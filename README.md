@@ -4,9 +4,11 @@
 
 当前收录 **44** 份题解。
 
-「[面试经典 150 题](https://leetcode.cn/studyplan/top-interview-150/)」的做题进度见 [doc/studyplan/面试经典150题.md](<doc/studyplan/面试经典150题.md>)。
+「[热题 100](https://leetcode.cn/studyplan/top-100-liked/)」的做题进度见 [doc/studyplan/热题100.md](<doc/studyplan/热题100.md>)。
 
 按重要程度排好的待刷清单（暂不含困难题）见 [doc/studyplan/优先级清单.md](<doc/studyplan/优先级清单.md>)。
+
+100 道题的题目原文汇总见 [doc/studyplan/热题100题目.md](<doc/studyplan/热题100题目.md>)。
 
 ## 题解索引
 
@@ -67,7 +69,7 @@
 │   ├── content/        # 题目原文
 │   ├── hint/           # 官方提示
 │   ├── note/           # 做题笔记
-│   └── studyplan/      # 学习计划进度（面试经典 150 题）
+│   └── studyplan/      # 学习计划进度（热题 100）
 └── TreeGraph.py        # 二叉树可视化小工具
 ```
 
