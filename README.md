@@ -6,6 +6,8 @@
 
 「[面试经典 150 题](https://leetcode.cn/studyplan/top-interview-150/)」的做题进度见 [doc/studyplan/面试经典150题.md](<doc/studyplan/面试经典150题.md>)。
 
+按重要程度排好的待刷清单（暂不含困难题）见 [doc/studyplan/优先级清单.md](<doc/studyplan/优先级清单.md>)。
+
 ## 题解索引
 
 | # | 题目 | 语言 | 文件 |
