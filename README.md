@@ -4,6 +4,8 @@
 
 当前收录 **44** 份题解。
 
+「[面试经典 150 题](https://leetcode.cn/studyplan/top-interview-150/)」的做题进度见 [doc/studyplan/面试经典150题.md](<doc/studyplan/面试经典150题.md>)。
+
 ## 题解索引
 
 | # | 题目 | 语言 | 文件 |
@@ -62,7 +64,8 @@
 ├── doc/
 │   ├── content/        # 题目原文
 │   ├── hint/           # 官方提示
-│   └── note/           # 做题笔记
+│   ├── note/           # 做题笔记
+│   └── studyplan/      # 学习计划进度（面试经典 150 题）
 └── TreeGraph.py        # 二叉树可视化小工具
 ```
 
