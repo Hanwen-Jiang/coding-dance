@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Java
+*.class
+target/
+out/
+*.iml
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# 编辑器
+.vscode/
