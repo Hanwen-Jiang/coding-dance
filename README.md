@@ -2,7 +2,7 @@
 
 个人刷题记录，题解使用 **Java / Python / Go** 编写，题目均来自 [力扣](https://leetcode.cn/)。
 
-当前收录 **44** 份题解；[热题 100](https://leetcode.cn/studyplan/top-100-liked/) 的 100 道题均有独立的题目文档。
+当前收录 **45** 份题解；[热题 100](https://leetcode.cn/studyplan/top-100-liked/) 的 100 道题均有独立的题目文档。
 
 ## 目录结构
 
@@ -58,6 +58,7 @@
 | 148 | [排序链表](<problems/0148.排序链表.md>) | Java | [0148.排序链表.java](<solutions/java/0148.排序链表.java>) |
 | 160 | [相交链表](<problems/0160.相交链表.md>) | Java | [0160.相交链表.java](<solutions/java/0160.相交链表.java>) |
 | 189 | [轮转数组](<problems/0189.轮转数组.md>) | Java | [0189.轮转数组.java](<solutions/java/0189.轮转数组.java>) |
+| 200 | [岛屿数量](<problems/0200.岛屿数量.md>) | Python | [0200.岛屿数量.py](<solutions/python/0200.岛屿数量.py>) |
 | 206 | [反转链表](<problems/0206.反转链表.md>) | Java | [0206.反转链表.java](<solutions/java/0206.反转链表.java>) |
 | 226 | [翻转二叉树](<problems/0226.翻转二叉树.md>) | Java | [0226.翻转二叉树.java](<solutions/java/0226.翻转二叉树.java>) |
 | 234 | [回文链表](<problems/0234.回文链表.md>) | Java | [0234.回文链表.java](<solutions/java/0234.回文链表.java>) |
