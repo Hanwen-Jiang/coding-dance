@@ -140,6 +140,35 @@ th { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .04
 td.mono { white-space: nowrap; }
 tr.pick td:first-child { color: var(--accent); font-weight: 700; }
 
+/* 小顶堆演示 */
+.sync { color: var(--muted); font-size: 13px; }
+.strip { display: flex; flex-wrap: wrap; gap: 6px; }
+.strip .c, .harr .c {
+  min-width: 36px; padding: 3px 6px; text-align: center;
+  font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums;
+  border-radius: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+}
+.strip .c.used { color: var(--out-ink); background: var(--out); border-color: transparent; }
+.strip .c.now { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+.strip .c.now.skip { border-color: var(--more); color: var(--more); background: var(--surface); }
+.tree { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; }
+.tree line { stroke: var(--line); stroke-width: 2; }
+.tree circle { fill: var(--accent-soft); stroke: var(--eq); stroke-width: 2; transition: fill .25s ease; }
+.tree circle.top { fill: var(--eq); }
+.tree circle.hl { fill: var(--more); stroke: var(--more); }
+.tree circle.ok { fill: var(--ok); stroke: var(--ok); }
+.tree text { font-family: var(--font-mono); font-size: 15px; font-weight: 600; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+.tree text.inv { fill: var(--surface); }
+.tree text.sub { font-size: 10px; font-weight: 400; fill: var(--muted); }
+.harr { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.harr .c { display: flex; flex-direction: column; line-height: 1.3; }
+.harr .c small { font-size: 10px; font-weight: 400; color: var(--muted); }
+.harr .c.top { border-color: var(--eq); }
+.harr .c.hl { border-color: var(--more); color: var(--more); }
+.harr-label { text-align: center; font-size: 12px; color: var(--muted); }
+.phase.warn { background: var(--surface); color: var(--more); border: 1px solid var(--more); }
+@media (prefers-reduced-motion: reduce) { .tree circle { transition: none; } }
+
 .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .point { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--line); }
 .point p { color: var(--muted); font-size: 14px; }
@@ -149,7 +178,7 @@ tr.pick td:first-child { color: var(--accent); font-weight: 700; }
   <header>
     <div class="eyebrow">LeetCode 215 · 中等 · 堆</div>
     <h1>第 K 个最大元素，快速选择怎么只排一半</h1>
-    <p class="lede">标准解法是快速选择：借用快速排序的划分，每一轮把数组分成「比 pivot 小 / 等于 / 比 pivot 大」三段，然后只往答案所在的那一段继续找。下面可以逐步播放每一次比较和交换。</p>
+    <p class="lede">标准解法是快速选择：借用快速排序的划分，每一轮把数组分成「比 pivot 小 / 等于 / 比 pivot 大」三段，然后只往答案所在的那一段继续找。下面可以逐步播放每一次比较和交换，后面还有另一种常考写法小顶堆的演示。</p>
   </header>
 
   <section aria-labelledby="h-hints">
@@ -267,6 +296,46 @@ class Solution:
           <span><i class="sw" style="background:var(--more)"></i>大于 pivot</span>
           <span><i class="sw" style="background:var(--out);border:1px solid var(--line)"></i>已排除</span>
           <span><i class="sw" style="outline:2px dashed var(--ok);outline-offset:-2px"></i>目标位置</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-heap">
+    <h2 id="h-heap">小顶堆演示</h2>
+    <p class="lede">堆里始终只放 k 个数，也就是目前见过的最大的 k 个。堆顶是其中最小的，就是当前的第 k 大，所以每个新来的数只需要和堆顶比一次。</p>
+    <div class="stage">
+      <div class="panel">
+        <p class="sync">数据和 k 跟上面的快速选择演示同步，在那里切换即可。</p>
+        <div class="strip" id="hstrip" aria-label="输入数组"></div>
+        <svg class="tree" id="htree" role="img" aria-label="小顶堆的树形结构"></svg>
+        <div class="harr" id="harr"></div>
+        <p class="harr-label">堆在代码里其实是这个数组：下标 i 的孩子是 2i+1 和 2i+2</p>
+        <div class="toolbar">
+          <button id="hreset" type="button">重置</button>
+          <button id="hprev" type="button">上一步</button>
+          <button id="hnext" type="button" class="primary">下一步</button>
+          <button id="hplay" type="button">自动播放</button>
+        </div>
+        <div class="scrub">
+          <input id="hslider" type="range" min="0" max="0" value="0" aria-label="堆演示步骤">
+          <span class="mono" id="hstepno">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="log" aria-live="polite">
+        <div class="facts">
+          <div class="fact"><span class="k">堆大小</span><span class="v" id="hk">0</span></div>
+          <div class="fact"><span class="k">堆顶</span><span class="v" id="htop">–</span></div>
+          <div class="fact"><span class="k">当前的数</span><span class="v" id="hcur">–</span></div>
+        </div>
+        <span class="phase" id="hphase">建堆</span>
+        <p class="msg" id="hmsg"></p>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--eq)"></i>堆顶，当前第 k 大</span>
+          <span><i class="sw" style="background:var(--accent-soft);border:1px solid var(--eq)"></i>堆里其他数</span>
+          <span><i class="sw" style="background:var(--more)"></i>正在比较或交换</span>
+          <span><i class="sw" style="background:var(--out);border:1px solid var(--line)"></i>已处理的输入</span>
         </div>
       </div>
     </div>
@@ -425,6 +494,7 @@ class Solution:
     k = Math.max(1, Math.min(nums.length, Math.round(Number(kin.value)) || 1));
     kin.value = k;
     build(); renderCols(); go(0);
+    hstop(); buildHeap(); hgo(0);
   }
   function load(name) {
     for (const id of ["ex1", "ex2", "exr"]) $(id).setAttribute("aria-pressed", String(id === name));
@@ -453,6 +523,113 @@ class Solution:
     if (j >= 0) go(j);
   };
   $("slider").oninput = (e) => { stop(); go(Number(e.target.value)); };
+
+  // ---------- 小顶堆 ----------
+  let hsteps = [], hidx = 0, htimer = null;
+
+  function buildHeap() {
+    const n = nums.length, h = nums.slice(0, k);
+    hsteps = [];
+    const snap = (o) => hsteps.push({ h: h.slice(), cur: -1, hl: [], ...o });
+    const siftQuiet = (i) => {
+      for (;;) {
+        let c = 2 * i + 1;
+        if (c >= k) return;
+        if (c + 1 < k && h[c + 1] < h[c]) c++;
+        if (h[i] <= h[c]) return;
+        [h[i], h[c]] = [h[c], h[i]];
+        i = c;
+      }
+    };
+    for (let i = (k >> 1) - 1; i >= 0; i--) siftQuiet(i);
+    snap({ phase: "建堆", msg: `先把前 k = ${k} 个数 [${nums.slice(0, k).join(", ")}] 放进堆，整理成小顶堆。堆顶 <b>${h[0]}</b> 是这 ${k} 个数里最小的，也就是目前的第 ${k} 大。` });
+    for (let t = k; t < n; t++) {
+      const x = nums[t];
+      if (x > h[0]) {
+        snap({ phase: "比较", cur: t, hl: [0], msg: `${x} &gt; 堆顶 ${h[0]}：${x} 能挤进前 ${k} 名，把堆顶 ${h[0]} 踢出去，换成 ${x}。` });
+        h[0] = x;
+        let i = 0;
+        for (;;) {
+          let c = 2 * i + 1;
+          if (c >= k) {
+            snap({ phase: "下沉结束", cur: t, hl: [i], msg: `${h[i]} 已经沉到底层，下沉结束。现在堆顶是 <b>${h[0]}</b>。` });
+            break;
+          }
+          if (c + 1 < k && h[c + 1] < h[c]) c++;
+          if (h[i] <= h[c]) {
+            snap({ phase: "下沉结束", cur: t, hl: [i], msg: `${h[i]} 不比孩子大了，下沉结束。现在堆顶是 <b>${h[0]}</b>。` });
+            break;
+          }
+          snap({ phase: "下沉", cur: t, hl: [i, c], msg: `新放上来的 ${h[i]} 比它较小的孩子 ${h[c]} 大，破坏了小顶堆，两者交换，继续往下看。` });
+          [h[i], h[c]] = [h[c], h[i]];
+          i = c;
+        }
+      } else {
+        snap({ phase: "跳过", skip: true, cur: t, hl: [0], msg: `${x} ≤ 堆顶 ${h[0]}：比前 ${k} 名里最小的还小，不可能进前 ${k}，直接跳过。` });
+      }
+    }
+    snap({ phase: "完成", done: true, msg: `所有数都处理完了。堆里是最大的 ${k} 个数，堆顶 <b>${h[0]}</b> 就是第 ${k} 大。` });
+  }
+
+  function hshow() {
+    const s = hsteps[hidx], n = nums.length, m = s.h.length;
+    const lim = s.done ? n : s.cur >= 0 ? s.cur : k;
+    $("hstrip").innerHTML = nums.map((v, j) => {
+      const c = j === s.cur ? "c now" + (s.skip ? " skip" : "") : j < lim ? "c used" : "c";
+      return `<span class="${c}">${v}</span>`;
+    }).join("");
+
+    const levels = Math.floor(Math.log2(m)) + 1, W = 420, H = levels * 64 + 8;
+    const pos = (i) => {
+      const l = Math.floor(Math.log2(i + 1)), p = i - (2 ** l - 1);
+      return [((p + 0.5) / 2 ** l) * W, 30 + l * 64];
+    };
+    const hl = new Set(s.hl);
+    let svg = "";
+    for (let i = 1; i < m; i++) {
+      const [x1, y1] = pos((i - 1) >> 1), [x2, y2] = pos(i);
+      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
+    }
+    for (let i = 0; i < m; i++) {
+      const [x, y] = pos(i);
+      const cls = s.done && i === 0 ? "ok" : hl.has(i) ? "hl" : i === 0 ? "top" : "";
+      svg += `<circle cx="${x}" cy="${y}" r="20" class="${cls}"></circle>`;
+      svg += `<text x="${x}" y="${y}" class="${cls ? "inv" : ""}">${s.h[i]}</text>`;
+    }
+    const tree = $("htree");
+    tree.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    tree.innerHTML = svg;
+
+    $("harr").innerHTML = s.h.map((v, i) => `<span class="c${hl.has(i) ? " hl" : i === 0 ? " top" : ""}"><small>${i}</small>${v}</span>`).join("");
+    $("hk").textContent = m;
+    const top = $("htop");
+    top.textContent = s.h[0];
+    top.className = "v" + (s.done ? " ok" : "");
+    $("hcur").textContent = s.cur >= 0 ? nums[s.cur] : "–";
+    const ph = $("hphase");
+    ph.textContent = s.phase;
+    ph.className = "phase" + (s.done ? " ok" : s.skip ? " warn" : "");
+    $("hmsg").innerHTML = s.msg;
+    $("hslider").max = hsteps.length - 1;
+    $("hslider").value = hidx;
+    $("hstepno").textContent = `${hidx} / ${hsteps.length - 1}`;
+    $("hprev").disabled = hidx === 0;
+    $("hnext").disabled = hidx === hsteps.length - 1;
+  }
+
+  function hgo(i) { hidx = Math.max(0, Math.min(hsteps.length - 1, i)); hshow(); }
+  function hstop() { if (htimer) clearInterval(htimer); htimer = null; $("hplay").textContent = "自动播放"; }
+  function hplay() {
+    if (htimer) return hstop();
+    if (hidx === hsteps.length - 1) hgo(0);
+    $("hplay").textContent = "暂停";
+    htimer = setInterval(() => { if (hidx >= hsteps.length - 1) return hstop(); hgo(hidx + 1); }, 900);
+  }
+  $("hreset").onclick = () => { hstop(); hgo(0); };
+  $("hprev").onclick = () => { hstop(); hgo(hidx - 1); };
+  $("hnext").onclick = () => { hstop(); hgo(hidx + 1); };
+  $("hplay").onclick = hplay;
+  $("hslider").oninput = (e) => { hstop(); hgo(Number(e.target.value)); };
 
   load("ex2");
 })();
