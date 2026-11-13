@@ -7,19 +7,19 @@
 <style>
 /* 版式：与岛屿数量图解同一系列。左边是柱状数组，随快速选择一轮轮被划成「小于 / 等于 / 大于」三段；右边是状态面板 */
 :root {
-  --bg: #eef0f5;
-  --surface: #f9fafc;
+  --bg: #ffffff;
+  --surface: #ffffff;
   --ink: #1b2236;
-  --muted: #5c6580;
-  --line: #cfd5e3;
+  --muted: #666666;
+  --line: #dddddd;
   --accent: #3d4fb8;
   --accent-soft: #dfe3f6;
-  --unk: #c3c9d9;
+  --unk: #cfcfcf;
   --less: #4f8fc9;
   --eq: #3d4fb8;
   --more: #d07a3a;
-  --out: #e2e5ee;
-  --out-ink: #9aa1b6;
+  --out: #f0f0f0;
+  --out-ink: #a3a3a3;
   --ok: #2f8a57;
   --ok-soft: #d9efe2;
   --font-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
@@ -28,16 +28,16 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #11141d; --surface: #181c28; --ink: #dde2f0; --muted: #929ab3; --line: #2b3247;
-    --accent: #8d9cf0; --accent-soft: #252c4a; --unk: #4a526b; --less: #5ea4e0; --eq: #8d9cf0;
-    --more: #e8955a; --out: #1f2433; --out-ink: #5d6581; --ok: #55c287; --ok-soft: #173426;
+    --bg: #000000; --surface: #000000; --ink: #dde2f0; --muted: #9a9a9a; --line: #2e2e2e;
+    --accent: #8d9cf0; --accent-soft: #252c4a; --unk: #4d4d4d; --less: #5ea4e0; --eq: #8d9cf0;
+    --more: #e8955a; --out: #1a1a1a; --out-ink: #5c5c5c; --ok: #55c287; --ok-soft: #173426;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #11141d; --surface: #181c28; --ink: #dde2f0; --muted: #929ab3; --line: #2b3247;
-  --accent: #8d9cf0; --accent-soft: #252c4a; --unk: #4a526b; --less: #5ea4e0; --eq: #8d9cf0;
-  --more: #e8955a; --out: #1f2433; --out-ink: #5d6581; --ok: #55c287; --ok-soft: #173426;
+  --bg: #000000; --surface: #000000; --ink: #dde2f0; --muted: #9a9a9a; --line: #2e2e2e;
+  --accent: #8d9cf0; --accent-soft: #252c4a; --unk: #4d4d4d; --less: #5ea4e0; --eq: #8d9cf0;
+  --more: #e8955a; --out: #1a1a1a; --out-ink: #5c5c5c; --ok: #55c287; --ok-soft: #173426;
   color-scheme: dark;
 }
 
