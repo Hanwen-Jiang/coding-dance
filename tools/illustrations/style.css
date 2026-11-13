@@ -76,7 +76,7 @@ button.primary:disabled { color: var(--ink); border-color: var(--line); }
 .cell { height: 38px; border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; transition: background-color .25s ease; }
 .ci { text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 .cp { min-height: 18px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.cp span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.25; color: var(--accent); }
+.cp span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.25; color: var(--accent); white-space: nowrap; }
 .bar-slot { height: 150px; display: flex; flex-direction: column; justify-content: flex-end; }
 .bar { border: 1px solid var(--line); border-radius: 4px 4px 2px 2px; display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; padding-top: 2px; min-height: 3px; background: var(--dim); color: var(--ink); }
 .bar.a, .bar.b, .bar.c { color: var(--surface); }
@@ -130,6 +130,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+.sw.dash { border: 0; border-top: 2px dashed var(--warm); border-radius: 0; height: 0; width: 18px; }
 .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .point { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--line); }
 .point p { color: var(--muted); font-size: 14px; }

@@ -83,7 +83,7 @@ button.primary:disabled { color: var(--ink); border-color: var(--line); }
 .cell { height: 38px; border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; transition: background-color .25s ease; }
 .ci { text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 .cp { min-height: 18px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
-.cp span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.25; color: var(--accent); }
+.cp span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.25; color: var(--accent); white-space: nowrap; }
 .bar-slot { height: 150px; display: flex; flex-direction: column; justify-content: flex-end; }
 .bar { border: 1px solid var(--line); border-radius: 4px 4px 2px 2px; display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; padding-top: 2px; min-height: 3px; background: var(--dim); color: var(--ink); }
 .bar.a, .bar.b, .bar.c { color: var(--surface); }
@@ -137,6 +137,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+.sw.dash { border: 0; border-top: 2px dashed var(--warm); border-radius: 0; height: 0; width: 18px; }
 .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .point { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--line); }
 .point p { color: var(--muted); font-size: 14px; }
@@ -316,7 +317,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[3,2,0,-4],"pos":1},"no
     const cx = (i) => X0 + i * GAP + BW / 2;
     let s = `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
     const next = v.next || nodes.map((_, i) => (i + 1 < n ? i + 1 : null));
-    const edge = (i, j, cls, lift) => {
+    const edge = (i, j, cls, lift, arc) => {
       if (j === null || j === undefined) return;
       if (j === -1) {
         if (i === n - 1) s += `<line class="edge ${cls}" x1="${cx(i) + BW / 2}" y1="${Y}" x2="${cx(i) + BW / 2 + 12}" y2="${Y}"></line><text class="nil" x="${cx(i) + BW / 2 + 20}" y="${Y}">∅</text>`;
@@ -324,14 +325,14 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[3,2,0,-4],"pos":1},"no
         else s += `<line class="edge ${cls}" x1="${cx(i)}" y1="${Y - BH / 2}" x2="${cx(i)}" y2="${Y - BH / 2 - 9}"></line><text class="nil" x="${cx(i)}" y="${Y - BH / 2 - 17}">∅</text>`;
         return;
       }
-      if (j === i + 1) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
-      else if (j === i - 1) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
+      if (j === i + 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
+      else if (j === i - 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
       else if (j === i) s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i) - 8} ${Y - BH / 2} C${cx(i) - 18} ${Y - 40} ${cx(i) + 18} ${Y - 40} ${cx(i) + 8} ${Y - BH / 2 - 2}"></path>`;
-      else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 14 + Math.abs(j - i) * 4);
+      else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 16 + Math.abs(j - i) * 4);
         s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`; }
     };
     next.forEach((j, i) => { if (!nodes[i].hide) edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, nodes[i].ecls || "", false); });
-    (v.extra || []).forEach(([i, j]) => edge(i, j, "warm", j > i));
+    (v.extra || []).forEach(([i, j]) => edge(i, j, "warm", j > i, true));
     const pm = ptrMap(v.ptrs);
     nodes.forEach((nd, i) => {
       if (nd.hide) return;
@@ -343,12 +344,12 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[3,2,0,-4],"pos":1},"no
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;
   }
   function vTree(v) {
-    const pos = {}, par = {}; let x = 0, depth = 0;
+    const pos = {}, par = {}, PAD = v.badges ? 44 : 28, GAPX = v.badges ? 54 : 46; let x = 0, depth = 0;
     const walk = (id, d) => { if (id === null || id === undefined || !v.nodes[id]) return; const nd = v.nodes[id];
-      walk(nd.l, d + 1); pos[id] = [28 + x * 46, 28 + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
+      walk(nd.l, d + 1); pos[id] = [PAD + x * GAPX, 28 + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
       for (const c of [nd.l, nd.r]) if (c !== null && c !== undefined && v.nodes[c]) par[c] = id; };
     walk(v.root, 0);
-    const W = Math.max(56 + (x - 1) * 46, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
+    const W = Math.max(PAD * 2 + (x - 1) * GAPX, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
     const cls = v.cls || {}, on = new Set(v.on || []);
     let s = "";
     for (const id in par) { const [x1, y1] = pos[par[id]], [x2, y2] = pos[id];

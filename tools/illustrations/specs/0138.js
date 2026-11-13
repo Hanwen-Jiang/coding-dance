@@ -45,7 +45,7 @@ for data in [[[7,None],[13,0],[11,4],[10,2],[1,0]], [[1,1],[2,1]], [[3,None],[3,
         out.append([cur.val, idx[cur.random] if cur.random else None]); cur = cur.next
     assert out == data
 `,
-  legend: [["a", "正在处理的旧节点"], ["k", "新节点"], ["", "虚线：random 指针"]],
+  legend: [["a", "正在处理的旧节点"], ["k", "新节点"], ["dash", "random 指针"]],
   presets: [
     { label: "示例 1", args: { d: [[7, null], [13, 0], [11, 4], [10, 2], [1, 0]] }, note: "head = [[7,null],[13,0],[11,4],[10,2],[1,0]]", expect: [[7, null], [13, 0], [11, 4], [10, 2], [1, 0]] },
     { label: "示例 2", args: { d: [[1, 1], [2, 1]] }, note: "head = [[1,1],[2,1]]", expect: [[1, 1], [2, 1]] },

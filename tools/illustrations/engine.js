@@ -49,7 +49,7 @@
     const cx = (i) => X0 + i * GAP + BW / 2;
     let s = `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
     const next = v.next || nodes.map((_, i) => (i + 1 < n ? i + 1 : null));
-    const edge = (i, j, cls, lift) => {
+    const edge = (i, j, cls, lift, arc) => {
       if (j === null || j === undefined) return;
       if (j === -1) {
         if (i === n - 1) s += `<line class="edge ${cls}" x1="${cx(i) + BW / 2}" y1="${Y}" x2="${cx(i) + BW / 2 + 12}" y2="${Y}"></line><text class="nil" x="${cx(i) + BW / 2 + 20}" y="${Y}">∅</text>`;
@@ -57,14 +57,14 @@
         else s += `<line class="edge ${cls}" x1="${cx(i)}" y1="${Y - BH / 2}" x2="${cx(i)}" y2="${Y - BH / 2 - 9}"></line><text class="nil" x="${cx(i)}" y="${Y - BH / 2 - 17}">∅</text>`;
         return;
       }
-      if (j === i + 1) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
-      else if (j === i - 1) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
+      if (j === i + 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
+      else if (j === i - 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
       else if (j === i) s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i) - 8} ${Y - BH / 2} C${cx(i) - 18} ${Y - 40} ${cx(i) + 18} ${Y - 40} ${cx(i) + 8} ${Y - BH / 2 - 2}"></path>`;
-      else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 14 + Math.abs(j - i) * 4);
+      else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 16 + Math.abs(j - i) * 4);
         s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`; }
     };
     next.forEach((j, i) => { if (!nodes[i].hide) edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, nodes[i].ecls || "", false); });
-    (v.extra || []).forEach(([i, j]) => edge(i, j, "warm", j > i));
+    (v.extra || []).forEach(([i, j]) => edge(i, j, "warm", j > i, true));
     const pm = ptrMap(v.ptrs);
     nodes.forEach((nd, i) => {
       if (nd.hide) return;
@@ -76,12 +76,12 @@
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;
   }
   function vTree(v) {
-    const pos = {}, par = {}; let x = 0, depth = 0;
+    const pos = {}, par = {}, PAD = v.badges ? 44 : 28, GAPX = v.badges ? 54 : 46; let x = 0, depth = 0;
     const walk = (id, d) => { if (id === null || id === undefined || !v.nodes[id]) return; const nd = v.nodes[id];
-      walk(nd.l, d + 1); pos[id] = [28 + x * 46, 28 + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
+      walk(nd.l, d + 1); pos[id] = [PAD + x * GAPX, 28 + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
       for (const c of [nd.l, nd.r]) if (c !== null && c !== undefined && v.nodes[c]) par[c] = id; };
     walk(v.root, 0);
-    const W = Math.max(56 + (x - 1) * 46, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
+    const W = Math.max(PAD * 2 + (x - 1) * GAPX, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
     const cls = v.cls || {}, on = new Set(v.on || []);
     let s = "";
     for (const id in par) { const [x1, y1] = pos[par[id]], [x2, y2] = pos[id];
