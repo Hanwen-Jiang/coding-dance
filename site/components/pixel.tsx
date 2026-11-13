@@ -336,6 +336,25 @@ export function PixelTitle({
   );
 }
 
+// 像素图标：每个字符串是一行，# 是亮的像素
+const ICONS: Record<string, string[]> = {
+  sun: ["....#....", ".#.....#.", "...###...", "..#####..", "#.#####.#", "..#####..", "...###...", ".#.....#.", "....#...."],
+  moon: ["...###...", "..##.....", ".##......", ".##......", ".##......", ".##......", ".###...#.", "..######.", "...####.."],
+  arrow: ["...####", ".....##", "....#.#", "...#..#", "..#....", ".#.....", "#......"],
+};
+
+export function PixelIcon({ name, cell = 2, className }: { name: keyof typeof ICONS; cell?: number; className?: string }) {
+  const rows = ICONS[name];
+  const w = rows[0].length, h = rows.length;
+  return (
+    <svg aria-hidden className={clsx("pixel-icon", className)} style={{ width: w * cell, height: h * cell }} viewBox={`0 0 ${w} ${h}`}>
+      {rows.flatMap((row, y) =>
+        [...row].map((c, x) => (c === "#" ? <rect key={`${x}-${y}`} fill="currentColor" height={0.84} rx={0.12} width={0.84} x={x + 0.08} y={y + 0.08} /> : null)),
+      )}
+    </svg>
+  );
+}
+
 // logo：点阵的 </>，只画笔画上的像素，没有底色和底点。13 列 × 7 行：< 4 列、/ 3 列、> 4 列，中间各空 1 列
 const LOGO_ROWS = (() => {
   const lt = ["...#", "..#.", ".#..", "#...", ".#..", "..#.", "...#"];

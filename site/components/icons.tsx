@@ -2,22 +2,6 @@
 type P = React.SVGProps<SVGSVGElement>;
 const base = { fill: "none", stroke: "currentColor", strokeWidth: 1.6, strokeLinecap: "round", strokeLinejoin: "round", viewBox: "0 0 16 16", width: 16, height: 16 } as const;
 
-export const LogoMark = (p: P) => (
-  <svg {...base} {...p} viewBox="0 0 24 24" strokeWidth={2}>
-    <path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" />
-  </svg>
-);
-export const SunIcon = (p: P) => (
-  <svg {...base} {...p}>
-    <circle cx="8" cy="8" r="3" />
-    <path d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.4 3.4l.85.85M11.75 11.75l.85.85M3.4 12.6l.85-.85M11.75 4.25l.85-.85" />
-  </svg>
-);
-export const MoonIcon = (p: P) => (
-  <svg {...base} {...p}>
-    <path d="M13.5 9.5A5.5 5.5 0 0 1 6.5 2.5a5.5 5.5 0 1 0 7 7z" />
-  </svg>
-);
 export const ExternalIcon = (p: P) => (
   <svg {...base} {...p}>
     <path d="M9 2.5h4.5V7M13.5 2.5L7 9M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3" />
