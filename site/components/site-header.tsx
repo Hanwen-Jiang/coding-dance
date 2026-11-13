@@ -24,10 +24,10 @@ export function SiteHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-separator bg-background/75 backdrop-blur-xl">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-        <NextLink aria-label="热题 100 · 题解手册" className="group flex items-center gap-3 no-underline" href="/">
+        <NextLink aria-label="Hot 100" className="group flex items-center gap-3 no-underline" href="/">
           <PixelLogo className="h-6 w-auto" />
           <span className="flex flex-col gap-1 leading-none">
-            <PixelTitle cell={1.5} px={12} text="热题 100 · 题解手册" weight={600} />
+            <PixelTitle cell={1.5} px={12} text="Hot 100" weight={700} />
             <span className="font-pixel hidden text-[10px] tracking-wider text-muted sm:block">~/leetcode/top100</span>
           </span>
         </NextLink>
