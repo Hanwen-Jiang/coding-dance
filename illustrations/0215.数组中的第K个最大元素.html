@@ -237,6 +237,24 @@ class Solution:
         </div>
       </details>
       <details>
+        <summary><span class="lvl">代码</span>极简写法：列表推导式三路划分<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>思路和标准解法完全一样，只是不在原数组上交换，而是每轮新建「大于」「小于」两个列表。直接按第 <code>k</code> 大来分，不用换算下标，也不用管三个指针。代价是额外空间平均 <code>O(n)</code>。面试时可以先写这版，面试官追问不开额外空间时，再写上面的标准解法。</p>
+<pre class="code">import random
+
+class Solution:
+    def findKthLargest(self, nums: List[int], k: int) -&gt; int:
+        pivot = random.choice(nums)
+        left = [x for x in nums if x &gt; pivot]     <span class="cmt"># 大于区，排在最前面</span>
+        right = [x for x in nums if x &lt; pivot]    <span class="cmt"># 小于区，排在最后面</span>
+        if len(left) &gt;= k:                        <span class="cmt"># 前 k 大全在大于区里</span>
+            return self.findKthLargest(left, k)
+        elif len(right) &gt; len(nums) - k:          <span class="cmt"># 答案在小于区</span>
+            return self.findKthLargest(right, k + len(right) - len(nums))
+        return pivot                              <span class="cmt"># 落在等于区</span></pre>
+        </div>
+      </details>
+      <details>
         <summary><span class="lvl">代码</span>另一种常考写法：大小为 k 的小顶堆<span class="peek">点开</span></summary>
         <div class="hint-body">
           <p>堆里始终保留目前见过的最大的 <code>k</code> 个数，堆顶是其中最小的，也就是第 <code>k</code> 大。复杂度 <code>O(n log k)</code>，不满足题目的 <code>O(n)</code>，但写起来短、不改原数组，面试时也经常被追问。</p>
@@ -349,7 +367,8 @@ class Solution:
         <tbody>
           <tr><td>直接排序</td><td class="mono">O(n log n)</td><td class="mono">O(1)～O(n)</td><td>一行就能写完，但不满足题目要求</td></tr>
           <tr><td>小顶堆</td><td class="mono">O(n log k)</td><td class="mono">O(k)</td><td>不改原数组，适合数据流、数据量大到放不进内存的场景</td></tr>
-          <tr class="pick"><td>快速选择</td><td class="mono">平均 O(n)</td><td class="mono">O(1)</td><td>本题标准解法；随机 pivot 下最坏 O(n²) 几乎不会出现</td></tr>
+          <tr><td>快速选择 · 极简写法</td><td class="mono">平均 O(n)</td><td class="mono">平均 O(n)</td><td>列表推导式，最短最好懂，但每轮都新建列表</td></tr>
+          <tr class="pick"><td>快速选择 · 标准解法</td><td class="mono">平均 O(n)</td><td class="mono">O(1)</td><td>原地三指针划分；随机 pivot 下最坏 O(n²) 几乎不会出现</td></tr>
         </tbody>
       </table>
     </div>
