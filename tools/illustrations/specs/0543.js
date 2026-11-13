@@ -20,6 +20,15 @@ class Solution:
             return max(l, r) + 1        # 返回给上一层的是深度
         depth(root)
         return best
+` }, { t: "简洁写法：返回二元组，不用全局变量", kind: "elegant", note: "递归同时返回「深度」和「子树里的最大直径」。", code: `
+class Solution:
+    def diameterOfBinaryTree(self, root: Optional[TreeNode]) -> int:
+        def dfs(node):
+            if not node:
+                return 0, 0
+            (ld, lb), (rd, rb) = dfs(node.left), dfs(node.right)
+            return 1 + max(ld, rd), max(lb, rb, ld + rd)
+        return dfs(root)[1]
 ` }],
   pytest: `
 s = Solution()

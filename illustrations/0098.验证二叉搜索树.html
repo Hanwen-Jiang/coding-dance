@@ -219,6 +219,18 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return inorder(root)</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：上下界当默认参数<span class="peek">点开</span></summary>
+        <div class="hint-body">
+<pre class="code">class Solution:
+    def isValidBST(self, root: Optional[TreeNode], lo=float("-inf"), hi=float("inf")) -&gt; bool:
+        if not root:
+            return True
+        return (lo &lt; root.val &lt; hi
+                and self.isValidBST(root.left, lo, root.val)
+                and self.isValidBST(root.right, root.val, hi))</pre>
+        </div>
+      </details>
     </div>
   </section>
 

@@ -209,6 +209,29 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return "" if size == float("inf") else s[start:start + size]</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：Counter 记欠账<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>need[c] 是窗口还欠多少个 c，可以是负数（多了）。窗口合法后，先把左边多余的扔掉得到最短，再扔掉一个必需的，让窗口重新变得不合法。</p>
+<pre class="code">class Solution:
+    def minWindow(self, s: str, t: str) -&gt; str:
+        need, missing = Counter(t), len(t)
+        best, left = (0, float("inf")), 0
+        for right, c in enumerate(s, 1):        <span class="cmt"># 窗口是 s[left:right]</span>
+            missing -= need[c] &gt; 0
+            need[c] -= 1
+            if not missing:
+                while need[s[left]] &lt; 0:        <span class="cmt"># 左边多余的字符</span>
+                    need[s[left]] += 1
+                    left += 1
+                if right - left &lt; best[1] - best[0]:
+                    best = (left, right)
+                need[s[left]] += 1              <span class="cmt"># 扔掉一个必需的</span>
+                missing += 1
+                left += 1
+        return "" if best[1] == float("inf") else s[best[0]:best[1]]</pre>
+        </div>
+      </details>
     </div>
   </section>
 

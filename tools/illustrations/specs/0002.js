@@ -24,6 +24,13 @@ class Solution:
             cur.next = ListNode(digit)
             cur = cur.next
         return dummy.next
+` }, { t: "简洁写法：递归，进位当参数", kind: "elegant", note: "把进位当成第三个参数往下传。两条链表都走完、也没有进位时结束。", code: `
+class Solution:
+    def addTwoNumbers(self, l1, l2, carry=0):
+        if not l1 and not l2 and not carry:
+            return None
+        s = (l1.val if l1 else 0) + (l2.val if l2 else 0) + carry
+        return ListNode(s % 10, self.addTwoNumbers(l1 and l1.next, l2 and l2.next, s // 10))
 ` }],
   pytest: `
 s = Solution()

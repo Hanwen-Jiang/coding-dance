@@ -7,7 +7,7 @@ module.exports = {
     { t: "找一个好的起点", body: ["左上角：往右往下都是变大，没法判断该往哪走。", "<strong>右上角</strong>：往左变小，往下变大。两个方向效果相反，每次比较都能做出决定。左下角也一样。"] },
     { t: "每次排除一行或一列", body: ["当前的数比 target 大：它下面的数更大，这一整列都不可能，往左走。", "当前的数比 target 小：它左边的数更小，这一整行都不可能，往下走。"] },
   ],
-  codes: [{ t: "标准解法：从右上角走", code: `
+  codes: [{ t: "标准解法：从右上角走", kind: "elegant", code: `
 class Solution:
     def searchMatrix(self, matrix: List[List[int]], target: int) -> bool:
         i, j = 0, len(matrix[0]) - 1    # 右上角

@@ -19,6 +19,19 @@ class Solution:
             fast = fast.next
         slow.next = slow.next.next      # 跳过要删的节点
         return dummy.next
+` }, { t: "简洁写法：递归数倒数第几个", kind: "elegant", note: "递归返回时自然是从尾往头，返回值就是「倒数第几个」。数到倒数第 n + 1 个时，删掉它后面那个。", code: `
+class Solution:
+    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -> Optional[ListNode]:
+        def rec(node):
+            if not node:
+                return 0
+            k = rec(node.next) + 1
+            if k == n + 1:
+                node.next = node.next.next
+            return k
+        dummy = ListNode(0, head)
+        rec(dummy)
+        return dummy.next
 ` }],
   pytest: `
 s = Solution()

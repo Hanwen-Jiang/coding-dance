@@ -1,0 +1,68 @@
+{
+ "id": 236,
+ "name": "二叉树的最近公共祖先",
+ "level": "中等",
+ "topic": "二叉树",
+ "h1": "二叉树的最近公共祖先，让答案自己往上冒",
+ "lede": "每个节点只问左右子树一句话：你们那边找到 p 或 q 了吗？左右都说找到了，自己就是答案。",
+ "handwritten": true,
+ "hints": [
+  {
+   "t": "先定好递归函数返回什么",
+   "body": [
+    "让函数 <code>f(node)</code> 回答：在以 <code>node</code> 为根的这棵子树里，有没有找到 p 或 q？",
+    "找到了就把找到的节点交上来，什么都没找到就返回空。"
+   ]
+  },
+  {
+   "t": "拿到左右两边的回答后怎么办",
+   "body": [
+    "<strong>左右都不为空</strong>：p 和 q 分别在两侧，当前节点就是最近公共祖先，返回自己。",
+    "<strong>只有一边不为空</strong>：把那一边的结果原样往上交。它可能是 p 或 q，也可能是下面已经找到的答案。",
+    "<strong>都为空</strong>：这棵子树里什么都没有，返回空。"
+   ]
+  },
+  {
+   "t": "碰到 p 为什么可以直接返回",
+   "body": [
+    "走到 p 时，不用再往下找 q。如果 q 在 p 下面，答案就是 p 自己；如果 q 不在 p 下面，别的分支会找到 q，在上面汇合。",
+    "这一步依赖题目保证 p、q 都在树里。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "比较的是节点不是值",
+   "body": "用 <code>is</code> 比较节点本身。题目保证值不重复，但用节点比较更稳。"
+  },
+  {
+   "t": "返回值有两种含义",
+   "body": "可能是找到的 p 或 q，也可能是已经确定的答案。上层不用区分，原样往上交就行。"
+  },
+  {
+   "t": "复杂度",
+   "body": "每个节点最多访问一次，时间 O(n)；递归深度是树高，最坏 O(n)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：后序递归",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def lowestCommonAncestor(self, root, p, q):\n        if root is None or root is p or root is q:\n            return root                 # 空，或者就是要找的节点\n        left = self.lowestCommonAncestor(root.left, p, q)\n        right = self.lowestCommonAncestor(root.right, p, q)\n        if left and right:\n            return root                 # p、q 分在两边\n        return left or right            # 哪边有就交哪边"
+  },
+  {
+   "t": "简洁写法：四行递归",
+   "kind": "elegant",
+   "note": null,
+   "code": "class Solution:\n    def lowestCommonAncestor(self, root, p, q):\n        if root in (None, p, q):\n            return root\n        l, r = (self.lowestCommonAncestor(c, p, q) for c in (root.left, root.right))\n        return root if l and r else l or r"
+  },
+  {
+   "t": "不用递归：记录父节点",
+   "kind": null,
+   "note": "先遍历一遍记下每个节点的父节点，再从 p 一路往上把祖先都放进集合，最后从 q 往上走，第一个在集合里的就是答案。",
+   "code": "class Solution:\n    def lowestCommonAncestor(self, root, p, q):\n        parent = {root: None}\n        stack = [root]\n        while p not in parent or q not in parent:\n            node = stack.pop()\n            for child in (node.left, node.right):\n                if child:\n                    parent[child] = node\n                    stack.append(child)\n        ancestors = set()\n        while p:                        # p 和它所有的祖先\n            ancestors.add(p)\n            p = parent[p]\n        while q not in ancestors:       # q 往上走，第一个碰到的就是答案\n            q = parent[q]\n        return q"
+  }
+ ],
+ "demo": null
+}

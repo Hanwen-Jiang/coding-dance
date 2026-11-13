@@ -1,0 +1,109 @@
+{
+ "id": 198,
+ "name": "打家劫舍",
+ "level": "中等",
+ "topic": "动态规划",
+ "h1": "打家劫舍，第 i 间偷还是不偷",
+ "lede": "看最后一间房：不偷它，答案就是前 i − 1 间的最优值；偷它，前一间就不能偷，答案是前 i − 2 间的最优值加上这一间的钱。两者取大。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "定义状态",
+   "body": [
+    "<code>dp[i]</code>：只考虑前 <code>i</code> 间房，最多能偷多少钱。"
+   ]
+  },
+  {
+   "t": "最后一间偷不偷",
+   "body": [
+    "不偷第 <code>i</code> 间：<code>dp[i - 1]</code>。",
+    "偷第 <code>i</code> 间：第 <code>i - 1</code> 间不能偷，<code>dp[i - 2] + nums[i - 1]</code>。",
+    "<code>dp[i] = max(dp[i - 1], dp[i - 2] + nums[i - 1])</code>。"
+   ]
+  },
+  {
+   "t": "初始值和空间优化",
+   "body": [
+    "<code>dp[0] = 0</code>，<code>dp[1] = nums[0]</code>。",
+    "只用到前两项，可以用两个变量滚动。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "dp 多开一位",
+   "body": "dp 长度 n + 1，dp[i] 对应前 i 间房，dp[0] = 0 可以省掉边界判断。"
+  },
+  {
+   "t": "不是隔一间偷一间",
+   "body": "最优方案可能隔两间，比如 [2,1,1,2] 偷第 1 和第 4 间。所以要用 DP，不能只比奇偶位置。"
+  },
+  {
+   "t": "复杂度",
+   "body": "时间 O(n)，滚动变量写法空间 O(1)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：动态规划",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def rob(self, nums: List[int]) -> int:\n        n = len(nums)\n        dp = [0] * (n + 1)              # dp[i]：前 i 间房最多偷多少\n        dp[1] = nums[0]\n        for i in range(2, n + 1):\n            dp[i] = max(dp[i - 1],                  # 不偷第 i 间\n                        dp[i - 2] + nums[i - 1])    # 偷第 i 间\n        return dp[n]"
+  },
+  {
+   "t": "简洁写法：两个变量滚动",
+   "kind": "elegant",
+   "note": "prev 是 dp[i-2]，cur 是 dp[i-1]。",
+   "code": "class Solution:\n    def rob(self, nums: List[int]) -> int:\n        prev = cur = 0\n        for x in nums:\n            prev, cur = cur, max(cur, prev + x)\n        return cur"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "正在算的"
+   ],
+   [
+    "e",
+    "用到的两项"
+   ],
+   [
+    "b",
+    "第 i 间房"
+   ],
+   [
+    "c",
+    "答案"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "nums": [
+      1,
+      2,
+      3,
+      1
+     ]
+    },
+    "note": "nums = [1,2,3,1]"
+   },
+   {
+    "label": "示例 2",
+    "args": {
+     "nums": [
+      2,
+      7,
+      9,
+      3,
+      1
+     ]
+    },
+    "note": "nums = [2,7,9,3,1]"
+   }
+  ],
+  "build": "build(a, snap) {\n    const nums = a.nums, n = nums.length, dp = Array(n + 1).fill(null);\n    dp[0] = 0; dp[1] = nums[0];\n    const view = (i, fin) => [\n      { t: \"array\", label: \"nums（第 1 间到第 n 间）\", idxFrom: 1, items: nums.map((v, k) => ({ v, cls: k === i - 1 ? \"b\" : \"\" })), ptrs: {} },\n      { t: \"array\", label: \"dp[i]：前 i 间最多偷多少\", items: dp.map((v, k) => ({ v, cls: fin && k === n ? \"c\" : k === i ? \"a\" : i >= 0 && (k === i - 1 || k === i - 2) ? \"e\" : \"\" })), ptrs: { i: i >= 0 ? i : null } },\n    ];\n    snap(\"开始\", `dp[0] = 0（没有房子），dp[1] = ${nums[0]}（只有第 1 间，偷了）。`, view(-1));\n    for (let i = 2; i <= n; i++) {\n      const no = dp[i - 1], yes = dp[i - 2] + nums[i - 1];\n      dp[i] = Math.max(no, yes);\n      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? \"，偷\" : \"，不偷\"}。`, view(i), { facts: [[\"不偷\", no], [\"偷\", yes]] });\n    }\n    snap(\"完成\", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { kind: \"ok\", ans: dp[n] });\n  }"
+ }
+}

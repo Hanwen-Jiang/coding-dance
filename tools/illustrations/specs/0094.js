@@ -31,6 +31,12 @@ class Solution:
             res.append(cur.val)
             cur = cur.right             # 转向右子树
         return res
+` }, { t: "简洁写法：一行递归", kind: "elegant", note: "左子树的结果 + 自己 + 右子树的结果。列表拼接有额外开销，但最贴近定义。", code: `
+class Solution:
+    def inorderTraversal(self, root: Optional[TreeNode]) -> List[int]:
+        if not root:
+            return []
+        return self.inorderTraversal(root.left) + [root.val] + self.inorderTraversal(root.right)
 ` }],
   pytest: `
 s = Solution()

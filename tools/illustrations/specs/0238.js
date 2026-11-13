@@ -19,6 +19,15 @@ class Solution:
             answer[i] *= right
             right *= nums[i]
         return answer
+` }, { t: "简洁写法：accumulate 算前缀积和后缀积", kind: "elegant", note: "pre[i] 是 i 左边所有数的积，suf[i] 是 i 右边所有数的积，两者相乘。", code: `
+from itertools import accumulate
+from operator import mul
+
+class Solution:
+    def productExceptSelf(self, nums: List[int]) -> List[int]:
+        pre = [1, *accumulate(nums[:-1], mul)]
+        suf = [*accumulate(nums[:0:-1], mul)][::-1] + [1]
+        return [a * b for a, b in zip(pre, suf)]
 ` }],
   pytest: `
 s = Solution()

@@ -199,6 +199,19 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return False</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：集合记走过的节点（O(n) 空间）<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>同一个节点第二次出现就说明有环。好懂，但不满足进阶的 O(1) 空间。</p>
+<pre class="code">class Solution:
+    def hasCycle(self, head: Optional[ListNode]) -&gt; bool:
+        seen = set()
+        while head and head not in seen:
+            seen.add(head)
+            head = head.next
+        return head is not None</pre>
+        </div>
+      </details>
     </div>
   </section>
 

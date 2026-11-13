@@ -26,6 +26,18 @@ class Solution:
             cur = cur.next
         cur.next = left or right
         return dummy.next
+` }, { t: "简洁写法：取出值排序再写回", kind: "elegant", note: "实际运行最快，但用了 O(n) 额外空间，也没有考到链表操作，面试时只能当作开场。", code: `
+class Solution:
+    def sortList(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        vals, node = [], head
+        while node:
+            vals.append(node.val)
+            node = node.next
+        node = head
+        for v in sorted(vals):
+            node.val = v
+            node = node.next
+        return head
 ` }],
   pytest: `
 s = Solution()

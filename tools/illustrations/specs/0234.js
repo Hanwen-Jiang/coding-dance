@@ -23,6 +23,14 @@ class Solution:
                 return False
             left, right = left.next, right.next
         return True
+` }, { t: "简洁写法：转成列表（O(n) 空间）", kind: "elegant", note: "把值取出来，和反过来的自己比。不满足进阶的 O(1) 空间。", code: `
+class Solution:
+    def isPalindrome(self, head: Optional[ListNode]) -> bool:
+        vals = []
+        while head:
+            vals.append(head.val)
+            head = head.next
+        return vals == vals[::-1]
 ` }],
   pytest: `
 s = Solution()

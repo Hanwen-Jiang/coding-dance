@@ -13,6 +13,10 @@ class Solution:
         if not root:
             return 0
         return max(self.maxDepth(root.left), self.maxDepth(root.right)) + 1
+` }, { t: "简洁写法：一行", kind: "elegant", code: `
+class Solution:
+    def maxDepth(self, root: Optional[TreeNode]) -> int:
+        return 1 + max(self.maxDepth(root.left), self.maxDepth(root.right)) if root else 0
 ` }],
   pytest: `
 s = Solution()

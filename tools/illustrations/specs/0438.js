@@ -22,6 +22,17 @@ class Solution:
             if win == need:
                 res.append(r - m + 1)
         return res
+` }, { t: "简洁写法：两个 Counter 直接比较", kind: "elegant", note: "Python 3.10 起，Counter 相等比较会把缺失的键当成 0。每次比较最多 26 个键。", code: `
+class Solution:
+    def findAnagrams(self, s: str, p: str) -> List[int]:
+        need, win, k, res = Counter(p), Counter(), len(p), []
+        for i, c in enumerate(s):
+            win[c] += 1
+            if i >= k:
+                win[s[i - k]] -= 1          # 左边滑出窗口
+            if win == need:
+                res.append(i - k + 1)
+        return res
 ` }],
   pytest: `
 s = Solution()

@@ -1,0 +1,100 @@
+{
+ "id": 46,
+ "name": "全排列",
+ "level": "中等",
+ "topic": "回溯",
+ "h1": "全排列，一位一位地填",
+ "lede": "排列就是把 n 个位置依次填满。每一位都从还没用过的数里挑一个，填完一种就退回去换下一个。用一个 used 数组记住哪些数已经用了。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "把问题看成填空",
+   "body": [
+    "有 n 个空位，从左往右填。第一位有 n 种选法，第二位有 n − 1 种……",
+    "每一位要知道哪些数已经被前面用掉了。"
+   ]
+  },
+  {
+   "t": "用 used 数组记状态",
+   "body": [
+    "<code>used[i]</code> 表示 <code>nums[i]</code> 是否已经在 path 里。",
+    "选一个没用过的数：标记 <code>used[i] = True</code>，放进 path，递归；回来后撤销这两步。"
+   ]
+  },
+  {
+   "t": "什么时候收集",
+   "body": [
+    "path 长度等于 n，说明每一位都填好了，收集一份拷贝。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "撤销要成对",
+   "body": "<code>used[i] = True</code> 和 <code>path.append</code> 是一对，递归回来后两个都要撤销。"
+  },
+  {
+   "t": "收集时要拷贝",
+   "body": "<code>res.append(path[:])</code>，否则后面回溯会把已经收集的结果改掉。"
+  },
+  {
+   "t": "复杂度",
+   "body": "一共 n! 个排列，每个长度 n，时间 O(n·n!)。递归深度 n。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：回溯 + used 数组",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def permute(self, nums: List[int]) -> List[List[int]]:\n        res, path, used = [], [], [False] * len(nums)\n\n        def dfs():\n            if len(path) == len(nums):\n                res.append(path[:])\n                return\n            for i, x in enumerate(nums):\n                if used[i]:\n                    continue\n                used[i] = True\n                path.append(x)\n                dfs()\n                path.pop()                  # 撤销选择\n                used[i] = False\n\n        dfs()\n        return res"
+  },
+  {
+   "t": "简洁写法：第一位选谁 + 剩下的全排列",
+   "kind": "elegant",
+   "note": "先定第一位是 x，再把剩下的数全排列，拼在 x 后面。",
+   "code": "class Solution:\n    def permute(self, nums: List[int]) -> List[List[int]]:\n        if len(nums) <= 1:\n            return [nums[:]]\n        return [[x] + p\n                for i, x in enumerate(nums)\n                for p in self.permute(nums[:i] + nums[i + 1:])]"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "这一步选的数"
+   ],
+   [
+    "d",
+    "已经用掉"
+   ],
+   [
+    "c",
+    "填满了"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "nums": [
+      1,
+      2,
+      3
+     ]
+    },
+    "note": "nums = [1,2,3]"
+   },
+   {
+    "label": "示例 2",
+    "args": {
+     "nums": [
+      0,
+      1
+     ]
+    },
+    "note": "nums = [0,1]"
+   }
+  ],
+  "build": "build(a, snap) {\n    const nums = a.nums, n = nums.length, used = nums.map(() => false), path = [], res = [];\n    const view = (cur, done) => [\n      { t: \"array\", label: \"nums（灰色的已经用掉）\", items: nums.map((v, i) => ({ v, cls: i === cur ? \"a\" : used[i] ? \"d\" : \"\" })), ptrs: {} },\n      { t: \"array\", label: \"path（正在填的排列）\", items: Array.from({ length: n }, (_, k) => ({ v: k < path.length ? path[k] : \"\", cls: k < path.length ? (done ? \"c\" : k === path.length - 1 && cur >= 0 ? \"a\" : \"e\") : \"\" })), idx: true },\n      { t: \"chips\", label: \"已收集\", items: res.map((r) => `[${r.join(\",\")}]`), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `有 ${n} 个空位，从左往右填。每一位从还没用过的数里挑。`, view(-1));\n    const dfs = () => {\n      if (path.length === n) { res.push(path.slice()); snap(\"收集\", `${n} 个位置都填好了，得到 <b>[${path.join(\",\")}]</b>。`, view(-1, true), { kind: \"ok\", facts: [[\"已收集\", res.length]] }); return; }\n      for (let i = 0; i < n; i++) {\n        if (used[i]) continue;\n        used[i] = true; path.push(nums[i]);\n        snap(\"填第 \" + path.length + \" 位\", `第 ${path.length} 位填 <b>${nums[i]}</b>，把它标记成用过。`, view(i), { facts: [[\"已收集\", res.length]] });\n        dfs();\n        path.pop(); used[i] = false;\n      }\n    };\n    dfs();\n    snap(\"完成\", `一共 ${res.length} 个排列，正好是 ${n}! 个。`, view(-1), { kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"已收集\", res.length]] });\n  }"
+ }
+}

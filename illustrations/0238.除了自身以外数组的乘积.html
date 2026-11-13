@@ -202,6 +202,20 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return answer</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：accumulate 算前缀积和后缀积<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>pre[i] 是 i 左边所有数的积，suf[i] 是 i 右边所有数的积，两者相乘。</p>
+<pre class="code">from itertools import accumulate
+from operator import mul
+
+class Solution:
+    def productExceptSelf(self, nums: List[int]) -&gt; List[int]:
+        pre = [1, *accumulate(nums[:-1], mul)]
+        suf = [*accumulate(nums[:0:-1], mul)][::-1] + [1]
+        return [a * b for a, b in zip(pre, suf)]</pre>
+        </div>
+      </details>
     </div>
   </section>
 

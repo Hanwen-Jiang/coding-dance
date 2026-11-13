@@ -1,0 +1,138 @@
+{
+ "id": 295,
+ "name": "数据流的中位数",
+ "level": "困难",
+ "topic": "堆",
+ "h1": "数据流的中位数，两个堆各管一半",
+ "lede": "把数分成较小的一半和较大的一半。较小的一半放进大顶堆，堆顶是这一半里最大的；较大的一半放进小顶堆，堆顶是这一半里最小的。两个堆顶正好夹住中间，中位数只看堆顶就行。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "中位数只关心中间",
+   "body": [
+    "排好序后，中位数只和中间一两个数有关。没必要让整个序列保持有序。"
+   ]
+  },
+  {
+   "t": "两个堆",
+   "body": [
+    "<code>lo</code>：大顶堆，放较小的一半。<code>hi</code>：小顶堆，放较大的一半。",
+    "保持 <code>len(lo) == len(hi)</code> 或 <code>len(lo) == len(hi) + 1</code>。总数是奇数时中位数是 lo 的堆顶，偶数时是两个堆顶的平均值。"
+   ]
+  },
+  {
+   "t": "加入一个数",
+   "body": [
+    "先放进 lo，再把 lo 的堆顶挪到 hi，保证 lo 里的每个数都不大于 hi 里的。",
+    "如果这时 hi 比 lo 多，再把 hi 的堆顶挪回 lo。",
+    "Python 的 heapq 只有小顶堆，大顶堆就存相反数。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "先过一遍另一个堆",
+   "body": "新数不能直接放进少的那个堆，要先经过另一个堆，才能保证 lo 的最大值 ≤ hi 的最小值。"
+  },
+  {
+   "t": "相反数",
+   "body": "heapq 是小顶堆，lo 里存 -num，取堆顶时再取反。"
+  },
+  {
+   "t": "复杂度",
+   "body": "addNum O(log n)，findMedian O(1)，空间 O(n)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：大顶堆 + 小顶堆",
+   "kind": null,
+   "note": null,
+   "code": "class MedianFinder:\n    def __init__(self):\n        self.lo = []                        # 大顶堆（存相反数），较小的一半\n        self.hi = []                        # 小顶堆，较大的一半\n\n    def addNum(self, num: int) -> None:\n        heapq.heappush(self.lo, -num)\n        heapq.heappush(self.hi, -heapq.heappop(self.lo))    # lo 的最大值挪到 hi\n        if len(self.hi) > len(self.lo):                     # 保持 lo 不比 hi 少\n            heapq.heappush(self.lo, -heapq.heappop(self.hi))\n\n    def findMedian(self) -> float:\n        if len(self.lo) > len(self.hi):\n            return -self.lo[0]\n        return (-self.lo[0] + self.hi[0]) / 2"
+  },
+  {
+   "t": "简洁写法：heappushpop",
+   "kind": "elegant",
+   "note": "heappushpop 先压入再弹出最小值，一步完成「过一遍另一个堆」。两个堆一样多时新数最终进 lo，否则进 hi。",
+   "code": "class MedianFinder:\n    def __init__(self):\n        self.lo, self.hi = [], []\n\n    def addNum(self, num: int) -> None:\n        if len(self.lo) == len(self.hi):\n            heapq.heappush(self.lo, -heapq.heappushpop(self.hi, num))\n        else:\n            heapq.heappush(self.hi, -heapq.heappushpop(self.lo, -num))\n\n    def findMedian(self) -> float:\n        if len(self.lo) > len(self.hi):\n            return -self.lo[0]\n        return (self.hi[0] - self.lo[0]) / 2"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "正在执行的操作"
+   ],
+   [
+    "c",
+    "堆顶"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例",
+    "args": {
+     "ops": [
+      [
+       "add",
+       1
+      ],
+      [
+       "add",
+       2
+      ],
+      [
+       "find"
+      ],
+      [
+       "add",
+       3
+      ],
+      [
+       "find"
+      ]
+     ]
+    },
+    "note": "addNum(1) addNum(2) findMedian() addNum(3) findMedian()"
+   },
+   {
+    "label": "乱序",
+    "args": {
+     "ops": [
+      [
+       "add",
+       5
+      ],
+      [
+       "find"
+      ],
+      [
+       "add",
+       15
+      ],
+      [
+       "find"
+      ],
+      [
+       "add",
+       1
+      ],
+      [
+       "find"
+      ],
+      [
+       "add",
+       3
+      ],
+      [
+       "find"
+      ]
+     ]
+    },
+    "note": "依次加入 5, 15, 1, 3，每次后查一次中位数"
+   }
+  ],
+  "build": "build(a, snap) {\n    const ops = a.ops, lo = [], hi = [], out = [];\n    const name = (o) => (o[0] === \"add\" ? `addNum(${o[1]})` : \"findMedian()\");\n    const view = (i) => [\n      { t: \"chips\", label: \"操作\", items: ops.map((o, t) => ({ v: name(o), cls: t === i ? \"a\" : t < i ? \"d\" : \"\" })) },\n      { t: \"array\", label: \"lo：较小的一半（大顶堆，右边是堆顶）\", items: lo.length ? lo.map((v, k) => ({ v, cls: k === lo.length - 1 ? \"c\" : \"\" })) : [{ v: \"\", cls: \"d\" }], idx: false },\n      { t: \"array\", label: \"hi：较大的一半（小顶堆，左边是堆顶）\", items: hi.length ? hi.map((v, k) => ({ v, cls: k === 0 ? \"c\" : \"\" })) : [{ v: \"\", cls: \"d\" }], idx: false },\n      { t: \"chips\", label: \"输出\", items: out.map((v) => (v === null ? \"null\" : v)), empty: \"还没有\" },\n    ];\n    const ins = (arr, x) => { arr.push(x); arr.sort((p, q) => p - q); };\n    snap(\"开始\", \"两个堆都是空的。\", view(-1), { facts: [[\"lo\", 0], [\"hi\", 0]] });\n    ops.forEach((o, i) => {\n      let msg;\n      if (o[0] === \"add\") {\n        const x = o[1]; ins(lo, x); const m1 = lo.pop(); ins(hi, m1);\n        msg = `先把 ${x} 放进 lo，再把 lo 里最大的 ${m1} 挪到 hi。`;\n        if (hi.length > lo.length) { const m2 = hi.shift(); ins(lo, m2); msg += `hi 比 lo 多了，把 hi 里最小的 ${m2} 挪回 lo。`; }\n        out.push(null);\n      } else {\n        const med = lo.length > hi.length ? lo[lo.length - 1] : (lo[lo.length - 1] + hi[0]) / 2;\n        out.push(med);\n        msg = lo.length > hi.length ? `一共 ${lo.length + hi.length} 个数，是奇数，中位数是 lo 的堆顶 <b>${med}</b>。` : `一共 ${lo.length + hi.length} 个数，是偶数，中位数是两个堆顶的平均 (${lo[lo.length - 1]} + ${hi[0]}) / 2 = <b>${med}</b>。`;\n      }\n      snap(name(o), msg, view(i), { facts: [[\"lo\", lo.length], [\"hi\", hi.length]] });\n    });\n    snap(\"完成\", `输出是 [${out.map((v) => (v === null ? \"null\" : v)).join(\", \")}]。`, view(ops.length), { kind: \"ok\", ans: out.slice(), facts: [[\"lo\", lo.length], [\"hi\", hi.length]] });\n  }"
+ }
+}

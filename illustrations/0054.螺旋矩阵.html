@@ -212,6 +212,19 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return res</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：取走第一行，再把剩下的转一下<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>每次拿走第一行，把剩下的矩阵逆时针转 90°，新的第一行就是原来的右边一列。会改掉输入，时间 O((m·n)·min(m, n))。</p>
+<pre class="code">class Solution:
+    def spiralOrder(self, matrix: List[List[int]]) -&gt; List[int]:
+        res = []
+        while matrix:
+            res += matrix.pop(0)
+            matrix = [list(r) for r in zip(*matrix)][::-1]
+        return res</pre>
+        </div>
+      </details>
     </div>
   </section>
 

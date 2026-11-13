@@ -209,6 +209,20 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
                 matrix[i][0] = 0</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：记下要清零的行和列（O(m+n) 空间）<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>先找出所有含 0 的行和列，再统一清零。好写，但用了额外空间，题目进阶要求 O(1)。</p>
+<pre class="code">class Solution:
+    def setZeroes(self, matrix: List[List[int]]) -&gt; None:
+        rows = {i for i, r in enumerate(matrix) if 0 in r}
+        cols = {j for j, c in enumerate(zip(*matrix)) if 0 in c}
+        for i, r in enumerate(matrix):
+            for j in range(len(r)):
+                if i in rows or j in cols:
+                    r[j] = 0</pre>
+        </div>
+      </details>
     </div>
   </section>
 

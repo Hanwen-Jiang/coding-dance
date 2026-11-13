@@ -195,6 +195,14 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return max(self.maxDepth(root.left), self.maxDepth(root.right)) + 1</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：一行<span class="peek">点开</span></summary>
+        <div class="hint-body">
+<pre class="code">class Solution:
+    def maxDepth(self, root: Optional[TreeNode]) -&gt; int:
+        return 1 + max(self.maxDepth(root.left), self.maxDepth(root.right)) if root else 0</pre>
+        </div>
+      </details>
     </div>
   </section>
 

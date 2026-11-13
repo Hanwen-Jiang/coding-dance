@@ -2,7 +2,9 @@
 
 个人刷题记录，题解使用 **Java / Python / Go** 编写，题目均来自 [力扣](https://leetcode.cn/)。
 
-当前收录 **49** 份题解；[热题 100](https://leetcode.cn/studyplan/top-100-liked/) 的 100 道题均有独立的题目文档。
+当前收录 **49** 份题解；[热题 100](https://leetcode.cn/studyplan/top-100-liked/) 的 100 道题均有独立的题目文档和思路图解（分层提示、简洁写法与标准解法、逐步演示）。
+
+网站：**https://leetcode.cgent.link** —— 按重要程度 / 难度 / 题型浏览，每道题一页，内容实时读取自本仓库。
 
 ## 目录结构
 
@@ -18,7 +20,8 @@
 │   ├── 热题100.md        # 做题进度（按专题）
 │   └── 优先级清单.md      # 按重要程度排序的待刷清单（暂不含困难题）
 ├── notes/           # 笔记、提示与不在热题 100 内的题目原文
-└── tools/           # 小工具（TreeGraph.py：二叉树可视化；illustrations/：图解生成器）
+├── tools/           # 小工具（TreeGraph.py：二叉树可视化；illustrations/：图解生成器，data/ 是导出给网站的数据）
+└── site/            # 题解网站（Next.js + HeroUI Pro，部署在 Cloudflare Pages）
 ```
 
 ## 题解索引

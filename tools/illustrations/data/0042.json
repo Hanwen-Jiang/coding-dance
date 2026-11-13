@@ -1,0 +1,113 @@
+{
+ "id": 42,
+ "name": "接雨水",
+ "level": "困难",
+ "topic": "双指针",
+ "h1": "接雨水，每一格能接多少只看两边最高的柱子",
+ "lede": "某一格上方的水位，等于它左边最高柱子和右边最高柱子里较矮的那个。用两个指针从两端往中间走，哪边的最高值更小，哪边那一格的水量就已经能确定。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "先只看一格",
+   "body": [
+    "下标 <code>i</code> 这一格能接的水 = <code>min(左边最高, 右边最高) − height[i]</code>。",
+    "水位由两边最高的柱子里矮的那个决定，再减掉这一格自己的高度。"
+   ]
+  },
+  {
+   "t": "朴素做法",
+   "body": [
+    "预先算出每个位置的左边最高 <code>leftMax[i]</code> 和右边最高 <code>rightMax[i]</code>，再逐格相加。时间 <code>O(n)</code>，空间 <code>O(n)</code>。"
+   ]
+  },
+  {
+   "t": "省掉两个数组",
+   "body": [
+    "用 <code>l</code>、<code>r</code> 从两端往中间走，同时维护 <code>leftMax</code>、<code>rightMax</code>。",
+    "如果 <code>leftMax &lt; rightMax</code>，那么 <code>l</code> 这一格的水位一定是 <code>leftMax</code>：右边至少有一根柱子不低于它。这一格算完，<code>l</code> 右移。另一边同理。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "先更新最高值再算水",
+   "body": "先把当前柱子计入 leftMax / rightMax，这样 <code>leftMax − height[l]</code> 不会是负数。"
+  },
+  {
+   "t": "为什么矮的那边可以先算",
+   "body": "leftMax < rightMax 时，l 右边一定存在不低于 leftMax 的柱子，所以 l 这格的水位不会被右边限制。"
+  },
+  {
+   "t": "复杂度",
+   "body": "时间 O(n)，空间 O(1)。单调栈也能做，是按层接水的另一种思路。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：双指针",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def trap(self, height: List[int]) -> int:\n        l, r = 0, len(height) - 1\n        left_max = right_max = 0\n        water = 0\n        while l < r:\n            left_max = max(left_max, height[l])\n            right_max = max(right_max, height[r])\n            if left_max < right_max:    # 左边矮，l 这一格水位就是 left_max\n                water += left_max - height[l]\n                l += 1\n            else:\n                water += right_max - height[r]\n                r -= 1\n        return water"
+  },
+  {
+   "t": "简洁写法：前缀最大值",
+   "kind": "elegant",
+   "note": "每个位置能接的水 = min(左边最高, 右边最高) − 自己的高度。用 accumulate 一次算出两个方向的最高。",
+   "code": "from itertools import accumulate\n\nclass Solution:\n    def trap(self, height: List[int]) -> int:\n        left = accumulate(height, max)\n        right = list(accumulate(reversed(height), max))[::-1]\n        return sum(min(l, r) - h for l, r, h in zip(left, right, height))"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "l 和 r"
+   ],
+   [
+    "d",
+    "已经算完的格子"
+   ],
+   [
+    "wat",
+    "已确定的水"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "h": [
+      0,
+      1,
+      0,
+      2,
+      1,
+      0,
+      1,
+      3,
+      2,
+      1,
+      2,
+      1
+     ]
+    },
+    "note": "height = [0,1,0,2,1,0,1,3,2,1,2,1]"
+   },
+   {
+    "label": "示例 2",
+    "args": {
+     "h": [
+      4,
+      2,
+      0,
+      3,
+      2,
+      5
+     ]
+    },
+    "note": "height = [4,2,0,3,2,5]"
+   }
+  ],
+  "build": "build(a, snap) {\r\n    const h = a.h, n = h.length, w = new Array(n).fill(0);\r\n    let l = 0, r = n - 1, lm = 0, rm = 0, total = 0;\r\n    const view = (done) => [{ t: \"bars\", label: \"height\", items: h.map((v, i) => ({ v, water: w[i], cls: !done && (i === l || i === r) ? \"a\" : i < l || i > r || done ? \"d\" : \"\" })), ptrs: done ? {} : { l, r } }];\r\n    const facts = () => [[\"接到的水\", total], [\"leftMax\", lm], [\"rightMax\", rm]];\r\n    snap(\"开始\", \"l、r 从两端出发。leftMax 是 l 走过的最高柱子，rightMax 是 r 走过的最高柱子。\", view(), { facts: facts() });\r\n    while (l < r) {\r\n      lm = Math.max(lm, h[l]); rm = Math.max(rm, h[r]);\r\n      if (lm < rm) {\r\n        const add = lm - h[l]; w[l] = add; total += add;\r\n        snap(\"算左边这一格\", `leftMax = ${lm} 小于 rightMax = ${rm}，所以下标 ${l} 的水位就是 ${lm}。这一格接 ${lm} − ${h[l]} = <b>${add}</b>，l 右移。`, view(), { facts: facts() });\r\n        l++;\r\n      } else {\r\n        const add = rm - h[r]; w[r] = add; total += add;\r\n        snap(\"算右边这一格\", `rightMax = ${rm} 不大于 leftMax = ${lm}，所以下标 ${r} 的水位就是 ${rm}。这一格接 ${rm} − ${h[r]} = <b>${add}</b>，r 左移。`, view(), { facts: facts() });\r\n        r--;\r\n      }\r\n    }\r\n    snap(\"完成\", `两个指针相遇。一共接到 <b>${total}</b> 格水。`, view(true), { kind: \"ok\", ans: total, facts: facts() });\r\n  }"
+ }
+}

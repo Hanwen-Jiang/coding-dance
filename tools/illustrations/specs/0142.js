@@ -21,6 +21,14 @@ class Solution:
                     slow = slow.next
                 return p
         return None
+` }, { t: "简洁写法：集合记走过的节点（O(n) 空间）", kind: "elegant", note: "第一个重复出现的节点就是环的入口。", code: `
+class Solution:
+    def detectCycle(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        seen = set()
+        while head and head not in seen:
+            seen.add(head)
+            head = head.next
+        return head
 ` }],
   pytest: `
 def mk(vals, pos):

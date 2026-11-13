@@ -201,6 +201,21 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return res</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：直接和结果的最后一段比<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>结果列表的最后一段就是「当前正在合并的区间」，不用另外记 start、end。</p>
+<pre class="code">class Solution:
+    def merge(self, intervals: List[List[int]]) -&gt; List[List[int]]:
+        res = []
+        for s, e in sorted(intervals):
+            if res and s &lt;= res[-1][1]:
+                res[-1][1] = max(res[-1][1], e)
+            else:
+                res.append([s, e])
+        return res</pre>
+        </div>
+      </details>
     </div>
   </section>
 

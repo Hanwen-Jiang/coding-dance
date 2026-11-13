@@ -23,6 +23,18 @@ class Solution:
             m[cur].random = m.get(cur.random)
             cur = cur.next
         return m[head]
+` }, { t: "简洁写法：defaultdict 一遍完成", kind: "elegant", note: "第一次用到某个节点的副本时，defaultdict 自动创建它，所以 next 和 random 可以在一遍里接好。", code: `
+class Solution:
+    def copyRandomList(self, head: "Optional[Node]") -> "Optional[Node]":
+        copy = defaultdict(lambda: Node(0))
+        copy[None] = None
+        node = head
+        while node:
+            copy[node].val = node.val
+            copy[node].next = copy[node.next]
+            copy[node].random = copy[node.random]
+            node = node.next
+        return copy[head]
 ` }],
   pytest: `
 class Node:

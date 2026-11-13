@@ -19,6 +19,15 @@ class Solution:
             cur = cur.next
         cur.next = list1 or list2       # 剩下的整段接上
         return dummy.next
+` }, { t: "简洁写法：递归", kind: "elegant", note: "让 list1 始终指向较小的头，它的后面接上「剩下部分的合并结果」。", code: `
+class Solution:
+    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:
+        if not list1 or not list2:
+            return list1 or list2
+        if list1.val > list2.val:
+            list1, list2 = list2, list1
+        list1.next = self.mergeTwoLists(list1.next, list2)
+        return list1
 ` }],
   pytest: `
 s = Solution()

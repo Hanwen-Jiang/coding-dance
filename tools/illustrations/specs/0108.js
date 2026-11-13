@@ -19,6 +19,13 @@ class Solution:
             node.right = build(mid + 1, hi)
             return node
         return build(0, len(nums) - 1)
+` }, { t: "简洁写法：切片递归", kind: "elegant", note: "切片会复制数组，多了 O(n log n) 的开销，但代码最短。", code: `
+class Solution:
+    def sortedArrayToBST(self, nums: List[int]) -> Optional[TreeNode]:
+        if not nums:
+            return None
+        m = (len(nums) - 1) // 2
+        return TreeNode(nums[m], self.sortedArrayToBST(nums[:m]), self.sortedArrayToBST(nums[m + 1:]))
 ` }],
   pytest: `
 def ok(root, lo=float("-inf"), hi=float("inf")):

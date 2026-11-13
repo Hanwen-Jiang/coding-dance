@@ -197,6 +197,16 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return root</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：同时赋值<span class="peek">点开</span></summary>
+        <div class="hint-body">
+<pre class="code">class Solution:
+    def invertTree(self, root: Optional[TreeNode]) -&gt; Optional[TreeNode]:
+        if root:
+            root.left, root.right = self.invertTree(root.right), self.invertTree(root.left)
+        return root</pre>
+        </div>
+      </details>
     </div>
   </section>
 

@@ -33,6 +33,20 @@ class Solution:
                     while l < r and nums[r] == nums[r + 1]:
                         r -= 1          # 第三个数去重
         return res
+` }, { t: "简洁写法：固定一个数，剩下的用集合找", kind: "elegant", note: "固定 x 之后就是两数之和。结果放进集合去重，最后排序输出。同样是 O(n²)。", code: `
+class Solution:
+    def threeSum(self, nums: List[int]) -> List[List[int]]:
+        nums.sort()
+        res = set()
+        for i, x in enumerate(nums):
+            if i and x == nums[i - 1]:
+                continue
+            seen = set()
+            for y in nums[i + 1:]:
+                if -x - y in seen:
+                    res.add((x, -x - y, y))
+                seen.add(y)
+        return sorted(map(list, res))
 ` }],
   pytest: `
 s = Solution()

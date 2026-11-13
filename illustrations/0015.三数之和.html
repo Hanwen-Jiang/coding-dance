@@ -216,6 +216,25 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return res</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：固定一个数，剩下的用集合找<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>固定 x 之后就是两数之和。结果放进集合去重，最后排序输出。同样是 O(n²)。</p>
+<pre class="code">class Solution:
+    def threeSum(self, nums: List[int]) -&gt; List[List[int]]:
+        nums.sort()
+        res = set()
+        for i, x in enumerate(nums):
+            if i and x == nums[i - 1]:
+                continue
+            seen = set()
+            for y in nums[i + 1:]:
+                if -x - y in seen:
+                    res.add((x, -x - y, y))
+                seen.add(y)
+        return sorted(map(list, res))</pre>
+        </div>
+      </details>
     </div>
   </section>
 

@@ -17,6 +17,14 @@ class Solution:
             if slow is fast:
                 return True
         return False
+` }, { t: "简洁写法：集合记走过的节点（O(n) 空间）", kind: "elegant", note: "同一个节点第二次出现就说明有环。好懂，但不满足进阶的 O(1) 空间。", code: `
+class Solution:
+    def hasCycle(self, head: Optional[ListNode]) -> bool:
+        seen = set()
+        while head and head not in seen:
+            seen.add(head)
+            head = head.next
+        return head is not None
 ` }],
   pytest: `
 def mk(vals, pos):

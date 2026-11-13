@@ -7,7 +7,7 @@ module.exports = {
     { t: "单调队列", body: ["用一个双端队列存<strong>下标</strong>，对应的值从队头到队尾递减。", "新数进来：从队尾弹出所有不比它大的，再把它放到队尾。队头就是窗口最大值。"] },
     { t: "队头什么时候过期", body: ["队头的下标如果已经滑出窗口（<code>≤ i − k</code>），就从队头弹出。", "存下标而不是值，就是为了能判断这一点。"] },
   ],
-  codes: [{ t: "标准解法：单调队列", code: `
+  codes: [{ t: "标准解法：单调队列", kind: "elegant", code: `
 class Solution:
     def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:
         q, res = deque(), []            # q 存下标，对应的值递减

@@ -205,6 +205,19 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return water</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：前缀最大值<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>每个位置能接的水 = min(左边最高, 右边最高) − 自己的高度。用 accumulate 一次算出两个方向的最高。</p>
+<pre class="code">from itertools import accumulate
+
+class Solution:
+    def trap(self, height: List[int]) -&gt; int:
+        left = accumulate(height, max)
+        right = list(accumulate(reversed(height), max))[::-1]
+        return sum(min(l, r) - h for l, r, h in zip(left, right, height))</pre>
+        </div>
+      </details>
     </div>
   </section>
 

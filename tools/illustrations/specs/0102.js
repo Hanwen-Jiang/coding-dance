@@ -24,6 +24,14 @@ class Solution:
                     q.append(node.right)
             res.append(level)
         return res
+` }, { t: "简洁写法：用列表代替队列", kind: "elegant", note: "level 是这一层的节点，下一层用列表推导一次生成。", code: `
+class Solution:
+    def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:
+        res, level = [], [root] if root else []
+        while level:
+            res.append([n.val for n in level])
+            level = [c for n in level for c in (n.left, n.right) if c]
+        return res
 ` }],
   pytest: `
 s = Solution()

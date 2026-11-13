@@ -204,6 +204,19 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return None</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：集合记走过的节点（O(n) 空间）<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>第一个重复出现的节点就是环的入口。</p>
+<pre class="code">class Solution:
+    def detectCycle(self, head: Optional[ListNode]) -&gt; Optional[ListNode]:
+        seen = set()
+        while head and head not in seen:
+            seen.add(head)
+            head = head.next
+        return head</pre>
+        </div>
+      </details>
     </div>
   </section>
 

@@ -203,6 +203,20 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return best</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：返回二元组，不用全局变量<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>递归同时返回「深度」和「子树里的最大直径」。</p>
+<pre class="code">class Solution:
+    def diameterOfBinaryTree(self, root: Optional[TreeNode]) -&gt; int:
+        def dfs(node):
+            if not node:
+                return 0, 0
+            (ld, lb), (rd, rb) = dfs(node.left), dfs(node.right)
+            return 1 + max(ld, rd), max(lb, rb, ld + rd)
+        return dfs(root)[1]</pre>
+        </div>
+      </details>
     </div>
   </section>
 

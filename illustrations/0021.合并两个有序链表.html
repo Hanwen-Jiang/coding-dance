@@ -200,6 +200,20 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return dummy.next</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：递归<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>让 list1 始终指向较小的头，它的后面接上「剩下部分的合并结果」。</p>
+<pre class="code">class Solution:
+    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -&gt; Optional[ListNode]:
+        if not list1 or not list2:
+            return list1 or list2
+        if list1.val &gt; list2.val:
+            list1, list2 = list2, list1
+        list1.next = self.mergeTwoLists(list1.next, list2)
+        return list1</pre>
+        </div>
+      </details>
     </div>
   </section>
 

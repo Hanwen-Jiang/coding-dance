@@ -17,6 +17,14 @@ class Solution:
                 return False
             return check(a.left, b.right) and check(a.right, b.left)
         return check(root.left, root.right)
+` }, { t: "简洁写法：a is b 处理空节点", kind: "elegant", note: "两个里至少有一个是空时，只有两个都空才对称，正好是 a is b。", code: `
+class Solution:
+    def isSymmetric(self, root: Optional[TreeNode]) -> bool:
+        def mirror(a, b):
+            if not a or not b:
+                return a is b
+            return a.val == b.val and mirror(a.left, b.right) and mirror(a.right, b.left)
+        return mirror(root.left, root.right)
 ` }],
   pytest: `
 s = Solution()

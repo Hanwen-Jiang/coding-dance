@@ -198,6 +198,15 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
                 j += 1</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：稳定排序<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>key 是「是不是 0」，False 排在 True 前面。Python 的排序是稳定的，非零元素的相对顺序不变。时间 O(n log n)。</p>
+<pre class="code">class Solution:
+    def moveZeroes(self, nums: List[int]) -&gt; None:
+        nums.sort(key=lambda x: x == 0)</pre>
+        </div>
+      </details>
     </div>
   </section>
 

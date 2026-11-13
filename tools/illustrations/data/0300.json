@@ -1,0 +1,110 @@
+{
+ "id": 300,
+ "name": "最长递增子序列",
+ "level": "中等",
+ "topic": "动态规划",
+ "h1": "最长递增子序列，以谁结尾",
+ "lede": "dp[i] 记以 nums[i] 结尾的最长递增子序列长度。nums[i] 可以接在前面任何一个比它小的数后面，接在哪个后面最长，就选哪个。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "定义状态要带上结尾",
+   "body": [
+    "只说「前 i 个数的 LIS 长度」没法转移，因为不知道最后一个数是多少，新数接不接得上。",
+    "改成 <code>dp[i]</code>：<strong>以 <code>nums[i]</code> 结尾</strong>的最长递增子序列长度。"
+   ]
+  },
+  {
+   "t": "转移",
+   "body": [
+    "对所有 <code>j &lt; i</code> 且 <code>nums[j] &lt; nums[i]</code>，<code>dp[i] = max(dp[j] + 1)</code>。没有这样的 j 时 <code>dp[i] = 1</code>。",
+    "答案是 <code>max(dp)</code>，不是 <code>dp[-1]</code>。"
+   ]
+  },
+  {
+   "t": "进阶：O(n log n)",
+   "body": [
+    "维护 <code>tails[k]</code>：长度为 <code>k + 1</code> 的递增子序列里，结尾最小是多少。<code>tails</code> 是递增的。",
+    "每来一个数 x，二分找到第一个 ≥ x 的位置替换掉；没有就接在末尾。最后 <code>tails</code> 的长度就是答案。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "严格递增",
+   "body": "判断条件是 <code>nums[j] &lt; nums[i]</code>，相等不能接。二分写法对应用 bisect_left。"
+  },
+  {
+   "t": "答案是 max(dp)",
+   "body": "最长的子序列可能在中间结束，比如 [1,2,0]。"
+  },
+  {
+   "t": "复杂度",
+   "body": "DP 写法 O(n²)；tails 写法每个数二分一次，O(n log n)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：动态规划 O(n²)",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def lengthOfLIS(self, nums: List[int]) -> int:\n        dp = [1] * len(nums)                # dp[i]：以 nums[i] 结尾的 LIS 长度\n        for i in range(len(nums)):\n            for j in range(i):\n                if nums[j] < nums[i]:\n                    dp[i] = max(dp[i], dp[j] + 1)   # 接在 nums[j] 后面\n        return max(dp)"
+  },
+  {
+   "t": "简洁写法：贪心 + 二分 O(n log n)",
+   "kind": "elegant",
+   "note": "tails[k:k+1] = [x]：k 等于长度时相当于 append，否则替换掉更大的结尾。",
+   "code": "from bisect import bisect_left\n\nclass Solution:\n    def lengthOfLIS(self, nums: List[int]) -> int:\n        tails = []                          # tails[k]：长度 k+1 的递增子序列的最小结尾\n        for x in nums:\n            k = bisect_left(tails, x)\n            tails[k:k + 1] = [x]\n        return len(tails)"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "正在算的 nums[i]"
+   ],
+   [
+    "e",
+    "比它小、可以接的"
+   ],
+   [
+    "c",
+    "接上后最长的那个"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "nums": [
+      10,
+      9,
+      2,
+      5,
+      3,
+      7,
+      101,
+      18
+     ]
+    },
+    "note": "nums = [10,9,2,5,3,7,101,18]"
+   },
+   {
+    "label": "示例 2",
+    "args": {
+     "nums": [
+      0,
+      1,
+      0,
+      3,
+      2,
+      3
+     ]
+    },
+    "note": "nums = [0,1,0,3,2,3]"
+   }
+  ],
+  "build": "build(a, snap) {\n    const nums = a.nums, n = nums.length, dp = Array(n).fill(null);\n    const view = (i, cand, from) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: k === i ? \"a\" : k === from ? \"c\" : cand.includes(k) ? \"e\" : \"\" })), ptrs: { i: i >= 0 ? i : null } },\n      { t: \"array\", label: \"dp[i]：以 nums[i] 结尾的 LIS 长度\", items: dp.map((v, k) => ({ v: v === null ? \"\" : v, cls: k === i ? \"a\" : k === from ? \"c\" : \"\" })), ptrs: {} },\n    ];\n    snap(\"开始\", \"从左往右，算出以每个数结尾的最长递增子序列。\", view(-1, [], -1));\n    for (let i = 0; i < n; i++) {\n      const cand = []; let best = 1, from = -1;\n      for (let j = 0; j < i; j++) if (nums[j] < nums[i]) { cand.push(j); if (dp[j] + 1 > best) { best = dp[j] + 1; from = j; } }\n      dp[i] = best;\n      snap(`dp[${i}]`, cand.length ? `前面比 ${nums[i]} 小的有 ${cand.map((j) => nums[j]).join(\"、\")}。接在 ${nums[from]} 后面最长（dp[${from}] = ${dp[from]}），dp[${i}] = <b>${best}</b>。` : `前面没有比 ${nums[i]} 小的数，它只能自己开头，dp[${i}] = <b>1</b>。`, view(i, cand, from), { facts: [[\"目前最长\", Math.max(...dp.filter((v) => v !== null))]] });\n    }\n    const ans = Math.max(...dp);\n    snap(\"完成\", `答案是 dp 里的最大值 <b>${ans}</b>，不一定是最后一个。`, view(-1, [], -1), { kind: \"ok\", ans, facts: [[\"目前最长\", ans]] });\n  }"
+ }
+}

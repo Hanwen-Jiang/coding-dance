@@ -205,6 +205,19 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return True</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：转成列表（O(n) 空间）<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>把值取出来，和反过来的自己比。不满足进阶的 O(1) 空间。</p>
+<pre class="code">class Solution:
+    def isPalindrome(self, head: Optional[ListNode]) -&gt; bool:
+        vals = []
+        while head:
+            vals.append(head.val)
+            head = head.next
+        return vals == vals[::-1]</pre>
+        </div>
+      </details>
     </div>
   </section>
 

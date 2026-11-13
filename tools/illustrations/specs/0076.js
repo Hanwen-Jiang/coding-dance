@@ -26,6 +26,24 @@ class Solution:
                     missing += 1
                 l += 1
         return "" if size == float("inf") else s[start:start + size]
+` }, { t: "简洁写法：Counter 记欠账", kind: "elegant", note: "need[c] 是窗口还欠多少个 c，可以是负数（多了）。窗口合法后，先把左边多余的扔掉得到最短，再扔掉一个必需的，让窗口重新变得不合法。", code: `
+class Solution:
+    def minWindow(self, s: str, t: str) -> str:
+        need, missing = Counter(t), len(t)
+        best, left = (0, float("inf")), 0
+        for right, c in enumerate(s, 1):        # 窗口是 s[left:right]
+            missing -= need[c] > 0
+            need[c] -= 1
+            if not missing:
+                while need[s[left]] < 0:        # 左边多余的字符
+                    need[s[left]] += 1
+                    left += 1
+                if right - left < best[1] - best[0]:
+                    best = (left, right)
+                need[s[left]] += 1              # 扔掉一个必需的
+                missing += 1
+                left += 1
+        return "" if best[1] == float("inf") else s[best[0]:best[1]]
 ` }],
   pytest: `
 s = Solution()

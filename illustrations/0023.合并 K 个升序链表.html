@@ -229,6 +229,23 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return lists[0]</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：heapq.merge<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>heapq.merge 内部就是小顶堆多路归并。每条链表包成一个生成器，按节点的值合并，再把节点依次串起来。</p>
+<pre class="code">class Solution:
+    def mergeKLists(self, lists: List[Optional[ListNode]]) -&gt; Optional[ListNode]:
+        def walk(node):
+            while node:
+                yield node
+                node = node.next
+        dummy = tail = ListNode()
+        for node in heapq.merge(*map(walk, lists), key=lambda n: n.val):
+            tail.next = tail = node
+        tail.next = None
+        return dummy.next</pre>
+        </div>
+      </details>
     </div>
   </section>
 

@@ -203,6 +203,16 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return n + 1</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：集合（不满足 O(1) 空间）<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>答案一定在 1 到 n + 1 之间。放进集合挨个查，O(n) 时间、O(n) 空间。面试时先说这个，再讲原地归位。</p>
+<pre class="code">class Solution:
+    def firstMissingPositive(self, nums: List[int]) -&gt; int:
+        s = set(nums)
+        return next(i for i in range(1, len(nums) + 2) if i not in s)</pre>
+        </div>
+      </details>
     </div>
   </section>
 

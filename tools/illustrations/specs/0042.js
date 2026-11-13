@@ -23,6 +23,14 @@ class Solution:
                 water += right_max - height[r]
                 r -= 1
         return water
+` }, { t: "简洁写法：前缀最大值", kind: "elegant", note: "每个位置能接的水 = min(左边最高, 右边最高) − 自己的高度。用 accumulate 一次算出两个方向的最高。", code: `
+from itertools import accumulate
+
+class Solution:
+    def trap(self, height: List[int]) -> int:
+        left = accumulate(height, max)
+        right = list(accumulate(reversed(height), max))[::-1]
+        return sum(min(l, r) - h for l, r, h in zip(left, right, height))
 ` }],
   pytest: `
 s = Solution()

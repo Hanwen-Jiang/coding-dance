@@ -20,6 +20,11 @@ class Solution:
             if nums[i] != i + 1:
                 return i + 1
         return n + 1
+` }, { t: "简洁写法：集合（不满足 O(1) 空间）", kind: "elegant", note: "答案一定在 1 到 n + 1 之间。放进集合挨个查，O(n) 时间、O(n) 空间。面试时先说这个，再讲原地归位。", code: `
+class Solution:
+    def firstMissingPositive(self, nums: List[int]) -> int:
+        s = set(nums)
+        return next(i for i in range(1, len(nums) + 2) if i not in s)
 ` }],
   pytest: `
 s = Solution()

@@ -197,6 +197,17 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return list(groups.values())</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：先排序再 groupby<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>按「排好序的字符串」排序后，异位词会挨在一起，groupby 把相邻的同类分成一组。</p>
+<pre class="code">from itertools import groupby
+
+class Solution:
+    def groupAnagrams(self, strs: List[str]) -&gt; List[List[str]]:
+        return [list(g) for _, g in groupby(sorted(strs, key=sorted), key=sorted)]</pre>
+        </div>
+      </details>
     </div>
   </section>
 

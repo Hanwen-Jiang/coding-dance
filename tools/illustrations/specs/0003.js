@@ -19,6 +19,16 @@ class Solution:
             seen.add(ch)
             best = max(best, r - l + 1)
         return best
+` }, { t: "简洁写法：记住每个字符上次出现的位置", kind: "elegant", note: "重复字符在窗口里时，左边界直接跳到它上次出现位置的下一格，不用一步一步收缩。", code: `
+class Solution:
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        last, left, best = {}, 0, 0
+        for i, c in enumerate(s):
+            if last.get(c, -1) >= left:     # c 在窗口里出现过
+                left = last[c] + 1
+            last[c] = i
+            best = max(best, i - left + 1)
+        return best
 ` }],
   pytest: `
 s = Solution()

@@ -15,6 +15,12 @@ class Solution:
             cur = max(x, cur + x)       # 接上前面，或者重新开始
             best = max(best, cur)
         return best
+` }, { t: "简洁写法：原地累加", kind: "elegant", note: "nums[i] 变成「以 i 结尾的最大子数组和」：前面的和是负数就不要了。会改掉输入数组。", code: `
+class Solution:
+    def maxSubArray(self, nums: List[int]) -> int:
+        for i in range(1, len(nums)):
+            nums[i] += max(nums[i - 1], 0)
+        return max(nums)
 ` }],
   pytest: `
 s = Solution()

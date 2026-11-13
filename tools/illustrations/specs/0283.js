@@ -15,6 +15,10 @@ class Solution:
             if nums[i] != 0:
                 nums[i], nums[j] = nums[j], nums[i]
                 j += 1
+` }, { t: "简洁写法：稳定排序", kind: "elegant", note: "key 是「是不是 0」，False 排在 True 前面。Python 的排序是稳定的，非零元素的相对顺序不变。时间 O(n log n)。", code: `
+class Solution:
+    def moveZeroes(self, nums: List[int]) -> None:
+        nums.sort(key=lambda x: x == 0)
 ` }],
   pytest: `
 for a, e in [([0,1,0,3,12],[1,3,12,0,0]), ([0],[0]), ([1,2,3],[1,2,3]), ([0,0,1],[1,0,0])]:

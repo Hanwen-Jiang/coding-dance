@@ -32,6 +32,14 @@ class Solution:
             prev = node.val
             return inorder(node.right)
         return inorder(root)
+` }, { t: "简洁写法：上下界当默认参数", kind: "elegant", code: `
+class Solution:
+    def isValidBST(self, root: Optional[TreeNode], lo=float("-inf"), hi=float("inf")) -> bool:
+        if not root:
+            return True
+        return (lo < root.val < hi
+                and self.isValidBST(root.left, lo, root.val)
+                and self.isValidBST(root.right, root.val, hi))
 ` }],
   pytest: `
 s = Solution()

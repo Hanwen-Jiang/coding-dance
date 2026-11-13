@@ -209,6 +209,23 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return dummy.next</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：取出值排序再写回<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>实际运行最快，但用了 O(n) 额外空间，也没有考到链表操作，面试时只能当作开场。</p>
+<pre class="code">class Solution:
+    def sortList(self, head: Optional[ListNode]) -&gt; Optional[ListNode]:
+        vals, node = [], head
+        while node:
+            vals.append(node.val)
+            node = node.next
+        node = head
+        for v in sorted(vals):
+            node.val = v
+            node = node.next
+        return head</pre>
+        </div>
+      </details>
     </div>
   </section>
 

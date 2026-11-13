@@ -1,0 +1,112 @@
+{
+ "id": 322,
+ "name": "零钱兑换",
+ "level": "中等",
+ "topic": "动态规划",
+ "h1": "零钱兑换，最后一枚硬币用哪种",
+ "lede": "凑出金额 i，最后一枚硬币可能是任意一种面值 c。用了 c，剩下的 i − c 要用最少的硬币凑出来。对所有面值取最小，就是 dp[i]。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "贪心为什么不行",
+   "body": [
+    "每次拿最大面值不一定最优：<code>coins = [1, 3, 4]</code>、<code>amount = 6</code>，贪心拿 4+1+1 是 3 枚，最优是 3+3 两枚。"
+   ]
+  },
+  {
+   "t": "定义状态",
+   "body": [
+    "<code>dp[i]</code>：凑出金额 <code>i</code> 最少要几枚硬币，凑不出来就是无穷大。<code>dp[0] = 0</code>。"
+   ]
+  },
+  {
+   "t": "枚举最后一枚",
+   "body": [
+    "<code>dp[i] = min(dp[i - c] + 1)</code>，对所有 <code>c &lt;= i</code> 的面值取最小。",
+    "最后 <code>dp[amount]</code> 还是无穷大，就返回 <code>-1</code>。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "初始化成无穷大",
+   "body": "不能初始化成 0 或 -1，否则取 min 时会出错。凑不出来的金额一直保持 inf。"
+  },
+  {
+   "t": "两层循环可以交换",
+   "body": "求最少枚数时，先枚举金额还是先枚举硬币都对。求组合数（第 518 题）时顺序就有讲究了。"
+  },
+  {
+   "t": "复杂度",
+   "body": "时间 O(amount × 面值种数)，空间 O(amount)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：动态规划",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        INF = float(\"inf\")\n        dp = [0] + [INF] * amount           # dp[i]：凑出 i 最少几枚\n        for i in range(1, amount + 1):\n            for c in coins:\n                if c <= i and dp[i - c] + 1 < dp[i]:\n                    dp[i] = dp[i - c] + 1   # 最后一枚用 c\n        return dp[amount] if dp[amount] != INF else -1"
+  },
+  {
+   "t": "简洁写法：完全背包",
+   "kind": "elegant",
+   "note": "外层枚举硬币、内层正序枚举金额，每种硬币可以被用无数次。",
+   "code": "from math import inf\n\nclass Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        dp = [0] + [inf] * amount\n        for c in coins:\n            for i in range(c, amount + 1):\n                dp[i] = min(dp[i], dp[i - c] + 1)\n        return dp[amount] if dp[amount] < inf else -1"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "正在算的金额"
+   ],
+   [
+    "e",
+    "候选 dp[i − c]"
+   ],
+   [
+    "c",
+    "取到最小的那个"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "coins": [
+      1,
+      2,
+      5
+     ],
+     "amount": 11
+    },
+    "note": "coins = [1,2,5], amount = 11"
+   },
+   {
+    "label": "凑不出",
+    "args": {
+     "coins": [
+      2
+     ],
+     "amount": 3
+    },
+    "note": "coins = [2], amount = 3"
+   },
+   {
+    "label": "贪心会错",
+    "args": {
+     "coins": [
+      1,
+      3,
+      4
+     ],
+     "amount": 6
+    },
+    "note": "coins = [1,3,4], amount = 6"
+   }
+  ],
+  "build": "build(a, snap) {\n    const { coins, amount } = a, dp = Array(amount + 1).fill(null); dp[0] = 0;\n    const show = (v) => (v === Infinity ? \"∞\" : v);\n    const view = (i, cands, best, fin) => [{ t: \"array\", label: \"dp[i]：凑出 i 最少几枚\", items: dp.map((v, k) => ({ v: v === null ? \"\" : show(v), cls: fin && k === amount ? \"c\" : k === i ? \"a\" : k === best ? \"c\" : cands.includes(k) ? \"e\" : \"\" })), ptrs: { i: i >= 0 ? i : null } }];\n    snap(\"开始\", `面值有 [${coins.join(\",\")}]。dp[0] = 0：金额 0 不需要硬币。`, view(-1, [], -1));\n    for (let i = 1; i <= amount; i++) {\n      let best = Infinity, bk = -1; const cs = [], parts = [];\n      for (const c of coins) if (c <= i) { cs.push(i - c); parts.push(`用 ${c}：dp[${i - c}] + 1 = ${show(dp[i - c] + 1)}`); if (dp[i - c] + 1 < best) { best = dp[i - c] + 1; bk = i - c; } }\n      dp[i] = best;\n      snap(`金额 ${i}`, parts.length ? `最后一枚可以${parts.join(\"；\")}。dp[${i}] = <b>${show(best)}</b>。` : `所有面值都比 ${i} 大，凑不出来，dp[${i}] = ∞。`, view(i, cs, best === Infinity ? -1 : bk), { facts: [[\"dp[\" + i + \"]\", show(best)]] });\n    }\n    const ans = dp[amount] === Infinity ? -1 : dp[amount];\n    snap(\"完成\", ans < 0 ? `dp[${amount}] 是 ∞，凑不出来，返回 <b>-1</b>。` : `凑出 ${amount} 最少要 <b>${ans}</b> 枚硬币。`, view(-1, [], -1, true), { kind: ans < 0 ? \"warn\" : \"ok\", ans });\n  }"
+ }
+}

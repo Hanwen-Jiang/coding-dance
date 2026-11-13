@@ -20,6 +20,16 @@ class Solution:
                 y += 1
             best = max(best, y - x + 1)
         return best
+` }, { t: "简洁写法：只更新段的两个端点", kind: "elegant", note: "lens[x] 记 x 所在连续段的长度，但只保证段的两个端点是准的。新来的 x 把左右两段连起来，更新新段的两个端点即可。", code: `
+class Solution:
+    def longestConsecutive(self, nums: List[int]) -> int:
+        lens, best = {}, 0
+        for x in nums:
+            if x not in lens:
+                l, r = lens.get(x - 1, 0), lens.get(x + 1, 0)
+                lens[x] = lens[x - l] = lens[x + r] = l + r + 1
+                best = max(best, l + r + 1)
+        return best
 ` }],
   pytest: `
 s = Solution()

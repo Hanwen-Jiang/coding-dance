@@ -36,6 +36,14 @@ class Solution:
                     if length > size:
                         start, size = l, length
         return s[start:start + size]
+` }, { t: "简洁写法：所有中心扩一遍，取最长", kind: "elegant", note: "每个位置 i 有两个中心：(i, i) 是奇数长度，(i, i+1) 是偶数长度。", code: `
+class Solution:
+    def longestPalindrome(self, s: str) -> str:
+        def grow(l, r):
+            while l >= 0 and r < len(s) and s[l] == s[r]:
+                l, r = l - 1, r + 1
+            return s[l + 1:r]
+        return max((grow(i, j) for i in range(len(s)) for j in (i, i + 1)), key=len)
 ` }],
   pytest: `
 s = Solution()

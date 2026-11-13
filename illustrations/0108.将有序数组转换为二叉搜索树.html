@@ -201,6 +201,18 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return build(0, len(nums) - 1)</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：切片递归<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>切片会复制数组，多了 O(n log n) 的开销，但代码最短。</p>
+<pre class="code">class Solution:
+    def sortedArrayToBST(self, nums: List[int]) -&gt; Optional[TreeNode]:
+        if not nums:
+            return None
+        m = (len(nums) - 1) // 2
+        return TreeNode(nums[m], self.sortedArrayToBST(nums[:m]), self.sortedArrayToBST(nums[m + 1:]))</pre>
+        </div>
+      </details>
     </div>
   </section>
 

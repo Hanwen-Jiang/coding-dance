@@ -15,6 +15,16 @@ class Solution:
             pa = pa.next if pa else headB   # 走到空就换到 B 的头
             pb = pb.next if pb else headA
         return pa                       # 交点，或者都是空
+` }, { t: "简洁写法：集合（O(m+n) 空间）", kind: "elegant", note: "把 A 的节点都放进集合，B 上第一个在集合里的节点就是交点。比较的是节点本身，不是值。", code: `
+class Solution:
+    def getIntersectionNode(self, headA: ListNode, headB: ListNode) -> Optional[ListNode]:
+        seen = set()
+        while headA:
+            seen.add(headA)
+            headA = headA.next
+        while headB and headB not in seen:
+            headB = headB.next
+        return headB
 ` }],
   pytest: `
 def mk(xa, xb, common):

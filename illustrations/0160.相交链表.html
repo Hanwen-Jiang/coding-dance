@@ -198,6 +198,21 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return pa                       <span class="cmt"># 交点，或者都是空</span></pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：集合（O(m+n) 空间）<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>把 A 的节点都放进集合，B 上第一个在集合里的节点就是交点。比较的是节点本身，不是值。</p>
+<pre class="code">class Solution:
+    def getIntersectionNode(self, headA: ListNode, headB: ListNode) -&gt; Optional[ListNode]:
+        seen = set()
+        while headA:
+            seen.add(headA)
+            headA = headA.next
+        while headB and headB not in seen:
+            headB = headB.next
+        return headB</pre>
+        </div>
+      </details>
     </div>
   </section>
 

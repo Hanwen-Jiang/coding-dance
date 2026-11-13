@@ -204,6 +204,22 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return res</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：两个 Counter 直接比较<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>Python 3.10 起，Counter 相等比较会把缺失的键当成 0。每次比较最多 26 个键。</p>
+<pre class="code">class Solution:
+    def findAnagrams(self, s: str, p: str) -&gt; List[int]:
+        need, win, k, res = Counter(p), Counter(), len(p), []
+        for i, c in enumerate(s):
+            win[c] += 1
+            if i &gt;= k:
+                win[s[i - k]] -= 1          <span class="cmt"># 左边滑出窗口</span>
+            if win == need:
+                res.append(i - k + 1)
+        return res</pre>
+        </div>
+      </details>
     </div>
   </section>
 

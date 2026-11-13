@@ -18,6 +18,16 @@ class Solution:
             else:
                 res.append([a, b])                # 不重叠，另起一段
         return res
+` }, { t: "简洁写法：直接和结果的最后一段比", kind: "elegant", note: "结果列表的最后一段就是「当前正在合并的区间」，不用另外记 start、end。", code: `
+class Solution:
+    def merge(self, intervals: List[List[int]]) -> List[List[int]]:
+        res = []
+        for s, e in sorted(intervals):
+            if res and s <= res[-1][1]:
+                res[-1][1] = max(res[-1][1], e)
+            else:
+                res.append([s, e])
+        return res
 ` }],
   pytest: `
 s = Solution()

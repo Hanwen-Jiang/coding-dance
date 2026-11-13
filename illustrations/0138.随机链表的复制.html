@@ -205,6 +205,23 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return m[head]</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：defaultdict 一遍完成<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>第一次用到某个节点的副本时，defaultdict 自动创建它，所以 next 和 random 可以在一遍里接好。</p>
+<pre class="code">class Solution:
+    def copyRandomList(self, head: "Optional[Node]") -&gt; "Optional[Node]":
+        copy = defaultdict(lambda: Node(0))
+        copy[None] = None
+        node = head
+        while node:
+            copy[node].val = node.val
+            copy[node].next = copy[node.next]
+            copy[node].random = copy[node.random]
+            node = node.next
+        return copy[head]</pre>
+        </div>
+      </details>
     </div>
   </section>
 

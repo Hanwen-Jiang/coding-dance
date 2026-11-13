@@ -46,7 +46,7 @@ class LRUCache:
             last = self.tail.prev       # 尾部是最久没用的
             self._remove(last)
             del self.map[last.key]
-` }, { t: "极简写法：OrderedDict", note: "Python 的 OrderedDict 内部就是哈希表加双向链表。面试时可以先说这个，再手写上面的版本。", code: `
+` }, { t: "极简写法：OrderedDict", kind: "elegant", note: "Python 的 OrderedDict 内部就是哈希表加双向链表。面试时可以先说这个，再手写上面的版本。", code: `
 class LRUCache:
     def __init__(self, capacity: int):
         self.cap = capacity

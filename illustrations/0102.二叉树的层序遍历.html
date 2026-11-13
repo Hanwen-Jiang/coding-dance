@@ -206,6 +206,19 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return res</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：用列表代替队列<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>level 是这一层的节点，下一层用列表推导一次生成。</p>
+<pre class="code">class Solution:
+    def levelOrder(self, root: Optional[TreeNode]) -&gt; List[List[int]]:
+        res, level = [], [root] if root else []
+        while level:
+            res.append([n.val for n in level])
+            level = [c for n in level for c in (n.left, n.right) if c]
+        return res</pre>
+        </div>
+      </details>
     </div>
   </section>
 

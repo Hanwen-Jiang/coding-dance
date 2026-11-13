@@ -209,6 +209,21 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return res</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：笛卡尔积<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>每个数字对应一组字母，所有组合就是这几组字母的笛卡尔积。</p>
+<pre class="code">from itertools import product
+
+class Solution:
+    def letterCombinations(self, digits: str) -&gt; List[str]:
+        if not digits:
+            return []
+        m = {"2": "abc", "3": "def", "4": "ghi", "5": "jkl",
+             "6": "mno", "7": "pqrs", "8": "tuv", "9": "wxyz"}
+        return ["".join(p) for p in product(*(m[d] for d in digits))]</pre>
+        </div>
+      </details>
     </div>
   </section>
 

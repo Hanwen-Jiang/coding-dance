@@ -202,6 +202,21 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return best</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：只更新段的两个端点<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>lens[x] 记 x 所在连续段的长度，但只保证段的两个端点是准的。新来的 x 把左右两段连起来，更新新段的两个端点即可。</p>
+<pre class="code">class Solution:
+    def longestConsecutive(self, nums: List[int]) -&gt; int:
+        lens, best = {}, 0
+        for x in nums:
+            if x not in lens:
+                l, r = lens.get(x - 1, 0), lens.get(x + 1, 0)
+                lens[x] = lens[x - l] = lens[x + r] = l + r + 1
+                best = max(best, l + r + 1)
+        return best</pre>
+        </div>
+      </details>
     </div>
   </section>
 

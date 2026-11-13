@@ -7,7 +7,7 @@ module.exports = {
     { t: "两刀其实只有一个自由度", body: ["在 A 上切在位置 <code>i</code>（左边 i 个数），在 B 上就必须切在 <code>j = half − i</code>，这样左边一共 half 个。", "所以只需要找 <code>i</code>。"] },
     { t: "怎么判断切对了", body: ["设 A 的切口两边是 <code>l1 | r1</code>，B 的是 <code>l2 | r2</code>。切对的条件是 <code>l1 ≤ r2</code> 且 <code>l2 ≤ r1</code>。", "<code>l1 &gt; r2</code>：A 这边切得太靠右，<code>i</code> 要变小。<code>l2 &gt; r1</code>：切得太靠左，<code>i</code> 要变大。这就可以二分了。"] },
   ],
-  codes: [{ t: "标准解法：在较短的数组上二分切口", code: `
+  codes: [{ t: "标准解法：在较短的数组上二分切口", kind: "elegant", code: `
 class Solution:
     def findMedianSortedArrays(self, nums1: List[int], nums2: List[int]) -> float:
         if len(nums1) > len(nums2):

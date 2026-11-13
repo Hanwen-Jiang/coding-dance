@@ -1,0 +1,92 @@
+{
+ "id": 70,
+ "name": "爬楼梯",
+ "level": "简单",
+ "topic": "动态规划",
+ "h1": "爬楼梯，看最后一步怎么跨",
+ "lede": "到第 n 阶的最后一步，要么从 n − 1 阶跨 1 步上来，要么从 n − 2 阶跨 2 步上来。这两类走法没有重叠，所以方法数相加：f(n) = f(n − 1) + f(n − 2)。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "只看最后一步",
+   "body": [
+    "站在第 <code>n</code> 阶，上一步只可能在第 <code>n - 1</code> 阶或第 <code>n - 2</code> 阶。"
+   ]
+  },
+  {
+   "t": "写出递推式",
+   "body": [
+    "<code>dp[i]</code> 表示爬到第 <code>i</code> 阶的方法数，<code>dp[i] = dp[i - 1] + dp[i - 2]</code>。",
+    "初始值：<code>dp[0] = 1</code>（站着不动算一种），<code>dp[1] = 1</code>。"
+   ]
+  },
+  {
+   "t": "只需要前两个数",
+   "body": [
+    "算 <code>dp[i]</code> 只用到前两项，用两个变量滚动就行，空间 O(1)。这就是斐波那契数列。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "dp[0] = 1 的含义",
+   "body": "不是「0 阶有 1 种爬法」这么生硬，而是让 dp[2] = dp[1] + dp[0] = 2 成立。也可以直接从 dp[1]=1, dp[2]=2 开始。"
+  },
+  {
+   "t": "不要直接递归",
+   "body": "不加记忆化的递归会重复算很多次，n = 45 时会超时。"
+  },
+  {
+   "t": "复杂度",
+   "body": "时间 O(n)，滚动变量写法空间 O(1)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：动态规划",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def climbStairs(self, n: int) -> int:\n        dp = [0] * (n + 1)\n        dp[0] = dp[1] = 1\n        for i in range(2, n + 1):\n            dp[i] = dp[i - 1] + dp[i - 2]   # 最后一步跨 1 阶或 2 阶\n        return dp[n]"
+  },
+  {
+   "t": "简洁写法：两个变量滚动",
+   "kind": "elegant",
+   "note": null,
+   "code": "class Solution:\n    def climbStairs(self, n: int) -> int:\n        a, b = 1, 1                         # dp[i-1], dp[i]\n        for _ in range(n - 1):\n            a, b = b, a + b\n        return b"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "正在算的"
+   ],
+   [
+    "e",
+    "用到的两项"
+   ],
+   [
+    "c",
+    "答案"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "n = 5",
+    "args": {
+     "n": 5
+    },
+    "note": "n = 5"
+   },
+   {
+    "label": "n = 3",
+    "args": {
+     "n": 3
+    },
+    "note": "n = 3"
+   }
+  ],
+  "build": "build(a, snap) {\n    const n = a.n, dp = Array(n + 1).fill(null);\n    dp[0] = 1; dp[1] = 1;\n    const view = (i, fin) => [{ t: \"array\", label: \"dp[i]：爬到第 i 阶的方法数\", items: dp.map((v, k) => ({ v, cls: fin && k === n ? \"c\" : k === i ? \"a\" : i >= 0 && (k === i - 1 || k === i - 2) ? \"e\" : \"\" })), ptrs: { i: i >= 0 ? i : null } }];\n    snap(\"开始\", \"dp[0] = 1（站在地面不动算一种），dp[1] = 1（只能跨 1 步）。\", view(-1));\n    for (let i = 2; i <= n; i++) {\n      dp[i] = dp[i - 1] + dp[i - 2];\n      snap(`第 ${i} 阶`, `最后一步从第 ${i - 1} 阶跨 1 步（${dp[i - 1]} 种），或从第 ${i - 2} 阶跨 2 步（${dp[i - 2]} 种）。dp[${i}] = ${dp[i - 1]} + ${dp[i - 2]} = <b>${dp[i]}</b>。`, view(i), { facts: [[\"dp[\" + i + \"]\", dp[i]]] });\n    }\n    snap(\"完成\", `爬到第 ${n} 阶一共有 <b>${dp[n]}</b> 种方法。`, view(-1, true), { kind: \"ok\", ans: dp[n] });\n  }"
+ }
+}

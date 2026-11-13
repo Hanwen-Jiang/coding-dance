@@ -201,6 +201,24 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return dummy.next</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：递归数倒数第几个<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>递归返回时自然是从尾往头，返回值就是「倒数第几个」。数到倒数第 n + 1 个时，删掉它后面那个。</p>
+<pre class="code">class Solution:
+    def removeNthFromEnd(self, head: Optional[ListNode], n: int) -&gt; Optional[ListNode]:
+        def rec(node):
+            if not node:
+                return 0
+            k = rec(node.next) + 1
+            if k == n + 1:
+                node.next = node.next.next
+            return k
+        dummy = ListNode(0, head)
+        rec(dummy)
+        return dummy.next</pre>
+        </div>
+      </details>
     </div>
   </section>
 

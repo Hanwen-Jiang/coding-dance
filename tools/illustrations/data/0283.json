@@ -1,0 +1,108 @@
+{
+ "id": 283,
+ "name": "移动零",
+ "level": "简单",
+ "topic": "双指针",
+ "h1": "移动零，一个指针找，一个指针放",
+ "lede": "不用真的去挪每个 0。让一个指针记住下一个非零数该放的位置，另一个指针往前找非零数，找到就换过去。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "换个角度",
+   "body": [
+    "把 0 移到末尾，等于把所有非零数<strong>按原顺序</strong>挤到前面。",
+    "所以只需要关心非零数该放到哪。"
+   ]
+  },
+  {
+   "t": "两个指针各管什么",
+   "body": [
+    "<code>j</code>：下一个非零数应该放的位置。它左边全是已经排好的非零数。",
+    "<code>i</code>：往前扫描，找非零数。"
+   ]
+  },
+  {
+   "t": "找到之后",
+   "body": [
+    "<code>nums[i]</code> 非零时，和 <code>nums[j]</code> 交换，然后 <code>j</code> 右移一格。",
+    "<code>j</code> 和 <code>i</code> 之间夹着的永远全是 0，所以换回来的一定是 0。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "原地修改",
+   "body": "函数不返回任何东西，直接改 <code>nums</code>。不要新建数组再赋值给 <code>nums</code>。"
+  },
+  {
+   "t": "顺序不变",
+   "body": "非零数是按扫描顺序依次放到前面的，所以相对顺序自动保持。"
+  },
+  {
+   "t": "复杂度",
+   "body": "时间 O(n)，空间 O(1)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：快慢指针交换",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def moveZeroes(self, nums: List[int]) -> None:\n        j = 0                           # 下一个非零数放的位置\n        for i in range(len(nums)):\n            if nums[i] != 0:\n                nums[i], nums[j] = nums[j], nums[i]\n                j += 1"
+  },
+  {
+   "t": "简洁写法：稳定排序",
+   "kind": "elegant",
+   "note": "key 是「是不是 0」，False 排在 True 前面。Python 的排序是稳定的，非零元素的相对顺序不变。时间 O(n log n)。",
+   "code": "class Solution:\n    def moveZeroes(self, nums: List[int]) -> None:\n        nums.sort(key=lambda x: x == 0)"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "c",
+    "已排好的非零数"
+   ],
+   [
+    "a",
+    "i 正在看的数"
+   ],
+   [
+    "w",
+    "j 和 i 之间的 0"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "nums": [
+      0,
+      1,
+      0,
+      3,
+      12
+     ]
+    },
+    "note": "nums = [0,1,0,3,12]"
+   },
+   {
+    "label": "零更多",
+    "args": {
+     "nums": [
+      4,
+      0,
+      0,
+      2,
+      0,
+      7,
+      1
+     ]
+    },
+    "note": "nums = [4,0,0,2,0,7,1]"
+   }
+  ],
+  "build": "build(a, snap) {\r\n    const n = a.nums.slice(); let j = 0;\r\n    const view = (i) => [{ t: \"array\", label: \"nums\", items: n.map((v, t) => ({ v, cls: t < j ? \"c\" : t === i ? \"a\" : t < i ? \"w\" : \"\" })), ptrs: { j, i: i < n.length ? i : null } }];\r\n    snap(\"开始\", \"j 指向下一个非零数该放的位置，i 从左往右扫描。\", view(-1));\r\n    for (let i = 0; i < n.length; i++) {\r\n      if (n[i] !== 0) {\r\n        const same = i === j, x = n[i];\r\n        [n[i], n[j]] = [n[j], n[i]]; j++;\r\n        snap(\"交换\", same ? `nums[${i}] = ${x} 非零，i 和 j 在同一格，原地不动，j 右移。` : `nums[${i}] = ${x} 非零，和 j 位置的 0 交换，${x} 到了前面，j 右移。`, view(i));\r\n      } else snap(\"跳过\", `nums[${i}] 是 0，不处理，i 继续往前。j 留在原地等下一个非零数。`, view(i), { kind: \"warn\" });\r\n    }\r\n    snap(\"完成\", `扫描结束。j 左边是所有非零数，顺序没变；右边全是 0。`, view(n.length), { kind: \"ok\", ans: n });\r\n  }"
+ }
+}

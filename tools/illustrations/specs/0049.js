@@ -15,6 +15,12 @@ class Solution:
             key = "".join(sorted(s))    # 异位词排序后相同
             groups[key].append(s)
         return list(groups.values())
+` }, { t: "简洁写法：先排序再 groupby", kind: "elegant", note: "按「排好序的字符串」排序后，异位词会挨在一起，groupby 把相邻的同类分成一组。", code: `
+from itertools import groupby
+
+class Solution:
+    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:
+        return [list(g) for _, g in groupby(sorted(strs, key=sorted), key=sorted)]
 ` }],
   pytest: `
 s = Solution()

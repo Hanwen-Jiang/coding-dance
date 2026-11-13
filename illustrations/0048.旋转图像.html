@@ -198,6 +198,15 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
             row.reverse()</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：zip 一行<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>先上下翻转，再转置，等于顺时针旋转 90°。matrix[:] 赋值才是原地修改。</p>
+<pre class="code">class Solution:
+    def rotate(self, matrix: List[List[int]]) -&gt; None:
+        matrix[:] = [list(row) for row in zip(*matrix[::-1])]</pre>
+        </div>
+      </details>
     </div>
   </section>
 

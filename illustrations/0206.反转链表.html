@@ -212,6 +212,18 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return new_head</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：一行三连换<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>右边先全部算好再赋值，所以三个指针可以一次挪完，不用临时变量。</p>
+<pre class="code">class Solution:
+    def reverseList(self, head: Optional[ListNode]) -&gt; Optional[ListNode]:
+        prev = None
+        while head:
+            head.next, prev, head = prev, head, head.next
+        return prev</pre>
+        </div>
+      </details>
     </div>
   </section>
 

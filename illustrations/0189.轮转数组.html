@@ -203,6 +203,16 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         reverse(k, n - 1)               <span class="cmt"># 翻转剩下的</span></pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：切片拼接<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>后 k 个挪到前面。k 可能比 n 大，先取模。nums[:] 赋值是原地修改，但切片会用 O(n) 临时空间。</p>
+<pre class="code">class Solution:
+    def rotate(self, nums: List[int], k: int) -&gt; None:
+        k %= len(nums)
+        nums[:] = nums[-k:] + nums[:-k] if k else nums</pre>
+        </div>
+      </details>
     </div>
   </section>
 

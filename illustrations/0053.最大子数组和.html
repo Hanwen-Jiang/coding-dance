@@ -198,6 +198,17 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return best</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：原地累加<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>nums[i] 变成「以 i 结尾的最大子数组和」：前面的和是负数就不要了。会改掉输入数组。</p>
+<pre class="code">class Solution:
+    def maxSubArray(self, nums: List[int]) -&gt; int:
+        for i in range(1, len(nums)):
+            nums[i] += max(nums[i - 1], 0)
+        return max(nums)</pre>
+        </div>
+      </details>
     </div>
   </section>
 

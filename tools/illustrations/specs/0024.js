@@ -17,6 +17,15 @@ class Solution:
             prev.next, a.next, b.next = b, b.next, a   # 三根指针一起改
             prev = a                    # a 现在在后面，是下一对的前驱
         return dummy.next
+` }, { t: "简洁写法：递归", kind: "elegant", note: "交换前两个，第一个的后面接上「从第三个开始两两交换的结果」。", code: `
+class Solution:
+    def swapPairs(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        if not head or not head.next:
+            return head
+        nxt = head.next
+        head.next = self.swapPairs(nxt.next)
+        nxt.next = head
+        return nxt
 ` }],
   pytest: `
 s = Solution()

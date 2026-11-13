@@ -1,0 +1,115 @@
+{
+ "id": 101,
+ "name": "对称二叉树",
+ "level": "简单",
+ "topic": "二叉树",
+ "h1": "对称二叉树，两个指针照镜子一样走",
+ "lede": "判断一棵树是否左右对称，就是判断它的左子树和右子树是不是互为镜像。用两个指针同时往下走：一个往左时另一个往右，一个往右时另一个往左，每一步都比较两个节点。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "换成比较两棵树",
+   "body": [
+    "整棵树对称 ⇔ 根节点的左子树和右子树互为镜像。",
+    "所以需要一个比较两个节点的函数 <code>check(a, b)</code>。"
+   ]
+  },
+  {
+   "t": "两个节点互为镜像的条件",
+   "body": [
+    "两个都是空：是镜像。",
+    "只有一个是空，或者值不相等：不是。",
+    "值相等：还要看 <code>a 的左</code> 和 <code>b 的右</code> 是否镜像，<code>a 的右</code> 和 <code>b 的左</code> 是否镜像。"
+   ]
+  },
+  {
+   "t": "注意是外侧配外侧",
+   "body": [
+    "比较的是 <code>a.left</code> 和 <code>b.right</code>（两个外侧），<code>a.right</code> 和 <code>b.left</code>（两个内侧）。",
+    "写成 <code>a.left</code> 比 <code>b.left</code> 就变成判断两棵树是否相同了。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "先判空再比值",
+   "body": "先处理两个都为空、只有一个为空的情况，之后才能放心访问 <code>.val</code>。"
+  },
+  {
+   "t": "and 会短路",
+   "body": "外侧那一对不对称时，内侧那一对不会再比较。"
+  },
+  {
+   "t": "迭代写法",
+   "body": "用队列，每次放进一对节点，取出来比较，再把外侧一对和内侧一对放进去。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：递归比较一对节点",
+   "kind": null,
+   "note": null,
+   "code": "class Solution:\n    def isSymmetric(self, root: Optional[TreeNode]) -> bool:\n        def check(a, b):\n            if not a and not b:\n                return True\n            if not a or not b or a.val != b.val:\n                return False\n            return check(a.left, b.right) and check(a.right, b.left)\n        return check(root.left, root.right)"
+  },
+  {
+   "t": "简洁写法：a is b 处理空节点",
+   "kind": "elegant",
+   "note": "两个里至少有一个是空时，只有两个都空才对称，正好是 a is b。",
+   "code": "class Solution:\n    def isSymmetric(self, root: Optional[TreeNode]) -> bool:\n        def mirror(a, b):\n            if not a or not b:\n                return a is b\n            return a.val == b.val and mirror(a.left, b.right) and mirror(a.right, b.left)\n        return mirror(root.left, root.right)"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "左边的指针 a"
+   ],
+   [
+    "b",
+    "右边的指针 b"
+   ],
+   [
+    "k",
+    "这一对比较通过"
+   ],
+   [
+    "w",
+    "这一对不对称"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "t": [
+      1,
+      2,
+      2,
+      3,
+      4,
+      4,
+      3
+     ]
+    },
+    "note": "root = [1,2,2,3,4,4,3]"
+   },
+   {
+    "label": "示例 2",
+    "args": {
+     "t": [
+      1,
+      2,
+      2,
+      null,
+      3,
+      null,
+      3
+     ]
+    },
+    "note": "root = [1,2,2,null,3,null,3]"
+   }
+  ],
+  "build": "build(a, snap) {\r\n    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });\r\n    const st = {};\r\n    const view = (x, y) => { const cls = {}; for (const id in N) cls[id] = +id === x ? \"a\" : +id === y ? \"b\" : st[id] || \"\"; return [{ t: \"tree\", nodes: N, root: 0, cls }]; };\r\n    const nm = (id) => (id === null ? \"空\" : N[id].v);\r\n    snap(\"开始\", \"a 从根的左孩子出发，b 从根的右孩子出发。\", view(-1, -1));\r\n    const check = (x, y, where) => {\r\n      if (x === null && y === null) { snap(\"都是空\", `${where}：两边都是空，对称。`, view(-1, -1)); return true; }\r\n      if (x === null || y === null) { if (x !== null) st[x] = \"w\"; if (y !== null) st[y] = \"w\"; snap(\"不对称\", `${where}：一边是 ${nm(x)}，另一边是 ${nm(y)}。只有一边有节点，<b>不对称</b>。`, view(x, y), { kind: \"warn\" }); return false; }\r\n      if (N[x].v !== N[y].v) { st[x] = st[y] = \"w\"; snap(\"不对称\", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值不相等，<b>不对称</b>。`, view(x, y), { kind: \"warn\" }); return false; }\r\n      snap(\"值相等\", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值相等。接着比较外侧的一对，再比较内侧的一对。`, view(x, y));\r\n      st[x] = st[y] = \"k\";\r\n      return check(N[x].l, N[y].r, `${N[x].v} 的左 和 ${N[y].v} 的右（外侧）`) && check(N[x].r, N[y].l, `${N[x].v} 的右 和 ${N[y].v} 的左（内侧）`);\r\n    };\r\n    const ans = check(N[0].l, N[0].r, \"根的左孩子和右孩子\");\r\n    snap(\"完成\", ans ? \"所有成对的节点都比较通过，这棵树是对称的。\" : \"发现一对不对称的节点，后面不用再比，返回 false。\", view(-1, -1), { kind: ans ? \"ok\" : \"warn\", ans });\r\n  }"
+ }
+}

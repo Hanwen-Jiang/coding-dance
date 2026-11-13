@@ -29,6 +29,14 @@ class Solution:
                     res.append(matrix[i][left])
                 left += 1
         return res
+` }, { t: "简洁写法：取走第一行，再把剩下的转一下", kind: "elegant", note: "每次拿走第一行，把剩下的矩阵逆时针转 90°，新的第一行就是原来的右边一列。会改掉输入，时间 O((m·n)·min(m, n))。", code: `
+class Solution:
+    def spiralOrder(self, matrix: List[List[int]]) -> List[int]:
+        res = []
+        while matrix:
+            res += matrix.pop(0)
+            matrix = [list(r) for r in zip(*matrix)][::-1]
+        return res
 ` }],
   pytest: `
 s = Solution()

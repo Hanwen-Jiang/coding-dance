@@ -21,6 +21,11 @@ class Solution:
         reverse(0, n - 1)               # 整体翻转
         reverse(0, k - 1)               # 翻转前 k 个
         reverse(k, n - 1)               # 翻转剩下的
+` }, { t: "简洁写法：切片拼接", kind: "elegant", note: "后 k 个挪到前面。k 可能比 n 大，先取模。nums[:] 赋值是原地修改，但切片会用 O(n) 临时空间。", code: `
+class Solution:
+    def rotate(self, nums: List[int], k: int) -> None:
+        k %= len(nums)
+        nums[:] = nums[-k:] + nums[:-k] if k else nums
 ` }],
   pytest: `
 for a, k, e in [([1,2,3,4,5,6,7],3,[5,6,7,1,2,3,4]), ([-1,-100,3,99],2,[3,99,-1,-100]), ([1,2],5,[2,1]), ([1],0,[1])]:

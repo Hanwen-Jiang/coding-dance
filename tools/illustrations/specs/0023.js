@@ -41,6 +41,18 @@ class Solution:
             lists = [merge2(lists[i], lists[i + 1] if i + 1 < len(lists) else None)
                      for i in range(0, len(lists), 2)]
         return lists[0]
+` }, { t: "简洁写法：heapq.merge", kind: "elegant", note: "heapq.merge 内部就是小顶堆多路归并。每条链表包成一个生成器，按节点的值合并，再把节点依次串起来。", code: `
+class Solution:
+    def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:
+        def walk(node):
+            while node:
+                yield node
+                node = node.next
+        dummy = tail = ListNode()
+        for node in heapq.merge(*map(walk, lists), key=lambda n: n.val):
+            tail.next = tail = node
+        tail.next = None
+        return dummy.next
 ` }],
   pytest: `
 s = Solution()

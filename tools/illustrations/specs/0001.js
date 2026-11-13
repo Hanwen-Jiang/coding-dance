@@ -7,7 +7,7 @@ module.exports = {
     { t: "用什么查得最快", body: ["哈希表（Python 的 <code>dict</code>）查一个值是否存在是 <code>O(1)</code>。", "键存数值，值存下标，因为题目要返回的是下标。"] },
     { t: "先查再存", body: ["对每个数，<strong>先查</strong>哈希表里有没有 <code>target - x</code>，没有<strong>再把自己存进去</strong>。", "顺序反过来的话，比如 <code>target = 6</code>、当前的数是 3，会在哈希表里查到刚存进去的自己，把同一个数用了两次。"] },
   ],
-  codes: [{ t: "标准解法：一遍哈希表", code: `
+  codes: [{ t: "标准解法：一遍哈希表", kind: "elegant", code: `
 class Solution:
     def twoSum(self, nums: List[int], target: int) -> List[int]:
         seen = {}                       # 数值 -> 下标

@@ -19,6 +19,12 @@ class Solution:
             else:                       # 左括号
                 stack.append(ch)
         return not stack
+` }, { t: "简洁写法：反复删掉相邻的一对", kind: "elegant", note: "合法的串里一定有一对相邻的括号，删掉后剩下的仍然合法。一直删到删不动，看是不是空串。时间 O(n²)，胜在直观。", code: `
+class Solution:
+    def isValid(self, s: str) -> bool:
+        while "()" in s or "[]" in s or "{}" in s:
+            s = s.replace("()", "").replace("[]", "").replace("{}", "")
+        return not s
 ` }],
   pytest: `
 s = Solution()

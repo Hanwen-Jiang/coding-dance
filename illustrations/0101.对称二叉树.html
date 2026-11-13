@@ -201,6 +201,19 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return check(root.left, root.right)</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：a is b 处理空节点<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>两个里至少有一个是空时，只有两个都空才对称，正好是 a is b。</p>
+<pre class="code">class Solution:
+    def isSymmetric(self, root: Optional[TreeNode]) -&gt; bool:
+        def mirror(a, b):
+            if not a or not b:
+                return a is b
+            return a.val == b.val and mirror(a.left, b.right) and mirror(a.right, b.left)
+        return mirror(root.left, root.right)</pre>
+        </div>
+      </details>
     </div>
   </section>
 

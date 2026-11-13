@@ -209,6 +209,23 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
             group_prev = first</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：递归<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>先数够 k 个，不够就原样返回。够的话，后面的部分先递归翻好，作为这一组翻转后的尾巴。</p>
+<pre class="code">class Solution:
+    def reverseKGroup(self, head: Optional[ListNode], k: int) -&gt; Optional[ListNode]:
+        node = head
+        for _ in range(k):
+            if not node:
+                return head
+            node = node.next
+        prev, cur = self.reverseKGroup(node, k), head
+        for _ in range(k):
+            cur.next, prev, cur = prev, cur, cur.next
+        return prev</pre>
+        </div>
+      </details>
     </div>
   </section>
 

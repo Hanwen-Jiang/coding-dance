@@ -202,6 +202,17 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return not stack</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：反复删掉相邻的一对<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>合法的串里一定有一对相邻的括号，删掉后剩下的仍然合法。一直删到删不动，看是不是空串。时间 O(n²)，胜在直观。</p>
+<pre class="code">class Solution:
+    def isValid(self, s: str) -&gt; bool:
+        while "()" in s or "[]" in s or "{}" in s:
+            s = s.replace("()", "").replace("[]", "").replace("{}", "")
+        return not s</pre>
+        </div>
+      </details>
     </div>
   </section>
 

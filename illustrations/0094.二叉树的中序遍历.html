@@ -217,6 +217,17 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return res</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：一行递归<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>左子树的结果 + 自己 + 右子树的结果。列表拼接有额外开销，但最贴近定义。</p>
+<pre class="code">class Solution:
+    def inorderTraversal(self, root: Optional[TreeNode]) -&gt; List[int]:
+        if not root:
+            return []
+        return self.inorderTraversal(root.left) + [root.val] + self.inorderTraversal(root.right)</pre>
+        </div>
+      </details>
     </div>
   </section>
 

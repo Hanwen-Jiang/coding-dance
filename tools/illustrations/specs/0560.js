@@ -18,6 +18,16 @@ class Solution:
             res += count[pre - k]       # 先查
             count[pre] += 1             # 再存
         return res
+` }, { t: "简洁写法：accumulate + Counter", kind: "elegant", note: "accumulate 依次给出每个前缀和，Counter 查不到的键默认是 0。", code: `
+from itertools import accumulate
+
+class Solution:
+    def subarraySum(self, nums: List[int], k: int) -> int:
+        seen, res = Counter({0: 1}), 0
+        for s in accumulate(nums):
+            res += seen[s - k]
+            seen[s] += 1
+        return res
 ` }],
   pytest: `
 s = Solution()

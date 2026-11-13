@@ -199,6 +199,20 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         return dummy.next</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：递归<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>交换前两个，第一个的后面接上「从第三个开始两两交换的结果」。</p>
+<pre class="code">class Solution:
+    def swapPairs(self, head: Optional[ListNode]) -&gt; Optional[ListNode]:
+        if not head or not head.next:
+            return head
+        nxt = head.next
+        head.next = self.swapPairs(nxt.next)
+        nxt.next = head
+        return nxt</pre>
+        </div>
+      </details>
     </div>
   </section>
 

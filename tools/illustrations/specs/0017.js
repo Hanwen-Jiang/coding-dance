@@ -25,6 +25,16 @@ class Solution:
                 path.pop()              # 撤销
         dfs(0)
         return res
+` }, { t: "简洁写法：笛卡尔积", kind: "elegant", note: "每个数字对应一组字母，所有组合就是这几组字母的笛卡尔积。", code: `
+from itertools import product
+
+class Solution:
+    def letterCombinations(self, digits: str) -> List[str]:
+        if not digits:
+            return []
+        m = {"2": "abc", "3": "def", "4": "ghi", "5": "jkl",
+             "6": "mno", "7": "pqrs", "8": "tuv", "9": "wxyz"}
+        return ["".join(p) for p in product(*(m[d] for d in digits))]
 ` }],
   pytest: `
 s = Solution()

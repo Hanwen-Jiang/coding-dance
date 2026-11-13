@@ -25,6 +25,13 @@ class Solution:
         head.next.next = head           # 让后一个节点指回自己
         head.next = None
         return new_head
+` }, { t: "简洁写法：一行三连换", kind: "elegant", note: "右边先全部算好再赋值，所以三个指针可以一次挪完，不用临时变量。", code: `
+class Solution:
+    def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
+        prev = None
+        while head:
+            head.next, prev, head = prev, head, head.next
+        return prev
 ` }],
   pytest: `
 s = Solution()

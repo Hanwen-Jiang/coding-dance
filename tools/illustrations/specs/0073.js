@@ -27,6 +27,15 @@ class Solution:
         if col0:
             for i in range(m):
                 matrix[i][0] = 0
+` }, { t: "简洁写法：记下要清零的行和列（O(m+n) 空间）", kind: "elegant", note: "先找出所有含 0 的行和列，再统一清零。好写，但用了额外空间，题目进阶要求 O(1)。", code: `
+class Solution:
+    def setZeroes(self, matrix: List[List[int]]) -> None:
+        rows = {i for i, r in enumerate(matrix) if 0 in r}
+        cols = {j for j, c in enumerate(zip(*matrix)) if 0 in c}
+        for i, r in enumerate(matrix):
+            for j in range(len(r)):
+                if i in rows or j in cols:
+                    r[j] = 0
 ` }],
   pytest: `
 for a, e in [([[1,1,1],[1,0,1],[1,1,1]], [[1,0,1],[0,0,0],[1,0,1]]), ([[0,1,2,0],[3,4,5,2],[1,3,1,5]], [[0,0,0,0],[0,4,5,0],[0,3,1,0]]), ([[1,0]], [[0,0]]), ([[1],[0]], [[0],[0]])]:

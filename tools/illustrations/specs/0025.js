@@ -25,6 +25,18 @@ class Solution:
             first = group_prev.next     # 这组原来的头，现在是尾
             group_prev.next = kth       # 前面接上新的头
             group_prev = first
+` }, { t: "简洁写法：递归", kind: "elegant", note: "先数够 k 个，不够就原样返回。够的话，后面的部分先递归翻好，作为这一组翻转后的尾巴。", code: `
+class Solution:
+    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:
+        node = head
+        for _ in range(k):
+            if not node:
+                return head
+            node = node.next
+        prev, cur = self.reverseKGroup(node, k), head
+        for _ in range(k):
+            cur.next, prev, cur = prev, cur, cur.next
+        return prev
 ` }],
   pytest: `
 s = Solution()
