@@ -1,0 +1,459 @@
+<meta charset="utf-8">
+<title>第 K 大元素图解</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 版式：与岛屿数量图解同一系列。左边是柱状数组，随快速选择一轮轮被划成「小于 / 等于 / 大于」三段；右边是状态面板 */
+:root {
+  --bg: #eef0f5;
+  --surface: #f9fafc;
+  --ink: #1b2236;
+  --muted: #5c6580;
+  --line: #cfd5e3;
+  --accent: #3d4fb8;
+  --accent-soft: #dfe3f6;
+  --unk: #c3c9d9;
+  --less: #4f8fc9;
+  --eq: #3d4fb8;
+  --more: #d07a3a;
+  --out: #e2e5ee;
+  --out-ink: #9aa1b6;
+  --ok: #2f8a57;
+  --ok-soft: #d9efe2;
+  --font-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #11141d; --surface: #181c28; --ink: #dde2f0; --muted: #929ab3; --line: #2b3247;
+    --accent: #8d9cf0; --accent-soft: #252c4a; --unk: #4a526b; --less: #5ea4e0; --eq: #8d9cf0;
+    --more: #e8955a; --out: #1f2433; --out-ink: #5d6581; --ok: #55c287; --ok-soft: #173426;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #11141d; --surface: #181c28; --ink: #dde2f0; --muted: #929ab3; --line: #2b3247;
+  --accent: #8d9cf0; --accent-soft: #252c4a; --unk: #4a526b; --less: #5ea4e0; --eq: #8d9cf0;
+  --more: #e8955a; --out: #1f2433; --out-ink: #5d6581; --ok: #55c287; --ok-soft: #173426;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.3; }
+h1 { font-size: clamp(28px, 5vw, 40px); font-weight: 800; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { margin: 0; font-size: 15px; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--muted); max-width: 62ch; }
+header, section { display: flex; flex-direction: column; gap: 14px; }
+code, .mono { font-family: var(--font-mono); font-size: .92em; }
+
+/* 提示与代码 */
+.hints { display: flex; flex-direction: column; gap: 10px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+summary { cursor: pointer; list-style: none; padding: 14px 18px; display: flex; align-items: baseline; gap: 12px; font-weight: 700; }
+summary::-webkit-details-marker { display: none; }
+summary .lvl { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 99px; flex: none; }
+summary .peek { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: auto; flex: none; }
+details[open] summary .peek { visibility: hidden; }
+summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint-body { padding: 0 18px 16px; max-width: 72ch; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+pre.code { margin: 0; padding: 14px 16px; overflow-x: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1.65; }
+.cmt { color: var(--muted); }
+
+/* 演示 */
+.stage { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 760px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button + button { border-left: 1px solid var(--line); }
+button { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+button:hover { background: var(--accent-soft); }
+button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; background: var(--surface); }
+.kbox { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.kbox input { width: 64px; font: inherit; font-family: var(--font-mono); padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+
+.bars { display: flex; gap: 6px; align-items: stretch; }
+.col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.slot { height: 190px; display: flex; align-items: flex-end; border-radius: 6px; position: relative; padding: 0 2px; }
+.slot.target { outline: 2px dashed var(--ok); outline-offset: 2px; }
+.bar {
+  width: 100%; border-radius: 5px 5px 2px 2px;
+  display: flex; align-items: flex-start; justify-content: center;
+  font-family: var(--font-mono); font-weight: 600; font-size: 14px;
+  padding-top: 4px; color: var(--surface);
+  transition: height .3s ease, background-color .3s ease;
+}
+.bar.unk { background: var(--unk); color: var(--ink); }
+.bar.less { background: var(--less); }
+.bar.eq { background: var(--eq); }
+.bar.more { background: var(--more); }
+.bar.out { background: var(--out); color: var(--out-ink); }
+.bar.ans { background: var(--ok); }
+.bar.swap { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--ink); }
+.idx { text-align: center; font-family: var(--font-mono); font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ptr { min-height: 40px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ptr span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.2; padding: 1px 5px; border-radius: 4px; }
+.ptr .p-lt { color: var(--less); }
+.ptr .p-i { color: var(--ink); background: var(--accent-soft); }
+.ptr .p-gt { color: var(--more); }
+@media (prefers-reduced-motion: reduce) { .bar { transition: none; } }
+
+.scrub { display: flex; align-items: center; gap: 10px; }
+.scrub input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.scrub .mono { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.log { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.fact { display: flex; flex-direction: column; gap: 2px; }
+.fact .k { font-size: 12px; color: var(--muted); }
+.fact .v { font-family: var(--font-display); font-weight: 800; font-size: 30px; line-height: 1.1; font-variant-numeric: tabular-nums; color: var(--accent); }
+.fact .v.ok { color: var(--ok); }
+.phase { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; align-self: flex-start; padding: 2px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.phase.ok { background: var(--ok-soft); color: var(--ok); }
+.msg { font-size: 16px; min-height: 4.6em; }
+.msg b { color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
+.cmp-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: .04em; }
+td.mono { white-space: nowrap; }
+tr.pick td:first-child { color: var(--accent); font-weight: 700; }
+
+.points { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.point { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--line); }
+.point p { color: var(--muted); font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">LeetCode 215 · 中等 · 堆</div>
+    <h1>第 K 个最大元素，快速选择怎么只排一半</h1>
+    <p class="lede">标准解法是快速选择：借用快速排序的划分，每一轮把数组分成「比 pivot 小 / 等于 / 比 pivot 大」三段，然后只往答案所在的那一段继续找。下面可以逐步播放每一次比较和交换。</p>
+  </header>
+
+  <section aria-labelledby="h-hints">
+    <h2 id="h-hints">分层提示</h2>
+    <div class="hints">
+      <details>
+        <summary><span class="lvl">提示 1</span>换成下标来想<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>第 <code>k</code> 大的元素，就是把数组<strong>升序</strong>排好后下标为 <code>n - k</code> 的那个数。</p>
+          <p>我们只关心这一个位置放的是谁，其他位置排没排好都无所谓。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">提示 2</span>借快速排序的一步<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>快速排序的划分（partition）做完一趟后，pivot 会落在它<strong>排好序后的最终位置</strong>，左边都比它小，右边都比它大。</p>
+          <p>比较这个位置和目标下标 <code>n - k</code>：相等就找到了；目标在左边就只处理左边，在右边就只处理右边。另一半直接扔掉，不用再排。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">提示 3</span>为什么是 O(n)，以及两个坑<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>每轮平均扔掉一半，总工作量大约是 <code>n + n/2 + n/4 + … ≈ 2n</code>，所以平均 <code>O(n)</code>。</p>
+          <p>坑 1：pivot 固定取第一个元素，遇到有序数组每轮只扔掉一个，退化成 <code>O(n²)</code>。所以 pivot 要<strong>随机选</strong>。</p>
+          <p>坑 2：力扣有一个全是相同元素的大用例，普通两段划分也会退化。用<strong>三路划分</strong>把等于 pivot 的数单独放中间，一轮就结束。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">代码</span>标准解法：随机 pivot + 三路划分<span class="peek">点开</span></summary>
+        <div class="hint-body">
+<pre class="code">import random
+
+class Solution:
+    def findKthLargest(self, nums: List[int], k: int) -&gt; int:
+        target = len(nums) - k          <span class="cmt"># 第 k 大 = 升序下标 n-k</span>
+        lo, hi = 0, len(nums) - 1
+        while True:
+            pivot = nums[random.randint(lo, hi)]
+            lt, i, gt = lo, lo, hi      <span class="cmt"># [lo,lt) 小于  [lt,i) 等于  (gt,hi] 大于</span>
+            while i &lt;= gt:
+                if nums[i] &lt; pivot:
+                    nums[lt], nums[i] = nums[i], nums[lt]
+                    lt += 1
+                    i += 1
+                elif nums[i] &gt; pivot:
+                    nums[i], nums[gt] = nums[gt], nums[i]
+                    gt -= 1             <span class="cmt"># 换过来的数还没看过，i 不动</span>
+                else:
+                    i += 1
+            if target &lt; lt:
+                hi = lt - 1             <span class="cmt"># 答案在小于区</span>
+            elif target &gt; gt:
+                lo = gt + 1             <span class="cmt"># 答案在大于区</span>
+            else:
+                return pivot            <span class="cmt"># 落在等于区，就是 pivot</span></pre>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">代码</span>另一种常考写法：大小为 k 的小顶堆<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>堆里始终保留目前见过的最大的 <code>k</code> 个数，堆顶是其中最小的，也就是第 <code>k</code> 大。复杂度 <code>O(n log k)</code>，不满足题目的 <code>O(n)</code>，但写起来短、不改原数组，面试时也经常被追问。</p>
+<pre class="code">import heapq
+
+class Solution:
+    def findKthLargest(self, nums: List[int], k: int) -&gt; int:
+        heap = nums[:k]
+        heapq.heapify(heap)             <span class="cmt"># 先放前 k 个，建小顶堆</span>
+        for x in nums[k:]:
+            if x &gt; heap[0]:             <span class="cmt"># 比堆顶大，才有资格进前 k</span>
+                heapq.heapreplace(heap, x)
+        return heap[0]</pre>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-demo">
+    <h2 id="h-demo">快速选择演示</h2>
+    <div class="stage">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="选择示例">
+            <button id="ex1" type="button" aria-pressed="false">示例 1</button>
+            <button id="ex2" type="button" aria-pressed="true">示例 2</button>
+            <button id="exr" type="button" aria-pressed="false">随机</button>
+          </div>
+          <label class="kbox" for="k">k =<input id="k" type="number" min="1" value="4"></label>
+        </div>
+        <div class="bars" id="bars" aria-label="数组柱状图"></div>
+        <div class="toolbar">
+          <button id="reset" type="button">重置</button>
+          <button id="prev" type="button">上一步</button>
+          <button id="next" type="button" class="primary">下一步</button>
+          <button id="play" type="button">自动播放</button>
+          <button id="jump" type="button">跳到下一轮</button>
+        </div>
+        <div class="scrub">
+          <input id="slider" type="range" min="0" max="0" value="0" aria-label="步骤">
+          <span class="mono" id="stepno">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="log" aria-live="polite">
+        <div class="facts">
+          <div class="fact"><span class="k">目标下标 n−k</span><span class="v" id="ft">0</span></div>
+          <div class="fact"><span class="k">当前区间</span><span class="v" id="fr">[0, 0]</span></div>
+          <div class="fact"><span class="k">pivot</span><span class="v" id="fp">–</span></div>
+        </div>
+        <span class="phase" id="phase">开始</span>
+        <p class="msg" id="msg"></p>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--unk)"></i>还没比较</span>
+          <span><i class="sw" style="background:var(--less)"></i>小于 pivot</span>
+          <span><i class="sw" style="background:var(--eq)"></i>等于 pivot</span>
+          <span><i class="sw" style="background:var(--more)"></i>大于 pivot</span>
+          <span><i class="sw" style="background:var(--out);border:1px solid var(--line)"></i>已排除</span>
+          <span><i class="sw" style="outline:2px dashed var(--ok);outline-offset:-2px"></i>目标位置</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-cmp">
+    <h2 id="h-cmp">三种做法对比</h2>
+    <div class="cmp-wrap">
+      <table>
+        <thead><tr><th>做法</th><th>时间</th><th>额外空间</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td>直接排序</td><td class="mono">O(n log n)</td><td class="mono">O(1)～O(n)</td><td>一行就能写完，但不满足题目要求</td></tr>
+          <tr><td>小顶堆</td><td class="mono">O(n log k)</td><td class="mono">O(k)</td><td>不改原数组，适合数据流、数据量大到放不进内存的场景</td></tr>
+          <tr class="pick"><td>快速选择</td><td class="mono">平均 O(n)</td><td class="mono">O(1)</td><td>本题标准解法；随机 pivot 下最坏 O(n²) 几乎不会出现</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-points">
+    <h2 id="h-points">写代码时注意</h2>
+    <div class="points">
+      <div class="point"><h3>和 gt 交换后 i 不动</h3><p>从右边换过来的数还没比较过，下一轮要接着看 <code>nums[i]</code>。和 lt 交换的数已经看过，所以 i 可以前进。</p></div>
+      <div class="point"><h3>循环条件是 i ≤ gt</h3><p>gt 指向的那个数也还没看过，写成 <code>i &lt; gt</code> 会漏掉一个。</p></div>
+      <div class="point"><h3>用迭代不用递归</h3><p>每轮只进一边，用 <code>while True</code> 改 lo、hi 就够了，不需要递归，也就没有递归深度的问题。</p></div>
+      <div class="point"><h3>第 k 大不是第 k 小</h3><p>升序下标是 <code>n - k</code>，不是 <code>k - 1</code>。示例 2 的 <code>[…,5,5,6]</code> 里第 2 大是 5，重复的数要算两次。</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const EX = {
+    ex1: { nums: [3, 2, 1, 5, 6, 4], k: 2 },
+    ex2: { nums: [3, 2, 3, 1, 2, 4, 5, 5, 6], k: 4 },
+  };
+  const $ = (id) => document.getElementById(id);
+  let nums = [], k = 1, steps = [], idx = 0, timer = null;
+
+  function build() {
+    const a = nums.slice(), n = a.length, t = n - k;
+    let lo = 0, hi = n - 1, round = 0;
+    steps = [];
+    const snap = (o) => steps.push({ a: a.slice(), lo, hi, t, ...o });
+    snap({ phase: "开始", msg: `第 ${k} 大，就是升序排好后下标 n−k = ${n}−${k} = <b>${t}</b> 的位置（虚线框）。只要这个位置放对数就行，其他位置不用管。` });
+    for (;;) {
+      round++;
+      const p = (lo + hi) >> 1, pv = a[p];
+      let lt = lo, i = lo, gt = hi;
+      snap({ phase: `第 ${round} 轮 · 选 pivot`, round, lt, i, gt, pv, pick: p, msg: `在区间 [${lo}, ${hi}] 里选 pivot = <b>${pv}</b>（演示取中间位置，方便复现；代码里是随机选）。` });
+      while (i <= gt) {
+        const x = a[i];
+        if (x < pv) {
+          [a[lt], a[i]] = [a[i], a[lt]];
+          const m = `a[${i}] = ${x} &lt; ${pv}：和 lt 位置交换，放进左边的小于区，lt、i 都右移。`;
+          const sw = [lt, i];
+          lt++; i++;
+          snap({ phase: `第 ${round} 轮 · 划分`, round, lt, i, gt, pv, sw, msg: m });
+        } else if (x > pv) {
+          [a[i], a[gt]] = [a[gt], a[i]];
+          const m = `a[${i}] = ${x} &gt; ${pv}：和 gt 位置交换，放进右边的大于区，gt 左移。<b>i 不动</b>，因为换过来的 ${a[i]} 还没比较过。`;
+          const sw = [i, gt];
+          gt--;
+          snap({ phase: `第 ${round} 轮 · 划分`, round, lt, i, gt, pv, sw, msg: m });
+        } else {
+          i++;
+          snap({ phase: `第 ${round} 轮 · 划分`, round, lt, i, gt, pv, msg: `a[${i - 1}] = ${x} 等于 pivot，留在中间，i 右移。` });
+        }
+      }
+      const parts = `划分完成：[${lo}, ${lt - 1}] 都小于 ${pv}，[${lt}, ${gt}] 都等于 ${pv}，[${gt + 1}, ${hi}] 都大于 ${pv}。`;
+      if (t < lt) {
+        snap({ phase: `第 ${round} 轮 · 缩小范围`, round, lt, i, gt, pv, after: true, msg: `${parts}目标下标 ${t} 在小于区，<b>只留左边 [${lo}, ${lt - 1}]</b>，右边整段排除。` });
+        hi = lt - 1;
+      } else if (t > gt) {
+        snap({ phase: `第 ${round} 轮 · 缩小范围`, round, lt, i, gt, pv, after: true, msg: `${parts}目标下标 ${t} 在大于区，<b>只留右边 [${gt + 1}, ${hi}]</b>，左边整段排除。` });
+        lo = gt + 1;
+      } else {
+        snap({ phase: "找到答案", round, lt, i, gt, pv, after: true, done: true, msg: `${parts}目标下标 ${t} 落在等于区，答案就是 <b>${pv}</b>。一共只用了 ${round} 轮，数组并没有完全排好序。` });
+        break;
+      }
+    }
+  }
+
+  function renderCols() {
+    const box = $("bars");
+    box.innerHTML = "";
+    nums.forEach((_, j) => {
+      const col = document.createElement("div");
+      col.className = "col";
+      col.innerHTML = `<div class="slot" id="s${j}"><div class="bar" id="b${j}"></div></div><div class="idx">${j}</div><div class="ptr" id="p${j}"></div>`;
+      box.appendChild(col);
+    });
+  }
+
+  function show() {
+    const s = steps[idx];
+    const min = Math.min(...nums), max = Math.max(...nums);
+    const h = (v) => (max === min ? 70 : 22 + (78 * (v - min)) / (max - min));
+    const swapped = new Set(s.sw || []);
+    s.a.forEach((v, j) => {
+      const b = $(`b${j}`);
+      let cls = "unk";
+      if (j < s.lo || j > s.hi) cls = "out";
+      else if (s.pv !== undefined) {
+        if (j < s.lt) cls = "less";
+        else if (j <= s.gt && j >= s.i) cls = "unk";
+        else if (j > s.gt) cls = "more";
+        else cls = "eq";
+        if (s.after && !s.done) {
+          if (s.t < s.lt && j >= s.lt) cls = "out";
+          if (s.t > s.gt && j <= s.gt) cls = "out";
+        }
+      }
+      if (s.done && j === s.t) cls = "ans";
+      b.className = `bar ${cls}${swapped.has(j) ? " swap" : ""}`;
+      b.style.height = `${h(v)}%`;
+      b.textContent = v;
+      $(`s${j}`).className = "slot" + (j === s.t ? " target" : "");
+      const tags = [];
+      if (s.pv !== undefined && !s.after) {
+        if (j === s.lt) tags.push('<span class="p-lt">lt</span>');
+        if (j === s.i) tags.push('<span class="p-i">i</span>');
+        if (j === s.gt) tags.push('<span class="p-gt">gt</span>');
+      }
+      $(`p${j}`).innerHTML = tags.join("");
+    });
+    $("ft").textContent = s.t;
+    $("fr").textContent = `[${s.lo}, ${s.hi}]`;
+    const fp = $("fp");
+    fp.textContent = s.pv === undefined ? "–" : s.pv;
+    fp.className = "v" + (s.done ? " ok" : "");
+    const ph = $("phase");
+    ph.textContent = s.phase;
+    ph.className = "phase" + (s.done ? " ok" : "");
+    $("msg").innerHTML = s.msg;
+    $("slider").max = steps.length - 1;
+    $("slider").value = idx;
+    $("stepno").textContent = `${idx} / ${steps.length - 1}`;
+    $("prev").disabled = idx === 0;
+    $("next").disabled = idx === steps.length - 1;
+    $("jump").disabled = !steps.slice(idx + 1).some((x) => x.pick !== undefined);
+  }
+
+  function go(i) { idx = Math.max(0, Math.min(steps.length - 1, i)); show(); }
+  function stop() { if (timer) clearInterval(timer); timer = null; $("play").textContent = "自动播放"; }
+  function play() {
+    if (timer) return stop();
+    if (idx === steps.length - 1) go(0);
+    $("play").textContent = "暂停";
+    timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 900);
+  }
+  function restart() {
+    stop();
+    const kin = $("k");
+    kin.max = nums.length;
+    k = Math.max(1, Math.min(nums.length, Math.round(Number(kin.value)) || 1));
+    kin.value = k;
+    build(); renderCols(); go(0);
+  }
+  function load(name) {
+    for (const id of ["ex1", "ex2", "exr"]) $(id).setAttribute("aria-pressed", String(id === name));
+    if (name === "exr") {
+      const n = 8 + Math.floor(Math.random() * 3);
+      nums = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * 9));
+      $("k").value = 1 + Math.floor(Math.random() * n);
+    } else {
+      nums = EX[name].nums.slice();
+      $("k").value = EX[name].k;
+    }
+    restart();
+  }
+
+  $("ex1").onclick = () => load("ex1");
+  $("ex2").onclick = () => load("ex2");
+  $("exr").onclick = () => load("exr");
+  $("k").onchange = restart;
+  $("reset").onclick = () => { stop(); go(0); };
+  $("prev").onclick = () => { stop(); go(idx - 1); };
+  $("next").onclick = () => { stop(); go(idx + 1); };
+  $("play").onclick = play;
+  $("jump").onclick = () => {
+    stop();
+    const j = steps.findIndex((x, t) => t > idx && x.pick !== undefined);
+    if (j >= 0) go(j);
+  };
+  $("slider").oninput = (e) => { stop(); go(Number(e.target.value)); };
+
+  load("ex2");
+})();
+</script>
