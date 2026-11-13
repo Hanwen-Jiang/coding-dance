@@ -62,6 +62,8 @@ button:hover { background: var(--accent-soft); }
 button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
 button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 button:disabled { opacity: .45; cursor: default; background: var(--surface); }
+button.primary:disabled { color: var(--ink); border-color: var(--line); }
+[hidden] { display: none !important; }
 .input-note { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
 .views { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .v { display: flex; flex-direction: column; gap: 6px; min-width: 0; }

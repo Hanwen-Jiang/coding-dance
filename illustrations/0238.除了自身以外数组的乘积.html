@@ -1,0 +1,405 @@
+<meta charset="utf-8">
+<title>除自身以外数组的乘积图解</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 版式：全系列统一。上面是分层提示和代码，中间左边是可逐步播放的演示，右边是状态说明 */
+:root {
+  --bg: #ffffff; --surface: #ffffff; --ink: #1a1a1a; --muted: #666666; --line: #dddddd; --dim: #f0f0f0; --dim-ink: #a3a3a3;
+  --accent: #2b5fb8; --accent-soft: #e4ecf9;
+  --warm: #c8641e; --warm-soft: #fbe9dc;
+  --ok: #2e8a57; --ok-soft: #dcf0e4;
+  --vio: #7a55c2; --vio-soft: #ece5f8;
+  --water: #7db7e8;
+  --font-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #000000; --ink: #e8e8e8; --muted: #9a9a9a; --line: #2e2e2e; --dim: #1a1a1a; --dim-ink: #5c5c5c;
+    --accent: #7ea6f0; --accent-soft: #1a2740; --warm: #f0a060; --warm-soft: #3a2413; --ok: #5cc68a; --ok-soft: #133022;
+    --vio: #b093ee; --vio-soft: #271d3d; --water: #3b78ad;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #000000; --ink: #e8e8e8; --muted: #9a9a9a; --line: #2e2e2e; --dim: #1a1a1a; --dim-ink: #5c5c5c;
+  --accent: #7ea6f0; --accent-soft: #1a2740; --warm: #f0a060; --warm-soft: #3a2413; --ok: #5cc68a; --ok-soft: #133022;
+  --vio: #b093ee; --vio-soft: #271d3d; --water: #3b78ad;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px; }
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.3; }
+h1 { font-size: clamp(26px, 5vw, 38px); font-weight: 800; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { margin: 0; font-size: 15px; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--muted); max-width: 62ch; }
+header, section { display: flex; flex-direction: column; gap: 14px; }
+code, .mono { font-family: var(--font-mono); font-size: .92em; }
+.hints { display: flex; flex-direction: column; gap: 10px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+summary { cursor: pointer; list-style: none; padding: 14px 18px; display: flex; align-items: baseline; gap: 12px; font-weight: 700; }
+summary::-webkit-details-marker { display: none; }
+summary .lvl { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 99px; flex: none; }
+summary .peek { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: auto; flex: none; }
+details[open] summary .peek { visibility: hidden; }
+summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint-body { padding: 0 18px 16px; max-width: 72ch; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+pre.code { margin: 0; padding: 14px 16px; overflow-x: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1.65; }
+.cmt { color: var(--muted); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 760px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button + button { border-left: 1px solid var(--line); }
+button { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+button:hover { background: var(--accent-soft); }
+button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; background: var(--surface); }
+button.primary:disabled { color: var(--ink); border-color: var(--line); }
+[hidden] { display: none !important; }
+.input-note { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.views { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.v { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.vl { font-size: 12px; color: var(--muted); }
+.scroll { overflow-x: auto; padding: 4px 2px; }
+
+
+.arr { display: flex; gap: 4px; width: max-content; min-width: 100%; }
+.cc { flex: 1 1 0; min-width: 30px; max-width: 58px; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
+.cell { height: 38px; border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; transition: background-color .25s ease; }
+.ci { text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.cp { min-height: 18px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.cp span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.25; color: var(--accent); }
+.bar-slot { height: 150px; display: flex; flex-direction: column; justify-content: flex-end; }
+.bar { border: 1px solid var(--line); border-radius: 4px 4px 2px 2px; display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; padding-top: 2px; min-height: 3px; background: var(--dim); color: var(--ink); }
+.bar.a, .bar.b, .bar.c { color: var(--surface); }
+.wat { background: var(--water); border-radius: 3px 3px 0 0; }
+.bv { text-align: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; line-height: 1.3; }
+
+.grid { display: grid; gap: 4px; width: max-content; }
+.grid .cell { width: 40px; height: 40px; }
+.grid .ax { display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
+.chip { font-family: var(--font-mono); font-size: 13px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); }
+.empty { color: var(--muted); font-size: 13px; }
+
+svg.g2 { display: block; height: auto; }
+svg.g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; }
+svg.g2 .edge.on { stroke: var(--accent); stroke-width: 2.6; }
+svg.g2 .edge.warm { stroke: var(--warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
+svg.g2 .ah { fill: var(--muted); }
+svg.g2 rect.n, svg.g2 circle.n { fill: var(--surface); stroke: var(--line); stroke-width: 2; transition: fill .25s ease; }
+svg.g2 .n.a { fill: var(--accent); stroke: var(--accent); }
+svg.g2 .n.b { fill: var(--warm); stroke: var(--warm); }
+svg.g2 .n.c { fill: var(--ok); stroke: var(--ok); }
+svg.g2 .n.d { fill: var(--dim); stroke: var(--dim); }
+svg.g2 .n.e { fill: var(--accent-soft); stroke: var(--accent); }
+svg.g2 .n.g { fill: var(--vio-soft); stroke: var(--vio); }
+svg.g2 .n.w { fill: var(--warm-soft); stroke: var(--warm); }
+svg.g2 .n.k { fill: var(--ok-soft); stroke: var(--ok); }
+svg.g2 text { font-family: var(--font-mono); font-size: 14px; font-weight: 600; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+svg.g2 text.inv { fill: var(--surface); }
+svg.g2 text.dimt { fill: var(--dim-ink); }
+svg.g2 text.pt { font-size: 11px; fill: var(--accent); }
+svg.g2 text.nil { font-size: 12px; fill: var(--muted); font-weight: 400; }
+svg.g2 rect.bd { fill: var(--surface); stroke: var(--muted); stroke-width: 1.2; }
+svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
+
+.scrub { display: flex; align-items: center; gap: 10px; }
+.scrub input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.scrub .mono { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.log { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fact .fk { font-size: 12px; color: var(--muted); }
+.fact .fv { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--accent); overflow-wrap: anywhere; }
+.fact .fv.long { font-family: var(--font-mono); font-size: 14px; font-weight: 600; line-height: 1.5; }
+.phase { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; align-self: flex-start; padding: 2px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.phase.ok { background: var(--ok-soft); color: var(--ok); }
+.phase.warn { background: var(--warm-soft); color: var(--warm); }
+.msg { font-size: 16px; min-height: 5.2em; }
+.msg b { color: var(--accent); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+.points { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.point { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--line); }
+.point p { color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
+
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+.a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
+.c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
+.d { background: var(--dim); color: var(--dim-ink); border-color: transparent; }
+.e { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); }
+.g { background: var(--vio-soft); color: var(--ink); border-color: var(--vio); }
+.w { background: var(--warm-soft); color: var(--ink); border-color: var(--warm); }
+.k { background: var(--ok-soft); color: var(--ink); border-color: var(--ok); }
+.bar.d { color: var(--dim-ink); }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">LeetCode 238 · 中等 · 普通数组</div>
+    <h1>除自身以外数组的乘积，左边乘一遍，右边乘一遍</h1>
+    <p class="lede">不能用除法。每个位置的答案等于它左边所有数的乘积，再乘上它右边所有数的乘积。从左往右扫一遍算出左边的部分，再从右往左扫一遍乘上右边的部分。</p>
+  </header>
+
+  <section aria-labelledby="h-hints">
+    <h2 id="h-hints">分层提示</h2>
+    <div class="hints">
+      <details>
+        <summary><span class="lvl">提示 1</span>把答案拆成两半<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p><code>answer[i] = (i 左边所有数的乘积) × (i 右边所有数的乘积)</code>。</p>
+          <p>这两部分可以分别算。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">提示 2</span>左边的乘积<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>从左往右扫，<code>answer[i]</code> 先存 i 左边所有数的乘积。</p>
+          <p><code>answer[0] = 1</code>（左边没有数），之后 <code>answer[i] = answer[i-1] × nums[i-1]</code>。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">提示 3</span>右边的乘积<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>再从右往左扫，用一个变量 <code>right</code> 记录当前位置右边所有数的乘积。</p>
+          <p>每到一个位置，<code>answer[i] *= right</code>，然后 <code>right *= nums[i]</code>。这样不需要第二个数组。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">代码</span>标准解法：前缀积 × 后缀积<span class="peek">点开</span></summary>
+        <div class="hint-body">
+<pre class="code">class Solution:
+    def productExceptSelf(self, nums: List[int]) -&gt; List[int]:
+        n = len(nums)
+        answer = [1] * n
+        for i in range(1, n):           <span class="cmt"># answer[i] = 左边所有数的乘积</span>
+            answer[i] = answer[i - 1] * nums[i - 1]
+        right = 1                       <span class="cmt"># 右边所有数的乘积</span>
+        for i in range(n - 1, -1, -1):
+            answer[i] *= right
+            right *= nums[i]
+        return answer</pre>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-demo">
+    <h2 id="h-demo">逐步演示</h2>
+    <div class="stage">
+      <div class="panel">
+        <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
+        <div class="input-note" id="inote"></div>
+        <div class="views" id="views"></div>
+        <div class="toolbar">
+          <button id="reset" type="button">重置</button>
+          <button id="prev" type="button">上一步</button>
+          <button id="next" type="button" class="primary">下一步</button>
+          <button id="play" type="button">自动播放</button>
+        </div>
+        <div class="scrub">
+          <input id="slider" type="range" min="0" max="0" value="0" aria-label="步骤">
+          <span class="mono" id="stepno">0 / 0</span>
+        </div>
+      </div>
+      <div class="log" aria-live="polite">
+        <div class="facts" id="facts"></div>
+        <span class="phase" id="phase"></span>
+        <p class="msg" id="msg"></p>
+        <div class="legend"><span><i class="sw a"></i>当前位置</span><span><i class="sw e"></i>已有左边的乘积</span><span><i class="sw c"></i>左右都乘好了</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-points">
+    <h2 id="h-points">写代码时注意</h2>
+    <div class="points">
+      <div class="point"><h3>为什么不用除法</h3><p>题目禁止。而且数组里有 0 时，总乘积除以 0 会出错。</p></div>
+      <div class="point"><h3>先乘再更新 right</h3><p><code>answer[i] *= right</code> 要在 <code>right *= nums[i]</code> 之前，否则会把自己也乘进去。</p></div>
+      <div class="point"><h3>复杂度</h3><p>两遍扫描，时间 O(n)。输出数组不算的话，额外空间 O(1)。</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,4]},"note":"nums = [1,2,3,4]"},{"label":"有 0","args":{"nums":[-1,1,0,-3,3]},"note":"nums = [-1,1,0,-3,3]"}], build(a, snap) {
+    const nums = a.nums, n = nums.length, ans = new Array(n).fill(1), st = new Array(n).fill("");
+    const fix = (x) => (Object.is(x, -0) ? 0 : x);
+    const view = (i) => [
+      { t: "array", label: "nums", items: nums.map((v, j) => ({ v, cls: j === i ? "a" : "" })), ptrs: { i: i >= 0 && i < n ? i : null } },
+      { t: "array", label: "answer", items: ans.map((v, j) => ({ v: fix(v), cls: st[j] })), idx: false },
+    ];
+    st[0] = "e";
+    snap("第一遍：从左往右", "answer[0] = 1，因为下标 0 左边没有数。", view(0));
+    for (let i = 1; i < n; i++) {
+      ans[i] = ans[i - 1] * nums[i - 1]; st[i] = "e";
+      snap("第一遍：从左往右", `answer[${i}] = answer[${i - 1}] × nums[${i - 1}] = ${fix(ans[i - 1])} × ${nums[i - 1]} = <b>${fix(ans[i])}</b>，这是下标 ${i} 左边所有数的乘积。`, view(i));
+    }
+    let right = 1;
+    for (let i = n - 1; i >= 0; i--) {
+      const before = ans[i]; ans[i] = fix(ans[i] * right); st[i] = "c";
+      snap("第二遍：从右往左", `right = ${fix(right)} 是下标 ${i} 右边所有数的乘积。answer[${i}] = ${fix(before)} × ${fix(right)} = <b>${ans[i]}</b>。然后 right 乘上 nums[${i}] = ${nums[i]}。`, view(i), { facts: [["right", fix(right * nums[i])]] });
+      right *= nums[i];
+    }
+    snap("完成", `answer = [${ans.join(", ")}]。`, view(-1), { kind: "ok", ans });
+  } };
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const INV = new Set(["a", "b", "c"]);
+  const lab = (v) => (v.label ? `<div class="vl">${v.label}</div>` : "");
+  const norm = (it) => (it !== null && typeof it === "object" ? it : { v: it });
+  const show = (x) => (x === null || x === undefined ? "" : E(x));
+
+  function ptrMap(ptrs) {
+    const m = {};
+    for (const [name, i] of Object.entries(ptrs || {})) if (i !== null && i !== undefined) (m[i] = m[i] || []).push(name);
+    return m;
+  }
+  function vArray(v) {
+    const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
+    const cols = v.items.map(norm).map((it, i) =>
+      `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
+      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
+  }
+  function vBars(v) {
+    const items = v.items.map(norm), pm = ptrMap(v.ptrs);
+    const max = Math.max(1, ...items.map((it) => it.v + (it.water || 0)), v.max || 0);
+    const cols = items.map((it, i) =>
+      `<div class="cc"><div class="bar-slot">` +
+      (it.v / max < 0.16 ? `<div class="bv">${it.v}</div>` : "") +
+      (it.water ? `<div class="wat" style="height:${(it.water / max) * 100}%"></div>` : "") +
+      `<div class="bar ${it.cls || ""}" style="height:${(it.v / max) * 100}%">${it.v / max < 0.16 ? "" : it.v}</div></div>` +
+      `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
+  }
+  function vGrid(v) {
+    const n = v.rows[0].length;
+    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    v.rows.forEach((r, i) => {
+      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+    });
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+  }
+  function vChips(v) {
+    const items = v.items.map(norm);
+    return `<div class="v">${lab(v)}<div class="chips">${items.length ? items.map((it) => `<span class="chip ${it.cls || ""}">${show(it.v)}</span>`).join("") : `<span class="empty">${v.empty || "空"}</span>`}</div></div>`;
+  }
+  let uid = 0;
+  function vList(v) {
+    const nodes = v.nodes.map(norm), n = nodes.length, GAP = 62, BW = 40, BH = 32, X0 = 30, Y = 46;
+    const W = X0 * 2 + n * GAP, H = 108, id = "ah" + uid++;
+    const cx = (i) => X0 + i * GAP + BW / 2;
+    let s = `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
+    const next = v.next || nodes.map((_, i) => (i + 1 < n ? i + 1 : null));
+    const edge = (i, j, cls, lift) => {
+      if (j === null || j === undefined) return;
+      if (j === -1) {
+        if (i === n - 1) s += `<line class="edge ${cls}" x1="${cx(i) + BW / 2}" y1="${Y}" x2="${cx(i) + BW / 2 + 12}" y2="${Y}"></line><text class="nil" x="${cx(i) + BW / 2 + 20}" y="${Y}">∅</text>`;
+        else if (i === 0) s += `<line class="edge ${cls}" x1="${cx(i) - BW / 2}" y1="${Y}" x2="${cx(i) - BW / 2 - 10}" y2="${Y}"></line><text class="nil" x="${cx(i) - BW / 2 - 18}" y="${Y}">∅</text>`;
+        else s += `<line class="edge ${cls}" x1="${cx(i)}" y1="${Y - BH / 2}" x2="${cx(i)}" y2="${Y - BH / 2 - 9}"></line><text class="nil" x="${cx(i)}" y="${Y - BH / 2 - 17}">∅</text>`;
+        return;
+      }
+      if (j === i + 1) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
+      else if (j === i - 1) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
+      else if (j === i) s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i) - 8} ${Y - BH / 2} C${cx(i) - 18} ${Y - 40} ${cx(i) + 18} ${Y - 40} ${cx(i) + 8} ${Y - BH / 2 - 2}"></path>`;
+      else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 14 + Math.abs(j - i) * 4);
+        s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`; }
+    };
+    next.forEach((j, i) => { if (!nodes[i].hide) edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, nodes[i].ecls || "", false); });
+    (v.extra || []).forEach(([i, j]) => edge(i, j, "warm", j > i));
+    const pm = ptrMap(v.ptrs);
+    nodes.forEach((nd, i) => {
+      if (nd.hide) return;
+      const c = (nd.cls || "").split(" ")[0];
+      s += `<rect class="n ${nd.cls || ""}" x="${cx(i) - BW / 2}" y="${Y - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
+      s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx(i)}" y="${Y}">${show(nd.v)}</text>`;
+      (pm[i] || []).forEach((nm, k) => { s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`; });
+    });
+    return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;
+  }
+  function vTree(v) {
+    const pos = {}, par = {}; let x = 0, depth = 0;
+    const walk = (id, d) => { if (id === null || id === undefined || !v.nodes[id]) return; const nd = v.nodes[id];
+      walk(nd.l, d + 1); pos[id] = [28 + x * 46, 28 + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
+      for (const c of [nd.l, nd.r]) if (c !== null && c !== undefined && v.nodes[c]) par[c] = id; };
+    walk(v.root, 0);
+    const W = Math.max(56 + (x - 1) * 46, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
+    const cls = v.cls || {}, on = new Set(v.on || []);
+    let s = "";
+    for (const id in par) { const [x1, y1] = pos[par[id]], [x2, y2] = pos[id];
+      s += `<line class="edge ${on.has(+id) && on.has(+par[id]) ? "on" : ""}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`; }
+    for (const id in pos) { const [px, py] = pos[id], c = (cls[id] || "").split(" ")[0];
+      s += `<circle class="n ${cls[id] || ""}" cx="${px}" cy="${py}" r="17"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(v.nodes[id].v)}</text>`;
+      const b = v.badges && v.badges[id];
+      if (b !== undefined && b !== null) { const t = String(b), w = Math.max(26, t.length * 7 + 10);
+        s += `<rect class="bd" x="${px - w / 2}" y="${py + 21}" width="${w}" height="16" rx="8"></rect><text class="bt" x="${px}" y="${py + 29}">${E(t)}</text>`; }
+    }
+    return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W * 1.15}px;max-width:100%"><g>${s}</g></svg></div></div>`;
+  }
+  const R = { array: vArray, bars: vBars, grid: vGrid, chips: vChips, list: vList, tree: vTree, note: (v) => `<div class="v">${lab(v)}<div>${v.html}</div></div>` };
+
+  let steps = [], idx = 0, timer = null;
+  function render() {
+    const s = steps[idx];
+    $("views").innerHTML = s.views.map((v) => R[v.t](v)).join("");
+    const f = $("facts");
+    f.hidden = !(s.facts && s.facts.length);
+    f.innerHTML = (s.facts || []).map(([k, val]) => `<div class="fact"><span class="fk">${E(k)}</span><span class="fv${String(val).length > 6 ? " long" : ""}">${E(val)}</span></div>`).join("");
+    const ph = $("phase");
+    ph.textContent = s.phase;
+    ph.className = "phase" + (s.kind ? " " + s.kind : "");
+    $("msg").innerHTML = s.msg;
+    $("slider").max = steps.length - 1; $("slider").value = idx;
+    $("stepno").textContent = `${idx} / ${steps.length - 1}`;
+    $("prev").disabled = idx === 0; $("next").disabled = idx === steps.length - 1;
+  }
+  function go(i) { idx = Math.max(0, Math.min(steps.length - 1, i)); render(); }
+  function stop() { if (timer) clearInterval(timer); timer = null; $("play").textContent = "自动播放"; }
+  function play() {
+    if (timer) return stop();
+    if (idx === steps.length - 1) go(0);
+    $("play").textContent = "暂停";
+    timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
+  }
+  function load(k) {
+    stop();
+    const p = SPEC.presets[k];
+    steps = [];
+    SPEC.build(p.args, (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
+    document.querySelectorAll("#presets button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === k)));
+    $("inote").textContent = p.note || "";
+    go(0);
+  }
+  $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" aria-pressed="false">${E(p.label)}</button>`).join("");
+  SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });
+  $("reset").onclick = () => { stop(); go(0); };
+  $("prev").onclick = () => { stop(); go(idx - 1); };
+  $("next").onclick = () => { stop(); go(idx + 1); };
+  $("play").onclick = play;
+  $("slider").oninput = (e) => { stop(); go(Number(e.target.value)); };
+  load(0);
+})();
+</script>
