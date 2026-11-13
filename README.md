@@ -2,7 +2,7 @@
 
 个人刷题记录，题解使用 **Java / Python / Go** 编写，题目均来自 [力扣](https://leetcode.cn/)。
 
-当前收录 **44** 份题解；[热题 100](https://leetcode.cn/studyplan/top-100-liked/) 的 100 道题均有独立的题目文档。
+当前收录 **49** 份题解；[热题 100](https://leetcode.cn/studyplan/top-100-liked/) 的 100 道题均有独立的题目文档。
 
 ## 目录结构
 
@@ -13,11 +13,12 @@
 │   ├── java/
 │   ├── python/
 │   └── go/
+├── illustrations/   # 解题思路图解页面：<编号>.<题名>.html，索引见 illustrations/README.md
 ├── studyplan/
 │   ├── 热题100.md        # 做题进度（按专题）
 │   └── 优先级清单.md      # 按重要程度排序的待刷清单（暂不含困难题）
 ├── notes/           # 笔记、提示与不在热题 100 内的题目原文
-└── tools/           # 小工具（TreeGraph.py：二叉树可视化）
+└── tools/           # 小工具（TreeGraph.py：二叉树可视化；illustrations/：图解生成器）
 ```
 
 ## 题解索引
@@ -58,7 +59,12 @@
 | 148 | [排序链表](<problems/0148.排序链表.md>) | Java | [0148.排序链表.java](<solutions/java/0148.排序链表.java>) |
 | 160 | [相交链表](<problems/0160.相交链表.md>) | Java | [0160.相交链表.java](<solutions/java/0160.相交链表.java>) |
 | 189 | [轮转数组](<problems/0189.轮转数组.md>) | Java | [0189.轮转数组.java](<solutions/java/0189.轮转数组.java>) |
+| 200 | [岛屿数量](<problems/0200.岛屿数量.md>) | Python | [0200.岛屿数量.py](<solutions/python/0200.岛屿数量.py>) |
+| 200 | [岛屿数量](<problems/0200.岛屿数量.md>) | Python | [0200.岛屿数量.简洁递归.py](<solutions/python/0200.岛屿数量.简洁递归.py>) |
+| 200 | [岛屿数量](<problems/0200.岛屿数量.md>) | Python | [0200.岛屿数量.BFS.py](<solutions/python/0200.岛屿数量.BFS.py>) |
 | 206 | [反转链表](<problems/0206.反转链表.md>) | Java | [0206.反转链表.java](<solutions/java/0206.反转链表.java>) |
+| 215 | [数组中的第K个最大元素](<problems/0215.数组中的第K个最大元素.md>) | Python | [0215.数组中的第K个最大元素.py](<solutions/python/0215.数组中的第K个最大元素.py>) |
+| 215 | [数组中的第K个最大元素](<problems/0215.数组中的第K个最大元素.md>) | Python | [0215.数组中的第K个最大元素.堆.py](<solutions/python/0215.数组中的第K个最大元素.堆.py>) |
 | 226 | [翻转二叉树](<problems/0226.翻转二叉树.md>) | Java | [0226.翻转二叉树.java](<solutions/java/0226.翻转二叉树.java>) |
 | 234 | [回文链表](<problems/0234.回文链表.md>) | Java | [0234.回文链表.java](<solutions/java/0234.回文链表.java>) |
 | 238 | [除自身以外数组的乘积](<problems/0238.除了自身以外数组的乘积.md>) | Java | [0238.除自身以外数组的乘积.java](<solutions/java/0238.除自身以外数组的乘积.java>) |

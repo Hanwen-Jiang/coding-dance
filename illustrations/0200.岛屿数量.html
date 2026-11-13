@@ -1,0 +1,521 @@
+<meta charset="utf-8">
+<title>岛屿数量图解</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 版式：一张「海图」——左侧是可逐步播放的网格海图，右侧是航海日志式的状态面板；上方是分层提示 */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --ink: #16313a;
+  --muted: #666666;
+  --line: #dddddd;
+  --water: #d2e4e8;
+  --water-ink: #8fb0b7;
+  --land: #e2cf9f;
+  --land-ink: #7d6534;
+  --accent: #0d6c79;
+  --accent-soft: #d3eaec;
+  --skip: #9a6a12;
+  --skip-soft: #f5e8c9;
+  --font-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --i1: #2e8a58; --i2: #c25530; --i3: #6f55bd; --i4: #b48a12; --i5: #2a70b9; --i6: #b03d74;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #000000; --ink: #d9e8ea; --muted: #9a9a9a; --line: #2e2e2e;
+    --water: #1b343a; --water-ink: #4c6f77; --land: #7f6c45; --land-ink: #efdcb0;
+    --accent: #52c3d0; --accent-soft: #163c42; --skip: #e7b75a; --skip-soft: #3a2f17;
+    --i1: #3fae72; --i2: #e0744c; --i3: #9a82e6; --i4: #d6aa2c; --i5: #4d95e0; --i6: #d763a0;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #000000; --ink: #d9e8ea; --muted: #9a9a9a; --line: #2e2e2e;
+  --water: #1b343a; --water-ink: #4c6f77; --land: #7f6c45; --land-ink: #efdcb0;
+  --accent: #52c3d0; --accent-soft: #163c42; --skip: #e7b75a; --skip-soft: #3a2f17;
+  --i1: #3fae72; --i2: #e0744c; --i3: #9a82e6; --i4: #d6aa2c; --i5: #4d95e0; --i6: #d763a0;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.wrap {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.3; }
+h1 { font-size: clamp(28px, 5vw, 40px); font-weight: 800; }
+h2 { font-size: 22px; font-weight: 600; }
+p { margin: 0; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--accent);
+}
+.lede { color: var(--muted); max-width: 62ch; }
+header { display: flex; flex-direction: column; gap: 10px; }
+section { display: flex; flex-direction: column; gap: 16px; }
+code, .mono { font-family: var(--font-mono); font-size: .92em; }
+
+/* ---------- 分层提示 ---------- */
+.hints { display: flex; flex-direction: column; gap: 10px; }
+details {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 18px;
+  display: flex; align-items: baseline; gap: 12px;
+  font-weight: 700;
+}
+summary::-webkit-details-marker { display: none; }
+summary .lvl {
+  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+  color: var(--accent); background: var(--accent-soft);
+  padding: 1px 8px; border-radius: 99px; flex: none;
+}
+summary .peek { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: auto; flex: none; }
+details[open] summary .peek { visibility: hidden; }
+summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint-body { padding: 0 18px 16px; max-width: 70ch; display: flex; flex-direction: column; gap: 8px; }
+pre.code {
+  margin: 0; padding: 14px 16px; overflow-x: auto;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
+  font-family: var(--font-mono); font-size: 13px; line-height: 1.65;
+}
+
+/* ---------- 演示区 ---------- */
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+@media (max-width: 760px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+
+.chart {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex; flex-direction: column; gap: 14px;
+  min-width: 0;
+}
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button + button { border-left: 1px solid var(--line); }
+button {
+  font: inherit; font-size: 14px;
+  color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 12px; cursor: pointer;
+}
+button:hover { background: var(--accent-soft); }
+button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; background: var(--surface); }
+.edit-note { color: var(--muted); font-size: 13px; }
+
+.grid-scroll { overflow-x: auto; }
+.grid {
+  --n: 5;
+  display: grid;
+  grid-template-columns: 22px repeat(var(--n), minmax(36px, 64px));
+  gap: 4px;
+  width: max-content;
+  margin: 0 auto;
+}
+.axis {
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted);
+  display: grid; place-items: center;
+}
+.cell {
+  position: relative;
+  aspect-ratio: 1;
+  max-width: 100%;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 0;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+  display: grid; place-items: center;
+  transition: background-color .25s ease, color .25s ease, transform .2s ease;
+}
+.cell.water {
+  color: var(--water-ink);
+  background:
+    repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--water-ink) 18%, transparent) 6px 7px),
+    var(--water);
+}
+.cell.land { background: var(--land); color: var(--land-ink); }
+.cell.isl { color: #fff; }
+.cell.cur { outline: 3px solid var(--accent); outline-offset: 2px; z-index: 2; }
+.cell.cur.skipped { outline-color: var(--skip); }
+.cell.pop { transform: scale(1.08); box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px currentColor; z-index: 3; }
+.cell.instack::after {
+  content: ""; position: absolute; inset: 5px;
+  border: 2px dashed rgba(255,255,255,.85); border-radius: 4px;
+}
+.cell.pushed .tag {
+  position: absolute; top: -7px; right: -7px;
+  font-size: 10px; line-height: 1; padding: 3px 5px; border-radius: 99px;
+  background: var(--ink); color: var(--surface);
+}
+@media (prefers-reduced-motion: reduce) {
+  .cell { transition: none; }
+  .cell.pop { transform: none; }
+}
+
+.scrub { display: flex; align-items: center; gap: 10px; }
+.scrub input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.scrub .mono { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* ---------- 航海日志面板 ---------- */
+.log { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.tally {
+  display: flex; align-items: baseline; gap: 14px;
+  border-bottom: 1px solid var(--line); padding-bottom: 12px;
+}
+.tally .num {
+  font-family: var(--font-display); font-weight: 800; font-size: 64px; line-height: 1;
+  color: var(--accent); font-variant-numeric: tabular-nums;
+}
+.tally .lab { color: var(--muted); }
+.phase {
+  font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em;
+  align-self: flex-start; padding: 2px 10px; border-radius: 99px;
+  background: var(--accent-soft); color: var(--accent);
+}
+.phase.skip { background: var(--skip-soft); color: var(--skip); }
+.msg { font-size: 16px; min-height: 3.4em; }
+.msg b { color: var(--accent); }
+.stackbox { display: flex; flex-direction: column; gap: 8px; }
+.stackbox .head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
+.chip {
+  font-family: var(--font-mono); font-size: 12px;
+  padding: 3px 9px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.chip.top { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.empty { color: var(--muted); font-size: 13px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
+
+/* ---------- 要点 ---------- */
+.points { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.point { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--line); }
+.point h3 { margin: 0; font-size: 15px; }
+.point p { color: var(--muted); font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">LeetCode 200 · 中等 · 图论</div>
+    <h1>岛屿数量，一步一步看</h1>
+    <p class="lede">先看提示，卡住时再往下翻一层。下面的海图可以逐步播放：看清楚「什么时候 +1」和「为什么同一座岛不会被数两次」，这道题就会了。</p>
+  </header>
+
+  <section aria-labelledby="h-hints">
+    <h2 id="h-hints">分层提示</h2>
+    <div class="hints">
+      <details>
+        <summary><span class="lvl">提示 1</span>换个说法看题目<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>「数岛屿」其实就是「数有几块互相连通的陆地」。</p>
+          <p>想象你从左上角开始，一格一格往右、往下扫。什么时候答案应该 +1？</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">提示 2</span>怎么避免重复计数<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>扫到一块<strong>还没被数过</strong>的陆地，答案就 +1。</p>
+          <p>难点在后面：同一座岛有很多格子，之后还会扫到它们。所以 +1 之后，要<strong>立刻把这座岛的所有格子都做上记号</strong>（比如直接改成 <code>'0'</code>，相当于把岛「淹掉」），以后扫到就直接跳过。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">提示 3</span>怎么找出整座岛<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>从刚发现的格子出发，往上、下、左、右四个方向扩散：遇到陆地就做记号并继续扩散，遇到水或者走出边界就停。</p>
+          <p>这就是 <strong>DFS</strong>（递归或用栈）或 <strong>BFS</strong>（用队列），两种都能过。下面的动画用的是栈。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">最后</span>伪代码骨架（想自己写就先别看）<span class="peek">点开</span></summary>
+        <div class="hint-body">
+<pre class="code">count = 0
+for 每个格子 (i, j):
+    if grid[i][j] == '1':
+        count += 1
+        sink(i, j)          // 把这整座岛淹掉
+
+sink(i, j):
+    if (i, j) 越界 或 grid[i][j] != '1':
+        return
+    grid[i][j] = '0'        // 做记号
+    sink(i-1, j); sink(i+1, j)
+    sink(i, j-1); sink(i, j+1)
+
+return count</pre>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-demo">
+    <h2 id="h-demo">海图演示</h2>
+    <div class="stage">
+      <div class="chart">
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="选择示例">
+            <button id="ex1" type="button" aria-pressed="false">示例 1</button>
+            <button id="ex2" type="button" aria-pressed="true">示例 2</button>
+            <button id="exr" type="button" aria-pressed="false">随机</button>
+          </div>
+          <span class="edit-note">点格子可以改地图</span>
+        </div>
+        <div class="grid-scroll"><div class="grid" id="grid" aria-label="网格海图"></div></div>
+        <div class="toolbar">
+          <button id="reset" type="button">重置</button>
+          <button id="prev" type="button">上一步</button>
+          <button id="next" type="button" class="primary">下一步</button>
+          <button id="play" type="button">自动播放</button>
+          <button id="jump" type="button">跳到下一座岛</button>
+        </div>
+        <div class="scrub">
+          <input id="slider" type="range" min="0" max="0" value="0" aria-label="步骤">
+          <span class="mono" id="stepno">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="log" aria-live="polite">
+        <div class="tally"><span class="num" id="count">0</span><span class="lab">座岛屿</span></div>
+        <span class="phase" id="phase">开始</span>
+        <p class="msg" id="msg"></p>
+        <div class="stackbox">
+          <div class="head"><span>待扩散的格子（栈）</span><span>右边是栈顶</span></div>
+          <div class="chips" id="stack"></div>
+        </div>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--water)"></i>水 0</span>
+          <span><i class="sw" style="background:var(--land)"></i>未标记的陆地 1</span>
+          <span><i class="sw" style="background:var(--i1)"></i>已标记（颜色区分岛）</span>
+          <span><i class="sw" style="border:2px dashed var(--muted)"></i>在栈里等待扩散</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-points">
+    <h2 id="h-points">写代码时注意</h2>
+    <div class="points">
+      <div class="point"><h3>先判断再递归</h3><p>进 <code>sink</code> 第一件事就是判断越界和是不是陆地，四个方向就不用各写一遍判断。</p></div>
+      <div class="point"><h3>先做记号再扩散</h3><p>记号要在扩散之前做，否则两个相邻格子会互相跳来跳去，死循环。</p></div>
+      <div class="point"><h3>格子是字符</h3><p>Java 里 <code>grid</code> 是 <code>char[][]</code>，比较要写 <code>'1'</code>，不是数字 <code>1</code>。</p></div>
+      <div class="point"><h3>复杂度</h3><p>每个格子最多被访问常数次，时间 <span class="mono">O(m·n)</span>；最坏情况下递归深度也是 <span class="mono">O(m·n)</span>。</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const EX = {
+    ex1: ["11110", "11010", "11000", "00000"],
+    ex2: ["11000", "11000", "00100", "00011"],
+  };
+  const DIRS = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
+  const COLORS = 6;
+  const $ = (id) => document.getElementById(id);
+  const fmt = ([r, c]) => `(${r},${c})`;
+
+  let grid = [], steps = [], idx = 0, timer = null, current = "ex2";
+
+  function parse(rows) { return rows.map((r) => [...r].map(Number)); }
+
+  function randomGrid() {
+    const m = 5, n = 6;
+    return Array.from({ length: m }, () => Array.from({ length: n }, () => (Math.random() < 0.45 ? 1 : 0)));
+  }
+
+  function build() {
+    const m = grid.length, n = grid[0].length;
+    const mark = grid.map((r) => r.map(() => 0));
+    let count = 0, stack = [];
+    steps = [];
+    const snap = (o) => steps.push({ mark: mark.map((r) => r.slice()), count, stack: stack.map((p) => p.slice()), ...o });
+
+    snap({ phase: "开始", msg: "从左上角 (0,0) 开始，一行一行扫描每个格子。" });
+    for (let i = 0; i < m; i++) {
+      for (let j = 0; j < n; j++) {
+        if (grid[i][j] === 0) {
+          snap({ phase: "扫描", cur: [i, j], msg: `${fmt([i, j])} 是水，跳过。` });
+        } else if (mark[i][j]) {
+          snap({ phase: "跳过", skip: true, cur: [i, j], msg: `${fmt([i, j])} 是陆地，但它已经被标记为第 ${mark[i][j]} 座岛的一部分，<b>不再计数</b>。这就是做记号的作用。` });
+        } else {
+          count++;
+          mark[i][j] = count;
+          stack = [[i, j]];
+          snap({ phase: "发现新岛", cur: [i, j], island: count, msg: `${fmt([i, j])} 是一块还没标记的陆地：<b>岛屿数 +1 → ${count}</b>。接下来从这里出发，把整座岛都标记出来。` });
+          while (stack.length) {
+            const [r, c] = stack.pop();
+            const pushed = [];
+            for (const [dr, dc] of DIRS) {
+              const nr = r + dr, nc = c + dc;
+              if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;
+              if (grid[nr][nc] !== 1 || mark[nr][nc]) continue;
+              mark[nr][nc] = count;
+              stack.push([nr, nc]);
+              pushed.push([nr, nc]);
+            }
+            const msg = pushed.length
+              ? `从栈顶取出 ${fmt([r, c])}，看它的上下左右：${pushed.map(fmt).join("、")} 是相连的陆地，标记为第 ${count} 座岛并放进栈。`
+              : `从栈顶取出 ${fmt([r, c])}，上下左右要么是水、要么出界、要么已标记，没有新格子。`;
+            snap({ phase: "扩散", cur: [i, j], pop: [r, c], pushed, island: count, msg });
+          }
+          snap({ phase: "这座岛标记完", cur: [i, j], msg: `栈空了，第 ${count} 座岛的每一格都有了记号。回到 ${fmt([i, j])}，继续往后扫描。` });
+        }
+      }
+    }
+    snap({ phase: "结束", msg: `所有格子扫描完毕，答案是 <b>${count}</b> 座岛屿。` });
+  }
+
+  function renderGrid() {
+    const m = grid.length, n = grid[0].length;
+    const g = $("grid");
+    g.style.setProperty("--n", n);
+    g.innerHTML = "";
+    g.appendChild(Object.assign(document.createElement("span"), { className: "axis" }));
+    for (let j = 0; j < n; j++) g.appendChild(Object.assign(document.createElement("span"), { className: "axis", textContent: j }));
+    for (let i = 0; i < m; i++) {
+      g.appendChild(Object.assign(document.createElement("span"), { className: "axis", textContent: i }));
+      for (let j = 0; j < n; j++) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.id = `c-${i}-${j}`;
+        b.className = "cell";
+        b.addEventListener("click", () => {
+          grid[i][j] ^= 1;
+          setPressed(null);
+          restart();
+        });
+        g.appendChild(b);
+      }
+    }
+  }
+
+  function show() {
+    const s = steps[idx];
+    const m = grid.length, n = grid[0].length;
+    const inStack = new Set(s.stack.map(([r, c]) => `${r},${c}`));
+    const pushed = new Set((s.pushed || []).map(([r, c]) => `${r},${c}`));
+    for (let i = 0; i < m; i++) {
+      for (let j = 0; j < n; j++) {
+        const el = $(`c-${i}-${j}`);
+        const k = s.mark[i][j];
+        const key = `${i},${j}`;
+        el.className = "cell " + (grid[i][j] ? "land" : "water");
+        el.style.background = "";
+        el.style.color = "";
+        if (k) {
+          el.classList.add("isl");
+          el.style.background = `var(--i${((k - 1) % COLORS) + 1})`;
+        }
+        if (inStack.has(key)) el.classList.add("instack");
+        if (s.cur && s.cur[0] === i && s.cur[1] === j) {
+          el.classList.add("cur");
+          if (s.skip) el.classList.add("skipped");
+        }
+        if (s.pop && s.pop[0] === i && s.pop[1] === j) el.classList.add("pop");
+        el.innerHTML = k ? `#${k}` : String(grid[i][j]);
+        if (pushed.has(key)) {
+          el.classList.add("pushed");
+          el.innerHTML += '<span class="tag">入栈</span>';
+        }
+        el.setAttribute("aria-label", `第 ${i} 行第 ${j} 列，${grid[i][j] ? "陆地" : "水"}${k ? `，第 ${k} 座岛` : ""}`);
+      }
+    }
+    $("count").textContent = s.count;
+    const ph = $("phase");
+    ph.textContent = s.phase;
+    ph.className = "phase" + (s.skip ? " skip" : "");
+    $("msg").innerHTML = s.msg;
+    const st = $("stack");
+    st.innerHTML = s.stack.length
+      ? s.stack.map((p, t) => `<span class="chip${t === s.stack.length - 1 ? " top" : ""}">${fmt(p)}</span>`).join("")
+      : '<span class="empty">空</span>';
+    $("slider").max = steps.length - 1;
+    $("slider").value = idx;
+    $("stepno").textContent = `${idx} / ${steps.length - 1}`;
+    $("prev").disabled = idx === 0;
+    $("next").disabled = idx === steps.length - 1;
+    $("jump").disabled = !steps.slice(idx + 1).some((x) => x.phase === "发现新岛");
+  }
+
+  function go(i) { idx = Math.max(0, Math.min(steps.length - 1, i)); show(); }
+
+  function stop() {
+    if (timer) clearInterval(timer);
+    timer = null;
+    $("play").textContent = "自动播放";
+  }
+  function play() {
+    if (timer) return stop();
+    if (idx === steps.length - 1) go(0);
+    $("play").textContent = "暂停";
+    timer = setInterval(() => {
+      if (idx >= steps.length - 1) return stop();
+      go(idx + 1);
+    }, 650);
+  }
+
+  function restart() { stop(); build(); renderGrid(); go(0); }
+  function load(name) {
+    current = name;
+    grid = name === "exr" ? randomGrid() : parse(EX[name]);
+    setPressed(name);
+    restart();
+  }
+  function setPressed(name) {
+    for (const id of ["ex1", "ex2", "exr"]) $(id).setAttribute("aria-pressed", String(id === name));
+  }
+
+  $("ex1").onclick = () => load("ex1");
+  $("ex2").onclick = () => load("ex2");
+  $("exr").onclick = () => load("exr");
+  $("reset").onclick = () => { stop(); go(0); };
+  $("prev").onclick = () => { stop(); go(idx - 1); };
+  $("next").onclick = () => { stop(); go(idx + 1); };
+  $("play").onclick = play;
+  $("jump").onclick = () => {
+    stop();
+    const k = steps.findIndex((x, t) => t > idx && x.phase === "发现新岛");
+    if (k >= 0) go(k);
+  };
+  $("slider").oninput = (e) => { stop(); go(Number(e.target.value)); };
+
+  load("ex2");
+  // 打开时停在第一次「发现新岛」，第一眼就能看到关键一步
+  const first = steps.findIndex((x) => x.phase === "发现新岛");
+  if (first > 0) go(first);
+})();
+</script>

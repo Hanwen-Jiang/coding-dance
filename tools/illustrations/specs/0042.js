@@ -1,0 +1,64 @@
+module.exports = {
+  id: 42, name: "接雨水", title: "接雨水图解", level: "困难", topic: "双指针",
+  h1: "接雨水，每一格能接多少只看两边最高的柱子",
+  lede: "某一格上方的水位，等于它左边最高柱子和右边最高柱子里较矮的那个。用两个指针从两端往中间走，哪边的最高值更小，哪边那一格的水量就已经能确定。",
+  hints: [
+    { t: "先只看一格", body: ["下标 <code>i</code> 这一格能接的水 = <code>min(左边最高, 右边最高) − height[i]</code>。", "水位由两边最高的柱子里矮的那个决定，再减掉这一格自己的高度。"] },
+    { t: "朴素做法", body: ["预先算出每个位置的左边最高 <code>leftMax[i]</code> 和右边最高 <code>rightMax[i]</code>，再逐格相加。时间 <code>O(n)</code>，空间 <code>O(n)</code>。"] },
+    { t: "省掉两个数组", body: ["用 <code>l</code>、<code>r</code> 从两端往中间走，同时维护 <code>leftMax</code>、<code>rightMax</code>。", "如果 <code>leftMax &lt; rightMax</code>，那么 <code>l</code> 这一格的水位一定是 <code>leftMax</code>：右边至少有一根柱子不低于它。这一格算完，<code>l</code> 右移。另一边同理。"] },
+  ],
+  codes: [{ t: "标准解法：双指针", code: `
+class Solution:
+    def trap(self, height: List[int]) -> int:
+        l, r = 0, len(height) - 1
+        left_max = right_max = 0
+        water = 0
+        while l < r:
+            left_max = max(left_max, height[l])
+            right_max = max(right_max, height[r])
+            if left_max < right_max:    # 左边矮，l 这一格水位就是 left_max
+                water += left_max - height[l]
+                l += 1
+            else:
+                water += right_max - height[r]
+                r -= 1
+        return water
+` }],
+  pytest: `
+s = Solution()
+assert s.trap([0,1,0,2,1,0,1,3,2,1,2,1]) == 6
+assert s.trap([4,2,0,3,2,5]) == 9
+assert s.trap([1]) == 0
+assert s.trap([3,0,3]) == 3
+`,
+  legend: [["a", "l 和 r"], ["d", "已经算完的格子"], ["wat", "已确定的水"]],
+  presets: [
+    { label: "示例 1", args: { h: [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1] }, note: "height = [0,1,0,2,1,0,1,3,2,1,2,1]", expect: 6 },
+    { label: "示例 2", args: { h: [4, 2, 0, 3, 2, 5] }, note: "height = [4,2,0,3,2,5]", expect: 9 },
+  ],
+  build(a, snap) {
+    const h = a.h, n = h.length, w = new Array(n).fill(0);
+    let l = 0, r = n - 1, lm = 0, rm = 0, total = 0;
+    const view = (done) => [{ t: "bars", label: "height", items: h.map((v, i) => ({ v, water: w[i], cls: !done && (i === l || i === r) ? "a" : i < l || i > r || done ? "d" : "" })), ptrs: done ? {} : { l, r } }];
+    const facts = () => [["接到的水", total], ["leftMax", lm], ["rightMax", rm]];
+    snap("开始", "l、r 从两端出发。leftMax 是 l 走过的最高柱子，rightMax 是 r 走过的最高柱子。", view(), { facts: facts() });
+    while (l < r) {
+      lm = Math.max(lm, h[l]); rm = Math.max(rm, h[r]);
+      if (lm < rm) {
+        const add = lm - h[l]; w[l] = add; total += add;
+        snap("算左边这一格", `leftMax = ${lm} 小于 rightMax = ${rm}，所以下标 ${l} 的水位就是 ${lm}。这一格接 ${lm} − ${h[l]} = <b>${add}</b>，l 右移。`, view(), { facts: facts() });
+        l++;
+      } else {
+        const add = rm - h[r]; w[r] = add; total += add;
+        snap("算右边这一格", `rightMax = ${rm} 不大于 leftMax = ${lm}，所以下标 ${r} 的水位就是 ${rm}。这一格接 ${rm} − ${h[r]} = <b>${add}</b>，r 左移。`, view(), { facts: facts() });
+        r--;
+      }
+    }
+    snap("完成", `两个指针相遇。一共接到 <b>${total}</b> 格水。`, view(true), { kind: "ok", ans: total, facts: facts() });
+  },
+  points: [
+    { t: "先更新最高值再算水", body: "先把当前柱子计入 leftMax / rightMax，这样 <code>leftMax − height[l]</code> 不会是负数。" },
+    { t: "为什么矮的那边可以先算", body: "leftMax < rightMax 时，l 右边一定存在不低于 leftMax 的柱子，所以 l 这格的水位不会被右边限制。" },
+    { t: "复杂度", body: "时间 O(n)，空间 O(1)。单调栈也能做，是按层接水的另一种思路。" },
+  ],
+};
