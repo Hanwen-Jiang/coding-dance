@@ -13,12 +13,12 @@
 │   ├── java/
 │   ├── python/
 │   └── go/
-├── illustrations/   # 解题思路图解页面：<编号>.<题名>.html，浏览器直接打开
+├── illustrations/   # 解题思路图解页面：<编号>.<题名>.html，索引见 illustrations/README.md
 ├── studyplan/
 │   ├── 热题100.md        # 做题进度（按专题）
 │   └── 优先级清单.md      # 按重要程度排序的待刷清单（暂不含困难题）
 ├── notes/           # 笔记、提示与不在热题 100 内的题目原文
-└── tools/           # 小工具（TreeGraph.py：二叉树可视化）
+└── tools/           # 小工具（TreeGraph.py：二叉树可视化；illustrations/：图解生成器）
 ```
 
 ## 题解索引
