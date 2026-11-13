@@ -1,0 +1,424 @@
+<meta charset="utf-8">
+<title>最近公共祖先图解</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 版式：与前两题图解同一系列。左边是整棵树，递归时每个节点下方挂出「它向上返回了什么」；右边是调用栈和说明 */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --ink: #1a1a1a;
+  --muted: #666666;
+  --line: #dddddd;
+  --none: #bdbdbd;
+  --accent: #2b5fb8;
+  --accent-soft: #e4ecf9;
+  --p: #2b5fb8;
+  --q: #c8641e;
+  --lca: #2e8a57;
+  --lca-soft: #dcf0e4;
+  --font-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #000000; --surface: #000000; --ink: #e8e8e8; --muted: #9a9a9a; --line: #2e2e2e; --none: #555555;
+    --accent: #7ea6f0; --accent-soft: #1a2740; --p: #7ea6f0; --q: #f0a060; --lca: #5cc68a; --lca-soft: #133022;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #000000; --surface: #000000; --ink: #e8e8e8; --muted: #9a9a9a; --line: #2e2e2e; --none: #555555;
+  --accent: #7ea6f0; --accent-soft: #1a2740; --p: #7ea6f0; --q: #f0a060; --lca: #5cc68a; --lca-soft: #133022;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.wrap {
+  max-width: 1040px; margin: 0 auto;
+  padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px;
+}
+h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.3; }
+h1 { font-size: clamp(28px, 5vw, 40px); font-weight: 800; }
+h2 { font-size: 22px; font-weight: 600; }
+h3 { margin: 0; font-size: 15px; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--muted); max-width: 62ch; }
+header, section { display: flex; flex-direction: column; gap: 14px; }
+code, .mono { font-family: var(--font-mono); font-size: .92em; }
+
+.hints { display: flex; flex-direction: column; gap: 10px; }
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+summary { cursor: pointer; list-style: none; padding: 14px 18px; display: flex; align-items: baseline; gap: 12px; font-weight: 700; }
+summary::-webkit-details-marker { display: none; }
+summary .lvl { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 99px; flex: none; }
+summary .peek { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: auto; flex: none; }
+details[open] summary .peek { visibility: hidden; }
+summary:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint-body { padding: 0 18px 16px; max-width: 72ch; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+pre.code { margin: 0; padding: 14px 16px; overflow-x: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1.65; }
+.cmt { color: var(--muted); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 28px; align-items: start; }
+@media (max-width: 760px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; }
+.seg button + button { border-left: 1px solid var(--line); }
+button { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+button:hover { background: var(--accent-soft); }
+button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
+button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; background: var(--surface); }
+.pick { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; }
+.pick b { font-family: var(--font-mono); }
+.pick.p b { color: var(--p); }
+.pick.q b { color: var(--q); }
+select { font: inherit; font-family: var(--font-mono); padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+
+.tree { display: block; width: 100%; height: auto; }
+.tree line { stroke: var(--line); stroke-width: 2; }
+.tree line.on { stroke: var(--accent); stroke-width: 3; }
+.tree circle { fill: var(--surface); stroke: var(--line); stroke-width: 2; transition: fill .25s ease, stroke .25s ease; }
+.tree circle.stack { fill: var(--accent-soft); stroke: var(--accent); }
+.tree circle.cur { stroke-width: 4; }
+.tree circle.ring-p { stroke: var(--p); stroke-width: 3; }
+.tree circle.ring-q { stroke: var(--q); stroke-width: 3; }
+.tree circle.ans { fill: var(--lca); stroke: var(--lca); }
+.tree text { font-family: var(--font-mono); font-size: 16px; font-weight: 600; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+.tree text.inv { fill: var(--surface); }
+.tree .tag { font-size: 11px; font-weight: 600; }
+.tree .tag.p { fill: var(--p); }
+.tree .tag.q { fill: var(--q); }
+.tree rect.badge { stroke-width: 1.5; }
+.tree rect.badge.none { fill: var(--surface); stroke: var(--none); }
+.tree rect.badge.p { fill: var(--surface); stroke: var(--p); }
+.tree rect.badge.q { fill: var(--surface); stroke: var(--q); }
+.tree rect.badge.lca { fill: var(--lca-soft); stroke: var(--lca); }
+.tree text.bt { font-size: 11px; font-weight: 600; }
+.tree text.bt.none { fill: var(--muted); }
+.tree text.bt.p { fill: var(--p); }
+.tree text.bt.q { fill: var(--q); }
+.tree text.bt.lca { fill: var(--lca); }
+@media (prefers-reduced-motion: reduce) { .tree circle { transition: none; } }
+
+.scrub { display: flex; align-items: center; gap: 10px; }
+.scrub input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.scrub .mono { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.log { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.phase { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; align-self: flex-start; padding: 2px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.phase.ok { background: var(--lca-soft); color: var(--lca); }
+.msg { font-size: 16px; min-height: 5.2em; }
+.msg b { color: var(--accent); }
+.msg b.lca { color: var(--lca); }
+.stackbox { display: flex; flex-direction: column; gap: 8px; }
+.stackbox .head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
+.chip { font-family: var(--font-mono); font-size: 12px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); }
+.chip.top { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+.empty { color: var(--muted); font-size: 13px; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.sw { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 2px solid var(--line); }
+
+.cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.case { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--line); }
+.case .rule { font-family: var(--font-mono); font-size: 13px; }
+.case p { color: var(--muted); font-size: 14px; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">LeetCode 236 · 中等 · 二叉树</div>
+    <h1>二叉树的最近公共祖先，让答案自己往上冒</h1>
+    <p class="lede">每个节点只问左右子树一句话：你们那边找到 p 或 q 了吗？左右都说找到了，自己就是答案。下面的树可以逐步播放递归过程，每个节点下面会挂出它向上返回的东西。</p>
+  </header>
+
+  <section aria-labelledby="h-hints">
+    <h2 id="h-hints">分层提示</h2>
+    <div class="hints">
+      <details>
+        <summary><span class="lvl">提示 1</span>先定好递归函数返回什么<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>让函数 <code>f(node)</code> 回答：在以 <code>node</code> 为根的这棵子树里，有没有找到 p 或 q？</p>
+          <p>找到了就把找到的节点交上来，什么都没找到就返回空。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">提示 2</span>拿到左右两边的回答后怎么办<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p><strong>左右都不为空</strong>：p 和 q 分别在两侧，当前节点就是最近公共祖先，返回自己。</p>
+          <p><strong>只有一边不为空</strong>：把那一边的结果原样往上交。它可能是 p 或 q，也可能是下面已经找到的答案。</p>
+          <p><strong>都为空</strong>：这棵子树里什么都没有，返回空。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">提示 3</span>碰到 p 为什么可以直接返回<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>走到 p 时，不用再往下找 q。如果 q 在 p 下面，答案就是 p 自己；如果 q 不在 p 下面，别的分支会找到 q，在上面汇合。</p>
+          <p>这一步依赖题目保证 p、q 都在树里。演示里的示例 2 就是 q 在 p 下面的情况，可以看看 4 根本没被访问到。</p>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">代码</span>标准解法：后序递归<span class="peek">点开</span></summary>
+        <div class="hint-body">
+<pre class="code">class Solution:
+    def lowestCommonAncestor(self, root, p, q):
+        if root is None or root is p or root is q:
+            return root                 <span class="cmt"># 空，或者就是要找的节点</span>
+        left = self.lowestCommonAncestor(root.left, p, q)
+        right = self.lowestCommonAncestor(root.right, p, q)
+        if left and right:
+            return root                 <span class="cmt"># p、q 分在两边</span>
+        return left or right            <span class="cmt"># 哪边有就交哪边</span></pre>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">代码</span>不用递归：记录父节点<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>先遍历一遍记下每个节点的父节点，再从 p 一路往上把祖先都放进集合，最后从 q 往上走，第一个在集合里的就是答案。树退化成一条长链时，递归写法在 Python 里可能超过默认的递归深度上限，这个写法没有这个问题。</p>
+<pre class="code">class Solution:
+    def lowestCommonAncestor(self, root, p, q):
+        parent = {root: None}
+        stack = [root]
+        while p not in parent or q not in parent:
+            node = stack.pop()
+            for child in (node.left, node.right):
+                if child:
+                    parent[child] = node
+                    stack.append(child)
+        ancestors = set()
+        while p:                        <span class="cmt"># p 和它所有的祖先</span>
+            ancestors.add(p)
+            p = parent[p]
+        while q not in ancestors:       <span class="cmt"># q 往上走，第一个碰到的就是答案</span>
+            q = parent[q]
+        return q</pre>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-demo">
+    <h2 id="h-demo">递归演示</h2>
+    <div class="stage">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="seg" role="group" aria-label="选择示例">
+            <button id="ex1" type="button" aria-pressed="true">示例 1</button>
+            <button id="ex2" type="button" aria-pressed="false">示例 2</button>
+          </div>
+          <label class="pick p" for="selp"><b>p</b> =<select id="selp"></select></label>
+          <label class="pick q" for="selq"><b>q</b> =<select id="selq"></select></label>
+        </div>
+        <svg class="tree" id="tree" viewBox="0 0 560 340" role="img" aria-label="示例二叉树"></svg>
+        <div class="toolbar">
+          <button id="reset" type="button">重置</button>
+          <button id="prev" type="button">上一步</button>
+          <button id="next" type="button" class="primary">下一步</button>
+          <button id="play" type="button">自动播放</button>
+        </div>
+        <div class="scrub">
+          <input id="slider" type="range" min="0" max="0" value="0" aria-label="步骤">
+          <span class="mono" id="stepno">0 / 0</span>
+        </div>
+      </div>
+
+      <div class="log" aria-live="polite">
+        <span class="phase" id="phase">开始</span>
+        <p class="msg" id="msg"></p>
+        <div class="stackbox">
+          <div class="head"><span>调用栈</span><span>右边是正在执行的</span></div>
+          <div class="chips" id="stack"></div>
+        </div>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--accent-soft);border-color:var(--accent)"></i>在调用栈上</span>
+          <span><i class="sw" style="border-color:var(--p)"></i>p</span>
+          <span><i class="sw" style="border-color:var(--q)"></i>q</span>
+          <span><i class="sw" style="background:var(--lca);border-color:var(--lca)"></i>最近公共祖先</span>
+          <span>节点下方的小标签：它向上返回的东西</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-cases">
+    <h2 id="h-cases">每个节点只有四种情况</h2>
+    <div class="cases">
+      <div class="case"><h3>自己就是 p 或 q</h3><span class="rule">return root</span><p>不用再往下找，直接把自己交上去。</p></div>
+      <div class="case"><h3>左右都找到了</h3><span class="rule">return root</span><p>p 和 q 分在两边，自己就是最近公共祖先。只会在一个节点上发生。</p></div>
+      <div class="case"><h3>只有一边找到</h3><span class="rule">return left or right</span><p>原样往上交。交上去的可能是 p、q，也可能是下面已经确定的答案。</p></div>
+      <div class="case"><h3>两边都没找到</h3><span class="rule">return None</span><p>这棵子树里没有 p 也没有 q。空节点也属于这种情况。</p></div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  // 示例树 [3,5,1,6,2,0,8,null,null,7,4]
+  const T = {
+    3: { l: 5, r: 1 }, 5: { l: 6, r: 2 }, 1: { l: 0, r: 8 },
+    6: {}, 2: { l: 7, r: 4 }, 0: {}, 8: {}, 7: {}, 4: {},
+  };
+  const ROOT = 3;
+  const ORDER = [3, 5, 1, 6, 2, 0, 8, 7, 4];
+  const POS = {};
+  (function layout() {
+    let x = 0;
+    const walk = (v, d) => {
+      if (v === undefined) return;
+      walk(T[v].l, d + 1);
+      POS[v] = [40 + x * 60, 40 + d * 82];
+      x++;
+      walk(T[v].r, d + 1);
+    };
+    walk(ROOT, 0);
+  })();
+  const PARENT = {};
+  for (const v of ORDER) for (const c of [T[v].l, T[v].r]) if (c !== undefined) PARENT[c] = v;
+
+  const $ = (id) => document.getElementById(id);
+  let P = 5, Q = 1, steps = [], idx = 0, timer = null;
+
+  const kind = (r) => (r === null ? "none" : r === P ? "p" : r === Q ? "q" : "lca");
+  const say = (r) => (r === null ? "空" : r === P ? `${r}（p）` : r === Q ? `${r}（q）` : `${r}（答案）`);
+
+  function build() {
+    steps = [];
+    const ret = {}, stack = [];
+    const snap = (o) => steps.push({ stack: stack.slice(), ret: { ...ret }, ...o });
+    snap({ phase: "开始", msg: `从根节点 ${ROOT} 开始递归。每个节点都问左右子树：你们那边找到 p = ${P} 或 q = ${Q} 了吗？` });
+    function f(v) {
+      stack.push(v);
+      if (v === P || v === Q) {
+        ret[v] = v;
+        snap({ cur: v, phase: "找到", msg: `${v} 就是 ${v === P ? "p" : "q"}，直接返回它自己，<b>不再往下找</b>。` });
+        stack.pop();
+        return v;
+      }
+      snap({ cur: v, phase: "进入", msg: `进入 ${v}：它不是 p 也不是 q，先问左子树，再问右子树。` });
+      const kids = [T[v].l, T[v].r];
+      const res = kids.map((c) => (c === undefined ? null : f(c)));
+      const [L, R] = res;
+      const miss = kids.map((c, i) => (c === undefined ? (i ? "右孩子" : "左孩子") : null)).filter(Boolean);
+      const note = miss.length ? `（${miss.join("、")}为空，直接返回空）` : "";
+      let r, msg;
+      if (L !== null && R !== null) {
+        r = v;
+        msg = `左边返回 ${say(L)}，右边返回 ${say(R)}。p 和 q 分在两边，<b class="lca">${v} 就是最近公共祖先</b>，返回 ${v}。`;
+      } else if (L !== null || R !== null) {
+        r = L !== null ? L : R;
+        const side = L !== null ? "左" : "右";
+        msg = r !== P && r !== Q
+          ? `${side}边返回的是已经找到的答案 ${r}，另一边是空${note}。原样往上交。`
+          : `只有${side}边返回了 ${say(r)}，另一边是空${note}。把它原样往上交。`;
+      } else {
+        r = null;
+        msg = `左右都是空${note}，这棵子树里什么都没有，返回空。`;
+      }
+      ret[v] = r;
+      snap({ cur: v, phase: r !== null && r !== P && r !== Q && r === v ? "汇合" : "返回", msg });
+      stack.pop();
+      return r;
+    }
+    const ans = f(ROOT);
+    const skipped = ORDER.filter((v) => !(v in ret));
+    snap({
+      phase: "结束", done: true, ans,
+      msg: `根节点返回 ${ans}，答案是 <b class="lca">${ans}</b>。` + (skipped.length ? `节点 ${skipped.join("、")} 从来没被访问，因为找到 p 或 q 后就不再往下走。` : ""),
+    });
+  }
+
+  function show() {
+    const s = steps[idx];
+    const onStack = new Set(s.stack);
+    let svg = "";
+    for (const v of ORDER) {
+      if (PARENT[v] === undefined) continue;
+      const [x1, y1] = POS[PARENT[v]], [x2, y2] = POS[v];
+      const on = onStack.has(v) && onStack.has(PARENT[v]);
+      svg += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${on ? "on" : ""}"></line>`;
+    }
+    for (const v of ORDER) {
+      const [x, y] = POS[v];
+      const isAns = s.done && v === s.ans;
+      const cls = [
+        isAns ? "ans" : onStack.has(v) ? "stack" : "",
+        !isAns && v === P ? "ring-p" : "",
+        !isAns && v === Q ? "ring-q" : "",
+        v === s.cur ? "cur" : "",
+      ].join(" ");
+      svg += `<circle cx="${x}" cy="${y}" r="20" class="${cls}"></circle>`;
+      svg += `<text x="${x}" y="${y}" class="${isAns ? "inv" : ""}">${v}</text>`;
+      if (v === P || v === Q) svg += `<text x="${x + 25}" y="${y - 18}" class="tag ${v === P ? "p" : "q"}">${v === P ? "p" : "q"}</text>`;
+      if (v in s.ret) {
+        const r = s.ret[v], k = kind(r), label = r === null ? "↑ 空" : `↑ ${r}`;
+        svg += `<rect class="badge ${k}" x="${x - 22}" y="${y + 26}" width="44" height="20" rx="10"></rect>`;
+        svg += `<text class="bt ${k}" x="${x}" y="${y + 36}">${label}</text>`;
+      }
+    }
+    $("tree").innerHTML = svg;
+    const ph = $("phase");
+    ph.textContent = s.phase;
+    ph.className = "phase" + (s.done || s.phase === "汇合" ? " ok" : "");
+    $("msg").innerHTML = s.msg;
+    $("stack").innerHTML = s.stack.length
+      ? s.stack.map((v, i) => `<span class="chip${i === s.stack.length - 1 ? " top" : ""}">f(${v})</span>`).join("")
+      : '<span class="empty">空</span>';
+    $("slider").max = steps.length - 1;
+    $("slider").value = idx;
+    $("stepno").textContent = `${idx} / ${steps.length - 1}`;
+    $("prev").disabled = idx === 0;
+    $("next").disabled = idx === steps.length - 1;
+  }
+
+  function go(i) { idx = Math.max(0, Math.min(steps.length - 1, i)); show(); }
+  function stop() { if (timer) clearInterval(timer); timer = null; $("play").textContent = "自动播放"; }
+  function play() {
+    if (timer) return stop();
+    if (idx === steps.length - 1) go(0);
+    $("play").textContent = "暂停";
+    timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
+  }
+  function restart() { stop(); build(); go(0); }
+
+  function fillSelects() {
+    for (const [id, val] of [["selp", P], ["selq", Q]]) {
+      $(id).innerHTML = ORDER.slice().sort((a, b) => a - b).map((v) => `<option value="${v}"${v === val ? " selected" : ""}>${v}</option>`).join("");
+    }
+  }
+  function setPQ(p, q, pressed) {
+    P = p; Q = q;
+    for (const id of ["ex1", "ex2"]) $(id).setAttribute("aria-pressed", String(id === pressed));
+    fillSelects();
+    restart();
+  }
+  $("selp").onchange = (e) => {
+    const v = Number(e.target.value);
+    setPQ(v, v === Q ? P : Q, null);
+  };
+  $("selq").onchange = (e) => {
+    const v = Number(e.target.value);
+    setPQ(v === P ? Q : P, v, null);
+  };
+  $("ex1").onclick = () => setPQ(5, 1, "ex1");
+  $("ex2").onclick = () => setPQ(5, 4, "ex2");
+  $("reset").onclick = () => { stop(); go(0); };
+  $("prev").onclick = () => { stop(); go(idx - 1); };
+  $("next").onclick = () => { stop(); go(idx + 1); };
+  $("play").onclick = play;
+  $("slider").oninput = (e) => { stop(); go(Number(e.target.value)); };
+
+  setPQ(5, 1, "ex1");
+})();
+</script>
