@@ -46,47 +46,92 @@ export function AccountButton() {
   );
 }
 
-/** 登录了但还没有进度仓：用模板创建一个 */
+function Step({ n, title, active, done, children }: { n: number; title: string; active: boolean; done: boolean; children?: React.ReactNode }) {
+  return (
+    <div className={`flex gap-3 ${active ? "" : "opacity-50"}`}>
+      <span className={`font-pixel mt-0.5 grid size-6 shrink-0 place-items-center rounded-md text-[11px] ${done ? "bg-success text-background" : active ? "bg-accent text-background" : "bg-foreground/10"}`}>{done ? "✓" : n}</span>
+      <div className="flex min-w-0 flex-col gap-2">
+        <span className="text-sm font-semibold">{title}</span>
+        {active && children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 登录了但还不能读写进度仓时的两步引导：
+ * ① 在 GitHub 上用模板创建 hot100-progress；② 把 GitHub App 装到这个仓库上（只选这一个仓库）。
+ */
 export function SetupCard() {
-  const { session, setup } = useProgress();
-  const [star, setStar] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-  if (!session?.user || !session.repo || session.repo.exists) return null;
-  const run = async () => {
-    setBusy(true);
-    setErr(null);
-    try {
-      await setup(star);
-    } catch (e) {
-      setErr((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
+  const { session, ready, loading, star, refresh, installHref } = useProgress();
+  const [wantStar, setWantStar] = useState(true);
+  const [checking, setChecking] = useState(false);
+  if (loading || ready || !session?.user || !session.repo) return null;
+  const { repo } = session;
+  const step = !repo.exists ? 1 : 2;
+  const maybeStar = () => {
+    if (wantStar && !session.starred) star();
+  };
+  const recheck = async () => {
+    setChecking(true);
+    await refresh();
+    setChecking(false);
   };
   return (
-    <Card className="reveal gap-4 p-5 sm:p-6">
+    <Card className="reveal gap-5 p-5 sm:p-6">
       <div className="flex items-center gap-3">
         <PixelBullet />
-        <span className="text-base font-semibold">还差一步：创建你的进度仓</span>
+        <span className="text-base font-semibold">两步开通你自己的进度</span>
       </div>
       <p className="text-sm leading-6 text-muted">
-        会用模板在你的账号下创建一个公开仓库 <span className="font-mono text-foreground">{session.repo.name}</span>，从 0 进度开始。以后每道题的状态和你写的题解都存在那里，文件规则在仓库的 README 里。
+        进度和题解存在你账号下的公开仓库 <span className="font-mono text-foreground">{repo.name}</span> 里。网站只申请这一个仓库的读写权限，不碰你的其他仓库。
       </p>
-      <Switch isSelected={star} onChange={setStar}>
-        <Switch.Content className="text-sm">
-          <Switch.Control>
-            <Switch.Thumb />
-          </Switch.Control>
-          顺手给模板仓库 {session.template} 点个 Star
-        </Switch.Content>
-      </Switch>
-      <div className="flex flex-wrap items-center gap-3">
-        <Button isPending={busy} onPress={run}>
-          {busy ? "正在创建…" : "创建我的进度仓"}
-        </Button>
-        {err && <span className="text-sm text-danger">{err}</span>}
+      <div className="flex flex-col gap-4">
+        <Step active={step === 1} done={step > 1} n={1} title="用模板创建进度仓">
+          <p className="text-xs leading-5 text-muted">
+            在 GitHub 的新建页面里，仓库名填 <span className="font-mono">{session.repoName}</span>，选 Public，然后点 Create repository。
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <a className="no-underline" href={session.createUrl} rel="noopener noreferrer" target="_blank" onClick={maybeStar}>
+              <Button size="sm">在 GitHub 上创建</Button>
+            </a>
+            <Button isPending={checking} size="sm" variant="outline" onPress={recheck}>
+              建好了
+            </Button>
+          </div>
+        </Step>
+        <Step active={step === 2} done={false} n={2} title="把 GitHub App 装到这个仓库上">
+          <p className="text-xs leading-5 text-muted">
+            安装时选 Only select repositories，只勾 <span className="font-mono">{session.repoName}</span>。装完会自动回到这里。
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {repo.manageUrl ? (
+              <>
+                <a className="no-underline" href={repo.manageUrl} rel="noopener noreferrer" target="_blank" onClick={maybeStar}>
+                  <Button size="sm">把仓库加进已装的 App</Button>
+                </a>
+                <Button isPending={checking} size="sm" variant="outline" onPress={recheck}>
+                  加好了
+                </Button>
+              </>
+            ) : (
+              <a className="no-underline" href={installHref()} onClick={maybeStar}>
+                <Button size="sm">安装 GitHub App</Button>
+              </a>
+            )}
+          </div>
+        </Step>
       </div>
+      {!session.starred && (
+        <Switch isSelected={wantStar} onChange={setWantStar}>
+          <Switch.Content className="text-sm">
+            <Switch.Control>
+              <Switch.Thumb />
+            </Switch.Control>
+            顺手给模板仓库 {session.template} 点个 Star
+          </Switch.Content>
+        </Switch>
+      )}
     </Card>
   );
 }
@@ -113,8 +158,8 @@ export function LoginHint() {
 
 /** 题目页：切换这道题的状态，直接提交到进度仓 */
 export function StatusPicker({ id }: { id: number }) {
-  const { session, progress, statusOf, setStatus, saving, error } = useProgress();
-  if (!session?.user || !session.repo?.exists || !progress) return null;
+  const { session, ready, statusOf, setStatus, saving, error } = useProgress();
+  if (!ready || !session?.repo) return null;
   return (
     <div className="flex flex-wrap items-center gap-3">
       <Segment aria-label="这道题的状态" selectedKey={statusOf(id)} size="sm" onSelectionChange={(k) => setStatus(id, String(k) as Status)}>

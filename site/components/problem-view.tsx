@@ -156,7 +156,7 @@ function History({ d }: { d: ProblemDetail }) {
   const { loading, session, loginHref } = useProgress();
   const id = d.summary.id;
   const user = session?.user?.login;
-  const canRead = !!user && !!session?.repo?.exists;
+  const canRead = !!user && !!session?.repo?.exists && !!session.repo.accessible;
   const [state, setState] = useState<{ key: string; history: HistoryFile[] | null; error: string | null }>({ key: "", history: null, error: null });
   const key = canRead ? `${user}/${id}` : "";
 
@@ -195,7 +195,9 @@ function History({ d }: { d: ProblemDetail }) {
       />
     );
   }
-  if (!session.repo?.exists) return <HistoryEmpty desc="先在首页创建你的进度仓，之后存进去的题解会出现在这里。" title="还没有进度仓" />;
+  if (!session.repo?.exists || !session.repo.accessible) {
+    return <HistoryEmpty desc="先在首页按两步开通你的进度仓（创建仓库、安装 App），之后存进去的题解会出现在这里。" title="还没开通进度仓" />;
+  }
   if (state.key !== key) return <Skel className="h-24 w-full rounded-3xl" />;
   if (state.error) return <HistoryEmpty desc={state.error} title="没能读到你的题解" />;
   const history = state.history ?? [];
@@ -344,7 +346,7 @@ export function ProblemView({ id }: { id: number }) {
   }
 
   const s = d.summary;
-  const { session, statusOf } = progressCtx;
+  const { statusOf } = progressCtx;
   const sections = SECTIONS.filter((x) => (x.id === "points" ? d.spec?.points?.length : true));
 
   return (
@@ -370,7 +372,7 @@ export function ProblemView({ id }: { id: number }) {
                 <LevelPixels level={s.level} />
                 <TopicChip topic={s.topic} />
                 <TierChip tier={s.tier} />
-                {session?.user && session.repo?.exists ? null : <StatusPixel status={statusOf(s.id)} />}
+                {progressCtx.ready ? null : <StatusPixel status={statusOf(s.id)} />}
               </div>
               <StatusPicker id={s.id} />
             </div>

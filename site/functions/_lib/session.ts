@@ -1,10 +1,14 @@
-// 登录会话：GitHub 给的用户令牌用 AES-GCM 加密后放在 HttpOnly Cookie 里，浏览器端的脚本读不到，也不会出现在任何响应里。
+// 登录会话（GitHub App 的用户令牌）。令牌用 AES-GCM 加密后放在 HttpOnly Cookie 里，浏览器端的脚本读不到，也不会出现在任何响应里。
+// GitHub App 的用户令牌 8 小时过期，Cookie 里同时存着 refresh token（6 个月有效），快过期时服务端自动换新。
 // 加密密钥来自 Pages 的加密环境变量 SESSION_SECRET。
 
 export interface AuthEnv {
   SESSION_SECRET?: string;
-  GITHUB_OAUTH_CLIENT_ID?: string;
-  GITHUB_OAUTH_CLIENT_SECRET?: string;
+  /** GitHub App 的 client id / client secret（加密环境变量） */
+  GITHUB_APP_CLIENT_ID?: string;
+  GITHUB_APP_CLIENT_SECRET?: string;
+  /** GitHub App 的 slug，用来拼安装链接：https://github.com/apps/<slug> */
+  GITHUB_APP_SLUG?: string;
   /** 0 进度的模板仓，owner/name */
   TEMPLATE_REPO: string;
   /** 用户进度仓的名字（建在用户自己的账号下） */
@@ -14,11 +18,15 @@ export interface AuthEnv {
 export interface Session {
   /** GitHub 用户令牌 */
   t: string;
+  /** refresh token（没开令牌过期时没有） */
+  r?: string;
+  /** 令牌过期时间（毫秒） */
+  te?: number;
   /** 用户名 */
   l: string;
   /** 头像 */
   a: string;
-  /** 过期时间（毫秒） */
+  /** 会话过期时间（毫秒） */
   exp: number;
 }
 
@@ -41,7 +49,7 @@ const unb64u = (s: string) => {
 };
 
 async function key(secret: string) {
-  const raw = await crypto.subtle.digest("SHA-256", enc.encode(secret));
+  const raw = await crypto.subtle.digest("SHA-256", enc.encode(secret.trim()));
   return crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]);
 }
 
@@ -75,12 +83,35 @@ export function setCookie(name: string, value: string, maxAge: number): string {
   return `${name}=${encodeURIComponent(value)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
 }
 
-export const authConfigured = (env: AuthEnv) => !!(env.SESSION_SECRET && env.GITHUB_OAUTH_CLIENT_ID && env.GITHUB_OAUTH_CLIENT_SECRET);
+export const authConfigured = (env: AuthEnv) => !!(env.SESSION_SECRET && env.GITHUB_APP_CLIENT_ID && env.GITHUB_APP_CLIENT_SECRET && env.GITHUB_APP_SLUG);
 
-export async function getSession(request: Request, env: AuthEnv): Promise<Session | null> {
-  if (!env.SESSION_SECRET) return null;
+/** 用授权码或 refresh token 换用户令牌 */
+export async function exchangeToken(env: AuthEnv, params: Record<string, string>) {
+  const r = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json", "User-Agent": "lc-hot100-site" },
+    body: JSON.stringify({ client_id: env.GITHUB_APP_CLIENT_ID, client_secret: env.GITHUB_APP_CLIENT_SECRET, ...params }),
+  });
+  const j = (await r.json().catch(() => ({}))) as { access_token?: string; refresh_token?: string; expires_in?: number };
+  if (!j.access_token) return null;
+  return { t: j.access_token, r: j.refresh_token, te: j.expires_in ? Date.now() + j.expires_in * 1000 : undefined };
+}
+
+/**
+ * 读出当前会话；令牌快过期时用 refresh token 换新的。
+ * cookie 不为空时，调用方要把它加到响应的 Set-Cookie 里。
+ */
+export async function getSession(request: Request, env: AuthEnv): Promise<{ session: Session | null; cookie: string | null }> {
+  if (!env.SESSION_SECRET) return { session: null, cookie: null };
   const v = readCookie(request, SESSION_COOKIE);
-  return v ? unseal(env.SESSION_SECRET, v) : null;
+  const s = v ? await unseal(env.SESSION_SECRET, v) : null;
+  if (!s) return { session: null, cookie: null };
+  if (!s.te || s.te - Date.now() > 5 * 60e3) return { session: s, cookie: null };
+  // 快过期了：换新令牌
+  const fresh = s.r && authConfigured(env) ? await exchangeToken(env, { grant_type: "refresh_token", refresh_token: s.r }) : null;
+  if (!fresh) return { session: null, cookie: setCookie(SESSION_COOKIE, "", 0) };
+  const next: Session = { ...s, ...fresh, r: fresh.r ?? s.r };
+  return { session: next, cookie: setCookie(SESSION_COOKIE, await seal(env.SESSION_SECRET, next), SESSION_DAYS * 86400) };
 }
 
 /** 写操作只接受本站页面发起的请求，挡住别的网站借用户的 Cookie 发请求 */
@@ -94,8 +125,15 @@ export function safeReturn(v: string | null): string {
   return v && /^\/(?!\/)[\w\-./?=&%#]*$/.test(v) ? v : "/";
 }
 
-export function privateJson(data: unknown, status = 200, extraHeaders: [string, string][] = []): Response {
+export function privateJson(data: unknown, status = 200, cookies: (string | null)[] = []): Response {
   const h = new Headers({ "Content-Type": "application/json; charset=utf-8", "Cache-Control": "private, no-store" });
-  for (const [k, v] of extraHeaders) h.append(k, v);
+  for (const c of cookies) if (c) h.append("Set-Cookie", c);
   return new Response(JSON.stringify(data), { status, headers: h });
+}
+
+/** 跳去 GitHub 之前，记下 state（防 CSRF）和回来后要去的页面 */
+export function startState(request: Request): { state: string; cookie: string } {
+  const state = b64u(crypto.getRandomValues(new Uint8Array(18)));
+  const back = safeReturn(new URL(request.url).searchParams.get("return"));
+  return { state, cookie: setCookie(OAUTH_COOKIE, `${state}|${back}`, 900) };
 }

@@ -92,8 +92,20 @@ export interface SessionInfo {
   configured: boolean;
   template: string;
   repoName: string;
+  /** GitHub「用模板新建仓库」页面 */
+  createUrl: string;
   user: { login: string; avatar: string } | null;
-  repo: { name: string; url: string; exists: boolean } | null;
+  repo: {
+    name: string;
+    url: string;
+    /** 仓库建好了没有 */
+    exists: boolean;
+    /** GitHub App 有没有装到这个仓库上（装了网站才能写） */
+    accessible: boolean;
+    /** 已经装过 App 但没选这个仓库时，去这里把它加上 */
+    manageUrl: string | null;
+  } | null;
+  starred: boolean;
 }
 
 /** /api/progress */

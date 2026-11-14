@@ -103,6 +103,7 @@ export async function saveStatus(token: string, repo: string, id: number, status
       ...(sha ? { sha } : {}),
     });
     if (r.ok) return;
+    if (r.status === 403 || r.status === 404) throw new HttpError(403, "网站还没有这个仓库的写权限：先把 GitHub App 装到你的进度仓上");
     if (r.status !== 409 && r.status !== 422) throw new HttpError(502, `保存进度失败（GitHub ${r.status}）`);
   }
   throw new HttpError(409, "进度仓刚被别的地方改过，刷新一下再试");

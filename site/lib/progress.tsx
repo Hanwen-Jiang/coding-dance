@@ -16,9 +16,15 @@ interface Ctx {
   statusOf: (id: number) => Status;
   langsOf: (id: number) => string[];
   setStatus: (id: number, s: Status) => Promise<void>;
-  setup: (star: boolean) => Promise<void>;
+  /** 给模板仓点 Star */
+  star: () => Promise<void>;
+  /** 重新确认登录状态（建完仓库后点「刷新」用） */
+  refresh: () => Promise<void>;
   logout: () => Promise<void>;
   loginHref: () => string;
+  installHref: () => string;
+  /** 能读写进度仓：登录了、仓库建好了、App 也装到仓库上了 */
+  ready: boolean;
 }
 
 const ProgressCtx = createContext<Ctx | null>(null);
@@ -41,7 +47,7 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     try {
       const s = await getJson<SessionInfo>("/api/session");
       setSession(s);
-      setProgress(s.user && s.repo?.exists ? await getJson<ProgressData>("/api/progress") : null);
+      setProgress(s.user && s.repo?.exists && s.repo.accessible ? await getJson<ProgressData>("/api/progress") : null);
       setError(null);
     } catch (e) {
       setError((e as Error).message);
@@ -76,21 +82,14 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     }
   }, [progress]);
 
-  const setup = useCallback(async (star: boolean) => {
-    await getJson("/api/progress/setup", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ star }) });
-    // GitHub 用模板生成仓库要一两秒，等它能读了再刷新
-    for (let k = 0; k < 8; k++) {
-      await new Promise((r) => setTimeout(r, 900));
-      try {
-        const p = await getJson<ProgressData>("/api/progress");
-        setProgress(p);
-        break;
-      } catch {
-        /* 还没好，继续等 */
-      }
+  const star = useCallback(async () => {
+    try {
+      await getJson("/api/progress/star", { method: "POST" });
+      setSession((s) => (s ? { ...s, starred: true } : s));
+    } catch {
+      /* Star 失败不影响别的 */
     }
-    await load();
-  }, [load]);
+  }, []);
 
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -98,11 +97,14 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     await load();
   }, [load]);
 
-  const loginHref = useCallback(() => `/api/auth/login?return=${encodeURIComponent(typeof window === "undefined" ? "/" : location.pathname + location.search)}`, []);
+  const here = () => encodeURIComponent(typeof window === "undefined" ? "/" : location.pathname + location.search);
+  const loginHref = useCallback(() => `/api/auth/login?return=${here()}`, []);
+  const installHref = useCallback(() => `/api/auth/install?return=${here()}`, []);
+  const ready = !!(session?.user && session.repo?.exists && session.repo.accessible && progress);
 
   const value = useMemo(
-    () => ({ loading, session, progress, saving, error, statusOf, langsOf, setStatus, setup, logout, loginHref }),
-    [loading, session, progress, saving, error, statusOf, langsOf, setStatus, setup, logout, loginHref],
+    () => ({ loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, refresh: load, logout, loginHref, installHref, ready }),
+    [loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, load, logout, loginHref, installHref, ready],
   );
   return <ProgressCtx.Provider value={value}>{children}</ProgressCtx.Provider>;
 }

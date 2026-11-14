@@ -19,5 +19,5 @@
 - `build.js` 会同时把提示、代码、注意点和演示导出到 `tools/illustrations/data/<编号>.json`，网站读的就是这份数据，所以改完 spec 一定要重新 build 并提交 data 目录。只想更新数据、不跑测试时用 `node tools/illustrations/build.js --data-only`。没装 Python 时可以设 `PYTHON="node <pyodide 运行器>"` 替代。
 - 修改已发布的图解时，用题目文档里记录的 artifact 链接原地更新，不要新建一个链接。
 - 题目通过后：不改这个仓库。在自己的进度仓里把 `progress.json` 对应题号的 `status` 改成 `已通过`（网站上点一下也行），题解按 `solutions/<语言>/<四位题号>.<题名>[.<写法>].<后缀>` 存进进度仓。规则以模板仓的 README 为准，模板仓的 `scripts/check.mjs` 和网站 `site/functions/_lib/progress.ts` 按同一套规则读文件，改规则时三处一起改。
-- 网站读私有资源仓用的 GitHub 令牌只存在 Cloudflare Pages 的加密环境变量 `GITHUB_TOKEN` 里；GitHub OAuth 的 client secret 和会话加密密钥 `SESSION_SECRET` 也只存在加密环境变量里。绝不写进仓库、`site/wrangler.toml`、前端代码或任何响应。改网站代码后的部署方式见 `site/README.md`。
+- 网站读私有资源仓用的 GitHub 令牌只存在 Cloudflare Pages 的加密环境变量 `GITHUB_TOKEN` 里；登录用的 GitHub App 的 client id / client secret 和会话加密密钥 `SESSION_SECRET` 也只存在加密环境变量里（App 的 slug 是公开信息，写在 wrangler.toml 的 `GITHUB_APP_SLUG`）。绝不写进仓库、`site/wrangler.toml`、前端代码或任何响应。改网站代码后的部署方式见 `site/README.md`。
 - 图解 artifact 的配色：页面背景浅色模式用纯白 `#ffffff`、深色模式用纯黑 `#000000`，面板底色同样用纯白 / 纯黑；边框、次要文字等中性色用不带色相的纯灰，不要带淡蓝等色调。强调色和表示含义的颜色（如岛屿数量里代表水的蓝色）不受此限。
