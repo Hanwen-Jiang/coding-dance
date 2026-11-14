@@ -132,7 +132,7 @@ export function ProblemList() {
   const [query, setQuery] = useState("");
 
   // 题目资源对所有人一样；状态和题解来自当前用户的进度仓（没登录就是 0 进度）
-  const { loading: sessionLoading, statusOf, langsOf } = useProgress();
+  const { loading: sessionLoading, session, statusOf, langsOf } = useProgress();
   const problems: Problem[] = useMemo(
     () => (data?.problems ?? []).map((p) => ({ ...p, status: statusOf(p.id), langs: langsOf(p.id) })),
     [data, statusOf, langsOf],
@@ -227,6 +227,16 @@ export function ProblemList() {
           </Card>
           <SetupCard />
           <LoginHint />
+          {/* 进度仓开通好了：提示可以用扩展从力扣同步 */}
+          {session?.repo?.exists && session.repo.accessible && (
+            <NextLink className="group flex items-center justify-between gap-3 rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-muted no-underline hover:text-foreground" href="/sync/">
+              <span>
+                <span className="font-pixel me-2 text-[10px] tracking-wider text-accent">SYNC</span>
+                用浏览器扩展把力扣上的提交记录同步进你的进度仓
+              </span>
+              <span aria-hidden className="font-pixel text-[11px] transition-transform group-hover:translate-x-0.5">→</span>
+            </NextLink>
+          )}
         </div>
       </section>
 

@@ -277,6 +277,7 @@ function Attempts({ d, mine }: { d: ProblemDetail; mine: Mine }) {
           <>
             每次提交（包括没通过的）在 <span className="font-mono">{session!.repo!.name}</span> 里按{" "}
             <span className="font-mono">attempts/{String(id).padStart(4, "0")}.{d.summary.name}/&lt;日期&gt;.&lt;序号&gt;.&lt;结果&gt;.md</span> 记一份，这里会按时间排出来。格式见进度仓 README。
+            也可以用 <NextLink href="/sync/">Hot 100 同步扩展</NextLink> 把力扣上的提交记录直接导进来。
           </>
         }
         title="这道题还没有尝试记录"
@@ -298,13 +299,25 @@ function Attempts({ d, mine }: { d: ProblemDetail; mine: Mine }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className={clsx("rounded-full px-2.5 py-0.5 text-xs font-semibold", st.chip)}>{a.result}</span>
                 <span className="font-mono text-xs text-muted">
-                  {a.date} · 第 {a.seq} 次
+                  {a.date}
+                  {a.submittedAt?.slice(11, 16) ? ` ${a.submittedAt.slice(11, 16)}` : ""} · 第 {a.seq} 次
                 </span>
                 {!a.verbatim && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">不是原样提交</span>}
+                {a.submission && (
+                  <a
+                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted no-underline hover:text-foreground"
+                    href={d.slug ? `https://leetcode.cn/problems/${d.slug}/submissions/${a.submission}/` : `https://leetcode.cn/submissions/detail/${a.submission}/`}
+                    rel="noopener noreferrer"
+                    target="_blank"
+                  >
+                    力扣提交 {a.submission}
+                    <ExternalIcon />
+                  </a>
+                )}
               </div>
               {a.sections.length > 0 && (
                 <Card className="gap-3 p-4 sm:p-5">
-                  {a.sections.map((sec) => (
+                  {a.sections.map((sec) => ({ ...sec, text: a.submission ? sec.text.replace(/^https:\/\/leetcode\.cn\/\S+$/gm, "").trim() : sec.text })).filter((sec) => sec.text).map((sec) => (
                     <div key={sec.title} className="flex flex-col gap-1">
                       <span className="text-xs font-semibold text-muted">{sec.title}</span>
                       <p className="whitespace-pre-wrap text-sm leading-relaxed">{sec.text}</p>

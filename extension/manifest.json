@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Hot 100 同步",
+  "version": "0.1.0",
+  "description": "把你在力扣中国站的提交记录写进你自己的 GitHub 进度仓。数据只在你的浏览器、leetcode.cn 和你的 GitHub 之间传递。",
+  "minimum_chrome_version": "116",
+  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "action": { "default_title": "Hot 100 同步", "default_icon": { "16": "icons/16.png", "32": "icons/32.png" } },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["https://leetcode.cn/*", "https://github.com/*", "https://api.github.com/*"]
+}

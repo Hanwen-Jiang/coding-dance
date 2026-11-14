@@ -98,6 +98,12 @@ export interface Attempt {
   code: string | null;
   /** 文件格式不对时的提示（仍然尽量显示） */
   errors: string[];
+  /** 从哪里同步来的，比如 leetcode.cn（手写的记录没有） */
+  source: string | null;
+  /** 力扣的提交编号（只含数字），有的话可以链接到力扣上的这次提交 */
+  submission: string | null;
+  /** 提交时间，如 2026-11-14T10:05:00+08:00 */
+  submittedAt: string | null;
 }
 
 export interface ProblemLink {

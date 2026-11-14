@@ -38,6 +38,7 @@ GitHub App 的配置（GitHub → Settings → Developer settings → GitHub App
 | Callback URL | `https://leetcode.cgent.link/api/auth/callback` |
 | Expire user authorization tokens | 勾上 |
 | Request user authorization (OAuth) during installation | 勾上 |
+| Enable Device Flow | 勾上（同步扩展用设备授权登录，不需要 client secret） |
 | Webhook → Active | 不勾 |
 | Repository permissions | Contents: Read and write；Metadata: Read-only |
 | Account permissions | Starring: Read and write |
@@ -52,6 +53,10 @@ wrangler pages secret put SESSION_SECRET --project-name lc-hot100
 ```
 
 这几项没设齐时，网站照常能看，只是不显示登录入口。
+
+## 同步扩展
+
+`/sync/` 页面介绍并提供下载 Hot 100 同步扩展（源码在仓库的 `extension/`，下载包是 `public/hot100-sync.zip`）。它在用户自己的浏览器里读 leetcode.cn 的提交记录，用同一个 GitHub App 的设备授权直接写进用户的进度仓，网站服务器不经手；网站只是像平常一样从进度仓读「尝试记录」。改了扩展要先跑 `node extension/pack.mjs` 重新生成 zip，再构建部署网站。
 
 ## 令牌
 

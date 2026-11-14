@@ -88,7 +88,14 @@ export function parseAttemptBody(src: string) {
       else code = c[3];
     } else sections.push({ title, text: content });
   }
-  return { lang, verbatim: meta.verbatim !== "false", sections, code, errors: errs };
+  // 扩展从力扣同步过来的记录（或补过编号的手写记录）带着这三项
+  if (meta.submission != null && !/^\d+$/.test(meta.submission)) errs.push("submission 只能写力扣的提交编号（数字）");
+  if (meta.submittedAt != null && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z)$/.test(meta.submittedAt)) errs.push("submittedAt 要写成 2026-11-14T10:05:00+08:00 这样");
+  const submission = meta.submission && /^\d+$/.test(meta.submission) ? meta.submission : null;
+  return {
+    lang, verbatim: meta.verbatim !== "false", sections, code, errors: errs,
+    source: meta.source || null, submission, submittedAt: meta.submittedAt || null,
+  };
 }
 
 async function listFiles(token: string, repo: string): Promise<string[]> {

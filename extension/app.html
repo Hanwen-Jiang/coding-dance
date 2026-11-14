@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hot 100 同步</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1><img src="icons/32.png" alt="" width="20" height="20"> Hot 100 同步</h1>
+    <p class="lede">把你在力扣中国站的提交记录写进你自己的 GitHub 进度仓。</p>
+    <ul class="facts">
+      <li>数据只在三处之间传递：这个浏览器、<code>leetcode.cn</code>、你的 GitHub 仓库。不经过网站或任何其他服务器。</li>
+      <li>你的进度仓是唯一的数据源。扩展只在本机保存 GitHub 授权，不留数据副本，每次同步都重新读仓库判断哪些已经导入过。</li>
+      <li>每次同步先列出要写入的内容，你确认后才写入，并且只产生一个 commit。</li>
+    </ul>
+  </header>
+
+  <section id="s-gh">
+    <h2><span class="n">1</span>连接 GitHub</h2>
+    <div class="row"><span class="dot" id="gh-dot"></span><span id="gh-state">检查中…</span></div>
+    <div id="gh-device" hidden>
+      <p>在 GitHub 上输入这个验证码，同意 Hot-100 访问你的账号：</p>
+      <div class="code" id="gh-code"></div>
+      <div class="row">
+        <button id="gh-open" class="primary">打开 github.com/login/device</button>
+        <button id="gh-copy">复制验证码</button>
+        <button id="gh-cancel">取消</button>
+      </div>
+      <p class="muted">只会拿到网站 GitHub App 已有的权限：你装了 App 的仓库（hot100-progress）的读写。</p>
+    </div>
+    <div class="row" id="gh-actions">
+      <button id="gh-connect" class="primary" hidden>连接 GitHub</button>
+      <label id="gh-repo-wrap" hidden>进度仓 <input id="gh-repo" spellcheck="false" autocomplete="off"></label>
+      <button id="gh-logout" hidden>断开</button>
+    </div>
+  </section>
+
+  <section id="s-lc">
+    <h2><span class="n">2</span>登录力扣</h2>
+    <div class="row"><span class="dot" id="lc-dot"></span><span id="lc-state">检查中…</span></div>
+    <div class="row">
+      <button id="lc-check">重新检查</button>
+      <button id="lc-open">打开 leetcode.cn</button>
+    </div>
+    <p class="muted">扩展在你已经登录的 leetcode.cn 标签页里读取提交记录，用的是浏览器现成的登录状态，拿不到也不保存你的 Cookie。</p>
+  </section>
+
+  <section id="s-sync">
+    <h2><span class="n">3</span>同步</h2>
+    <div class="row">
+      <button id="plan" class="primary" disabled>检查要同步的内容</button>
+      <span class="muted" id="plan-note">只读：先看一遍，不会写入任何东西。</span>
+    </div>
+    <p class="log" id="log" aria-live="polite"></p>
+    <div id="result" hidden>
+      <div class="summary" id="summary"></div>
+      <table id="table"><thead><tr><th>题目</th><th>新增提交</th><th>补编号</th><th>状态</th></tr></thead><tbody></tbody></table>
+      <details id="skipped-wrap" hidden><summary id="skipped-title"></summary><ul id="skipped"></ul></details>
+      <div class="confirm" id="confirm">
+        <p>确认后，上面这些改动会作为<strong>一个 commit</strong> 写进 <code id="confirm-repo"></code>。</p>
+        <div class="row">
+          <button id="commit" class="primary">写入我的进度仓</button>
+          <button id="discard">不写了</button>
+        </div>
+      </div>
+    </div>
+    <p class="done" id="done" hidden></p>
+  </section>
+</main>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -9,6 +9,7 @@
 - `studyplan/热题100.md`（按专题的题单）、`studyplan/优先级清单.md`（100 题按重要程度排序，P0 必做 / P1 重要 / P2 补全 / P3 选做）。网站按这两个文件解析题单和重要程度，改表格格式时要同步改 `site/functions/_lib/repo.ts`。
 - `tools/`：小工具。
 - `site/`：题解网站（Next.js 静态导出 + HeroUI Pro，部署在 Cloudflare Pages 项目 `lc-hot100`，域名 https://leetcode.cgent.link）。网站在运行时通过 GitHub API 读这个仓库，push 之后最多一分钟网站就会更新，不用重新部署。登录的用户的进度和题解从他自己的 `hot100-progress` 仓库读写。
+- `extension/`：Hot 100 同步扩展（Chrome / Edge，Manifest V3），把用户在 leetcode.cn 上的提交记录写进他自己的进度仓。网站的 `/sync/` 页面提供下载（`site/public/hot100-sync.zip`）。
 
 ## 工作约定
 
@@ -23,6 +24,13 @@
   - 每一次值得记的尝试（通过、答案错误、超时、运行出错、思路不成立）都按 `attempts/<四位题号>.<题名>/<YYYY-MM-DD>.<序号>.<结果>.md` 记一份：原样代码（不要改好再存；不是原样时写 `verbatim: false`）、错在哪里、怎么发现的、差在哪一步。写进去的结论先在本地复现一遍。
   - 状态写在 `progress.json` 对应题号的 `status`：通过了记 `已通过`，提交过但还没通过记 `尝试过`（网站上点一下也行）。
   - 通过后把整理好的写法按 `solutions/<语言>/<四位题号>.<题名>[.<写法>].<后缀>` 存一份。
-  - 规则以模板仓的 README 为准，模板仓的 `scripts/check.mjs` 和网站 `site/functions/_lib/progress.ts` 按同一套规则读文件，改规则时三处一起改（进度仓里的 README 和 check.mjs 是模板的副本，也要同步）。
-- 网站读私有资源仓用的 GitHub 令牌只存在 Cloudflare Pages 的加密环境变量 `GITHUB_TOKEN` 里；登录用的 GitHub App 的 client id / client secret 和会话加密密钥 `SESSION_SECRET` 也只存在加密环境变量里（App 的 slug 是公开信息，写在 wrangler.toml 的 `GITHUB_APP_SLUG`）。绝不写进仓库、`site/wrangler.toml`、前端代码或任何响应。改网站代码后的部署方式见 `site/README.md`。
+  - 从力扣同步来的记录（以及补过编号的手写记录）开头的设置里有 `source: leetcode.cn`、`submission: <提交编号>`、`submittedAt`。手写记录时如果对应某次力扣提交，也照着写上编号，同步扩展就不会再导入一份。
+  - 规则以模板仓的 README 为准，模板仓的 `scripts/check.mjs`、网站 `site/functions/_lib/progress.ts` 和扩展 `extension/core.js` 按同一套规则读写文件，改规则时几处一起改（进度仓里的 README 和 check.mjs 是模板的副本，也要同步）。
+- 同步扩展的约定：
+  - **进度仓是唯一的数据源**。网站只读它，扩展只写它；扩展本地只存 GitHub 授权，不存数据副本，每次同步重新读仓库，按 `submission` 编号判断导入过没有，状态只升不降。
+  - 数据只在用户浏览器、leetcode.cn、用户的 GitHub 仓库之间走，不经过网站服务器。力扣的请求在用户已登录的 leetcode.cn 标签页里发，扩展不碰 Cookie。
+  - 每次同步先给用户看要写入的内容，用户确认后才写，一次同步只产生一个 commit。
+  - 改完扩展跑 `node extension/test/sync.test.mjs`，改 `manifest.json` 的版本号，再跑 `node extension/pack.mjs` 重新生成图标和下载用的 zip，提交 zip 并部署网站。
+  - 力扣中国站的 `userProgressQuestionList`（做过的题）限流很严，扩展被限流时改成逐题查 `submissionList`；历史提交拿不到失败用例。
+- 网站读私有资源仓用的 GitHub 令牌只存在 Cloudflare Pages 的加密环境变量 `GITHUB_TOKEN` 里；登录用的 GitHub App 的 client secret 和会话加密密钥 `SESSION_SECRET` 也只存在加密环境变量里。绝不写进仓库、`site/wrangler.toml`、前端代码或任何响应。App 的 slug（`GITHUB_APP_SLUG`）和 client id 是公开信息：client id 每次登录跳转的网址里都有，同步扩展做设备授权也要用它，所以写在 `extension/github.js` 里；网站那边仍然从环境变量读。改网站代码后的部署方式见 `site/README.md`。
 - 图解 artifact 的配色：页面背景浅色模式用纯白 `#ffffff`、深色模式用纯黑 `#000000`，面板底色同样用纯白 / 纯黑；边框、次要文字等中性色用不带色相的纯灰，不要带淡蓝等色调。强调色和表示含义的颜色（如岛屿数量里代表水的蓝色）不受此限。
