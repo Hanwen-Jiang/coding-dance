@@ -1,8 +1,9 @@
 // 读写用户自己的进度仓（<用户>/hot100-progress）。文件规则和模板仓 README、scripts/check.mjs 是同一套：
 //   progress.json：{ version: 1, problems: { "<题号>": { status, updatedAt? } } }
 //   solutions/<语言>/<四位题号>.<题名>[.<写法>].<后缀>
+//   attempts/<四位题号>.<题名>/<YYYY-MM-DD>.<序号>.<结果>.md
 
-import type { HistoryFile, Status } from "../../lib/types";
+import type { Attempt, AttemptResult, HistoryFile, Status } from "../../lib/types";
 import { HttpError } from "./github";
 
 export const LANGS: Record<string, string[]> = {
@@ -13,7 +14,8 @@ const LANG_LABEL: Record<string, string> = {
   python: "Python", java: "Java", go: "Go", cpp: "C++", c: "C", javascript: "JavaScript", typescript: "TypeScript",
   rust: "Rust", kotlin: "Kotlin", swift: "Swift", csharp: "C#",
 };
-export const STATUSES: Status[] = ["已通过", "曾通过", "未开始"];
+export const STATUSES: Status[] = ["已通过", "曾通过", "尝试过", "未开始"];
+export const RESULTS: AttemptResult[] = ["通过", "答案错误", "超时", "运行出错", "思路不成立"];
 
 interface ProgressFile {
   version: number;
@@ -48,6 +50,45 @@ export function parseSolution(p: string): { id: number; lang: string; variant: s
   // 热题 100 的题名里没有「.」，第一个「.」之后的部分是写法名
   const rest = m[3], dot = rest.indexOf(".");
   return { id: Number(m[2]), lang: m[1], variant: dot >= 0 ? rest.slice(dot + 1) : "" };
+}
+
+/** 解析一个尝试记录的路径；不符合规则返回 null（和 check.mjs 的 parseAttemptPath 一致） */
+export function parseAttemptPath(p: string): { id: number; date: string; seq: number; result: AttemptResult } | null {
+  const m = p.match(/^attempts\/(\d{4})\.([^/]+)\/(\d{4}-\d{2}-\d{2})\.(\d+)\.([^./]+)\.md$/);
+  if (!m || !RESULTS.includes(m[5] as AttemptResult)) return null;
+  return { id: Number(m[1]), date: m[3], seq: Number(m[4]), result: m[5] as AttemptResult };
+}
+
+/** 解析尝试记录的内容：--- 设置 ---，然后是 ## 小节，「## 代码」里放一个代码块（和 check.mjs 的 parseAttemptBody 一致） */
+export function parseAttemptBody(src: string) {
+  const errs: string[] = [];
+  const text = src.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n");
+  const fm = text.match(/^---\n([\s\S]*?)\n---\n/);
+  const meta: Record<string, string> = {};
+  if (!fm) errs.push("开头要有 --- 包起来的设置（至少写 lang）");
+  else for (const line of fm[1].split("\n")) {
+    if (!line.trim() || line.trim().startsWith("#")) continue;
+    const kv = line.match(/^([A-Za-z]+):\s*(.*?)\s*(?:#.*)?$/);
+    if (!kv) { errs.push(`设置里看不懂这一行：${line}`); continue; }
+    meta[kv[1]] = kv[2];
+  }
+  const lang = meta.lang ?? "";
+  if (fm && !LANGS[lang]) errs.push(`lang 要写成语言目录名之一：${Object.keys(LANGS).join(" / ")}`);
+  if (meta.verbatim != null && meta.verbatim !== "true" && meta.verbatim !== "false") errs.push("verbatim 只能写 true 或 false");
+  const body = fm ? text.slice(fm[0].length) : text;
+  const sections: { title: string; text: string }[] = [];
+  let code: string | null = null;
+  for (const chunk of body.split(/^## +/m).slice(1)) {
+    const nl = chunk.indexOf("\n");
+    const title = (nl < 0 ? chunk : chunk.slice(0, nl)).trim();
+    const content = (nl < 0 ? "" : chunk.slice(nl + 1)).trim();
+    if (title === "代码") {
+      const c = content.match(/^(`{3,})([^\n`]*)\n([\s\S]*?)\n\1\s*$/);
+      if (!c) errs.push("「代码」一节里要放且只放一个 ``` 代码块");
+      else code = c[3];
+    } else sections.push({ title, text: content });
+  }
+  return { lang, verbatim: meta.verbatim !== "false", sections, code, errors: errs };
 }
 
 async function listFiles(token: string, repo: string): Promise<string[]> {
@@ -119,14 +160,38 @@ function trimSolution(lang: string, src: string) {
   return src.replace(/\s+$/, "");
 }
 
+const readRaw = async (token: string, repo: string, f: string) => {
+  const r = await gh(token, "GET", `/repos/${repo}/contents/${encPath(f)}`, undefined, "application/vnd.github.raw+json");
+  return r.ok ? r.text() : null;
+};
+
+/** 某道题在用户进度仓里的所有题解和尝试记录（共用一次目录读取） */
+export async function loadMine(token: string, repo: string, id: number): Promise<{ history: HistoryFile[]; attempts: Attempt[] }> {
+  const files = await listFiles(token, repo);
+  const [history, attempts] = await Promise.all([loadSolutions(token, repo, id, files), loadAttempts(token, repo, id, files)]);
+  return { history, attempts };
+}
+
+/** 某道题的尝试记录，按日期、序号排好 */
+export async function loadAttempts(token: string, repo: string, id: number, files?: string[]): Promise<Attempt[]> {
+  const mine = (files ?? (await listFiles(token, repo))).map((f) => ({ f, a: parseAttemptPath(f) })).filter((x) => x.a?.id === id);
+  const out = await Promise.all(mine.map(async ({ f, a }) => {
+    const src = await readRaw(token, repo, f);
+    if (src == null) return null;
+    const b = parseAttemptBody(src);
+    return { file: f, date: a!.date, seq: a!.seq, result: a!.result, ...b } satisfies Attempt;
+  }));
+  return (out.filter(Boolean) as Attempt[]).sort((x, y) => x.date.localeCompare(y.date) || x.seq - y.seq);
+}
+
 /** 某道题在用户进度仓里的所有题解 */
-export async function loadSolutions(token: string, repo: string, id: number): Promise<HistoryFile[]> {
-  const files = (await listFiles(token, repo)).filter((f) => parseSolution(f)?.id === id).sort();
+export async function loadSolutions(token: string, repo: string, id: number, files?: string[]): Promise<HistoryFile[]> {
+  files = (files ?? (await listFiles(token, repo))).filter((f) => parseSolution(f)?.id === id).sort();
   const out = await Promise.all(files.map(async (f) => {
-    const r = await gh(token, "GET", `/repos/${repo}/contents/${encPath(f)}`, undefined, "application/vnd.github.raw+json");
-    if (!r.ok) return null;
+    const text = await readRaw(token, repo, f);
+    if (text == null) return null;
     const s = parseSolution(f)!;
-    return { lang: s.lang, file: f, label: (LANG_LABEL[s.lang] ?? s.lang) + (s.variant ? ` · ${s.variant}` : ""), code: trimSolution(s.lang, await r.text()) };
+    return { lang: s.lang, file: f, label: (LANG_LABEL[s.lang] ?? s.lang) + (s.variant ? ` · ${s.variant}` : ""), code: trimSolution(s.lang, text) };
   }));
   const order = Object.keys(LANGS);
   return (out.filter(Boolean) as HistoryFile[]).sort((a, b) => order.indexOf(a.lang) - order.indexOf(b.lang) || a.file.localeCompare(b.file));

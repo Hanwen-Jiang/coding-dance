@@ -26,6 +26,7 @@ const GROUPS: { id: GroupBy; label: string }[] = [
 const FILTERS: { id: StatusFilter; label: string }[] = [
   { id: "all", label: "全部" },
   { id: "未开始", label: "未开始" },
+  { id: "尝试过", label: "尝试过" },
   { id: "曾通过", label: "曾通过" },
   { id: "已通过", label: "已通过" },
 ];
@@ -137,7 +138,7 @@ export function ProblemList() {
   );
   const ready = !!data && !sessionLoading;
   const counts = useMemo(() => {
-    const c = { 已通过: 0, 曾通过: 0, 未开始: 0, history: 0, spec: 0 };
+    const c = { 已通过: 0, 曾通过: 0, 尝试过: 0, 未开始: 0, history: 0, spec: 0 };
     for (const p of problems) {
       c[p.status]++;
       if (p.langs.length) c.history++;
@@ -180,6 +181,7 @@ export function ProblemList() {
               [
                 ["已通过", counts.已通过],
                 ["曾通过 · 待复习", counts.曾通过],
+                ["尝试过 · 未通过", counts.尝试过],
                 ["未开始", counts.未开始],
                 ["有我的题解", counts.history],
               ] as const
@@ -202,6 +204,7 @@ export function ProblemList() {
               <span className="flex items-center gap-3">
                 <StatusPixel status="已通过" />
                 <StatusPixel status="曾通过" />
+                <StatusPixel status="尝试过" />
                 <StatusPixel status="未开始" />
               </span>
             </div>

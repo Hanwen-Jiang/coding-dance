@@ -1,6 +1,6 @@
 // 前端和 Pages Functions 共用的数据结构
 
-export type Status = "已通过" | "曾通过" | "未开始";
+export type Status = "已通过" | "曾通过" | "尝试过" | "未开始";
 export type Level = "简单" | "中等" | "困难";
 /** 重要程度：来自资源仓的 studyplan/优先级清单.md，100 题统一排序，和个人进度无关 */
 export type Tier = "P0" | "P1" | "P2" | "P3";
@@ -83,6 +83,23 @@ export interface HistoryFile {
   code: string;
 }
 
+export type AttemptResult = "通过" | "答案错误" | "超时" | "运行出错" | "思路不成立";
+
+/** 进度仓 attempts/ 里的一次尝试 */
+export interface Attempt {
+  file: string;
+  date: string;
+  seq: number;
+  result: AttemptResult;
+  lang: string;
+  /** false：代码不是原样提交 */
+  verbatim: boolean;
+  sections: { title: string; text: string }[];
+  code: string | null;
+  /** 文件格式不对时的提示（仍然尽量显示） */
+  errors: string[];
+}
+
 export interface ProblemLink {
   id: number;
   name: string;
@@ -127,7 +144,7 @@ export interface ProgressData {
 
 export const TIER_ORDER: Tier[] = ["P0", "P1", "P2", "P3"];
 export const LEVEL_ORDER: Level[] = ["简单", "中等", "困难"];
-export const STATUS_ORDER: Status[] = ["未开始", "曾通过", "已通过"];
+export const STATUS_ORDER: Status[] = ["未开始", "尝试过", "曾通过", "已通过"];
 
 export const TIER_INFO: Record<Tier, { label: string; desc: string }> = {
   P0: { label: "P0 · 必做", desc: "高频原题" },

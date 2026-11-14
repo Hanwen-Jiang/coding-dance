@@ -40,6 +40,7 @@ export function TopicChip({ topic, size = "sm" }: { topic: string; size?: "sm" |
 const STATUS_DOT: Record<Status, string> = {
   已通过: "bg-success",
   曾通过: "bg-warning",
+  尝试过: "bg-danger",
   未开始: "bg-default-foreground/25 dark:bg-white/25",
 };
 

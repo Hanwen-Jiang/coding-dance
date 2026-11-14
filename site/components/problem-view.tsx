@@ -14,7 +14,7 @@ import { StatusPicker } from "@/components/account";
 import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel, StatusPixel } from "@/components/pixel";
 import { TierChip, TopicChip } from "@/components/tags";
 import { useProgress } from "@/lib/progress";
-import type { HistoryFile, ProblemDetail, Spec } from "@/lib/types";
+import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec } from "@/lib/types";
 import { TIER_INFO } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
@@ -24,6 +24,7 @@ const SECTIONS = [
   { id: "demo", label: "动画演示", en: "DEMO" },
   { id: "solution", label: "题解", en: "SOLUTION" },
   { id: "history", label: "我的历史题解", en: "MY CODE" },
+  { id: "attempts", label: "尝试记录", en: "ATTEMPTS" },
   { id: "points", label: "写代码时注意", en: "NOTES" },
 ];
 
@@ -151,13 +152,14 @@ function HistoryEmpty({ title, desc, action }: { title: string; desc: React.Reac
   );
 }
 
-/** 我的历史题解：从当前用户自己的进度仓读，没登录时提示登录 */
-function History({ d }: { d: ProblemDetail }) {
+type MineState = { key: string; history: HistoryFile[] | null; attempts: Attempt[] | null; error: string | null };
+
+/** 从当前用户自己的进度仓读这道题的题解和尝试记录，两节共用一次请求 */
+function useMine(id: number) {
   const { loading, session, loginHref } = useProgress();
-  const id = d.summary.id;
   const user = session?.user?.login;
   const canRead = !!user && !!session?.repo?.exists && !!session.repo.accessible;
-  const [state, setState] = useState<{ key: string; history: HistoryFile[] | null; error: string | null }>({ key: "", history: null, error: null });
+  const [state, setState] = useState<MineState>({ key: "", history: null, attempts: null, error: null });
   const key = canRead ? `${user}/${id}` : "";
 
   useEffect(() => {
@@ -167,15 +169,22 @@ function History({ d }: { d: ProblemDetail }) {
       .then(async (r) => {
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || `请求失败（${r.status}）`);
-        return j.history as HistoryFile[];
+        return j as { history: HistoryFile[]; attempts?: Attempt[] };
       })
-      .then((h) => alive && setState({ key, history: h, error: null }))
-      .catch((e: Error) => alive && setState({ key, history: null, error: e.message }));
+      .then((j) => alive && setState({ key, history: j.history ?? [], attempts: j.attempts ?? [], error: null }))
+      .catch((e: Error) => alive && setState({ key, history: null, attempts: null, error: e.message }));
     return () => {
       alive = false;
     };
   }, [canRead, id, key]);
 
+  return { loading, session, loginHref, id, state, ready: state.key === key && !!key };
+}
+type Mine = ReturnType<typeof useMine>;
+
+/** 没登录、没开通、读取中、出错时两节共用的占位；返回 null 表示数据可用 */
+function MineGate({ mine, what }: { mine: Mine; what: string }) {
+  const { loading, session, loginHref, state, ready } = mine;
   if (loading) return <Skel className="h-24 w-full rounded-3xl" />;
   if (!session?.user) {
     return (
@@ -190,23 +199,31 @@ function History({ d }: { d: ProblemDetail }) {
             </a>
           ) : undefined
         }
-        desc="登录 GitHub 后，这里显示你自己的进度仓里这道题的代码。"
-        title="登录后显示你的题解"
+        desc={`登录 GitHub 后，这里显示你自己的进度仓里这道题的${what}。`}
+        title={`登录后显示你的${what}`}
       />
     );
   }
   if (!session.repo?.exists || !session.repo.accessible) {
-    return <HistoryEmpty desc="先在首页按两步开通你的进度仓（创建仓库、安装 App），之后存进去的题解会出现在这里。" title="还没开通进度仓" />;
+    return <HistoryEmpty desc={`先在首页按两步开通你的进度仓（创建仓库、安装 App），之后存进去的${what}会出现在这里。`} title="还没开通进度仓" />;
   }
-  if (state.key !== key) return <Skel className="h-24 w-full rounded-3xl" />;
-  if (state.error) return <HistoryEmpty desc={state.error} title="没能读到你的题解" />;
+  if (!ready) return <Skel className="h-24 w-full rounded-3xl" />;
+  if (state.error) return <HistoryEmpty desc={state.error} title={`没能读到你的${what}`} />;
+  return null;
+}
+
+/** 我的历史题解：solutions/ 里整理好的写法 */
+function History({ d, mine }: { d: ProblemDetail; mine: Mine }) {
+  const gate = MineGate({ mine, what: "题解" });
+  if (gate) return gate;
+  const { id, session, state } = mine;
   const history = state.history ?? [];
   if (!history.length) {
     return (
       <HistoryEmpty
         desc={
           <>
-            在 <span className="font-mono">{session.repo.name}</span> 里按 <span className="font-mono">solutions/&lt;语言&gt;/{String(id).padStart(4, "0")}.{d.summary.name}.&lt;后缀&gt;</span> 存一份代码，这里会自动出现。
+            在 <span className="font-mono">{session!.repo!.name}</span> 里按 <span className="font-mono">solutions/&lt;语言&gt;/{String(id).padStart(4, "0")}.{d.summary.name}.&lt;后缀&gt;</span> 存一份代码，这里会自动出现。
           </>
         }
         title="这道题还没有你的提交"
@@ -232,6 +249,77 @@ function History({ d }: { d: ProblemDetail }) {
         </Tabs.Panel>
       ))}
     </Tabs>
+  );
+}
+
+const RESULT_STYLE: Record<AttemptResult, { dot: string; chip: string }> = {
+  通过: { dot: "bg-success", chip: "bg-success/15 text-success" },
+  答案错误: { dot: "bg-danger", chip: "bg-danger/15 text-danger" },
+  超时: { dot: "bg-warning", chip: "bg-warning/15 text-warning" },
+  运行出错: { dot: "bg-danger", chip: "bg-danger/15 text-danger" },
+  思路不成立: { dot: "bg-foreground/40", chip: "bg-foreground/10 text-foreground" },
+};
+const LANG_NAME: Record<string, string> = {
+  python: "Python", java: "Java", go: "Go", cpp: "C++", c: "C", javascript: "JavaScript", typescript: "TypeScript",
+  rust: "Rust", kotlin: "Kotlin", swift: "Swift", csharp: "C#",
+};
+
+/** 尝试记录：attempts/ 里每一次提交，按时间排成一条线 */
+function Attempts({ d, mine }: { d: ProblemDetail; mine: Mine }) {
+  const gate = MineGate({ mine, what: "尝试记录" });
+  if (gate) return gate;
+  const { id, session, state } = mine;
+  const attempts = state.attempts ?? [];
+  if (!attempts.length) {
+    return (
+      <HistoryEmpty
+        desc={
+          <>
+            每次提交（包括没通过的）在 <span className="font-mono">{session!.repo!.name}</span> 里按{" "}
+            <span className="font-mono">attempts/{String(id).padStart(4, "0")}.{d.summary.name}/&lt;日期&gt;.&lt;序号&gt;.&lt;结果&gt;.md</span> 记一份，这里会按时间排出来。格式见进度仓 README。
+          </>
+        }
+        title="这道题还没有尝试记录"
+      />
+    );
+  }
+  return (
+    <ol className="flex flex-col">
+      {attempts.map((a, i) => {
+        const st = RESULT_STYLE[a.result];
+        const last = i === attempts.length - 1;
+        return (
+          <li key={a.file} className="relative flex gap-4 pb-6 last:pb-0">
+            <div aria-hidden className="relative flex w-3 shrink-0 justify-center">
+              <span className={clsx("mt-[7px] size-3 rounded-[3px]", st.dot)} />
+              {!last && <span className="absolute top-6 bottom-[-4px] w-px bg-border" />}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className={clsx("rounded-full px-2.5 py-0.5 text-xs font-semibold", st.chip)}>{a.result}</span>
+                <span className="font-mono text-xs text-muted">
+                  {a.date} · 第 {a.seq} 次
+                </span>
+                {!a.verbatim && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">不是原样提交</span>}
+              </div>
+              {a.sections.length > 0 && (
+                <Card className="gap-3 p-4 sm:p-5">
+                  {a.sections.map((sec) => (
+                    <div key={sec.title} className="flex flex-col gap-1">
+                      <span className="text-xs font-semibold text-muted">{sec.title}</span>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{sec.text}</p>
+                    </div>
+                  ))}
+                </Card>
+              )}
+              {a.code != null && <CodePanel code={a.code} label={`${LANG_NAME[a.lang] ?? a.lang} · ${a.verbatim ? "原样提交" : "不是原样提交"}`} lang={a.lang} />}
+              {a.errors.length > 0 && <p className="text-xs text-danger">这份记录的格式不对：{a.errors.join("；")}</p>}
+              <span className="font-mono text-[11px] text-muted">{a.file}</span>
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
@@ -323,6 +411,7 @@ function DemoSection({ d }: { d: ProblemDetail }) {
 export function ProblemView({ id }: { id: number }) {
   const { data: d, error, loading } = useApi<ProblemDetail>(`/api/problem/${id}`);
   const progressCtx = useProgress();
+  const mine = useMine(id);
 
   useEffect(() => {
     if (d) document.title = `${d.summary.id}. ${d.summary.name} · 热题 100 题解手册`;
@@ -435,7 +524,12 @@ export function ProblemView({ id }: { id: number }) {
 
           <section className="flex flex-col gap-4">
             <SectionTitle id="history">我的历史题解</SectionTitle>
-            <History d={d} />
+            <History d={d} mine={mine} />
+          </section>
+
+          <section className="flex flex-col gap-4">
+            <SectionTitle id="attempts">尝试记录</SectionTitle>
+            <Attempts d={d} mine={mine} />
           </section>
 
           {d.spec?.points?.length ? (
