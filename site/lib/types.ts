@@ -2,8 +2,8 @@
 
 export type Status = "已通过" | "曾通过" | "尝试过" | "未开始";
 export type Level = "简单" | "中等" | "困难";
-/** 重要程度：来自资源仓的 studyplan/优先级清单.md，100 题统一排序，和个人进度无关 */
-export type Tier = "P0" | "P1" | "P2" | "P3";
+/** 重要程度：来自资源仓的 studyplan/优先级清单.md，100 题统一排序，和个人进度无关。Hot 20 排在 P0 前面 */
+export type Tier = "Hot 20" | "P0" | "P1" | "P2" | "P3";
 
 /** 资源仓里不变的题目信息 */
 export interface ProblemSummary {
@@ -148,11 +148,12 @@ export interface ProgressData {
   langs: Record<string, string[]>;
 }
 
-export const TIER_ORDER: Tier[] = ["P0", "P1", "P2", "P3"];
+export const TIER_ORDER: Tier[] = ["Hot 20", "P0", "P1", "P2", "P3"];
 export const LEVEL_ORDER: Level[] = ["简单", "中等", "困难"];
 export const STATUS_ORDER: Status[] = ["未开始", "尝试过", "曾通过", "已通过"];
 
 export const TIER_INFO: Record<Tier, { label: string; desc: string }> = {
+  "Hot 20": { label: "Hot 20 · 重点", desc: "面试最高频，最先做" },
   P0: { label: "P0 · 必做", desc: "高频原题" },
   P1: { label: "P1 · 重要", desc: "固定套路" },
   P2: { label: "P2 · 补全", desc: "中频与变形" },

@@ -127,7 +127,7 @@ export function PixelText({
 export const TYPING_WORDS: { w: string; note: string }[] = [
   { w: "CODING", note: "~/leetcode $ solve --top100" },
   { w: "LEETCODE", note: "# 100 道热题 · 17 个专题" },
-  { w: "TOP100", note: "# 按重要程度刷：P0 → P1 → P2" },
+  { w: "TOP100", note: "# 按重要程度刷：Hot 20 → P0 → P1" },
   { w: "DFS", note: "# 200 岛屿数量 · 79 单词搜索 · 46 全排列" },
   { w: "BFS", note: "# 102 层序遍历 · 994 腐烂的橘子" },
   { w: "DP[I]", note: "dp[i] = dp[i - 1] + dp[i - 2]" },

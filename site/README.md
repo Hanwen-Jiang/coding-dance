@@ -13,7 +13,7 @@
 | --- | --- |
 | 题目列表、难度、题型 | `studyplan/热题100.md` |
 | 每道题的状态 | 登录用户自己的进度仓里的 `progress.json` |
-| 重要程度（P0 / P1 / P2 / P3） | `studyplan/优先级清单.md` |
+| 重要程度（Hot 20 / P0 / P1 / P2 / P3） | `studyplan/优先级清单.md` |
 | 原题 | `problems/<编号>.<题名>.md` 的「题目描述」一节，图片在 `problems/images/` |
 | 分层提示、简洁写法、标准题解、注意点、动画演示（有几种解法就有几个演示，可以切换） | `tools/illustrations/data/<编号>.json`（由 `tools/illustrations/build.js` 从 spec 导出） |
 | 我的历史题解 | 登录用户自己的进度仓里的 `solutions/<语言>/<编号>.*`（Java 文件只取 submit region 里的代码） |

@@ -22,7 +22,7 @@
 ├── illustrations/   # 思路图解页面：<编号>.<题名>.html，索引见 illustrations/README.md
 ├── studyplan/
 │   ├── 热题100.md        # 按专题分组的题单
-│   └── 优先级清单.md      # 100 题按重要程度排序（P0 必做 → P3 选做）
+│   └── 优先级清单.md      # 100 题按重要程度排序（Hot 20 重点 → P0 必做 → P3 选做）
 ├── tools/           # 小工具（TreeGraph.py：二叉树可视化；illustrations/：图解生成器，data/ 是导出给网站的数据）
 └── site/            # 题解网站（Next.js + HeroUI Pro，部署在 Cloudflare Pages）
 ```

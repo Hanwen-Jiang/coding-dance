@@ -33,12 +33,12 @@ function parsePlan(md: string): PlanRow[] {
   return out;
 }
 
-/** studyplan/优先级清单.md：100 题按重要程度分成 P0–P3，「顺序」是全局排名 */
+/** studyplan/优先级清单.md：100 题按重要程度分成 Hot 20、P0–P3，「顺序」是全局排名 */
 function parsePriority(md: string): Map<number, { tier: Tier; order: number }> {
   const map = new Map<number, { tier: Tier; order: number }>();
   let tier: Tier | null = null;
   for (const line of lines(md)) {
-    const h = line.match(/^##\s+(P[0-3])\b/);
+    const h = line.match(/^##\s+(Hot 20|P[0-3])\b/);
     if (h) {
       tier = h[1] as Tier;
       continue;

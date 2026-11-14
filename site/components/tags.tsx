@@ -14,6 +14,7 @@ export function LevelChip({ level, size = "sm" }: { level: Level; size?: "sm" | 
 }
 
 const TIER_STYLE: Record<Tier, { color: "accent" | "default" | "warning" | "success" | "danger"; variant: "primary" | "soft" | "secondary" }> = {
+  "Hot 20": { color: "danger", variant: "primary" },
   P0: { color: "accent", variant: "primary" },
   P1: { color: "accent", variant: "soft" },
   P2: { color: "default", variant: "secondary" },
