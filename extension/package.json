@@ -1,9 +1,0 @@
-{
-  "name": "hot100-sync-extension",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "test": "node test/sync.test.mjs",
-    "pack": "node pack.mjs"
-  }
-}

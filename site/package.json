@@ -7,6 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "preview": "wrangler pages dev out",
+    "test": "node lib/sync/test/sync.test.ts",
     "deploy": "next build && wrangler pages deploy out"
   },
   "dependencies": {

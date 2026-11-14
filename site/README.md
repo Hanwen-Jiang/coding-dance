@@ -38,7 +38,6 @@ GitHub App 的配置（GitHub → Settings → Developer settings → GitHub App
 | Callback URL | `https://leetcode.cgent.link/api/auth/callback` |
 | Expire user authorization tokens | 勾上 |
 | Request user authorization (OAuth) during installation | 勾上 |
-| Enable Device Flow | 勾上（同步扩展用设备授权登录，不需要 client secret） |
 | Webhook → Active | 不勾 |
 | Repository permissions | Contents: Read and write；Metadata: Read-only |
 | Account permissions | Starring: Read and write |
@@ -54,9 +53,15 @@ wrangler pages secret put SESSION_SECRET --project-name lc-hot100
 
 这几项没设齐时，网站照常能看，只是不显示登录入口。
 
-## 同步扩展
+## 从力扣同步（`/sync/`）
 
-`/sync/` 页面介绍并提供下载 Hot 100 同步扩展（源码在仓库的 `extension/`，下载包是 `public/hot100-sync.zip`）。它在用户自己的浏览器里读 leetcode.cn 的提交记录，用同一个 GitHub App 的设备授权直接写进用户的进度仓，网站服务器不经手；网站只是像平常一样从进度仓读「尝试记录」。改了扩展要先跑 `node extension/pack.mjs` 重新生成 zip，再构建部署网站。
+不用装任何东西：用户把页面上的「同步力扣」按钮拖到书签栏，在 leetcode.cn 上点它。
+
+1. 书签（`lib/sync/bookmarklet.ts`）打开本站的 `/sync/?from=leetcode`。同步页和力扣页面通过 postMessage 说话：同步页发只读的 GraphQL 查询，力扣页面用它现成的登录状态代发，再把结果传回来（`lib/sync/bridge.ts`）。书签只认本站同步页的消息、拒绝 mutation；同步页只认 `https://leetcode.cn` 的回复。
+2. 同步页在浏览器里比对力扣上的提交和进度仓里已有的记录（`lib/sync/plan.ts`、`core.ts`），列出要写入的内容让用户勾选。
+3. 用户确认后，`/api/sync/commit` 用用户在本站的 GitHub 登录把内容写成一个 commit。服务端只转手不保存，只肯写 `progress.json`、`attempts/skip.txt` 和符合规则的尝试记录（`lib/sync/server.ts`）。读仓库用 `/api/sync/repo` 和 `/api/sync/blobs`。
+
+测试：在 `site/` 里 `npm test`。本地联调时可以在 `.dev.vars` 里写 `SYNC_GITHUB_API=http://127.0.0.1:<端口>`，让这三个接口去请求一个假的 GitHub；线上不设这个变量。
 
 ## 令牌
 

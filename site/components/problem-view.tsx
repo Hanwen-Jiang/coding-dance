@@ -277,7 +277,7 @@ function Attempts({ d, mine }: { d: ProblemDetail; mine: Mine }) {
           <>
             每次提交（包括没通过的）在 <span className="font-mono">{session!.repo!.name}</span> 里按{" "}
             <span className="font-mono">attempts/{String(id).padStart(4, "0")}.{d.summary.name}/&lt;日期&gt;.&lt;序号&gt;.&lt;结果&gt;.md</span> 记一份，这里会按时间排出来。格式见进度仓 README。
-            也可以用 <NextLink href="/sync/">Hot 100 同步扩展</NextLink> 把力扣上的提交记录直接导进来。
+            也可以用 <NextLink href="/sync/">「同步力扣」书签</NextLink> 把力扣上的提交记录直接导进来。
           </>
         }
         title="这道题还没有尝试记录"

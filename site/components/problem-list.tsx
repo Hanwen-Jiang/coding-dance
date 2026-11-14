@@ -227,12 +227,12 @@ export function ProblemList() {
           </Card>
           <SetupCard />
           <LoginHint />
-          {/* 进度仓开通好了：提示可以用扩展从力扣同步 */}
+          {/* 进度仓开通好了：提示可以从力扣同步 */}
           {session?.repo?.exists && session.repo.accessible && (
             <NextLink className="group flex items-center justify-between gap-3 rounded-2xl border border-dashed border-border px-4 py-3 text-sm text-muted no-underline hover:text-foreground" href="/sync/">
               <span>
                 <span className="font-pixel me-2 text-[10px] tracking-wider text-accent">SYNC</span>
-                用浏览器扩展把力扣上的提交记录同步进你的进度仓
+                把力扣上的提交记录同步进你的进度仓：拖一个书签就行，不用装东西
               </span>
               <span aria-hidden className="font-pixel text-[11px] transition-transform group-hover:translate-x-0.5">→</span>
             </NextLink>
