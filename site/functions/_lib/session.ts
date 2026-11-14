@@ -13,7 +13,13 @@ export interface AuthEnv {
   TEMPLATE_REPO: string;
   /** 用户进度仓的名字（建在用户自己的账号下） */
   PROGRESS_REPO: string;
+  /** 页面上请用户点 Star 的仓库，逗号分隔的 owner/name；不设就只有模板仓 */
+  STAR_REPOS?: string;
 }
+
+/** 请用户点 Star 的仓库列表（只认 owner/name 这种写法） */
+export const starRepos = (env: AuthEnv) =>
+  (env.STAR_REPOS || env.TEMPLATE_REPO).split(",").map((s) => s.trim()).filter((s) => /^[\w.-]+\/[\w.-]+$/.test(s));
 
 export interface Session {
   /** GitHub 用户令牌 */

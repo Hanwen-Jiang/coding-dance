@@ -22,7 +22,11 @@ interface ProgressFile {
   problems: Record<string, { status: Status; updatedAt?: string | null }>;
 }
 
-const API = "https://api.github.com";
+let API = "https://api.github.com";
+/** 只在本地测试时用（functions/api/_middleware.ts 里按环境变量设置）：让用户令牌的请求去一个假的 GitHub */
+export function setUserApi(base?: string) {
+  if (base) API = base.replace(/\/$/, "");
+}
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 const toB64 = (s: string) => { let b = ""; for (const x of enc.encode(s)) b += String.fromCharCode(x); return btoa(b); };
@@ -39,7 +43,8 @@ export async function gh(token: string, method: string, path: string, body?: unk
       "X-GitHub-Api-Version": "2022-11-28",
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
-    body: body ? JSON.stringify(body) : undefined,
+    // 没有内容的 PUT / POST（比如点 Star）也要带一个空的 body，这样才有 Content-Length: 0，GitHub 要求这个头
+    body: body ? JSON.stringify(body) : method === "GET" || method === "HEAD" ? undefined : "",
   });
 }
 

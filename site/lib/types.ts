@@ -139,7 +139,17 @@ export interface SessionInfo {
     /** 已经装过 App 但没选这个仓库时，去这里把它加上 */
     manageUrl: string | null;
   } | null;
+  /** 下面这些仓库是不是都 Star 了 */
   starred: boolean;
+  /** 页面上请用户点 Star 的仓库，各自 Star 了没有 */
+  stars: { repo: string; starred: boolean }[];
+}
+
+/** POST /api/progress/star 里每个仓库的结果；没点上时 status 是 GitHub 返回的状态码 */
+export interface StarResult {
+  repo: string;
+  starred: boolean;
+  status: number;
 }
 
 /** /api/progress */

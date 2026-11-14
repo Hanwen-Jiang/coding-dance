@@ -1,6 +1,6 @@
 // 当前登录状态：是谁、进度仓建了没有、App 有没有装到进度仓上、Star 了没有。令牌本身从不返回给浏览器。
 import { gh } from "../_lib/progress";
-import { type AuthEnv, SESSION_COOKIE, authConfigured, getSession, privateJson, setCookie } from "../_lib/session";
+import { type AuthEnv, SESSION_COOKIE, authConfigured, getSession, privateJson, setCookie, starRepos } from "../_lib/session";
 
 /** 用户的 App 安装里，包不包括这个仓库；返回安装 id（没装时为 null） */
 async function installationFor(token: string, repo: string): Promise<{ id: number | null; covers: boolean }> {
@@ -30,19 +30,22 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
     createUrl: `https://github.com/new?template_owner=${tOwner}&template_name=${tName}&name=${env.PROGRESS_REPO}&visibility=public`,
   };
   const { session: s, cookie } = await getSession(request, env);
-  if (!s) return privateJson({ ...base, user: null, repo: null, starred: false }, 200, [cookie]);
+  if (!s) return privateJson({ ...base, user: null, repo: null, starred: false, stars: [] }, 200, [cookie]);
 
   const repo = `${s.l}/${env.PROGRESS_REPO}`;
-  const [me, rr, inst, star] = await Promise.all([
+  const list = starRepos(env);
+  const [me, rr, inst, ...starred] = await Promise.all([
     gh(s.t, "GET", "/user"),
     gh(s.t, "GET", `/repos/${repo}`),
     installationFor(s.t, repo),
-    gh(s.t, "GET", `/user/starred/${env.TEMPLATE_REPO}`),
+    ...list.map((r) => gh(s.t, "GET", `/user/starred/${r}`)),
   ]);
   if (me.status === 401) {
     // 用户在 GitHub 上撤销了授权：清掉会话
-    return privateJson({ ...base, user: null, repo: null, starred: false }, 200, [setCookie(SESSION_COOKIE, "", 0)]);
+    return privateJson({ ...base, user: null, repo: null, starred: false, stars: [] }, 200, [setCookie(SESSION_COOKIE, "", 0)]);
   }
+  // 每个仓库 Star 了没有
+  const stars = list.map((r, i) => ({ repo: r, starred: starred[i].status === 204 }));
   return privateJson(
     {
       ...base,
@@ -55,7 +58,8 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
         // 已经装过 App、只是没选这个仓库：去安装设置里把它加上
         manageUrl: inst.id ? `https://github.com/settings/installations/${inst.id}` : null,
       },
-      starred: star.status === 204,
+      starred: stars.every((x) => x.starred),
+      stars,
     },
     200,
     [cookie],

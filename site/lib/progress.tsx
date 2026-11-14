@@ -3,7 +3,7 @@
 // 当前用户的登录状态和进度。题目资源对所有人都一样；进度来自用户自己的 hot100-progress 仓库，没登录时就是 0 进度。
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-import type { ProgressData, SessionInfo, Status } from "@/lib/types";
+import type { ProgressData, SessionInfo, StarResult, Status } from "@/lib/types";
 
 interface Ctx {
   /** 还在确认登录状态 */
@@ -16,8 +16,8 @@ interface Ctx {
   statusOf: (id: number) => Status;
   langsOf: (id: number) => string[];
   setStatus: (id: number, s: Status) => Promise<void>;
-  /** 给模板仓点 Star */
-  star: () => Promise<void>;
+  /** 给用户勾选的仓库点 Star，返回每个仓库的结果（没点上的带着 GitHub 的状态码） */
+  star: (repos: string[]) => Promise<StarResult[]>;
   /** 重新确认登录状态（建完仓库后点「刷新」用） */
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
@@ -82,12 +82,21 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     }
   }, [progress]);
 
-  const star = useCallback(async () => {
+  const star = useCallback(async (repos: string[]): Promise<StarResult[]> => {
+    if (!repos.length) return [];
     try {
-      await getJson("/api/progress/star", { method: "POST" });
-      setSession((s) => (s ? { ...s, starred: true } : s));
+      // keepalive：点完马上跳去 GitHub 时，浏览器也不会取消这个请求
+      const { results } = await getJson<{ results: StarResult[] }>("/api/progress/star", {
+        method: "POST", keepalive: true, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ repos }),
+      });
+      setSession((s) => {
+        if (!s) return s;
+        const stars = s.stars.map((x) => (results.some((r) => r.repo === x.repo && r.starred) ? { ...x, starred: true } : x));
+        return { ...s, stars, starred: stars.every((x) => x.starred) };
+      });
+      return results;
     } catch {
-      /* Star 失败不影响别的 */
+      return repos.map((repo) => ({ repo, starred: false, status: 0 })); // Star 失败不影响别的
     }
   }, []);
 
