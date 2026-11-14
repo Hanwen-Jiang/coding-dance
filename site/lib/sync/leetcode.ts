@@ -5,16 +5,17 @@ import type { Detail, Sub } from "./core.ts";
 const Q = {
   status: `query { userStatus { isSignedIn username userSlug } }`,
   progress: `query($filters: UserProgressQuestionListInput) { userProgressQuestionList(filters: $filters) {
-    totalNum questions { frontendId titleSlug lastSubmittedAt numSubmitted questionStatus } } }`,
+    totalNum questions { frontendId titleSlug translatedTitle lastSubmittedAt numSubmitted questionStatus } } }`,
+  // questionSlug 传空串时，力扣按时间从新到旧列出所有题的提交
   list: `query($offset: Int!, $limit: Int!, $lastKey: String, $questionSlug: String!) {
     submissionList(offset: $offset, limit: $limit, lastKey: $lastKey, questionSlug: $questionSlug) {
-      lastKey hasNext submissions { id status statusDisplay lang langVerboseName runtime memory timestamp isPending } } }`,
+      lastKey hasNext submissions { id title status statusDisplay lang langVerboseName runtime memory timestamp isPending } } }`,
   detail: `query($id: ID!) { submissionDetail(submissionId: $id) {
     id code timestamp lang runtime memory passedTestCaseCnt totalTestCaseCnt runtimePercentile memoryPercentile } }`,
 };
 
 export type Transport = (query: string, variables: Record<string, unknown>) => Promise<any>;
-export interface ProgressItem { titleSlug: string; numSubmitted: number; lastSubmittedAt?: string }
+export interface ProgressItem { titleSlug: string; translatedTitle?: string; numSubmitted: number; lastSubmittedAt?: string }
 
 export class RateLimited extends Error {}
 /** 力扣说请求太频繁了 */
@@ -63,17 +64,28 @@ export function createLeetCode(transport: Transport, { gap = 1200, maxGap = 1000
         if (!p.questions.length || skip + 100 >= p.totalNum) return out;
       }
     }),
-    /** 一道题的所有提交，最新的在前 */
-    submissions: (slug: string) => memo(`list:${slug}`, async () => {
+    /**
+     * 力扣上的全部提交（所有题），最新的在前，每条带题目名。同步以它为准：仓库里没有的提交都从这里找出来。
+     * onPage(已读条数) 用来在界面上显示进度。
+     * 翻到一半一直被限流：已经读到的（最新的那部分）照常返回，complete 为 false；第一页就读不到才抛出。
+     */
+    all: (onPage: (n: number) => void = () => {}) => memo("all", async (): Promise<{ subs: Sub[]; complete: boolean }> => {
       const out: Sub[] = [];
       let lastKey: string | null = null;
-      for (let offset = 0; offset < 2000; offset += 20) {
-        const l: { submissions: Sub[]; lastKey: string | null; hasNext: boolean } = (await q(Q.list, { offset, limit: 20, lastKey, questionSlug: slug })).submissionList;
+      for (let offset = 0; offset < 10000; offset += 20) {
+        let l: { submissions: Sub[]; lastKey: string | null; hasNext: boolean };
+        try {
+          l = (await q(Q.list, { offset, limit: 20, lastKey, questionSlug: "" })).submissionList;
+        } catch (e) {
+          if (out.length && isRateLimited(e)) return { subs: out, complete: false };
+          throw e;
+        }
         out.push(...l.submissions);
+        onPage(out.length);
         lastKey = l.lastKey;
-        if (!l.hasNext) break;
+        if (!l.hasNext || !l.submissions.length) break;
       }
-      return out;
+      return { subs: out, complete: true };
     }),
     detail: (id: string | number) => memo(`detail:${id}`, async (): Promise<Detail> => (await q(Q.detail, { id: String(id) })).submissionDetail),
   };

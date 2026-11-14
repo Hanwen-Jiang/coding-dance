@@ -30,6 +30,6 @@
   - **进度仓是唯一的数据源**。网站不另存任何数据，每次同步都重新读仓库，按 `submission` 编号判断导入过没有；用户取消勾选的提交记进 `attempts/skip.txt`；状态只升不降。
   - 流程：用户在 leetcode.cn 上点「同步力扣」书签（`site/lib/sync/bookmarklet.ts`），书签打开本站 `/sync/`，同步页用 postMessage 让力扣页面代发只读查询（`bridge.ts`），在浏览器里算出要写的内容；用户确认后，`/api/sync/commit` 用用户自己的 GitHub 登录写成一个 commit。网站服务器只转手，不保存。
   - 书签只认本站同步页的消息、只转发只读查询（带 mutation 的拒绝）；同步页只认 `https://leetcode.cn` 的回复。`/api/sync/commit` 只能写 `progress.json`、`attempts/skip.txt` 和符合规则的尝试记录，在 `site/lib/sync/server.ts` 里逐个检查。
-  - 力扣中国站的 `userProgressQuestionList`（做过的题）限流很严，被限流时改成逐题查 `submissionList`；读到一半一直被限流就停下，读完的题可以先写。历史提交拿不到失败用例。实测的限流数据（一次最多读了多少、被拦下后隔多久能再读）记在 `site/lib/sync/限流记录.md`，调同步节奏前先看，有新的同步数据就补进去。
+  - **以力扣为准找提交**：每次同步先用 `submissionList`（`questionSlug` 传空串）从新到旧翻完全部提交，按题目名对到热题 100（对不上时再用 `userProgressQuestionList` 里的 slug 对；这个接口限流很严，被拒就只按名字对）；只给仓库里没有的提交读代码，最近提交的题先读。列表翻到一半一直被限流，就用已经读到的最新那部分；读代码读到一半一直被限流就停下，读完的题可以先写。进度仓不支持的语言导不进记录，但结果算进状态。历史提交拿不到失败用例。实测的限流数据（一次最多读了多少、被拦下后隔多久能再读）记在 `site/lib/sync/限流记录.md`，调同步节奏前先看，有新的同步数据就补进去。
 - 网站读私有资源仓用的 GitHub 令牌只存在 Cloudflare Pages 的加密环境变量 `GITHUB_TOKEN` 里；登录用的 GitHub App 的 client id / client secret 和会话加密密钥 `SESSION_SECRET` 也只存在加密环境变量里（App 的 slug 是公开信息，写在 wrangler.toml 的 `GITHUB_APP_SLUG`）。绝不写进仓库、`site/wrangler.toml`、前端代码或任何响应。改网站代码后的部署方式见 `site/README.md`。
 - 图解 artifact 的配色：页面背景浅色模式用纯白 `#ffffff`、深色模式用纯黑 `#000000`，面板底色同样用纯白 / 纯黑；边框、次要文字等中性色用不带色相的纯灰，不要带淡蓝等色调。强调色和表示含义的颜色（如岛屿数量里代表水的蓝色）不受此限。

@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Card } from "@heroui/react";
+import { Button, Card, ProgressBar } from "@heroui/react";
+import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import NextLink from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -37,6 +38,72 @@ function Step({ n, title, state, children }: { n: number; title: string; state: 
 
 type Bridge = ReturnType<typeof createBridge>;
 type Phase = "idle" | "reading" | "plan" | "writing" | "done";
+
+/** 被力扣拦下之后建议等多久再同步（实测见 lib/sync/限流记录.md：等 27 分钟后又能完整读一轮） */
+const RETRY_HINT = "过 25～30 分钟再同步";
+
+type Browser = "chrome" | "edge" | "firefox" | "safari" | "mobile";
+const BROWSERS: { id: Browser; label: string }[] = [
+  { id: "chrome", label: "Chrome" },
+  { id: "edge", label: "Edge" },
+  { id: "firefox", label: "火狐" },
+  { id: "safari", label: "Safari" },
+  { id: "mobile", label: "手机" },
+];
+
+function detectBrowser(): Browser {
+  const ua = navigator.userAgent;
+  // iPad 的 Safari 会自称 Mac，靠触屏认出来
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) return "mobile";
+  if (/Edg\//.test(ua)) return "edge";
+  if (/Firefox\//.test(ua)) return "firefox";
+  if (/Chrome\/|Chromium\//.test(ua)) return "chrome";
+  if (/Safari\//.test(ua)) return "safari";
+  return "chrome";
+}
+
+const Key = ({ children }: { children: React.ReactNode }) => (
+  <kbd className="rounded-md border border-border bg-foreground/[0.04] px-1.5 py-0.5 font-mono text-[12px]">{children}</kbd>
+);
+
+/** 每种浏览器怎么把书签放上去；默认选中当前浏览器 */
+function BookmarkGuide() {
+  const [b, setB] = useState<Browser>("chrome");
+  useEffect(() => { setB(detectBrowser()); }, []);
+  const use = <>打开 leetcode.cn 并登录，点书签栏里的「同步力扣」。</>;
+  const steps: Record<Browser, React.ReactNode[]> = {
+    chrome: [<>按 <Key>Ctrl</Key> <Key>Shift</Key> <Key>B</Key>（Mac 上是 <Key>⌘</Key> <Key>Shift</Key> <Key>B</Key>）显示书签栏。Brave、Arc、Opera 等 Chromium 浏览器也一样。</>, <>按住上面的「同步力扣」按钮，拖到书签栏上松开。</>, use],
+    edge: [<>按 <Key>Ctrl</Key> <Key>Shift</Key> <Key>B</Key>（Mac 上是 <Key>⌘</Key> <Key>Shift</Key> <Key>B</Key>）显示收藏夹栏。</>, <>按住上面的「同步力扣」按钮，拖到收藏夹栏上松开。</>, <>打开 leetcode.cn 并登录，点收藏夹栏里的「同步力扣」。</>],
+    firefox: [<>在地址栏旁边的工具栏空白处点右键，选「书签工具栏」→「总是显示」。</>, <>按住上面的「同步力扣」按钮，拖到书签工具栏上松开。</>, use],
+    safari: [<>在菜单栏选「显示」→「显示个人收藏栏」（<Key>⇧</Key> <Key>⌘</Key> <Key>B</Key>）。</>, <>按住上面的「同步力扣」按钮，拖到个人收藏栏上松开。</>, <>打开 leetcode.cn 并登录，点个人收藏栏里的「同步力扣」。</>],
+    mobile: [<>手机上拖不了书签，同步也要在两个标签页之间来回传消息，<b>建议用电脑</b>。一定要用手机的话：点「复制书签地址」。</>, <>随便把一个网页加入书签，再编辑这个书签：名字改成「同步力扣」，网址换成刚才复制的内容。</>, <>打开 leetcode.cn 并登录。Android 的 Chrome 在地址栏输入「同步力扣」，从下拉建议里点这个书签；iPhone 的 Safari 从书签列表里点它。不保证每种手机浏览器都能用。</>],
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <Segment aria-label="浏览器" className="max-w-full overflow-x-auto" selectedKey={b} size="sm" variant="ghost" onSelectionChange={(k) => setB(k as Browser)}>
+        {BROWSERS.map((x) => <Segment.Item key={x.id} id={x.id}>{x.label}</Segment.Item>)}
+      </Segment>
+      <ol className="flex list-decimal flex-col gap-1 ps-5 text-sm leading-6 text-muted marker:text-foreground/50">
+        {steps[b].map((s, i) => <li key={i}>{s}</li>)}
+      </ol>
+    </div>
+  );
+}
+
+/** 读取时的进度：有总数时按「要读的代码份数」显示进度条，翻提交列表时不知道总数，显示不定进度 */
+function ReadProgress({ log, step }: { log: string; step: { done: number; total: number } | null }) {
+  const known = !!step && step.total > 0;
+  return (
+    <ProgressBar aria-label="同步进度" className="w-full max-w-xl" isIndeterminate={!known} maxValue={known ? step!.total : 100} size="sm" value={known ? step!.done : 0}>
+      {/* data-slot="label" 让它落在进度条的「标题」格子里 */}
+      <span aria-live="polite" className="text-sm font-normal text-muted" data-slot="label">{log || "准备中…"}</span>
+      {known && <ProgressBar.Output className="text-xs font-normal text-muted">{step!.done} / {step!.total}</ProgressBar.Output>}
+      <ProgressBar.Track>
+        <ProgressBar.Fill />
+      </ProgressBar.Track>
+    </ProgressBar>
+  );
+}
 
 export function SyncApp() {
   const { session, loading, loginHref, refresh } = useProgress();
@@ -81,6 +148,8 @@ export function SyncApp() {
   const repo = useMemo(() => createRepoClient(), []);
   const cache = useRef(new Map());
   const [phase, setPhase] = useState<Phase>("idle");
+  const [step, setStep] = useState<{ done: number; total: number } | null>(null);
+  const onProgress = useCallback((m: string, s?: { done: number; total: number }) => { setLog(m); setStep(s ?? null); }, []);
   const [base, setBase] = useState<Plan | null>(null);
   const [excluded, setExcluded] = useState<Set<string>>(new Set());
   const plan = useMemo(() => (base ? finalize(base, excluded) : null), [base, excluded]);
@@ -90,25 +159,26 @@ export function SyncApp() {
     if (!lc) return;
     setError(""); setDone(null); setExcluded(new Set()); setPhase("reading");
     try {
-      setBase(await buildPlan({ repo, lc, cache: cache.current, onProgress: setLog }));
+      setBase(await buildPlan({ repo, lc, cache: cache.current, onProgress }));
       setPhase("plan");
     } catch (e) {
-      setError((e as Error).message); setPhase("idle");
+      const msg = (e as Error).message;
+      setError(/频繁/.test(msg) ? `${msg}：力扣连第一页提交列表都不让读了，${RETRY_HINT}。` : msg); setPhase("idle");
     }
-    setLog("");
+    setLog(""); setStep(null);
   };
   const write = async () => {
     if (!lc || !plan) return;
     setError(""); setPhase("writing");
     try {
-      const res = await commitPlan({ repo, lc, plan, cache: cache.current, onProgress: setLog });
+      const res = await commitPlan({ repo, lc, plan, cache: cache.current, onProgress });
       if ("changed" in res) { setBase(res.plan); setPhase("plan"); setError("仓库在这期间变了，要写入的内容也跟着变了，请重新确认。"); return; }
       setDone("nothing" in res ? { nothing: true } : { url: res.url });
       setPhase("done");
       refresh();
     } catch (e) {
       setError((e as Error).message); setPhase("plan");
-    } finally { setLog(""); }
+    } finally { setLog(""); setStep(null); }
   };
   const toggle = (id: string, on: boolean) => setExcluded((s) => { const n = new Set(s); if (on) n.delete(id); else n.add(id); return n; });
 
@@ -151,6 +221,7 @@ export function SyncApp() {
               {copied ? "已复制" : "复制书签地址"}
             </Button>
           </div>
+          <BookmarkGuide />
           <p className="text-sm text-muted">拖不了的话：复制书签地址，新建一个书签，把它粘贴到「网址」一栏。</p>
         </Step>
         <Step n={3} state={lcState === "ok" ? "ok" : lcState === "checking" ? "wait" : "todo"} title="在力扣上点书签">
@@ -180,7 +251,7 @@ export function SyncApp() {
               <span className="text-sm text-muted">只读：先看一遍，不会写入任何东西。</span>
             </div>
             {!repoReady && <p className="text-sm text-warning">先完成第 1 步（登录本站、开通进度仓）。</p>}
-            {log && <p className="text-sm text-muted" aria-live="polite">{log}</p>}
+            {busy ? <ReadProgress log={log} step={step} /> : log && <p aria-live="polite" className="text-sm text-muted">{log}</p>}
             {error && <p className="text-sm text-danger">{error}</p>}
             {plan && (phase === "plan" || phase === "writing") && <PlanView excluded={excluded} plan={plan} toggle={toggle} />}
             {plan && phase === "plan" && plan.writes.length > 0 && (
@@ -224,7 +295,7 @@ export function SyncApp() {
           <p>手写的记录（比如带分析的「错在哪里」）不会被重复导入：代码和某次力扣提交一样，就认定是同一次，只在它开头的设置里补上提交编号，其余内容一个字不动。</p>
           <p>取消勾选的提交会记进 <span className="font-mono text-sm">attempts/skip.txt</span>，以后不再列出来；删掉一条同步来的记录时，把它的编号写进这个文件，它就不会被导回来。</p>
           <p>状态只升不降：有通过的提交记「已通过」，只提交过没通过记「尝试过」；你手动标的「曾通过」只有在那之后又通过了才会改。</p>
-          <p className="text-sm text-muted">第一次同步要读你所有的提交。力扣限流比较严，会放慢速度、必要时等几分钟；还不行就停下，已经读完的题可以先写入，过一会儿再同步，会接着读剩下的。力扣上历史提交的失败用例拿不到，记录里只有通过了几个用例。只同步热题 100 里的题和进度仓支持的 11 种语言。</p>
+          <p className="text-sm text-muted">每次同步先把力扣上你的提交列表从新到旧翻一遍（每页 20 条），只给进度仓里还没有的提交读代码，所以第一次最慢，以后只读新的。力扣限流比较严，会放慢速度、必要时等几分钟；还不行就停下，已经读完的题可以先写入，{RETRY_HINT}，会接着读剩下的。力扣上历史提交的失败用例拿不到，记录里只有通过了几个用例。只同步热题 100 里的题；进度仓不支持的语言（比如 SQL）导不进记录，但会算进状态。</p>
         </Card>
       </section>
     </div>
@@ -235,9 +306,17 @@ function PlanView({ plan, excluded, toggle }: { plan: Plan; excluded: Set<string
   const n = plan.added.length, l = plan.linked.length, s = plan.changes.size, d = plan.dropped.length;
   return (
     <div className="flex flex-col gap-3">
+      <p className="text-sm text-muted">
+        力扣上一共 {plan.totals.all} 次提交{plan.listCut && "（这次读到的部分）"}，其中热题 100 的 {plan.totals.hot} 次、{plan.totals.problems} 道题；进度仓里已经有 {plan.totals.known} 次，新的 {plan.totals.fresh} 次。
+      </p>
+      {plan.listCut && (
+        <p className="text-sm text-warning">
+          力扣的提交列表只让读到最近 {plan.listCut.read} 条（最早到 {new Date(plan.listCut.oldest * 1000).toLocaleDateString("zh-CN")}），更早的提交这次没看到。先写入下面这些，{RETRY_HINT}，再看更早的。
+        </p>
+      )}
       {plan.partial && (
         <p className="text-sm text-warning">
-          力扣一直提示请求太频繁，只读完了 {plan.partial.done} / {plan.partial.total} 道题（停在第 {plan.partial.next.id} 题）。可以先写入下面这些，过一会儿再同步，会接着读剩下的。
+          力扣一直提示请求太频繁：有新提交的 {plan.partial.total} 道题只读完了 {plan.partial.done} 道（停在第 {plan.partial.next.id} 题），还有 {plan.partial.left} 次提交的代码没读。可以先写入下面这些，{RETRY_HINT}，会接着读剩下的。
         </p>
       )}
       <p className="text-[15px]">

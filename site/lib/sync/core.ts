@@ -8,6 +8,8 @@ export interface Problem { id: number; name: string; slug: string }
 /** submissionList 里的一次提交 */
 export interface Sub {
   id: string | number; status: string; statusDisplay?: string; lang: string; langVerboseName?: string;
+  /** 题目的中文名（列出所有题的提交时才有） */
+  title?: string;
   runtime?: string; memory?: string; timestamp: string | number; isPending?: string;
 }
 /** submissionDetail */
