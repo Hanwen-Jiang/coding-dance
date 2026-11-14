@@ -8,15 +8,33 @@ import { useEffect, useState } from "react";
 import { AccountButton } from "@/components/account";
 import { PixelIcon, PixelLogo, PixelTitle } from "@/components/pixel";
 
+/** 旧的按钮只会存「浅色 / 深色」，存了就再也不跟随系统。换成新按钮后把旧的选择清掉一次，回到默认的跟随系统 */
+const THEME_RESET_KEY = "hot100:theme-follows-system";
+
+/**
+ * 默认跟随系统。点一下切到另一种颜色并固定下来；切到的颜色正好和系统一样时，就改回「跟随系统」，
+ * 所以多点一下总能回到跟随系统，之后系统换深浅色也会跟着换。
+ */
 function ThemeSwitch() {
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, resolvedTheme, systemTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    try {
+      if (!localStorage.getItem(THEME_RESET_KEY)) {
+        localStorage.setItem(THEME_RESET_KEY, "1");
+        setTheme("system");
+      }
+    } catch { /* 存不了就照旧 */ }
+  }, [setTheme]);
   if (!mounted) return <div aria-hidden className="size-9" />;
   const dark = resolvedTheme === "dark";
+  const next = dark ? "light" : "dark";
+  const follows = theme === "system";
+  const label = `${follows ? "跟随系统" : "已固定"}：${dark ? "深色" : "浅色"}。点一下切到${next === "dark" ? "深色" : "浅色"}${next === systemTheme ? "（跟随系统）" : ""}`;
   return (
-    <Button isIconOnly aria-label={dark ? "切换到浅色" : "切换到深色"} size="sm" variant="ghost" onPress={() => setTheme(dark ? "light" : "dark")}>
-      <PixelIcon cell={2} name={dark ? "sun" : "moon"} />
+    <Button isIconOnly aria-label={label} size="sm" variant="ghost" onPress={() => setTheme(next === systemTheme ? "system" : next)}>
+      <span title={label}><PixelIcon cell={2} name={dark ? "sun" : "moon"} /></span>
     </Button>
   );
 }
