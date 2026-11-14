@@ -227,6 +227,8 @@ class Solution:
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -245,7 +247,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>当前字符</span><span><i class="sw d"></i>已经处理过</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>当前字符</span><span><i class="sw d"></i>已经处理过</span></div>
       </div>
     </div>
   </section>
@@ -331,7 +333,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"3[a]2[bc]"},"note":"s 
     };
     const s = (R.chance(0.4) ? atom() : "") + enc(R.int(0, 1)) + (R.chance(0.5) ? enc(0) : "") + (R.chance(0.3) ? atom() : "");
     return { args: { s }, note: `s = "${s}"`, py: `Solution().decodeString("${s}")` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "栈", note: null, legend: [["a","当前字符"],["d","已经处理过"]], build(a, snap) {
     const s = a.s, stack = []; let cur = "", k = 0;
     const view = (i) => [
       { t: "array", label: "s", items: s.split("").map((c, j) => ({ v: c, cls: j === i ? "a" : j < i ? "d" : "" })), ptrs: { i: i >= 0 && i < s.length ? i : null } },
@@ -347,7 +350,27 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"3[a]2[bc]"},"note":"s 
       else { cur += c; snap("字母", `字母 ${c} 直接接到 cur 后面。`, view(i), f()); }
     }
     snap("完成", `解码结果是 <b>"${cur}"</b>。`, view(s.length), { kind: "ok", ans: cur, ...f() });
-  } };
+  } },
+{ t: "反复展开最内层", note: "和简洁写法一样：「数字[纯字母]」里面没有别的括号，一定是最内层。每一轮把所有最内层的括号展开，直到没有括号为止。", legend: [["a","这一轮要展开的最内层"]], build(a, snap) {
+      let s = a.s, round = 0;
+      const view = (hl) => [{ t: "array", label: "s", items: [...s].map((c, i) => ({ v: c, cls: hl.has(i) ? "a" : "" })) }];
+      const f = () => ({ facts: [["轮数", round], ["长度", s.length]] });
+      snap("开始", "正则 <code>(\\d+)\\[([a-z]*)\\]</code> 匹配「数字[纯字母]」，它一定是最内层的括号。", view(new Set()), f());
+      while (s.includes("[")) {
+        round++;
+        const re = /(\d+)\[([a-z]*)\]/g, hl = new Set(), parts = [];
+        let m;
+        while ((m = re.exec(s))) {
+          for (let k = m.index; k < m.index + m[0].length; k++) hl.add(k);
+          parts.push(`${m[0]} 展开成 "${m[2].repeat(+m[1])}"`);
+        }
+        snap(`第 ${round} 轮`, `找到 ${parts.length} 个最内层：${parts.join("，")}。`, view(hl), f());
+        s = s.replace(/(\d+)\[([a-z]*)\]/g, (_, k, t) => t.repeat(+k));
+        snap(`第 ${round} 轮完`, `替换后 s = "${s}"。` + (s.includes("[") ? "还有括号，原来的外层现在变成了最内层，再来一轮。" : "没有括号了。"), view(new Set()), f());
+      }
+      snap("完成", `解码结果是 <b>"${s}"</b>。`, view(new Set()), { kind: "ok", ans: s, ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -469,16 +492,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"3[a]2[bc]"},"note":"s 
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

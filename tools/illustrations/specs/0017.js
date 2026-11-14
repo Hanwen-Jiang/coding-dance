@@ -43,6 +43,7 @@ assert s.letterCombinations("") == []
 assert s.letterCombinations("2") == ["a","b","c"]
 assert len(s.letterCombinations("79")) == 16
 `,
+  method: "回溯",
   legend: [["a", "正在选的这一位"], ["e", "当前路径"], ["k", "刚记下的组合"]],
   presets: [
     { label: "示例 1", args: { d: "23" }, note: 'digits = "23"', expect: ["ad", "ae", "af", "bd", "be", "bf", "cd", "ce", "cf"] },
@@ -72,6 +73,28 @@ assert len(s.letterCombinations("79")) == 16
     dfs(0);
     snap("完成", `所有选法都走完了，一共 <b>${res.length}</b> 个组合` + (quiet ? "（后面的过程和前面一样，没有逐步演示）。" : "。"), view(-1), { kind: "ok", ans: quiet ? res.length : res });
   },
+  alts: [{
+    t: "笛卡尔积",
+    note: "和简洁写法一样：所有组合就是几组字母的笛卡尔积。一位一位地乘上去：已有的每个前缀，后面分别接上这一位的每个字母。",
+    legend: [["a", "正在乘上的这一位"], ["k", "这一轮得到的组合"]],
+    build(a, snap) {
+      const d = a.d, phone = { 2: "abc", 3: "def", 4: "ghi", 5: "jkl", 6: "mno", 7: "pqrs", 8: "tuv", 9: "wxyz" };
+      let combos = [""];
+      const view = (i) => [
+        { t: "array", label: "digits", items: [...d].map((v, t) => ({ v, cls: t === i ? "a" : t < i ? "d" : "" })), idx: false },
+        { t: "chips", label: i >= 0 && i < d.length ? `数字 ${d[i]} 对应的字母` : "对应的字母", items: i >= 0 && i < d.length ? [...phone[d[i]]] : [], empty: "—" },
+        { t: "chips", label: `组合（${combos.length} 个）`, items: combos.map((c) => ({ v: c === "" ? "空串" : c, cls: i >= 0 ? "k" : "" })) },
+      ];
+      if (!d.length) { snap("完成", "digits 是空的，返回 []。", view(-1), { kind: "ok", ans: [] }); return; }
+      snap("开始", "一开始只有一个空前缀。", view(-1));
+      for (let i = 0; i < d.length; i++) {
+        const L = phone[d[i]], old = combos.length;
+        combos = combos.flatMap((c) => [...L].map((ch) => c + ch));
+        snap(`乘上第 ${i} 位`, `第 ${i} 位是 ${d[i]}，对应 ${L.length} 个字母。已有的 ${old} 个前缀后面各接一个字母，变成 ${old} × ${L.length} = <b>${combos.length}</b> 个。`, view(i));
+      }
+      snap("完成", `一共 <b>${combos.length}</b> 个组合，顺序和回溯的结果一样。`, view(-1), { kind: "ok", ans: d.length > 2 ? combos.length : combos });
+    },
+  }],
   points: [
     { t: "空字符串", body: "<code>digits</code> 为空时要返回 <code>[]</code>。不特判的话会得到 <code>[\"\"]</code>。" },
     { t: "撤销不能少", body: "<code>path.pop()</code> 把这一位清掉，下一个字母才能放在同一个位置上。" },

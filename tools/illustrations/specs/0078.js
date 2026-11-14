@@ -36,6 +36,8 @@ assert norm(s.subsets([1,2,3])) == norm([[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3
 assert norm(s.subsets([0])) == [[],[0]]
 assert len(s.subsets(list(range(10)))) == 1024
 `,
+  method: "回溯",
+  cmp: "unordered",
   legend: [["a", "刚放进来的数"], ["e", "这一层可以选的范围"], ["c", "收集的子集"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 2, 3] }, note: "nums = [1,2,3]", expect: [[], [1], [1, 2], [1, 2, 3], [1, 3], [2], [2, 3], [3]] },
@@ -62,6 +64,26 @@ assert len(s.subsets(list(range(10)))) == 1024
     dfs(0);
     snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
   },
+  alts: [{
+    t: "逐个加入",
+    note: "和简洁写法一样：从只有空集开始。每来一个数 x，已有的每个子集都可以选择加上 x，于是子集个数翻一倍。",
+    legend: [["a", "正在加入的数"], ["c", "这一轮新生成的子集"]],
+    build(a, snap) {
+      const nums = a.nums; let res = [[]], fresh = 0;
+      const view = (k) => [
+        { t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i === k ? "a" : i < k ? "d" : "" })) },
+        { t: "chips", label: "res", items: res.map((r, i) => ({ v: `[${r.join(",")}]`, cls: i >= res.length - fresh ? "c" : "" })) },
+      ];
+      snap("开始", "res 里只有一个空集。", view(-1), { facts: [["子集个数", 1]] });
+      nums.forEach((x, k) => {
+        const add = res.map((s) => [...s, x]);
+        res = res.concat(add); fresh = add.length;
+        snap(`加入 ${x}`, `已有的 ${add.length} 个子集每个都加上 ${x}，得到 ${add.map((s) => `[${s.join(",")}]`).join("、")}，接在 res 后面。子集个数翻倍成 ${res.length}。`, view(k), { facts: [["子集个数", res.length]] });
+      });
+      fresh = 0;
+      snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(nums.length), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["子集个数", res.length]] });
+    },
+  }],
   points: [
     { t: "收集放在循环前面", body: "子集没有「填满」的概念，进入函数就收集，空集也算一个。" },
     { t: "dfs(i + 1) 而不是 dfs(start + 1)", body: "下一层从刚选的数的后面开始，不是从这一层的起点后面开始。" },

@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card } from "@heroui/react";
+import { Button, Card, Tabs } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { renderViews } from "@/components/demo/render";
 import { ChevronLeft, ChevronRight, PlayIcon } from "@/components/icons";
 import { PixelIcon } from "@/components/pixel";
-import type { Demo } from "@/lib/types";
+import type { Demo, DemoMethod } from "@/lib/types";
 
 type Step = { phase: string; msg: string; views: Record<string, unknown>[]; kind?: string; facts?: [string, unknown][] };
 type BuildFn = (args: unknown, snap: (phase: string, msg: string, views: Step["views"], o?: Partial<Step>) => void) => void;
@@ -54,7 +54,11 @@ const PauseIcon = () => (
 );
 
 export function DemoPlayer({ demo }: { demo: Demo }) {
-  const build = useMemo(() => compile(demo.build), [demo.build]);
+  // 多种解法共用同一组输入，切换解法时输入不变、从第 0 步重新播放
+  const methods: DemoMethod[] = demo.methods?.length ? demo.methods : [{ t: "", note: null, legend: demo.legend, build: demo.build }];
+  const [mi, setMi] = useState(0);
+  const method = methods[Math.min(mi, methods.length - 1)];
+  const build = useMemo(() => compile(method.build), [method.build]);
   const random = useMemo(() => compileRandom(demo.random), [demo.random]);
   // sel 是预设的下标，或者 "random"
   const [sel, setSel] = useState("0");
@@ -81,7 +85,7 @@ export function DemoPlayer({ demo }: { demo: Demo }) {
   useEffect(() => {
     setIdx(0);
     setPlaying(false);
-  }, [input]);
+  }, [input, build]);
 
   useEffect(() => {
     if (!playing) return;
@@ -110,141 +114,160 @@ export function DemoPlayer({ demo }: { demo: Demo }) {
   const html = renderViews(s.views);
 
   return (
-    <div
-      className="demo grid gap-5 outline-none lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (e.key === "ArrowRight") {
-          setPlaying(false);
-          go(idx + 1);
-        } else if (e.key === "ArrowLeft") {
-          setPlaying(false);
-          go(idx - 1);
-        } else if (e.key === " ") {
-          e.preventDefault();
-          togglePlay();
-        }
-      }}
-    >
-      <Card className="min-w-0 gap-4 p-4 sm:p-5">
-        {(demo.presets.length > 1 || random) && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Segment
-              aria-label="选择示例"
-              className="max-w-full overflow-x-auto"
-              selectedKey={sel}
-              size="sm"
-              onSelectionChange={(k) => (String(k) === "random" ? reroll() : setSel(String(k)))}
-            >
-              {demo.presets.map((p, i) => (
-                <Segment.Item key={i} id={String(i)}>
-                  {p.label}
-                </Segment.Item>
-              ))}
-              {random ? (
-                <Segment.Item key="random" id="random">
-                  随机
-                </Segment.Item>
-              ) : null}
-            </Segment>
-            {sel === "random" && (
-              <Button size="sm" variant="ghost" onPress={reroll}>
-                <PixelIcon cell={2} name="dice" />
-                换一组
+    <div className="flex flex-col gap-4">
+      {methods.length > 1 && (
+        <div className="flex flex-col gap-2">
+          <Tabs className="w-full" selectedKey={String(mi)} onSelectionChange={(k) => setMi(Number(k))}>
+            <Tabs.ListContainer className="max-w-full overflow-x-auto">
+              <Tabs.List aria-label="选择解法">
+                {methods.map((m, i) => (
+                  <Tabs.Tab key={i} id={String(i)}>
+                    {m.t}
+                    <Tabs.Indicator />
+                  </Tabs.Tab>
+                ))}
+              </Tabs.List>
+            </Tabs.ListContainer>
+          </Tabs>
+          {method.note && <p className="hint-text text-sm leading-6 text-muted" dangerouslySetInnerHTML={{ __html: method.note }} />}
+        </div>
+      )}
+      <div
+        className="demo grid gap-5 outline-none lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight") {
+            setPlaying(false);
+            go(idx + 1);
+          } else if (e.key === "ArrowLeft") {
+            setPlaying(false);
+            go(idx - 1);
+          } else if (e.key === " ") {
+            e.preventDefault();
+            togglePlay();
+          }
+        }}
+      >
+        <Card className="min-w-0 gap-4 p-4 sm:p-5">
+          {(demo.presets.length > 1 || random) && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Segment
+                aria-label="选择示例"
+                className="max-w-full overflow-x-auto"
+                selectedKey={sel}
+                size="sm"
+                onSelectionChange={(k) => (String(k) === "random" ? reroll() : setSel(String(k)))}
+              >
+                {demo.presets.map((p, i) => (
+                  <Segment.Item key={i} id={String(i)}>
+                    {p.label}
+                  </Segment.Item>
+                ))}
+                {random ? (
+                  <Segment.Item key="random" id="random">
+                    随机
+                  </Segment.Item>
+                ) : null}
+              </Segment>
+              {sel === "random" && (
+                <Button size="sm" variant="ghost" onPress={reroll}>
+                  <PixelIcon cell={2} name="dice" />
+                  换一组
+                </Button>
+              )}
+            </div>
+          )}
+          {input?.note && (
+            <div className="font-mono text-xs text-muted [overflow-wrap:anywhere]">
+              {sel === "random" && <span className="font-pixel me-2 text-[10px] tracking-wider text-accent">RANDOM</span>}
+              {input.note}
+            </div>
+          )}
+          <div className="dm-views" dangerouslySetInnerHTML={{ __html: html }} />
+          <div className="flex flex-col gap-3 border-t border-separator pt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" variant="ghost" onPress={() => { setPlaying(false); go(0); }}>
+                重置
               </Button>
+              <Button isDisabled={idx === 0} size="sm" variant="secondary" onPress={() => { setPlaying(false); go(idx - 1); }}>
+                <ChevronLeft />
+                上一步
+              </Button>
+              <Button isDisabled={idx >= last} size="sm" onPress={() => { setPlaying(false); go(idx + 1); }}>
+                下一步
+                <ChevronRight />
+              </Button>
+              <Button size="sm" variant="outline" onPress={togglePlay}>
+                {playing ? <PauseIcon /> : <PlayIcon />}
+                {playing ? "暂停" : "自动播放"}
+              </Button>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                aria-label="步骤"
+                className="dm-range min-w-0 flex-1"
+                max={last}
+                min={0}
+                type="range"
+                value={idx}
+                onChange={(e) => { setPlaying(false); go(Number(e.target.value)); }}
+              />
+              <span className="font-pixel w-16 text-right text-[11px] text-muted tabular-nums">
+                {idx}/{last}
+              </span>
+            </div>
+            {/* 像素进度条：每一步一个格子 */}
+            {steps.length <= 120 && (
+              <div aria-hidden className="flex flex-wrap gap-[3px]">
+                {steps.map((st, i) => (
+                  <button
+                    key={i}
+                    className={clsx(
+                      "size-[7px] rounded-[2px] transition-colors",
+                      i === idx ? "bg-accent" : i < idx ? (st.kind === "warn" ? "bg-warning/60" : "bg-accent/35") : "bg-foreground/10",
+                    )}
+                    tabIndex={-1}
+                    type="button"
+                    onClick={() => { setPlaying(false); go(i); }}
+                  />
+                ))}
+              </div>
             )}
           </div>
-        )}
-        {input?.note && (
-          <div className="font-mono text-xs text-muted [overflow-wrap:anywhere]">
-            {sel === "random" && <span className="font-pixel me-2 text-[10px] tracking-wider text-accent">RANDOM</span>}
-            {input.note}
-          </div>
-        )}
-        <div className="dm-views" dangerouslySetInnerHTML={{ __html: html }} />
-        <div className="flex flex-col gap-3 border-t border-separator pt-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="ghost" onPress={() => { setPlaying(false); go(0); }}>
-              重置
-            </Button>
-            <Button isDisabled={idx === 0} size="sm" variant="secondary" onPress={() => { setPlaying(false); go(idx - 1); }}>
-              <ChevronLeft />
-              上一步
-            </Button>
-            <Button isDisabled={idx >= last} size="sm" onPress={() => { setPlaying(false); go(idx + 1); }}>
-              下一步
-              <ChevronRight />
-            </Button>
-            <Button size="sm" variant="outline" onPress={togglePlay}>
-              {playing ? <PauseIcon /> : <PlayIcon />}
-              {playing ? "暂停" : "自动播放"}
-            </Button>
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              aria-label="步骤"
-              className="dm-range min-w-0 flex-1"
-              max={last}
-              min={0}
-              type="range"
-              value={idx}
-              onChange={(e) => { setPlaying(false); go(Number(e.target.value)); }}
-            />
-            <span className="font-pixel w-16 text-right text-[11px] text-muted tabular-nums">
-              {idx}/{last}
-            </span>
-          </div>
-          {/* 像素进度条：每一步一个格子 */}
-          {steps.length <= 120 && (
-            <div aria-hidden className="flex flex-wrap gap-[3px]">
-              {steps.map((st, i) => (
-                <button
-                  key={i}
-                  className={clsx(
-                    "size-[7px] rounded-[2px] transition-colors",
-                    i === idx ? "bg-accent" : i < idx ? (st.kind === "warn" ? "bg-warning/60" : "bg-accent/35") : "bg-foreground/10",
-                  )}
-                  tabIndex={-1}
-                  type="button"
-                  onClick={() => { setPlaying(false); go(i); }}
-                />
+        </Card>
+
+        <div className="flex min-w-0 flex-col gap-4" aria-live="polite">
+          {s.facts && s.facts.length > 0 && (
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-3 border-b border-separator pb-4">
+              {s.facts.map(([k, v]) => (
+                <div key={k} className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-xs text-muted">{k}</span>
+                  <span className={clsx("font-bold text-accent [overflow-wrap:anywhere]", String(v).length > 6 ? "font-mono text-sm" : "text-2xl")}>{String(v)}</span>
+                </div>
               ))}
             </div>
           )}
-        </div>
-      </Card>
-
-      <div className="flex min-w-0 flex-col gap-4" aria-live="polite">
-        {s.facts && s.facts.length > 0 && (
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-3 border-b border-separator pb-4">
-            {s.facts.map(([k, v]) => (
-              <div key={k} className="flex min-w-0 flex-col gap-0.5">
-                <span className="text-xs text-muted">{k}</span>
-                <span className={clsx("font-bold text-accent [overflow-wrap:anywhere]", String(v).length > 6 ? "font-mono text-sm" : "text-2xl")}>{String(v)}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <span
-          className={clsx(
-            "font-pixel self-start rounded-md px-2.5 py-0.5 text-[11px] tracking-wider",
-            s.kind === "ok" ? "bg-success/15 text-success" : s.kind === "warn" ? "bg-warning/15 text-warning" : "bg-accent/10 text-accent",
+          <span
+            className={clsx(
+              "font-pixel self-start rounded-md px-2.5 py-0.5 text-[11px] tracking-wider",
+              s.kind === "ok" ? "bg-success/15 text-success" : s.kind === "warn" ? "bg-warning/15 text-warning" : "bg-accent/10 text-accent",
+            )}
+          >
+            {s.phase}
+          </span>
+          <p key={`${sel}-${mi}-${idx}`} className="dm-msg min-h-[5.5em] text-base leading-7" dangerouslySetInnerHTML={{ __html: s.msg }} />
+          {method.legend.length > 0 && (
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
+              {method.legend.map(([cls, t]) => (
+                <span key={cls + t} className="inline-flex items-center gap-1.5">
+                  <i className={clsx("dm-sw", `r-${cls}`)} />
+                  {t}
+                </span>
+              ))}
+            </div>
           )}
-        >
-          {s.phase}
-        </span>
-        <p key={`${sel}-${idx}`} className="dm-msg min-h-[5.5em] text-base leading-7" dangerouslySetInnerHTML={{ __html: s.msg }} />
-        {demo.legend.length > 0 && (
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
-            {demo.legend.map(([cls, t]) => (
-              <span key={cls + t} className="inline-flex items-center gap-1.5">
-                <i className={clsx("dm-sw", `r-${cls}`)} />
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-        <span className="hidden text-[11px] text-muted lg:block">点一下演示区域后，可以用 ← → 切换步骤，空格键播放 / 暂停。</span>
+          <span className="hidden text-[11px] text-muted lg:block">点一下演示区域后，可以用 ← → 切换步骤，空格键播放 / 暂停。</span>
+        </div>
       </div>
     </div>
   );

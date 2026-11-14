@@ -45,6 +45,7 @@ assert s.inorderTraversal(T([])) == []
 assert s.inorderTraversal(T([1])) == [1]
 assert s.inorderTraversal(T([4,2,6,1,3,5,7])) == [1,2,3,4,5,6,7]
 `,
+  method: "递归",
   legend: [["e", "在调用栈上，还没记"], ["a", "当前节点"], ["c", "已经记进结果"]],
   presets: [
     { label: "示例 1", args: { t: [1, null, 2, null, null, 3] }, note: "root = [1,null,2,3]", expect: [1, 3, 2] },
@@ -67,6 +68,36 @@ assert s.inorderTraversal(T([4,2,6,1,3,5,7])) == [1,2,3,4,5,6,7]
     dfs(0);
     snap("完成", `中序遍历的结果是 [${res.join(", ")}]。`, view(-1), { kind: "ok", ans: res });
   },
+  alts: [{
+    t: "用栈模拟",
+    note: "和迭代写法一样：cur 一路向左，沿途的节点入栈；走到空就弹出栈顶记下来，再转向它的右子树。栈做的就是递归时调用栈的事。",
+    legend: [["e", "在栈里，还没记"], ["a", "cur"], ["c", "已经记进结果"]],
+    build(a, snap) {
+      const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+      const res = [], stack = [], done = new Set(), order = {};
+      let cur = N[0] ? 0 : null;
+      const view = (hl) => {
+        const cls = {};
+        for (const id in N) cls[id] = +id === hl ? "a" : done.has(+id) ? "c" : stack.includes(+id) ? "e" : "";
+        return [{ t: "tree", nodes: N, root: 0, cls, badges: { ...order } }, { t: "chips", label: "栈（右边是栈顶）", items: stack.map((id) => N[id].v), empty: "空" }, { t: "chips", label: "结果", items: res.slice(), empty: "还没有" }];
+      };
+      snap("开始", "cur 指着根节点，栈是空的。", view(cur));
+      while (cur !== null || stack.length) {
+        while (cur !== null) {
+          stack.push(cur);
+          const nd = N[cur];
+          snap("一路向左", `${nd.v} 入栈。` + (nd.l !== null ? `cur 走到它的左孩子 ${N[nd.l].v}。` : "它没有左孩子，cur 变成空。"), view(cur));
+          cur = nd.l;
+        }
+        cur = stack.pop();
+        const nd = N[cur];
+        res.push(nd.v); done.add(cur); order[cur] = "第 " + res.length;
+        snap("出栈记下", `cur 是空的，弹出栈顶 ${nd.v}：它的左子树已经走完了，把 <b>${nd.v}</b> 记进结果。` + (nd.r !== null ? `cur 转向它的右孩子 ${N[nd.r].v}。` : "它没有右孩子，cur 变成空，下一轮接着弹栈。"), view(cur));
+        cur = nd.r;
+      }
+      snap("完成", `cur 是空的，栈也空了。中序遍历的结果是 [${res.join(", ")}]。`, view(-1), { kind: "ok", ans: res });
+    },
+  }],
   points: [
     { t: "二叉搜索树的中序是有序的", body: "对二叉搜索树做中序遍历，得到的正好是从小到大的序列。很多 BST 的题都靠这一点。" },
     { t: "迭代写法的循环条件", body: "<code>while cur or stack</code>：栈空了但 cur 还指着右子树时，遍历还没结束。" },

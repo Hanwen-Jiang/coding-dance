@@ -220,6 +220,8 @@ class Solution:
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -238,7 +240,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在算的金额</span><span><i class="sw e"></i>候选 dp[i − c]</span><span><i class="sw c"></i>取到最小的那个</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在算的金额</span><span><i class="sw e"></i>候选 dp[i − c]</span><span><i class="sw c"></i>取到最小的那个</span></div>
       </div>
     </div>
   </section>
@@ -319,7 +321,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"coins":[1,2,5],"amount":11
 })(); const r = ((R) => {
     const coins = R.sorted(R.distinct(R.int(1, 3), 1, 7)), amount = R.int(3, 12);
     return { args: { coins, amount }, note: `coins = ${R.fmt(coins)}, amount = ${amount}`, py: `Solution().coinChange(${R.py(coins)}, ${amount})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "按金额递推", note: null, legend: [["a","正在算的金额"],["e","候选 dp[i − c]"],["c","取到最小的那个"]], build(a, snap) {
     const { coins, amount } = a, dp = Array(amount + 1).fill(null); dp[0] = 0;
     const show = (v) => (v === Infinity ? "∞" : v);
     const view = (i, cands, best, fin) => [{ t: "array", label: "dp[i]：凑出 i 最少几枚", items: dp.map((v, k) => ({ v: v === null ? "" : show(v), cls: fin && k === amount ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } }];
@@ -332,7 +335,29 @@ const SPEC = { presets: [{"label":"示例 1","args":{"coins":[1,2,5],"amount":11
     }
     const ans = dp[amount] === Infinity ? -1 : dp[amount];
     snap("完成", ans < 0 ? `dp[${amount}] 是 ∞，凑不出来，返回 <b>-1</b>。` : `凑出 ${amount} 最少要 <b>${ans}</b> 枚硬币。`, view(-1, [], -1, true), { kind: ans < 0 ? "warn" : "ok", ans });
-  } };
+  } },
+{ t: "完全背包", note: "和简洁写法一样：外层一种一种地加入硬币，内层金额从小到大更新。正序更新时 dp[i − c] 可能刚用过面值 c，所以同一种硬币可以用很多枚。", legend: [["a","正在算的金额 / 这一轮的面值"],["e","dp[i − c]"],["c","变少了，更新"]], build(a, snap) {
+      const { coins, amount } = a, dp = Array(amount + 1).fill(Infinity); dp[0] = 0;
+      const show = (v) => (v === Infinity ? "∞" : v);
+      const view = (i, from, c, upd) => [
+        { t: "array", label: "coins", items: coins.map((x) => ({ v: x, cls: x === c ? "a" : "" })), idx: false },
+        { t: "array", label: "dp[i]：凑出 i 最少几枚", items: dp.map((v, k) => ({ v: show(v), cls: k === i ? (upd ? "c" : "a") : k === from ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
+      ];
+      snap("开始", "dp[0] = 0，其他金额先设成 ∞。", view(-1, -1, null, false));
+      for (const c of coins) {
+        const touched = new Set();
+        snap(`加入面值 ${c}`, `现在允许用面值 ${c}，从金额 ${c} 开始往上更新。`, view(-1, -1, c, false));
+        for (let i = c; i <= amount; i++) {
+          const cand = dp[i - c] + 1, old = dp[i], upd = cand < old;
+          if (upd) { dp[i] = cand; touched.add(i); }
+          const reuse = touched.has(i - c) ? `（dp[${i - c}] 这一轮刚用 ${c} 更新过，相当于 ${c} 又用了一枚）` : "";
+          snap(`面值 ${c}`, `金额 ${i}：最后一枚用 ${c}，要 dp[${i - c}] + 1 = ${show(cand)}${reuse}。` + (upd ? `比原来的 ${show(old)} 少，dp[${i}] 更新成 <b>${cand}</b>。` : `不比原来的 ${show(old)} 少，不变。`), view(i, i - c, c, upd));
+        }
+      }
+      const ans = dp[amount] === Infinity ? -1 : dp[amount];
+      snap("完成", ans < 0 ? `dp[${amount}] 还是 ∞，凑不出来，返回 <b>-1</b>。` : `凑出 ${amount} 最少要 <b>${ans}</b> 枚硬币。`, view(amount, -1, null, true), { kind: ans < 0 ? "warn" : "ok", ans });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -454,16 +479,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"coins":[1,2,5],"amount":11
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

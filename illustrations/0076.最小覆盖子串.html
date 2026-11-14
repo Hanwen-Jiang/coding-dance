@@ -239,6 +239,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar" hidden><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -257,7 +259,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw e"></i>窗口</span><span><i class="sw a"></i>刚进来</span><span><i class="sw b"></i>刚移出</span><span><i class="sw c"></i>目前最短的合格窗口</span></div>
+        <div class="legend" id="legend"><span><i class="sw e"></i>窗口</span><span><i class="sw a"></i>刚进来</span><span><i class="sw b"></i>刚移出</span><span><i class="sw c"></i>目前最短的合格窗口</span></div>
       </div>
     </div>
   </section>
@@ -338,7 +340,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"ADOBECODEBANC","t":"AB
 })(); const r = ((R) => {
     const s = R.word(R.int(8, 13), "ABCDE"), t = R.word(R.int(2, 3), "ABC");
     return { args: { s, t }, note: `s = "${s}", t = "${t}"`, py: `len(Solution().minWindow("${s}", "${t}"))`, cmp: "length" };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "标准解法", note: null, legend: [["e","窗口"],["a","刚进来"],["b","刚移出"],["c","目前最短的合格窗口"]], build(a, snap) {
     const { s, t } = a, need = {}; let missing = t.length, l = 0, start = -1, size = Infinity;
     for (const c of t) need[c] = (need[c] || 0) + 1;
     const keys = [...new Set(t)];
@@ -364,7 +367,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"ADOBECODEBANC","t":"AB
     }
     const ans = size === Infinity ? "" : s.slice(start, start + size);
     snap("完成", `r 走到头了。最短的覆盖子串是 <b>"${ans}"</b>。`, view(-1, -1, true), { kind: "ok", ans, facts: facts() });
-  } };
+  } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -486,16 +490,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"ADOBECODEBANC","t":"AB
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

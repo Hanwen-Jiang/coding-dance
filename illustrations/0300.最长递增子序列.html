@@ -221,6 +221,8 @@ class Solution:
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -239,7 +241,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在算的 nums[i]</span><span><i class="sw e"></i>比它小、可以接的</span><span><i class="sw c"></i>接上后最长的那个</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在算的 nums[i]</span><span><i class="sw e"></i>比它小、可以接的</span><span><i class="sw c"></i>接上后最长的那个</span></div>
       </div>
     </div>
   </section>
@@ -320,7 +322,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[10,9,2,5,3,7,101,18
 })(); const r = ((R) => {
     const nums = R.arr(R.int(5, 9), 0, 12);
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().lengthOfLIS(${R.py(nums)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "动态规划 O(n²)", note: null, legend: [["a","正在算的 nums[i]"],["e","比它小、可以接的"],["c","接上后最长的那个"]], build(a, snap) {
     const nums = a.nums, n = nums.length, dp = Array(n).fill(null);
     const view = (i, cand, from) => [
       { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k === from ? "c" : cand.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
@@ -335,7 +338,32 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[10,9,2,5,3,7,101,18
     }
     const ans = Math.max(...dp);
     snap("完成", `答案是 dp 里的最大值 <b>${ans}</b>，不一定是最后一个。`, view(-1, [], -1), { kind: "ok", ans, facts: [["目前最长", ans]] });
-  } };
+  } },
+{ t: "贪心 + 二分", note: "和简洁写法一样：tails[k] 记「长度为 k+1 的递增子序列，结尾最小可以是多少」。新数比所有结尾都大就接在最后；否则用二分找到第一个 ≥ 它的结尾，换成它。", legend: [["a","当前的数"],["c","接在最后，长度 +1"],["w","换成更小的结尾"]], build(a, snap) {
+      const nums = a.nums, n = nums.length, tails = [];
+      const view = (i, k, mode) => [
+        { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === i ? "a" : t < i ? "d" : "" })), ptrs: { i: i >= 0 && i < n ? i : null } },
+        tails.length
+          ? { t: "array", label: "tails[k]：长度为 k+1 的递增子序列的最小结尾", items: tails.map((v, t) => ({ v, cls: t === k ? (mode === "add" ? "c" : "w") : "" })) }
+          : { t: "note", label: "tails", html: "空" },
+      ];
+      const f = () => ({ facts: [["最长", tails.length]] });
+      snap("开始", "tails 一开始是空的。它始终是递增的，所以可以二分。", view(-1, -1), f());
+      for (let i = 0; i < n; i++) {
+        const x = nums[i];
+        let lo = 0, hi = tails.length;
+        while (lo < hi) { const mid = (lo + hi) >> 1; if (tails[mid] < x) lo = mid + 1; else hi = mid; }
+        if (lo === tails.length) {
+          tails.push(x);
+          snap("接到最后", `${x} 比 tails 里所有结尾都大，接在最长的那个后面。现在最长是 <b>${tails.length}</b>。`, view(i, lo, "add"), f());
+        } else {
+          const old = tails[lo]; tails[lo] = x;
+          snap("替换", `二分找到第一个 ≥ ${x} 的位置 k = ${lo}（原来是 ${old}）。长度为 ${lo + 1} 的递增子序列，结尾可以从 ${old} 换成更小的 ${x}，后面更容易接上新数。`, view(i, lo, "rep"), f());
+        }
+      }
+      snap("完成", `答案是 tails 的长度 <b>${tails.length}</b>。注意 tails 本身不一定是一个真正的递增子序列，只有长度是对的。`, view(n, -1), { kind: "ok", ans: tails.length, ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -457,16 +485,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[10,9,2,5,3,7,101,18
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

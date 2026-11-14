@@ -56,6 +56,7 @@ assert s.threeSum([0,0,0]) == [[0,0,0]]
 assert s.threeSum([0,0,0,0]) == [[0,0,0]]
 assert s.threeSum([-2,0,0,2,2]) == [[-2,0,2]]
 `,
+  method: "排序 + 双指针",
   legend: [["b", "固定的第一个数"], ["a", "l 和 r"], ["c", "凑成 0 的一组"], ["d", "已经处理过"]],
   presets: [
     { label: "示例 1", args: { nums: [-1, 0, 1, 2, -1, -4] }, note: "nums = [-1,0,1,2,-1,-4]", expect: [[-1, -1, 2], [-1, 0, 1]] },
@@ -88,6 +89,41 @@ assert s.threeSum([-2,0,0,2,2]) == [[-2,0,2]]
     }
     snap("完成", `一共找到 <b>${res.length}</b> 组。`, view(null, null, null), { kind: "ok", ans: res });
   },
+  alts: [{
+    t: "固定一个数 + 集合",
+    note: "和简洁写法一样：排序后固定第一个数 x，剩下的就是两数之和：往后扫 y，看 −x − y 在不在前面见过的集合里。结果放进集合去重。",
+    legend: [["b", "固定的 x"], ["a", "正在看的 y"], ["e", "seen 里的数"], ["c", "凑成 0 的一组"]],
+    build(a, snap) {
+      const nums = a.nums.slice().sort((x, y) => x - y), n = nums.length, res = [], key = new Set();
+      let seenIdx = [];
+      const view = (i, j, hit) => [
+        { t: "array", label: "排序后的 nums", items: nums.map((v, t) => ({ v, cls: t === i ? "b" : t === j || t === hit ? (hit >= 0 ? "c" : "a") : seenIdx.includes(t) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null, j: j >= 0 ? j : null } },
+        { t: "chips", label: "seen", items: seenIdx.map((t) => nums[t]), empty: "空" },
+        { t: "chips", label: "结果（集合，自动去重）", items: res.map((t) => `[${t.join(", ")}]`), empty: "还没有" },
+      ];
+      snap("排序", `先排序，得到 [${nums.join(", ")}]。`, view(-1, -1, -1));
+      for (let i = 0; i < n; i++) {
+        const x = nums[i];
+        if (i && x === nums[i - 1]) { snap("跳过", `x = ${x} 和前一个数相同，以它开头的三元组已经找过了，跳过。`, view(i, -1, -1), { kind: "warn" }); continue; }
+        if (i + 1 >= n) continue;
+        seenIdx = [];
+        snap("固定 x", `固定 x = <b>${x}</b>，往后扫 y，找 y + z = ${-x}。seen 清空。`, view(i, -1, -1));
+        for (let j = i + 1; j < n; j++) {
+          const y = nums[j], z = -x - y, zi = seenIdx.find((t) => nums[t] === z);
+          if (zi !== undefined) {
+            const t = [x, z, y], k = t.join(",");
+            const dup = key.has(k);
+            if (!dup) { key.add(k); res.push(t); }
+            snap("找到一组", `y = ${y}，要找 ${-x} − ${y} = ${z}，它在 seen 里。` + (dup ? `[${t.join(", ")}] 已经在结果里了，集合会去重。` : `记下 <b>[${t.join(", ")}]</b>。`), view(i, j, zi), { kind: dup ? "warn" : "ok" });
+          } else snap("没找到", `y = ${y}，要找 ${-x} − ${y} = ${z}，seen 里没有。把 ${y} 放进 seen。`, view(i, j, -1));
+          seenIdx.push(j);
+        }
+      }
+      res.sort((p, q) => p[0] - q[0] || p[1] - q[1] || p[2] - q[2]);
+      seenIdx = [];
+      snap("完成", `一共找到 <b>${res.length}</b> 组，排好序输出。`, view(-1, -1, -1), { kind: "ok", ans: res });
+    },
+  }],
   points: [
     { t: "去重有三处", body: "第一个数、第二个数、第三个数都要跳过重复值。漏掉任何一处都会出现重复的三元组。" },
     { t: "i > 0 才比较前一个", body: "<code>nums[i] == nums[i-1]</code> 之前要先判断 <code>i > 0</code>，否则 i = 0 时会和最后一个数比。" },

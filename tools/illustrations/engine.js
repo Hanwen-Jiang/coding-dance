@@ -119,16 +119,36 @@
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

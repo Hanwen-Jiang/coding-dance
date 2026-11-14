@@ -224,6 +224,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -242,7 +244,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>当前节点 cur</span><span><i class="sw b"></i>左子树最右的 pre</span><span><i class="sw c"></i>已经展开好的部分</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>当前节点 cur</span><span><i class="sw b"></i>左子树最右的 pre</span><span><i class="sw c"></i>已经展开好的部分</span></div>
       </div>
     </div>
   </section>
@@ -323,7 +325,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,5,3,4,null,6]},"no
 })(); const r = ((R) => {
     const t = R.tree(R.int(3, 7), () => R.int(1, 9));
     return { args: { t: t.heap }, note: `root = ${R.fmt(t.lc)}`, py: `__flat(T(${R.py(t.lc)}))` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "原地挪左子树", note: null, legend: [["a","当前节点 cur"],["b","左子树最右的 pre"],["c","已经展开好的部分"]], build(a, snap) {
     const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
     const done = [];
     const view = (cur, pre) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : +id === pre ? "b" : done.includes(+id) ? "c" : ""; return [{ t: "tree", nodes: N, root: 0, cls }]; };
@@ -341,7 +344,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,5,3,4,null,6]},"no
     }
     const out = []; let p = 0; while (p !== null) { out.push(N[p].v); p = N[p].r; }
     snap("完成", `展开成了一条只用右指针的链：${out.join(" → ")}，正是前序遍历的顺序。`, view(-1, -1), { kind: "ok", ans: out });
-  } };
+  } },
+{ t: "反向前序", note: "和简洁写法一样：按 右 → 左 → 自己 的顺序访问，正好是前序倒过来，也就是从链表的尾巴往头走。每访问一个节点，就让它的 right 指向上一个访问的节点 prev。", legend: [["e","在调用栈上"],["a","正在接的节点"],["c","已经串进链表"]], build(a, snap) {
+      const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+      // 树画的是原来的形状，新的 right 指针记在 link 里，串好的部分单独画成链表
+      const stack = [], done = new Set(), link = {}; let prev = null;
+      const chain = () => { const out = []; for (let p = prev; p !== null; p = link[p]) out.push(N[p].v); return out; };
+      const view = (cur) => {
+        const cls = {}, c = chain();
+        for (const id in N) cls[id] = +id === cur ? "a" : done.has(+id) ? "c" : stack.includes(+id) ? "e" : "";
+        return [{ t: "tree", label: "原来的树", nodes: N, root: 0, cls, on: stack.slice() }, c.length
+          ? { t: "list", label: "已经串好的链（从 prev 开始，只用 right 指针）", nodes: c.map((v, i) => ({ v, cls: i === 0 && cur >= 0 ? "a" : "c" })) }
+          : { t: "note", label: "已经串好的链", html: "还没有" }];
+      };
+      snap("开始", "前序是 根 → 左 → 右。反过来按 右 → 左 → 根 访问，访问顺序就是展开后链表从尾到头的顺序。prev 一开始是空。", view(-1));
+      const dfs = (id) => {
+        if (id === null) return;
+        const nd = N[id];
+        stack.push(id);
+        dfs(nd.r);
+        dfs(nd.l);
+        const old = prev;
+        link[id] = prev; done.add(id); prev = id;
+        snap("接上", `${nd.v} 的右子树、左子树都处理完了。${nd.v}.right 指向 prev${old === null ? "（空）" : ` ${N[old].v}`}，left 置空，prev 变成 ${nd.v}。`, view(id));
+        stack.pop();
+      };
+      dfs(N[0] ? 0 : null);
+      const out = chain();
+      snap("完成", `展开成了一条只用右指针的链：${out.join(" → ")}，正是前序遍历的顺序。`, view(-1), { kind: "ok", ans: out });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -463,16 +495,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,5,3,4,null,6]},"no
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

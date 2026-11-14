@@ -221,6 +221,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -239,7 +241,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw e"></i>能到的范围</span><span><i class="sw a"></i>当前位置</span><span><i class="sw w"></i>到不了</span><span><i class="sw c"></i>终点能到</span></div>
+        <div class="legend" id="legend"><span><i class="sw e"></i>能到的范围</span><span><i class="sw a"></i>当前位置</span><span><i class="sw w"></i>到不了</span><span><i class="sw c"></i>终点能到</span></div>
       </div>
     </div>
   </section>
@@ -320,7 +322,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,3,1,1,4]},"note":
 })(); const r = ((R) => {
     const nums = R.arr(R.int(4, 7), 0, 3);
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().canJump(${R.py(nums)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "维护最远可达", note: null, legend: [["e","能到的范围"],["a","当前位置"],["w","到不了"],["c","终点能到"]], build(a, snap) {
     const nums = a.nums, n = nums.length; let far = 0;
     const view = (i, end) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: end === "ok" && k === n - 1 ? "c" : k === i ? (end === "bad" ? "w" : "a") : k <= far ? "e" : end === "bad" ? "w" : "" })), ptrs: { i: i >= 0 ? i : null, far: Math.min(far, n - 1) } }];
     snap("开始", "一开始站在下标 0，能到的最远位置 far = 0。", view(-1), { facts: [["far", far], ["终点", n - 1]] });
@@ -330,7 +333,22 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,3,1,1,4]},"note":
       if (far >= n - 1) { snap("能到终点", `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，已经够到终点 ${n - 1}。返回 <b>true</b>。`, view(i, "ok"), { kind: "ok", ans: true, facts: [["far", far], ["终点", n - 1]] }); return; }
       snap("更新 far", `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}。` + (far > old ? `far 从 ${old} 变成 <b>${far}</b>。` : `没有超过 far = ${far}。`), view(i), { facts: [["far", far], ["终点", n - 1]] });
     }
-  } };
+  } },
+{ t: "从终点往回推", note: "和简洁写法一样：goal 是「只要能到这里，就一定能到终点」的最左位置。从右往左看，能跳到 goal 的位置就成为新的 goal，最后看 goal 是不是 0。", legend: [["a","当前位置"],["e","从这里出发能到终点"],["w","到不了终点"],["c","起点能到终点"]], build(a, snap) {
+      const nums = a.nums, n = nums.length; let goal = n - 1;
+      const view = (i, end) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k >= goal ? (end === "ok" && k === 0 ? "c" : "e") : end === "bad" ? "w" : "" })), ptrs: { i: i >= 0 ? i : null, goal } }];
+      const f = () => ({ facts: [["goal", goal], ["终点", n - 1]] });
+      snap("开始", `goal 一开始就是终点 ${n - 1}：站在终点当然能到终点。从倒数第二格开始往左看。`, view(-1), f());
+      for (let i = n - 2; i >= 0; i--) {
+        if (i + nums[i] >= goal) {
+          const old = goal; goal = i;
+          snap("新的 goal", `站在 ${i} 最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，够得着 goal = ${old}。能到 ${i} 就能到终点，goal 移到 <b>${i}</b>。`, view(i), f());
+        } else snap("够不着", `站在 ${i} 最远只能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，够不着 goal = ${goal}。goal 不动。`, view(i), f());
+      }
+      if (goal === 0) snap("完成", "goal 推到了起点 0，从起点出发能到终点。返回 <b>true</b>。", view(-1, "ok"), { kind: "ok", ans: true, ...f() });
+      else snap("完成", `goal 停在 ${goal}，没能推到起点。起点到不了终点，返回 <b>false</b>。`, view(-1, "bad"), { kind: "warn", ans: false, ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -452,16 +470,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,3,1,1,4]},"note":
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

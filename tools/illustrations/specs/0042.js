@@ -31,6 +31,20 @@ class Solution:
         left = accumulate(height, max)
         right = list(accumulate(reversed(height), max))[::-1]
         return sum(min(l, r) - h for l, r, h in zip(left, right, height))
+` }, { t: "另一种写法：单调栈，按层接水", note: "栈里的柱子从底到顶越来越矮。来了一根更高的柱子，栈顶就是一个坑的坑底，它下面那根是左墙，新柱子是右墙，一次接上一层水。", code: `
+class Solution:
+    def trap(self, height: List[int]) -> int:
+        stack, water = [], 0                # 栈里存下标，高度从底到顶递减
+        for i, h in enumerate(height):
+            while stack and height[stack[-1]] < h:
+                bottom = stack.pop()        # 坑底
+                if not stack:
+                    break                   # 左边没有墙，接不住
+                left = stack[-1]
+                width = i - left - 1
+                water += (min(height[left], h) - height[bottom]) * width
+            stack.append(i)
+        return water
 ` }],
   pytest: `
 s = Solution()
@@ -39,6 +53,7 @@ assert s.trap([4,2,0,3,2,5]) == 9
 assert s.trap([1]) == 0
 assert s.trap([3,0,3]) == 3
 `,
+  method: "双指针",
   legend: [["a", "l 和 r"], ["d", "已经算完的格子"], ["wat", "已确定的水"]],
   presets: [
     { label: "示例 1", args: { h: [0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1] }, note: "height = [0,1,0,2,1,0,1,3,2,1,2,1]", expect: 6 },
@@ -64,9 +79,62 @@ assert s.trap([3,0,3]) == 3
     }
     snap("完成", `两个指针相遇。一共接到 <b>${total}</b> 格水。`, view(true), { kind: "ok", ans: total, facts: facts() });
   },
+  alts: [{
+    t: "前缀最大值",
+    note: "和简洁写法一样：每一格的水位 = min(左边最高, 右边最高)。先从左往右、从右往左各算一遍最高值，再逐格相减。要 O(n) 额外空间。",
+    legend: [["a", "当前格子"], ["k", "两边最高里较小的那个，就是这一格的水位"], ["wat", "接到的水"]],
+    build(a, snap) {
+      const h = a.h, n = h.length, w = Array(n).fill(0), L = Array(n).fill(null), R = Array(n).fill(null);
+      let total = 0;
+      const view = (i) => [
+        { t: "bars", label: "height", items: h.map((v, k) => ({ v, water: w[k], cls: k === i ? "a" : "" })) },
+        { t: "array", label: "left：从左往右到这里为止最高的柱子", items: L.map((v, k) => ({ v: v === null ? "" : v, cls: k === i && L[k] <= R[k] ? "k" : "" })) },
+        { t: "array", label: "right：从右往左到这里为止最高的柱子", items: R.map((v, k) => ({ v: v === null ? "" : v, cls: k === i && R[k] < L[k] ? "k" : "" })) },
+      ];
+      const f = () => ({ facts: [["接到的水", total]] });
+      snap("开始", "一格能接多少水，取决于它左边最高和右边最高的柱子里较矮的那根。先把两个方向的最高都算出来。", view(-1), f());
+      for (let k = 0; k < n; k++) L[k] = Math.max(k ? L[k - 1] : 0, h[k]);
+      snap("算 left", "accumulate(height, max)：从左往右走，每格记下到这里为止（包括自己）最高的柱子。", view(-1), f());
+      for (let k = n - 1; k >= 0; k--) R[k] = Math.max(k < n - 1 ? R[k + 1] : 0, h[k]);
+      snap("算 right", "再从右往左走一遍，每格记下它右边（包括自己）最高的柱子。", view(-1), f());
+      for (let i = 0; i < n; i++) {
+        const lv = Math.min(L[i], R[i]), add = lv - h[i];
+        w[i] = add; total += add;
+        snap(`下标 ${i}`, `left = ${L[i]}，right = ${R[i]}，水位是较小的 ${lv}。这一格接 ${lv} − ${h[i]} = <b>${add}</b>。`, view(i), f());
+      }
+      snap("完成", `每一格都算完了，一共接到 <b>${total}</b> 格水。`, view(-1), { kind: "ok", ans: total, ...f() });
+    },
+  }, {
+    t: "单调栈",
+    note: "和「另一种写法」一样：前面两种是一列一列算水，这种是一层一层算。栈里的柱子从底到顶越来越矮；来了更高的柱子，就和栈里的柱子围出一个坑，接上一层水。",
+    legend: [["a", "右墙：当前柱子"], ["b", "坑底"], ["k", "左墙"], ["e", "在栈里"], ["wat", "接到的水"]],
+    build(a, snap) {
+      const h = a.h, n = h.length, level = h.slice(), stack = [];
+      let total = 0;
+      const view = (i, bottom, left) => [
+        { t: "bars", label: "height", items: h.map((v, k) => ({ v, water: level[k] - v, cls: k === i ? "a" : k === bottom ? "b" : k === left ? "k" : stack.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 && i < n ? i : null } },
+        { t: "chips", label: "栈（存下标，右边是栈顶）", items: stack.map((k) => `${k}:${h[k]}`), empty: "空" },
+      ];
+      const f = () => ({ facts: [["接到的水", total]] });
+      snap("开始", "从左往右看每根柱子。栈里放还在等右墙的柱子，高度从底到顶递减。", view(-1, -1, -1), f());
+      for (let i = 0; i < n; i++) {
+        while (stack.length && h[stack[stack.length - 1]] < h[i]) {
+          const bottom = stack.pop();
+          if (!stack.length) { snap("左边没墙", `${h[i]} 比栈顶的 ${h[bottom]} 高，弹出 ${bottom}。可它左边没有柱子了，围不成坑，接不住水。`, view(i, bottom, -1), { kind: "warn", ...f() }); break; }
+          const left = stack[stack.length - 1], width = i - left - 1, top = Math.min(h[left], h[i]), add = (top - h[bottom]) * width;
+          for (let k = left + 1; k < i; k++) level[k] = top;
+          total += add;
+          snap("接一层水", `${h[i]} 比栈顶的 ${h[bottom]} 高，弹出坑底 ${bottom}。左墙是下标 ${left}（高 ${h[left]}），右墙是 ${i}（高 ${h[i]}）。这一层宽 ${i} − ${left} − 1 = ${width}，高 min(${h[left]}, ${h[i]}) − ${h[bottom]} = ${top - h[bottom]}，接 <b>${add}</b>。`, view(i, bottom, left), f());
+        }
+        stack.push(i);
+        snap("压栈", `把下标 ${i}（高 ${h[i]}）压栈，等它的右墙。`, view(i, -1, -1), f());
+      }
+      snap("完成", `所有柱子都看完了，一共接到 <b>${total}</b> 格水。`, view(-1, -1, -1), { kind: "ok", ans: total, ...f() });
+    },
+  }],
   points: [
     { t: "先更新最高值再算水", body: "先把当前柱子计入 leftMax / rightMax，这样 <code>leftMax − height[l]</code> 不会是负数。" },
     { t: "为什么矮的那边可以先算", body: "leftMax < rightMax 时，l 右边一定存在不低于 leftMax 的柱子，所以 l 这格的水位不会被右边限制。" },
-    { t: "复杂度", body: "时间 O(n)，空间 O(1)。单调栈也能做，是按层接水的另一种思路。" },
+    { t: "复杂度", body: "双指针时间 O(n)、空间 O(1)；前缀最大值和单调栈都是时间 O(n)、空间 O(n)。" },
   ],
 };

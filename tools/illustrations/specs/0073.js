@@ -41,6 +41,7 @@ class Solution:
 for a, e in [([[1,1,1],[1,0,1],[1,1,1]], [[1,0,1],[0,0,0],[1,0,1]]), ([[0,1,2,0],[3,4,5,2],[1,3,1,5]], [[0,0,0,0],[0,4,5,0],[0,3,1,0]]), ([[1,0]], [[0,0]]), ([[1],[0]], [[0],[0]])]:
     Solution().setZeroes(a); assert a == e
 `,
+  method: "第一行第一列做标记",
   legend: [["a", "正在看的格子"], ["w", "写下的记号"], ["c", "被清零的格子"], ["e", "记号区（第一行、第一列）"]],
   presets: [
     { label: "示例 1", args: { m: [[1, 1, 1], [1, 0, 1], [1, 1, 1]] }, note: "matrix = [[1,1,1],[1,0,1],[1,1,1]]", expect: [[1, 0, 1], [0, 0, 0], [1, 0, 1]] },
@@ -65,6 +66,28 @@ for a, e in [([[1,1,1],[1,0,1],[1,1,1]], [[1,0,1],[0,0,0],[1,0,1]]), ([[0,1,2,0]
     snap("最后处理第一行和第一列", (row0 ? "第一行原来有 0，整行清零。" : "第一行原来没有 0，保持不动。") + (col0 ? "第一列原来有 0，整列清零。" : "第一列原来没有 0，保持不动。"), view(), { facts: facts() });
     snap("完成", "所有该清零的行和列都处理完了。", view(), { kind: "ok", ans: M, facts: facts() });
   },
+  alts: [{
+    t: "记下行和列",
+    note: "和简洁写法一样：先扫一遍，把含 0 的行号和列号分别放进两个集合，再统一清零。好写，但要 O(m + n) 额外空间。",
+    legend: [["a", "找到的 0"], ["e", "要清零的行和列"], ["c", "被清零的格子"]],
+    build(a, snap) {
+      const M = a.m.map((r) => r.slice()), m = M.length, n = M[0].length, rows = new Set(), cols = new Set(), cls = M.map((r) => r.map(() => ""));
+      const sorted = (s) => [...s].sort((p, q) => p - q);
+      const view = (ci, cj) => [
+        { t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : cls[i][j] || (rows.has(i) || cols.has(j) ? "e" : "") }))) },
+        { t: "chips", label: "rows：要清零的行", items: sorted(rows), empty: "空" },
+        { t: "chips", label: "cols：要清零的列", items: sorted(cols), empty: "空" },
+      ];
+      snap("开始", "先只看不改：找出所有 0，记下它们所在的行和列。", view(-1, -1));
+      for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (M[i][j] === 0) {
+        rows.add(i); cols.add(j);
+        snap("记下", `matrix[${i}][${j}] 是 0，记下第 ${i} 行和第 ${j} 列。`, view(i, j));
+      }
+      for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (rows.has(i) || cols.has(j)) { M[i][j] = 0; cls[i][j] = "c"; }
+      snap("统一清零", `再扫一遍：行号在 rows 里，或者列号在 cols 里，就清零。`, view(-1, -1));
+      snap("完成", "所有该清零的行和列都处理完了。", view(-1, -1), { kind: "ok", ans: M });
+    },
+  }],
   points: [
     { t: "顺序不能乱", body: "先记 row0 / col0，再用第一行第一列做记号，最后才清第一行第一列。提前清掉的话，记号就全变成 0 了。" },
     { t: "内层从 1 开始", body: "做记号和按记号清零时，i、j 都从 1 开始，第一行第一列留到最后单独处理。" },

@@ -36,6 +36,7 @@ assert s.findDuplicate([3,3,3,3,3]) == 3
 assert s.findDuplicate([1,1]) == 1
 assert s.findDuplicate([2,5,9,6,9,3,8,9,7,1]) == 9
 `,
+  method: "快慢指针",
   legend: [["a", "slow"], ["b", "fast"], ["c", "两者相遇"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 3, 4, 2, 2] }, note: "nums = [1,3,4,2,2]", expect: 2 },
@@ -61,6 +62,31 @@ assert s.findDuplicate([2,5,9,6,9,3,8,9,7,1]) == 9
     }
     snap("完成", `重复的数是 <b>${slow}</b>。`, view(true), { kind: "ok", ans: slow, facts: [["slow", slow], ["fast", fast]] });
   },
+  alts: [{
+    t: "对值二分",
+    note: "和简洁写法一样：设重复的数是 d。数一数 nums 里 ≤ x 的有几个：x &lt; d 时不会超过 x，x ≥ d 时一定超过 x。二分找第一个超过的 x。",
+    legend: [["a", "mid"], ["e", "nums 里 ≤ mid 的数"], ["d", "已经排除的值"], ["c", "答案"]],
+    build(a, snap) {
+      const nums = a.nums, n = nums.length; let lo = 0, hi = n;
+      const view = (mid, ans) => [
+        { t: "array", label: "nums", items: nums.map((v) => ({ v, cls: mid >= 0 && v <= mid ? "e" : "" })) },
+        { t: "array", label: "候选的值 x（0 到 n − 1）", items: Array.from({ length: n }, (_, x) => ({ v: x, cls: x === ans ? "c" : x === mid ? "a" : x < lo || x >= hi ? "d" : "" })), idx: false, ptrs: { lo, hi: hi < n ? hi : null, mid: mid >= 0 ? mid : null } },
+      ];
+      const f = (c) => ({ facts: [["lo", lo], ["hi", hi], ["≤ mid 的个数", c === undefined ? "—" : c]] });
+      snap("开始", `值都在 1 到 ${n - 1} 之间。1 到 x 只有 x 个不同的值，如果 nums 里 ≤ x 的数超过 x 个，1 到 x 里一定有重复。在 [${lo}, ${hi}) 里二分。`, view(-1, -1), f());
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1, c = nums.filter((v) => v <= mid).length;
+        if (c > mid) {
+          hi = mid;
+          snap("往左", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，比 ${mid} 多，重复的数 ≤ ${mid}。hi = ${mid}。`, view(mid, -1), f(c));
+        } else {
+          lo = mid + 1;
+          snap("往右", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，没有超过 ${mid}，重复的数比 ${mid} 大。lo = ${mid + 1}。`, view(mid, -1), f(c));
+        }
+      }
+      snap("完成", `lo = hi = ${lo}，它是第一个「≤ x 的数超过 x 个」的值，重复的数是 <b>${lo}</b>。时间 O(n log n)。`, view(-1, lo), { kind: "ok", ans: lo, ...f() });
+    },
+  }],
   points: [
     { t: "从下标 0 出发", body: "值都在 1..n，没有任何下标指向 0，所以 0 一定在环外，是链表的「头」。" },
     { t: "不修改数组", body: "题目要求不修改、O(1) 空间，所以不能排序，也不能用原地标记的方法。" },

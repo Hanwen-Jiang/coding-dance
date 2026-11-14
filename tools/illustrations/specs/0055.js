@@ -35,6 +35,7 @@ assert s.canJump([0]) is True
 assert s.canJump([0,1]) is False
 assert s.canJump([2,0,0]) is True
 `,
+  method: "维护最远可达",
   legend: [["e", "能到的范围"], ["a", "当前位置"], ["w", "到不了"], ["c", "终点能到"]],
   presets: [
     { label: "示例 1", args: { nums: [2, 3, 1, 1, 4] }, note: "nums = [2,3,1,1,4]", expect: true },
@@ -51,6 +52,25 @@ assert s.canJump([2,0,0]) is True
       snap("更新 far", `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}。` + (far > old ? `far 从 ${old} 变成 <b>${far}</b>。` : `没有超过 far = ${far}。`), view(i), { facts: [["far", far], ["终点", n - 1]] });
     }
   },
+  alts: [{
+    t: "从终点往回推",
+    note: "和简洁写法一样：goal 是「只要能到这里，就一定能到终点」的最左位置。从右往左看，能跳到 goal 的位置就成为新的 goal，最后看 goal 是不是 0。",
+    legend: [["a", "当前位置"], ["e", "从这里出发能到终点"], ["w", "到不了终点"], ["c", "起点能到终点"]],
+    build(a, snap) {
+      const nums = a.nums, n = nums.length; let goal = n - 1;
+      const view = (i, end) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k >= goal ? (end === "ok" && k === 0 ? "c" : "e") : end === "bad" ? "w" : "" })), ptrs: { i: i >= 0 ? i : null, goal } }];
+      const f = () => ({ facts: [["goal", goal], ["终点", n - 1]] });
+      snap("开始", `goal 一开始就是终点 ${n - 1}：站在终点当然能到终点。从倒数第二格开始往左看。`, view(-1), f());
+      for (let i = n - 2; i >= 0; i--) {
+        if (i + nums[i] >= goal) {
+          const old = goal; goal = i;
+          snap("新的 goal", `站在 ${i} 最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，够得着 goal = ${old}。能到 ${i} 就能到终点，goal 移到 <b>${i}</b>。`, view(i), f());
+        } else snap("够不着", `站在 ${i} 最远只能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，够不着 goal = ${goal}。goal 不动。`, view(i), f());
+      }
+      if (goal === 0) snap("完成", "goal 推到了起点 0，从起点出发能到终点。返回 <b>true</b>。", view(-1, "ok"), { kind: "ok", ans: true, ...f() });
+      else snap("完成", `goal 停在 ${goal}，没能推到起点。起点到不了终点，返回 <b>false</b>。`, view(-1, "bad"), { kind: "warn", ans: false, ...f() });
+    },
+  }],
   points: [
     { t: "先判断再更新", body: "<code>i &gt; far</code> 的判断要放在更新之前。位置 i 都到不了，就不能用 nums[i] 更新 far。" },
     { t: "不需要真的模拟跳", body: "只关心能不能到，不关心跳几次、怎么跳，一个变量就够了。" },

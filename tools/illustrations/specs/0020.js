@@ -36,6 +36,7 @@ assert s.isValid("{[]}") is True
 assert s.isValid("((") is False
 assert s.isValid(")") is False
 `,
+  method: "栈",
   legend: [["a", "当前字符"], ["d", "已经处理"], ["e", "栈里等待配对的左括号"]],
   presets: [
     { label: "嵌套", args: { s: "{[()]}" }, note: 's = "{[()]}"', expect: true },
@@ -61,6 +62,33 @@ assert s.isValid(")") is False
     if (stack.length) snap("无效", `字符串走完了，但栈里还剩 ${stack.length} 个左括号没关上。返回 false。`, view(s.length), { kind: "warn", ans: false });
     else snap("完成", "字符串走完，栈也空了，每个括号都配上了。返回 true。", view(s.length), { kind: "ok", ans: true });
   },
+  alts: [{
+    t: "反复删一对",
+    note: "和简洁写法一样：每一轮依次把所有 ()、[]、{} 删掉，删到删不动为止。合法的串最后一定删成空串。",
+    legend: [["a", "这一下要删掉的一对"]],
+    build(a, snap) {
+      let s = a.s, round = 0;
+      const view = (hl) => [s.length
+        ? { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: hl.has(t) ? "a" : "" })) }
+        : { t: "note", label: "s", html: "空串" }];
+      const f = () => ({ facts: [["轮数", round], ["剩下", s.length]] });
+      const has = () => ["()", "[]", "{}"].some((p) => s.includes(p));
+      snap("开始", "合法的串里一定有一对挨在一起的括号。把它们删掉，剩下的部分合法性不变。", view(new Set()), f());
+      while (has()) {
+        round++;
+        for (const p of ["()", "[]", "{}"]) {
+          const hl = new Set();
+          for (let k = s.indexOf(p); k >= 0; k = s.indexOf(p, k + 2)) { hl.add(k); hl.add(k + 1); }
+          if (!hl.size) continue;
+          snap(`第 ${round} 轮`, `找到 ${hl.size / 2} 对相邻的 <code>${p}</code>，全部删掉。`, view(hl), f());
+          s = s.split(p).join("");
+        }
+        snap(`第 ${round} 轮完`, s.length ? (has() ? `删完变成 "${s}"，里面又出现了相邻的一对，再来一轮。` : `删完变成 "${s}"，已经没有相邻的一对了。`) : "删成空串了。", view(new Set()), f());
+      }
+      if (s.length) snap("无效", `删不动了，还剩 "${s}"，说明有括号配不上。返回 false。`, view(new Set()), { kind: "warn", ans: false, ...f() });
+      else snap("完成", "整个串都删光了，每个括号都配上了。返回 true。", view(new Set()), { kind: "ok", ans: true, ...f() });
+    },
+  }],
   points: [
     { t: "弹栈前先看栈空不空", body: "遇到右括号而栈是空的，直接无效。不判断的话 <code>pop</code> 会报错。" },
     { t: "最后返回 not stack", body: "走完字符串不代表有效，栈里可能还有没关的左括号。" },

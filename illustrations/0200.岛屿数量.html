@@ -243,10 +243,33 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
                 q = deque([(i, j)])
                 while q:
                     x, y = q.popleft()
-                    for a, b in (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1):
+                    for a, b in (x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1):
                         if 0 &lt;= a &lt; m and 0 &lt;= b &lt; n and grid[a][b] == '1':
                             grid[a][b] = '0'    <span class="cmt"># 入队时就做记号</span>
                             q.append((a, b))
+        return count</pre>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">代码</span>另一种写法：用栈模拟 DFS<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>把 BFS 的队列换成栈（<code>popleft</code> 换成 <code>pop</code>），就是不用递归的 DFS。</p>
+<pre class="code">class Solution:
+    def numIslands(self, grid: List[List[str]]) -&gt; int:
+        m, n, count = len(grid), len(grid[0]), 0
+        for i in range(m):
+            for j in range(n):
+                if grid[i][j] != '1':
+                    continue
+                count += 1
+                grid[i][j] = '0'
+                stack = [(i, j)]
+                while stack:
+                    x, y = stack.pop()
+                    for a, b in (x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1):
+                        if 0 &lt;= a &lt; m and 0 &lt;= b &lt; n and grid[a][b] == '1':
+                            grid[a][b] = '0'    <span class="cmt"># 入栈时就做记号</span>
+                            stack.append((a, b))
         return count</pre>
         </div>
       </details>
@@ -257,6 +280,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">海图演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -275,7 +300,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw d"></i>水 0</span><span><i class="sw "></i>还没淹的陆地 1</span><span><i class="sw e"></i>在栈里等着扩散</span><span><i class="sw a"></i>正在扩散的格子</span><span><i class="sw c"></i>已经淹掉（颜色和数字区分不同的岛）</span></div>
+        <div class="legend" id="legend"><span><i class="sw d"></i>水 0</span><span><i class="sw "></i>还没淹的陆地 1</span><span><i class="sw e"></i>在递归路径上，还没返回</span><span><i class="sw a"></i>正在执行的 sink</span><span><i class="sw c"></i>已经淹掉（颜色和数字区分不同的岛）</span></div>
       </div>
     </div>
   </section>
@@ -358,7 +383,89 @@ const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11
     const r = R.int(3, 5), c = R.int(3, 6), p = R.pick([0.4, 0.5, 0.6]);
     const grid = Array.from({ length: r }, () => Array.from({ length: c }, () => (Math.random() < p ? "1" : "0")).join(""));
     return { args: { grid }, note: `grid = ${R.fmt(grid)}`, py: `Solution().numIslands([list(r) for r in ${R.py(grid)}])` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "递归 sink", note: "和标准解法一样：sink 淹掉当前格子，再按上、下、左、右的顺序递归。越界、是水或已经淹掉的方向，sink 一进去就返回，演示里直接跳过。", legend: [["d","水 0"],["","还没淹的陆地 1"],["e","在递归路径上，还没返回"],["a","正在执行的 sink"],["c","已经淹掉（颜色和数字区分不同的岛）"]], build(a, snap) {
+    const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
+    const mark = g.map((r) => r.map(() => 0)); // 0 还没淹，k 表示属于第 k 座岛
+    const COL = ["c", "g", "w"], DIR = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
+    let count = 0;
+    const calls = []; // 递归调用栈：[i, j, 下一个要试的方向]
+    const onPath = (i, j) => calls.some(([x, y]) => x === i && y === j);
+    const view = () => {
+      const top = calls[calls.length - 1];
+      return [
+        { t: "grid", label: "grid（淹掉的格子写的是第几座岛）", rows: g.map((r, i) => r.map((v, j) => {
+          const k = mark[i][j];
+          const cls = top && top[0] === i && top[1] === j ? "a" : onPath(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
+          return { v: k || v, cls };
+        })) },
+        { t: "chips", label: "递归调用栈（右边是正在执行的那一层）", items: calls.map(([x, y], t) => ({ v: `sink(${x},${y})`, cls: t === calls.length - 1 ? "a" : "e" })), empty: "空：回到外面的两层循环" },
+      ];
+    };
+    const f = () => ({ facts: [["岛屿数", count], ["递归深度", calls.length]] });
+    const sink = (i, j, dir) => {
+      mark[i][j] = count;
+      calls.push([i, j]);
+      if (dir) snap("递归进入", `往${dir}走到 (${i},${j})：是陆地，淹掉它，再从它出发按上、下、左、右递归。`, view(), f());
+      else snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。调用 sink(${i},${j})：先淹掉它，再按上、下、左、右递归。`, view(), f());
+      for (const [di, dj, dn] of DIR) {
+        const p = i + di, q = j + dj;
+        if (p < 0 || q < 0 || p >= m || q >= n || g[p][q] !== "1" || mark[p][q]) continue;
+        sink(p, q, dn);
+        const rest = DIR.slice(DIR.findIndex((d) => d[2] === dn) + 1).map((d) => d[2]);
+        snap("返回", `sink(${p},${q}) 这一支淹完了，返回到 sink(${i},${j})。` + (rest.length ? `接着试它的「${rest.join("、")}」。` : "它四个方向都试过了。"), view(), f());
+      }
+      calls.pop();
+    };
+    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再调用 sink 把整座岛淹掉。`, view(), f());
+    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
+      if (g[i][j] !== "1" || mark[i][j]) continue;
+      count++;
+      sink(i, j, null);
+      snap("淹完", `sink(${i},${j}) 返回了，调用栈空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f());
+    }
+    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+  } },
+{ t: "BFS 队列", note: "从新岛的第一格出发，用队列一圈一圈往外扩：出队一个格子，把它四周没淹的陆地做上记号放进队尾。离起点近的格子总是先被淹。", legend: [["d","水 0"],["","还没淹的陆地 1"],["e","在队列里排队"],["a","刚出队，正在看四周"],["c","已经淹掉（颜色和数字区分不同的岛）"]], build(a, snap) {
+      const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
+      const mark = g.map((r) => r.map(() => 0)), ring = g.map((r) => r.map(() => 0));
+      const COL = ["c", "g", "w"];
+      let count = 0, q = [], cur = null;
+      const inQ = (i, j) => q.some(([x, y]) => x === i && y === j);
+      const view = () => [
+        { t: "grid", label: "grid（淹掉的格子写的是第几座岛）", rows: g.map((r, i) => r.map((v, j) => {
+          const k = mark[i][j];
+          const cls = cur && cur[0] === i && cur[1] === j ? "a" : inQ(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
+          return { v: k || v, cls };
+        })) },
+        { t: "chips", label: "队列（左边是队头，先出队）", items: q.map(([x, y]) => `(${x},${y}) 第${ring[x][y]}圈`), empty: "空" },
+      ];
+      const f = () => ({ facts: [["岛屿数", count], ["队列长度", q.length]] });
+      snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再用队列把整座岛淹掉。`, view(), f());
+      for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
+        if (g[i][j] !== "1" || mark[i][j]) continue;
+        count++;
+        mark[i][j] = count;
+        q = [[i, j]];
+        snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。做上记号放进队列，它是第 0 圈。`, view(), f());
+        while (q.length) {
+          cur = q.shift();
+          const [x, y] = cur, added = [];
+          for (const [p, s] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+            if (p < 0 || s < 0 || p >= m || s >= n || g[p][s] !== "1" || mark[p][s]) continue;
+            mark[p][s] = count;
+            ring[p][s] = ring[x][y] + 1;
+            q.push([p, s]);
+            added.push(`(${p},${s})`);
+          }
+          snap("出队扩散", `队头 (${x},${y}) 出队（第 ${ring[x][y]} 圈），看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号排到队尾，它们是第 ${ring[x][y] + 1} 圈。` : "四周没有新的陆地。"), view(), f());
+        }
+        cur = null;
+        snap("淹完", `队列空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f());
+      }
+      snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+    } },
+{ t: "栈模拟 DFS", note: "和 BFS 的写法一样，只是把队列换成栈：每次弹出最后放进去的格子，所以会先沿着一个方向钻到底。入栈时就做记号。", legend: [["d","水 0"],["","还没淹的陆地 1"],["e","在栈里等着扩散"],["a","刚弹出，正在看四周"],["c","已经淹掉（颜色和数字区分不同的岛）"]], build(a, snap) {
     const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
     const mark = g.map((r) => r.map(() => 0)); // 0 还没淹，k 表示属于第 k 座岛
     const COL = ["c", "g", "w"];
@@ -395,7 +502,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11
       snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), f());
     }
     snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
-  } };
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -517,16 +625,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

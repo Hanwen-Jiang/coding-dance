@@ -36,6 +36,7 @@ assert toL(s.mergeTwoLists(L([]), L([]))) == []
 assert toL(s.mergeTwoLists(L([]), L([0]))) == [0]
 assert toL(s.mergeTwoLists(L([5]), L([1,2,3]))) == [1,2,3,5]
 `,
+  method: "迭代",
   legend: [["a", "正在比较的两个头"], ["d", "已经接走"], ["k", "结果链表"]],
   presets: [
     { label: "示例 1", args: { x: [1, 2, 4], y: [1, 3, 4] }, note: "list1 = [1,2,4], list2 = [1,3,4]", expect: [1, 1, 2, 3, 4, 4] },
@@ -55,6 +56,36 @@ assert toL(s.mergeTwoLists(L([5]), L([1,2,3]))) == [1,2,3,5]
     snap("接上剩下的", rest.length ? `一个链表走完了。${which} 剩下的 [${rest.join(", ")}] 本来就有序，整段接上。` : "两个链表同时走完。", view(true));
     snap("完成", `返回 dummy.next，也就是 [${out.join(", ")}]。`, view(true), { kind: "ok", ans: out });
   },
+  alts: [{
+    t: "递归",
+    note: "和简洁写法一样：每一层选出两个头里较小的那个，它后面接什么要等下一层合并完剩下的部分。所以选是从前往后选，接是从后往前接。",
+    legend: [["a", "正在比较的两个头"], ["d", "已经被某一层选走"], ["e", "调用栈"], ["k", "已经接好的部分"]],
+    build(a, snap) {
+      const { x, y } = a, calls = []; let i = 0, j = 0, tail = [];
+      const lv = (label, arr, p, name) => ({ t: "list", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? "d" : t === p ? "a" : "" })), ptrs: { [name]: p < arr.length ? p : null } });
+      const view = () => [lv("list1", x, i, "list1"), lv("list2", y, j, "list2"),
+        { t: "chips", label: "递归调用栈（右边是最里层；写的是这一层选中的节点）", items: calls.map((v, t) => ({ v: `选了 ${v}`, cls: t === calls.length - 1 ? "a" : "e" })), empty: "空" },
+        { t: "chips", label: "已经接好的部分", items: tail.map((v) => ({ v, cls: "k" })), empty: "还没有" }];
+      snap("开始", "每一层只做一件事：两个头里挑小的，它的 next 等于「剩下部分的合并结果」。", view());
+      while (i < x.length && j < y.length) {
+        const eq = x[i] === y[j], fromX = x[i] <= y[j], pick = fromX ? x[i] : y[j], cmp = `${x[i]} 和 ${y[j]}`;
+        calls.push(pick);
+        if (fromX) i++; else j++;
+        snap("递归进入", `比较两个头 ${cmp}，` + (eq ? `一样大，取 list1 的 ${pick}` : `${fromX ? "list1" : "list2"} 的 ${pick} 更小`) + `。这一层返回 ${pick}，它后面接什么，交给下一层去合并。`, view());
+      }
+      tail = i < x.length ? x.slice(i) : y.slice(j);
+      const which = i < x.length ? "list2" : "list1";
+      i = x.length; j = y.length;
+      snap("到底", tail.length ? `${which} 已经空了，这一层直接返回另一个链表剩下的 [${tail.join(", ")}]。` : "两个链表都空了，返回空。", view());
+      while (calls.length) {
+        const v = calls[calls.length - 1], old = tail.slice();
+        tail = [v, ...tail];
+        snap("返回", `回到选了 ${v} 的那一层：${v}.next 接上下一层返回的${old.length ? ` [${old.join(", ")}]` : "空链表"}，再把 ${v} 返回给上一层。`, view());
+        calls.pop();
+      }
+      snap("完成", `递归全部返回，结果是 [${tail.join(", ")}]。`, view(), { kind: "ok", ans: tail });
+    },
+  }],
   points: [
     { t: "返回 dummy.next", body: "<code>dummy</code> 本身只是占位用的，真正的头是它的下一个节点。" },
     { t: "相等时取哪个都行", body: "用 <code>&lt;=</code> 让相等时先取 list1 的，结果是稳定的。" },

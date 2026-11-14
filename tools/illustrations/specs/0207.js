@@ -50,6 +50,7 @@ assert s.canFinish(4, [[1,0],[2,0],[3,1],[3,2]]) is True
 assert s.canFinish(3, [[0,1],[1,2],[2,0]]) is False
 assert s.canFinish(1, []) is True
 `,
+  method: "拓扑排序 BFS",
   legend: [["a", "刚上完的课"], ["e", "在队列里"], ["c", "已经上过"], ["w", "永远上不了"]],
   presets: [
     { label: "能修完", args: { n: 4, pre: [[1, 0], [2, 0], [3, 1], [3, 2]] }, note: "numCourses = 4, prerequisites = [[1,0],[2,0],[3,1],[3,2]]", expect: true },
@@ -74,6 +75,45 @@ assert s.canFinish(1, []) is True
     const ok = taken.length === n;
     snap("完成", ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join("、")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`, view(-1, true), { kind: ok ? "ok" : "warn", ans: ok, facts: [["已上", taken.length], ["总数", n]] });
   },
+  alts: [{
+    t: "DFS 三色标记",
+    note: "和简洁写法一样：从一门课出发，沿着「要先上哪门」一路往下走。state 为 1 表示这门课还在当前的递归路径上，又走回了路径上的课，就说明有环。",
+    legend: [["a", "当前的课 / 正在看的关系"], ["e", "1：在递归路径上"], ["c", "2：确认没问题"], ["w", "绕回来的课"]],
+    build(a, snap) {
+      const n = a.n, g = Array.from({ length: n }, () => []);
+      for (const [x, y] of a.pre) g[x].push(y);
+      const state = Array(n).fill(0), path = [];
+      let edge = null, bad = -1;
+      const view = (cur) => [
+        { t: "chips", label: "先修关系（a → b：上 a 之前要先上 b）", items: a.pre.map(([x, y]) => ({ v: `${x} → ${y}`, cls: edge && edge[0] === x && edge[1] === y ? "a" : "" })) },
+        { t: "array", label: "state（0 没访问，1 在递归路径上，2 确认没问题）", items: state.map((s, k) => ({ v: s, cls: k === bad ? "w" : k === cur ? "a" : s === 1 ? "e" : s === 2 ? "c" : "" })) },
+        { t: "chips", label: "递归路径", items: path.map((u) => ({ v: `课 ${u}`, cls: u === cur ? "a" : "e" })), empty: "空" },
+      ];
+      const ok = (u) => {
+        state[u] = 1; path.push(u);
+        snap("进入", `进入课 ${u}，标成 1。` + (g[u].length ? `上它之前要先上 ${g[u].join("、")}，挨个检查。` : "它没有先修课。"), view(u));
+        for (const v of g[u]) {
+          edge = [u, v];
+          if (state[v] === 1) {
+            bad = v;
+            snap("有环", `课 ${u} 要先上课 ${v}，可是 ${v} 还在当前的递归路径上：${path.slice(path.indexOf(v)).join(" → ")} → ${v} 绕成了一个环，这些课互相等待。返回 false。`, view(u), { kind: "warn" });
+            return false;
+          }
+          if (state[v] === 2) { snap("已确认", `课 ${u} 要先上课 ${v}，${v} 之前已经确认没问题，跳过。`, view(u)); continue; }
+          if (!ok(v)) return false;
+        }
+        edge = null; state[u] = 2; path.pop();
+        snap("确认", `课 ${u} 的先修课都没问题，标成 2，离开递归路径。`, view(u));
+        return true;
+      };
+      snap("开始", "所有课的 state 都是 0。从课 0 开始，依次把每门没访问过的课当起点做 DFS。", view(-1));
+      for (let u = 0; u < n; u++) {
+        if (state[u]) continue;
+        if (!ok(u)) { snap("完成", "找到了环，环上的课永远上不完，返回 <b>false</b>。", view(-1), { kind: "warn", ans: false }); return; }
+      }
+      snap("完成", `所有课都标成了 2，没有环，${n} 门课都能上完，返回 <b>true</b>。`, view(-1), { kind: "ok", ans: true });
+    },
+  }],
   points: [
     { t: "边的方向", body: "[a, b] 是先 b 后 a，边从 b 指向 a，入度加在 a 上。方向反了也能判环，但拓扑序就反了。" },
     { t: "DFS 要三种状态", body: "只用「访问过」两种状态分不清「在当前路径上」和「已经确认没问题」，会误判有环。" },

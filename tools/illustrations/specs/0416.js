@@ -36,7 +36,8 @@ assert s.canPartition([2,2]) is True
 assert s.canPartition([1]) is False
 assert s.canPartition([100]*200) is True
 `,
-  legend: [["k", "能凑出"], ["c", "这一轮新能凑出的"], ["a", "目标 target"]],
+  method: "0-1 背包",
+  legend: [["k", "能凑出"], ["c", "这一轮新能凑出的"], ["e", "目标 target"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 5, 11, 5] }, note: "nums = [1,5,11,5]", expect: true },
     { label: "凑不出", args: { nums: [1, 2, 5] }, note: "nums = [1,2,5]", expect: false },
@@ -60,6 +61,30 @@ assert s.canPartition([100]*200) is True
     }
     snap("完成", `所有数都加完了，还是凑不出 ${T}，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, facts: [["总和", total], ["target", T]] });
   },
+  alts: [{
+    t: "位运算",
+    note: "和简洁写法一样：把 dp 数组压成一个整数 bits，第 j 位是 1 表示能凑出和 j。加入 x 就是所有能凑出的和都加上 x：bits | (bits << x)。",
+    legend: [["a", "正在加入的数"], ["k", "1：能凑出"], ["c", "这一轮新变成 1 的位"], ["e", "目标 total / 2"]],
+    build(a, snap) {
+      const nums = a.nums, total = nums.reduce((s, x) => s + x, 0), T = total % 2 ? null : total / 2;
+      let bits = Array(total + 1).fill(0); bits[0] = 1;
+      const view = (xi, fresh) => [
+        { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === xi ? "a" : k < xi ? "d" : "" })) },
+        { t: "array", label: "bits（下标 j 就是第 j 位，最左边是最低位）", items: bits.map((b, j) => ({ v: b, cls: fresh.includes(j) ? "c" : b ? "k" : j === T ? "e" : "" })), ptrs: T === null ? {} : { target: T } },
+      ];
+      const f = () => ({ facts: [["总和", total], ["target", T === null ? "—" : T]] });
+      snap("开始", "bits = 1，只有第 0 位是 1：什么都不选，和为 0。", view(-1, []), f());
+      nums.forEach((x, k) => {
+        const nb = bits.slice(), fresh = [];
+        for (let j = total; j >= x; j--) if (bits[j - x] && !bits[j]) { nb[j] = 1; fresh.push(j); }
+        bits = nb;
+        snap(`加入 ${x}`, `bits << ${x}：每个能凑出的和都加上 ${x}，再和原来的 bits 按位或。` + (fresh.length ? `新能凑出 ${fresh.slice().reverse().join("、")}。` : "没有新的和。"), view(k, fresh), f());
+      });
+      if (T === null) snap("完成", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f() });
+      else if (bits[T]) snap("完成", `第 ${T} 位是 1，能凑出总和的一半，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, ...f() });
+      else snap("完成", `第 ${T} 位是 0，凑不出总和的一半，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f() });
+    },
+  }],
   points: [
     { t: "先判奇偶", body: "总和是奇数时直接返回 False，省掉后面所有计算。" },
     { t: "内层倒序", body: "<code>range(target, x - 1, -1)</code>。这是 0-1 背包一维写法最关键的一点。" },

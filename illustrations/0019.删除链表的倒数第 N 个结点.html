@@ -226,6 +226,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -244,7 +246,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>slow</span><span><i class="sw b"></i>fast</span><span><i class="sw w"></i>要删除的节点</span><span><i class="sw d"></i>哑节点 / 已删除</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>slow</span><span><i class="sw b"></i>fast</span><span><i class="sw w"></i>要删除的节点</span><span><i class="sw d"></i>哑节点 / 已删除</span></div>
       </div>
     </div>
   </section>
@@ -325,7 +327,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5],"n":2},"not
 })(); const r = ((R) => {
     const v = R.arr(R.int(1, 7), 1, 9), n = R.int(1, v.length);
     return { args: { v, n }, note: `head = ${R.fmt(v)}, n = ${n}`, py: `toL(Solution().removeNthFromEnd(L(${R.py(v)}), ${n}))` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "快慢指针", note: null, legend: [["a","slow"],["b","fast"],["w","要删除的节点"],["d","哑节点 / 已删除"]], build(a, snap) {
     const v = ["D", ...a.v], len = v.length, n = a.n, next = v.map((_, i) => (i + 1 < len ? i + 1 : null));
     let slow = 0, fast = 0, del = -1, gone = false;
     const view = () => [{ t: "list", label: "链表（D 是哑节点）", nodes: v.map((x, i) => ({ v: x, cls: i === del ? (gone ? "d" : "w") : i === slow ? "a" : i === fast ? "b" : i === 0 ? "d" : "" })), next: next.slice(), ptrs: { slow, fast } }];
@@ -339,7 +342,32 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5],"n":2},"not
     snap("删除", `把 slow 的 next 指向 ${v[del]} 的下一个节点${next[slow] === null ? "（空）" : " " + v[next[slow]]}，${v[del]} 就从链表里脱离了。`, view());
     const ans = a.v.filter((_, i) => i + 1 !== del);
     snap("完成", `返回 dummy.next，结果是 [${ans.join(", ")}]。`, view(), { kind: "ok", ans });
-  } };
+  } },
+{ t: "递归数位置", note: "和简洁写法一样：递归一路走到空，返回时从尾往头数，返回值就是「倒数第几个」。数到 n + 1 的那个节点，删掉它后面那个。", legend: [["a","正在执行的这一层"],["e","在调用栈上，还没返回"],["d","哑节点 / 已删除"]], build(a, snap) {
+      const v = ["D", ...a.v], len = v.length, n = a.n, next = v.map((_, i) => (i + 1 < len ? i + 1 : null));
+      const k = {}, calls = []; let del = -1;
+      const view = (cur) => [
+        { t: "list", label: "链表（D 是哑节点；下面写的是倒数第几个）", nodes: v.map((x, i) => ({ v: x, cls: i === del ? "d" : i === cur ? "a" : calls.includes(i) ? "e" : i === 0 ? "d" : "" })), next: next.slice(), ptrs: Object.fromEntries(Object.entries(k).map(([i, x]) => [`k=${x}`, +i])) },
+        { t: "chips", label: "递归调用栈（右边是最里层）", items: calls.map((i) => ({ v: `rec(${v[i]})`, cls: i === cur ? "a" : "e" })), empty: "空" },
+      ];
+      snap("开始", `从哑节点 D 开始递归。要删的是倒数第 ${n} 个，所以要找倒数第 ${n + 1} 个，也就是它前面那个节点。`, view(-1));
+      for (let i = 0; i < len; i++) {
+        calls.push(i);
+        snap("往下递归", `调用 rec(${v[i]})。它要先等 rec(${i + 1 < len ? v[i + 1] : "空"}) 返回，才知道自己是倒数第几个。`, view(i));
+      }
+      snap("到底", "rec(空) 直接返回 0：空节点后面没有节点。开始往回返回。", view(-1));
+      for (let i = len - 1; i >= 0; i--) {
+        k[i] = len - i;
+        if (k[i] === n + 1) {
+          del = i + 1; next[i] = del + 1 < len ? del + 1 : null;
+          snap("删除", `rec(${v[i]}) 得到 ${k[i] - 1} + 1 = <b>${k[i]}</b>，正好是 n + 1：${v[i]} 是要删节点的前一个。把 ${v[i]}.next 改成指向${next[i] === null ? "空" : " " + v[next[i]]}，倒数第 ${n} 个 ${v[del]} 被删掉。`, view(i), { kind: "warn" });
+        } else snap("返回", `rec(${v[i]}) 拿到后面返回的 ${k[i] - 1}，加 1 得 ${k[i]}：${i === 0 ? "哑节点 D 也算一个" : `${v[i]} 是倒数第 ${k[i]} 个`}。`, view(i));
+        calls.pop();
+      }
+      const ans = a.v.filter((_, i) => i + 1 !== del);
+      snap("完成", `递归全部返回。dummy.next 开始的链表就是结果：[${ans.join(", ")}]。`, view(-1), { kind: "ok", ans });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -461,16 +489,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5],"n":2},"not
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

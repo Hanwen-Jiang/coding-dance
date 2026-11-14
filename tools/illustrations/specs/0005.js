@@ -62,6 +62,7 @@ for _ in range(300):
     r = s.longestPalindrome(t)
     assert r == r[::-1] and r in t and len(r) == len(brute(t))
 `,
+  method: "中心扩展",
   legend: [["a", "中心"], ["e", "从这个中心扩出的回文"], ["b", "两边不相等，停在这里"], ["c", "目前最长的回文"]],
   presets: [
     { label: "示例 1", args: { s: "babad" }, note: 's = "babad"', expect: "bab" },
@@ -86,6 +87,36 @@ for _ in range(300):
     }
     snap("完成", `所有中心都试过了，最长回文子串是 <b>"${s.slice(bs, be + 1)}"</b>。`, [{ t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t >= bs && t <= be ? "c" : "" })) }], { kind: "ok", ans: s.slice(bs, be + 1), facts: best() });
   },
+  alts: [{
+    t: "动态规划",
+    note: "dp[l][r] 表示 s[l..r] 是不是回文。按长度从短到长填表：两端相等，并且去掉两端后还是回文，这一段才是回文。",
+    legend: [["a", "正在填的格子 / 这一段的两端"], ["k", "要参考的 dp[l+1][r−1]"], ["e", "是回文"], ["c", "目前最长的回文"], ["d", "用不到（l > r）"]],
+    build(a, snap) {
+      const s = a.s, n = s.length, dp = Array.from({ length: n }, () => Array(n).fill(null));
+      let start = 0, size = 1;
+      const view = (L, R, dep) => [
+        { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t === L || t === R ? "a" : L >= 0 && t > L && t < R ? "e" : "" })), ptrs: { l: L >= 0 ? L : null, r: R >= 0 ? R : null } },
+        { t: "grid", label: "dp[l][r]（行是 l，列是 r）", rows: dp.map((row, i) => row.map((v, j) => ({
+          v: j < i || v === null ? "" : v ? "✓" : "✗",
+          cls: i === L && j === R ? "a" : dep && dep[0] === i && dep[1] === j ? "k" : j < i ? "d" : v && i === start && j === start + size - 1 ? "c" : v ? "e" : "",
+        }))) },
+      ];
+      const f = () => ({ facts: [["最长", s.slice(start, start + size)]] });
+      for (let i = 0; i < n; i++) dp[i][i] = true;
+      snap("长度 1", `长度为 1 的子串都是回文，对角线先全填 ✓。目前最长的是 "${s[0]}"。`, view(-1, -1, null), f());
+      for (let len = 2; len <= n; len++) for (let l = 0; l + len - 1 < n; l++) {
+        const r = l + len - 1, eq = s[l] === s[r], ok = eq && (len === 2 || dp[l + 1][r - 1]);
+        dp[l][r] = ok;
+        const up = ok && len > size;
+        if (up) { start = l; size = len; }
+        const why = !eq ? `两端 '${s[l]}' 和 '${s[r]}' 不相等，不是回文。`
+          : len === 2 ? `两个字符都是 '${s[l]}'，是回文。`
+          : `两端都是 '${s[l]}'，再看去掉两端的 dp[${l + 1}][${r - 1}]：${dp[l + 1][r - 1] ? "是回文，所以这一段也是" : "不是回文，所以这一段也不是"}。`;
+        snap(up ? "更新最长" : `长度 ${len}`, `s[${l}..${r}] = "${s.slice(l, r + 1)}"：${why}` + (up ? "比之前的都长，记下来。" : ""), view(l, r, eq && len > 2 ? [l + 1, r - 1] : null), { kind: up ? "ok" : "", ...f() });
+      }
+      snap("完成", `表填完了，最长回文子串是 <b>"${s.slice(start, start + size)}"</b>。`, view(-1, -1, null), { kind: "ok", ans: s.slice(start, start + size), ...f() });
+    },
+  }],
   points: [
     { t: "别漏了偶数中心", body: "只试 <code>expand(i, i)</code> 找不到 <code>bb</code> 这样偶数长度的回文。" },
     { t: "expand 返回时要退一步", body: "循环结束时 <code>l</code>、<code>r</code> 已经多走了一步，回文的范围是 <code>l + 1</code> 到 <code>r − 1</code>。" },

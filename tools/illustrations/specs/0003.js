@@ -38,6 +38,7 @@ assert s.lengthOfLongestSubstring("pwwkew") == 3
 assert s.lengthOfLongestSubstring("") == 0
 assert s.lengthOfLongestSubstring("abba") == 2
 `,
+  method: "集合 + 收缩",
   legend: [["e", "窗口里的字符"], ["a", "刚进来的字符"], ["b", "被移出的字符"], ["d", "窗口左边"]],
   presets: [
     { label: "示例 1", args: { s: "abcabcbb" }, note: 's = "abcabcbb"', expect: 3 },
@@ -64,6 +65,32 @@ assert s.lengthOfLongestSubstring("abba") == 2
     }
     snap("完成", `r 走到头了。最长的无重复子串长度是 <b>${best}</b>。`, view(s.length), { kind: "ok", ans: best, facts: [["最长", best]] });
   },
+  alts: [{
+    t: "字典 + 跳转",
+    note: "用字典记每个字符上次出现的下标。新字符在窗口里出现过时，左边界一步跳到它上次出现位置的右边，不用一格一格收缩。",
+    legend: [["e", "窗口里的字符"], ["a", "刚进来的字符"], ["b", "它上次出现的位置"], ["d", "窗口左边"]],
+    build(a, snap) {
+      const s = a.s, last = {}; let left = 0, best = 0;
+      const view = (i, prev) => [
+        { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t === prev ? "b" : t === i ? "a" : t >= left && t < i ? "e" : t < left ? "d" : "" })), ptrs: { left, i: i >= 0 && i < s.length ? i : null } },
+        { t: "chips", label: "last：每个字符上次出现的下标", items: Object.keys(last).map((c) => `${c} → ${last[c]}`), empty: "空" },
+      ];
+      const facts = (i) => ({ facts: [["最长", best], ["窗口长度", Math.max(0, i - left + 1)]] });
+      snap("开始", "字典 last 是空的，左边界 left = 0。", view(-1, -1), { facts: [["最长", 0]] });
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i], p = c in last ? last[c] : -1;
+        if (p >= left) {
+          const old = left;
+          left = p + 1; last[c] = i; best = Math.max(best, i - left + 1);
+          snap("跳", `'${c}' 上次出现在下标 ${p}，还在窗口 [${old}, ${i - 1}] 里。left 直接从 ${old} 跳到 ${p} + 1 = <b>${left}</b>，窗口变成 "${s.slice(left, i + 1)}"。`, view(i, p), { kind: "warn", ...facts(i) });
+        } else {
+          last[c] = i; best = Math.max(best, i - left + 1);
+          snap("扩张", (p >= 0 ? `'${c}' 上次出现在下标 ${p}，已经在窗口左边了，不算重复。` : `'${c}' 第一次出现。`) + `记下 last['${c}'] = ${i}。窗口是 "${s.slice(left, i + 1)}"，长度 ${i - left + 1}。`, view(i, -1), facts(i));
+        }
+      }
+      snap("完成", `走到头了。最长的无重复子串长度是 <b>${best}</b>。`, view(s.length, -1), { kind: "ok", ans: best, facts: [["最长", best]] });
+    },
+  }],
   points: [
     { t: "while 不是 if", body: "重复的那个字符可能不在最左边，要一直移到它被移出去为止。" },
     { t: "先收缩再加入", body: "先把窗口缩到不含 <code>ch</code>，再把 <code>ch</code> 加进集合，最后更新答案。" },

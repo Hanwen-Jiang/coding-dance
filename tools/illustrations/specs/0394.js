@@ -41,6 +41,7 @@ assert s.decodeString("2[abc]3[cd]ef") == "abcabccdcdcdef"
 assert s.decodeString("abc3[cd]xyz") == "abccdcdcdxyz"
 assert s.decodeString("10[a]") == "a" * 10
 `,
+  method: "栈",
   legend: [["a", "当前字符"], ["d", "已经处理过"]],
   presets: [
     { label: "示例 1", args: { s: "3[a]2[bc]" }, note: "s = \"3[a]2[bc]\"", expect: "aaabcbc" },
@@ -63,6 +64,30 @@ assert s.decodeString("10[a]") == "a" * 10
     }
     snap("完成", `解码结果是 <b>"${cur}"</b>。`, view(s.length), { kind: "ok", ans: cur, ...f() });
   },
+  alts: [{
+    t: "反复展开最内层",
+    note: "和简洁写法一样：「数字[纯字母]」里面没有别的括号，一定是最内层。每一轮把所有最内层的括号展开，直到没有括号为止。",
+    legend: [["a", "这一轮要展开的最内层"]],
+    build(a, snap) {
+      let s = a.s, round = 0;
+      const view = (hl) => [{ t: "array", label: "s", items: [...s].map((c, i) => ({ v: c, cls: hl.has(i) ? "a" : "" })) }];
+      const f = () => ({ facts: [["轮数", round], ["长度", s.length]] });
+      snap("开始", "正则 <code>(\\d+)\\[([a-z]*)\\]</code> 匹配「数字[纯字母]」，它一定是最内层的括号。", view(new Set()), f());
+      while (s.includes("[")) {
+        round++;
+        const re = /(\d+)\[([a-z]*)\]/g, hl = new Set(), parts = [];
+        let m;
+        while ((m = re.exec(s))) {
+          for (let k = m.index; k < m.index + m[0].length; k++) hl.add(k);
+          parts.push(`${m[0]} 展开成 "${m[2].repeat(+m[1])}"`);
+        }
+        snap(`第 ${round} 轮`, `找到 ${parts.length} 个最内层：${parts.join("，")}。`, view(hl), f());
+        s = s.replace(/(\d+)\[([a-z]*)\]/g, (_, k, t) => t.repeat(+k));
+        snap(`第 ${round} 轮完`, `替换后 s = "${s}"。` + (s.includes("[") ? "还有括号，原来的外层现在变成了最内层，再来一轮。" : "没有括号了。"), view(new Set()), f());
+      }
+      snap("完成", `解码结果是 <b>"${s}"</b>。`, view(new Set()), { kind: "ok", ans: s, ...f() });
+    },
+  }],
   points: [
     { t: "存档时 k 要清零", body: "压栈后 k 归零，否则括号里的数字会接在外面的数字后面。" },
     { t: "展开是 prev + cur * times", body: "重复的只是括号里的部分，前缀只出现一次。" },

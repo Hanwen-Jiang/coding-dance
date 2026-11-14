@@ -47,6 +47,7 @@ assert s.longestValidParentheses("()(())") == 6
 assert s.longestValidParentheses("()(()") == 2
 assert s.longestValidParentheses("(()))())(") == 4
 `,
+  method: "栈",
   legend: [["a", "当前字符"], ["e", "在栈里的下标"], ["c", "以当前位置结尾的有效括号"]],
   presets: [
     { label: "示例 2", args: { s: ")()())" }, note: "s = \")()())\"", expect: 4 },
@@ -70,6 +71,37 @@ assert s.longestValidParentheses("(()))())(") == 4
     }
     snap("完成", `最长有效括号的长度是 <b>${best}</b>。`, view(-1), { kind: "ok", ans: best, ...f() });
   },
+  alts: [{
+    t: "左右各数一遍",
+    note: "从左往右数 ( 和 ) 的个数：一样多就是一段有效括号，) 多了就清零重来。左括号多出来的情况这样数不出来，所以再从右往左数一遍。",
+    legend: [["a", "当前字符"], ["c", "从计数起点到这里，( 和 ) 一样多"]],
+    build(a, snap) {
+      const s = a.s, n = s.length; let best = 0;
+      const view = (i, seg, dir) => [{ t: "array", label: dir ? "s（从左往右数）" : "s（从右往左数，把 ) 当开括号）", items: [...s].map((c, k) => ({ v: c, cls: k === i ? "a" : seg && k >= seg[0] && k <= seg[1] ? "c" : "" })), ptrs: { i: i >= 0 && i < n ? i : null } }];
+      const pass = (fw) => {
+        const open = fw ? "(" : ")";
+        let l = 0, r = 0, st = fw ? 0 : n - 1;
+        const f = () => ({ facts: [["( 的个数", fw ? l : r], [") 的个数", fw ? r : l], ["最长", best]] });
+        for (let t = 0; t < n; t++) {
+          const i = fw ? t : n - 1 - t, c = s[i];
+          if (c === open) l++; else r++;
+          const seg = fw ? [st, i] : [i, st];
+          if (l === r) {
+            const up = 2 * r > best; best = Math.max(best, 2 * r);
+            snap("一样多", `下标 ${i} 是 ${c}。( 和 ) 都是 ${l} 个，${fw ? `从 ${st} 到 ${i}` : `从 ${i} 到 ${st}`} 是一段长 ${2 * r} 的有效括号。` + (up ? "比之前的都长。" : ""), view(i, seg, fw), { kind: up ? "ok" : "", ...f() });
+          } else if (r > l) {
+            l = r = 0; st = fw ? i + 1 : i - 1;
+            snap("清零", `下标 ${i} 是 ${c}，${fw ? ")" : "("} 比 ${open} 多了，这一段不可能再变有效。两个计数清零，从下一格重新数。`, view(i, null, fw), { kind: "warn", ...f() });
+          } else snap("继续", `下标 ${i} 是 ${c}。${open} 比另一种多，后面还可能补上，继续数。`, view(i, seg, fw), f());
+        }
+      };
+      snap("从左往右", "先从左往右数。( 和 ) 一样多时，从计数起点到这里就是一段有效括号；) 多了就清零。", view(-1, null, true), { facts: [["最长", 0]] });
+      pass(true);
+      snap("换方向", `只从左往右数，会漏掉 ( 一直比 ) 多的情况（比如 "(()"，两个计数永远等不到相等）。所以再从右往左数一遍，这次把 ) 当成开括号。`, view(-1, null, false), { facts: [["最长", best]] });
+      pass(false);
+      snap("完成", `两遍都数完了，最长有效括号的长度是 <b>${best}</b>。`, view(-1, null, true), { kind: "ok", ans: best, facts: [["最长", best]] });
+    },
+  }],
   points: [
     { t: "先弹再判空", body: "遇到 ) 先 pop。pop 之后栈空，说明弹出的是分界线，这个 ) 无法匹配。" },
     { t: "长度用栈顶算", body: "不是 i − 弹出的下标 + 1，而是 i − 新的栈顶。这样能把连在一起的几段有效括号一起算上。" },

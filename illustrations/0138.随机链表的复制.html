@@ -229,6 +229,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar" hidden><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -247,7 +249,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在处理的旧节点</span><span><i class="sw k"></i>新节点</span><span><i class="sw dash"></i>random 指针</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在处理的旧节点</span><span><i class="sw k"></i>新节点</span><span><i class="sw dash"></i>random 指针</span></div>
       </div>
     </div>
   </section>
@@ -328,7 +330,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"d":[[7,null],[13,0],[11,4]
 })(); const r = ((R) => {
     const n = R.int(2, 5), d = Array.from({ length: n }, () => [R.int(1, 20), R.chance(0.25) ? null : R.int(0, n - 1)]);
     return { args: { d }, note: `head = ${R.fmt(d)}`, py: `__dump138(Solution().copyRandomList(__mk138(${R.py(d)})))` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "标准解法", note: null, legend: [["a","正在处理的旧节点"],["k","新节点"],["dash","random 指针"]], build(a, snap) {
     const d = a.d, n = d.length, made = [], nnext = d.map(() => null), nrand = [];
     const view = (i) => [
       { t: "list", label: "原链表（实线 next，虚线 random）", nodes: d.map(([v], t) => ({ v, cls: t === i ? "a" : "" })), extra: d.map(([, r], t) => [t, r]).filter(([, r]) => r !== null), ptrs: { cur: i >= 0 && i < n ? i : null } },
@@ -345,7 +348,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"d":[[7,null],[13,0],[11,4]
       snap("第二遍：连指针", `旧 ${d[i][0]} 的 next 是${i + 1 < n ? " " + d[i + 1][0] : "空"}，random 是${r === null ? "空" : " " + d[r][0]}。查表，让新 ${d[i][0]} 的 next 指向${i + 1 < n ? "新 " + d[i + 1][0] : "空"}，random 指向${r === null ? "空" : "新 " + d[r][0]}。`, view(i));
     }
     snap("完成", "新链表的结构和原链表一模一样，但每个节点都是新造的。返回表里头节点对应的新节点。", view(-1), { kind: "ok", ans: d });
-  } };
+  } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -467,16 +471,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"d":[[7,null],[13,0],[11,4]
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

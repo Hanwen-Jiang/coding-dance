@@ -236,6 +236,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -254,7 +256,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>刚上完的课</span><span><i class="sw e"></i>在队列里</span><span><i class="sw c"></i>已经上过</span><span><i class="sw w"></i>永远上不了</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>刚上完的课</span><span><i class="sw e"></i>在队列里</span><span><i class="sw c"></i>已经上过</span><span><i class="sw w"></i>永远上不了</span></div>
       </div>
     </div>
   </section>
@@ -340,7 +342,8 @@ const SPEC = { presets: [{"label":"能修完","args":{"n":4,"pre":[[1,0],[2,0],[
     }
     if (!pre.length) pre.push([1, 0]);
     return { args: { n, pre }, note: `numCourses = ${n}, prerequisites = ${R.fmt(pre)}`, py: `Solution().canFinish(${n}, ${R.py(pre)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "拓扑排序 BFS", note: null, legend: [["a","刚上完的课"],["e","在队列里"],["c","已经上过"],["w","永远上不了"]], build(a, snap) {
     const n = a.n, g = Array.from({ length: n }, () => []), indeg = Array(n).fill(0);
     for (const [x, y] of a.pre) { g[y].push(x); indeg[x]++; }
     const q = [], taken = [];
@@ -358,7 +361,42 @@ const SPEC = { presets: [{"label":"能修完","args":{"n":4,"pre":[[1,0],[2,0],[
     }
     const ok = taken.length === n;
     snap("完成", ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join("、")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`, view(-1, true), { kind: ok ? "ok" : "warn", ans: ok, facts: [["已上", taken.length], ["总数", n]] });
-  } };
+  } },
+{ t: "DFS 三色标记", note: "和简洁写法一样：从一门课出发，沿着「要先上哪门」一路往下走。state 为 1 表示这门课还在当前的递归路径上，又走回了路径上的课，就说明有环。", legend: [["a","当前的课 / 正在看的关系"],["e","1：在递归路径上"],["c","2：确认没问题"],["w","绕回来的课"]], build(a, snap) {
+      const n = a.n, g = Array.from({ length: n }, () => []);
+      for (const [x, y] of a.pre) g[x].push(y);
+      const state = Array(n).fill(0), path = [];
+      let edge = null, bad = -1;
+      const view = (cur) => [
+        { t: "chips", label: "先修关系（a → b：上 a 之前要先上 b）", items: a.pre.map(([x, y]) => ({ v: `${x} → ${y}`, cls: edge && edge[0] === x && edge[1] === y ? "a" : "" })) },
+        { t: "array", label: "state（0 没访问，1 在递归路径上，2 确认没问题）", items: state.map((s, k) => ({ v: s, cls: k === bad ? "w" : k === cur ? "a" : s === 1 ? "e" : s === 2 ? "c" : "" })) },
+        { t: "chips", label: "递归路径", items: path.map((u) => ({ v: `课 ${u}`, cls: u === cur ? "a" : "e" })), empty: "空" },
+      ];
+      const ok = (u) => {
+        state[u] = 1; path.push(u);
+        snap("进入", `进入课 ${u}，标成 1。` + (g[u].length ? `上它之前要先上 ${g[u].join("、")}，挨个检查。` : "它没有先修课。"), view(u));
+        for (const v of g[u]) {
+          edge = [u, v];
+          if (state[v] === 1) {
+            bad = v;
+            snap("有环", `课 ${u} 要先上课 ${v}，可是 ${v} 还在当前的递归路径上：${path.slice(path.indexOf(v)).join(" → ")} → ${v} 绕成了一个环，这些课互相等待。返回 false。`, view(u), { kind: "warn" });
+            return false;
+          }
+          if (state[v] === 2) { snap("已确认", `课 ${u} 要先上课 ${v}，${v} 之前已经确认没问题，跳过。`, view(u)); continue; }
+          if (!ok(v)) return false;
+        }
+        edge = null; state[u] = 2; path.pop();
+        snap("确认", `课 ${u} 的先修课都没问题，标成 2，离开递归路径。`, view(u));
+        return true;
+      };
+      snap("开始", "所有课的 state 都是 0。从课 0 开始，依次把每门没访问过的课当起点做 DFS。", view(-1));
+      for (let u = 0; u < n; u++) {
+        if (state[u]) continue;
+        if (!ok(u)) { snap("完成", "找到了环，环上的课永远上不完，返回 <b>false</b>。", view(-1), { kind: "warn", ans: false }); return; }
+      }
+      snap("完成", `所有课都标成了 2，没有环，${n} 门课都能上完，返回 <b>true</b>。`, view(-1), { kind: "ok", ans: true });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -480,16 +518,36 @@ const SPEC = { presets: [{"label":"能修完","args":{"n":4,"pre":[[1,0],[2,0],[
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

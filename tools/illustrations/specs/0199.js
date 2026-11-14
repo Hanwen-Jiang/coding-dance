@@ -40,6 +40,7 @@ assert s.rightSideView(T([1,2,3,4,None,None,None,5])) == [1,3,4,5]
 assert s.rightSideView(T([1,None,3])) == [1,3]
 assert s.rightSideView(T([])) == []
 `,
+  method: "BFS 按层",
   legend: [["e", "当前这一层"], ["c", "被看到的节点"]],
   presets: [
     { label: "示例 1", args: { t: [1, 2, 3, null, 5, null, 4] }, note: "root = [1,2,3,null,5,null,4]", expect: [1, 3, 4] },
@@ -61,6 +62,37 @@ assert s.rightSideView(T([])) == []
     }
     snap("完成", `右视图是 [${res.join(", ")}]。`, view([]), { kind: "ok", ans: res.slice() });
   },
+  alts: [{
+    t: "先右后左 DFS",
+    note: "和简洁写法一样：递归时先走右孩子再走左孩子，每一层第一个被访问到的就是最右边的节点。depth 等于 len(res) 时，说明这一层还没人记过。",
+    legend: [["e", "在调用栈上"], ["a", "当前节点"], ["c", "被看到的节点"], ["d", "这一层已经有人了"]],
+    build(a, snap) {
+      const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+      const res = [], stack = [], seen = new Set(), passed = new Set(), badges = {};
+      const view = (cur) => {
+        const cls = {};
+        for (const id in N) cls[id] = +id === cur ? "a" : seen.has(+id) ? "c" : stack.includes(+id) ? "e" : passed.has(+id) ? "d" : "";
+        return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: { ...badges } }, { t: "chips", label: "右视图 res", items: res.slice(), empty: "还没有" }];
+      };
+      snap("开始", "从根出发，depth = 0。每个节点下面标的是它的深度。", view(-1), { facts: [["len(res)", 0]] });
+      const dfs = (id, d) => {
+        if (id === null) return;
+        stack.push(id); badges[id] = "d=" + d;
+        if (d === res.length) {
+          res.push(N[id].v); seen.add(id);
+          snap("第一次到这一层", `${N[id].v} 的深度是 ${d}，正好等于 len(res)：第 ${d} 层还没人记过。先右后左走，第一个到的就是最右边的，记下 <b>${N[id].v}</b>。`, view(id), { facts: [["len(res)", res.length]] });
+        } else {
+          passed.add(id);
+          snap("这一层有人了", `${N[id].v} 的深度是 ${d}，len(res) = ${res.length}，第 ${d} 层已经记过更靠右的节点，${N[id].v} 被挡住了。`, view(id), { facts: [["len(res)", res.length]] });
+        }
+        dfs(N[id].r, d + 1);
+        dfs(N[id].l, d + 1);
+        stack.pop();
+      };
+      dfs(N[0] ? 0 : null, 0);
+      snap("完成", `右视图是 [${res.join(", ")}]。`, view(-1), { kind: "ok", ans: res.slice(), facts: [["len(res)", res.length]] });
+    },
+  }],
   points: [
     { t: "先记长度再出队", body: "<code>for _ in range(len(q))</code> 在循环开始时就固定了这一层的节点数，新入队的下一层节点不会混进来。" },
     { t: "不是一路往右走", body: "只看右孩子会漏掉左子树更深的部分，第二个示例就是这种情况。" },

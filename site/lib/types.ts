@@ -49,6 +49,17 @@ export interface Demo {
   build: string;
   /** 随机输入：自包含的函数源码，调用后返回 { args, note }；没有时为 null */
   random?: string | null;
+  /** 多种解法的演示，共用 presets 和 random；第一个和 build 相同。旧数据没有这个字段 */
+  methods?: DemoMethod[];
+}
+
+export interface DemoMethod {
+  /** 解法名，如「递归沉岛」 */
+  t: string;
+  /** 一句话说明（可含 HTML） */
+  note: string | null;
+  legend: [string, string][];
+  build: string;
 }
 
 export interface Spec {

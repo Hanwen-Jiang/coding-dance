@@ -231,6 +231,8 @@ class Solution:
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -249,7 +251,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在选的这一位</span><span><i class="sw e"></i>当前路径</span><span><i class="sw k"></i>刚记下的组合</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在选的这一位</span><span><i class="sw e"></i>当前路径</span><span><i class="sw k"></i>刚记下的组合</span></div>
       </div>
     </div>
   </section>
@@ -332,7 +334,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"d":"23"},"note":"digits = 
     // 超过两位时演示只逐步播前几个组合，最后给出的是组合个数
     if (d.length > 2) return { args: { d }, note: `digits = "${d}"（只演示前几个组合的过程）`, py: `len(Solution().letterCombinations("${d}"))` };
     return { args: { d }, note: `digits = "${d}"`, py: `Solution().letterCombinations("${d}")`, cmp: "unordered" };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "回溯", note: null, legend: [["a","正在选的这一位"],["e","当前路径"],["k","刚记下的组合"]], build(a, snap) {
     const d = a.d, phone = { 2: "abc", 3: "def", 4: "ghi", 5: "jkl", 6: "mno", 7: "pqrs", 8: "tuv", 9: "wxyz" }, res = [], path = [];
     const quiet = d.length > 2; let shown = true;
     const view = (i, fresh) => [
@@ -355,7 +358,25 @@ const SPEC = { presets: [{"label":"示例 1","args":{"d":"23"},"note":"digits = 
     };
     dfs(0);
     snap("完成", `所有选法都走完了，一共 <b>${res.length}</b> 个组合` + (quiet ? "（后面的过程和前面一样，没有逐步演示）。" : "。"), view(-1), { kind: "ok", ans: quiet ? res.length : res });
-  } };
+  } },
+{ t: "笛卡尔积", note: "和简洁写法一样：所有组合就是几组字母的笛卡尔积。一位一位地乘上去：已有的每个前缀，后面分别接上这一位的每个字母。", legend: [["a","正在乘上的这一位"],["k","这一轮得到的组合"]], build(a, snap) {
+      const d = a.d, phone = { 2: "abc", 3: "def", 4: "ghi", 5: "jkl", 6: "mno", 7: "pqrs", 8: "tuv", 9: "wxyz" };
+      let combos = [""];
+      const view = (i) => [
+        { t: "array", label: "digits", items: [...d].map((v, t) => ({ v, cls: t === i ? "a" : t < i ? "d" : "" })), idx: false },
+        { t: "chips", label: i >= 0 && i < d.length ? `数字 ${d[i]} 对应的字母` : "对应的字母", items: i >= 0 && i < d.length ? [...phone[d[i]]] : [], empty: "—" },
+        { t: "chips", label: `组合（${combos.length} 个）`, items: combos.map((c) => ({ v: c === "" ? "空串" : c, cls: i >= 0 ? "k" : "" })) },
+      ];
+      if (!d.length) { snap("完成", "digits 是空的，返回 []。", view(-1), { kind: "ok", ans: [] }); return; }
+      snap("开始", "一开始只有一个空前缀。", view(-1));
+      for (let i = 0; i < d.length; i++) {
+        const L = phone[d[i]], old = combos.length;
+        combos = combos.flatMap((c) => [...L].map((ch) => c + ch));
+        snap(`乘上第 ${i} 位`, `第 ${i} 位是 ${d[i]}，对应 ${L.length} 个字母。已有的 ${old} 个前缀后面各接一个字母，变成 ${old} × ${L.length} = <b>${combos.length}</b> 个。`, view(i));
+      }
+      snap("完成", `一共 <b>${combos.length}</b> 个组合，顺序和回溯的结果一样。`, view(-1), { kind: "ok", ans: d.length > 2 ? combos.length : combos });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -477,16 +498,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"d":"23"},"note":"digits = 
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

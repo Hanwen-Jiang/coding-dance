@@ -41,6 +41,7 @@ for vals, pos in [([3,2,0,-4],1), ([1,2],0), ([1],-1), ([1,2,3,4,5,6,7],3), ([1]
     nodes = mk(vals, pos)
     assert s.detectCycle(nodes[0]) is (nodes[pos] if pos >= 0 else None)
 `,
+  method: "快慢指针",
   legend: [["a", "slow"], ["b", "fast"], ["g", "从头出发的 p"], ["c", "环的入口"]],
   presets: [
     { label: "示例 1", args: { v: [3, 2, 0, -4], pos: 1 }, note: "head = [3,2,0,-4], pos = 1", expect: 1 },
@@ -68,6 +69,27 @@ for vals, pos in [([3,2,0,-4],1), ([1,2],0), ([1],-1), ([1,2,3,4,5,6,7],3), ([1]
     }
     snap("找到入口", `p 和 slow 在 <b>${v[p]}</b> 相遇，这里就是环的入口（下标 ${p}）。`, view(p), { kind: "ok", ans: p });
   },
+  alts: [{
+    t: "集合",
+    note: "和简洁写法一样：把走过的节点放进集合，第一个第二次走到的节点就是环的入口。要 O(n) 额外空间。",
+    legend: [["a", "当前节点"], ["e", "已经在 seen 里"], ["c", "环的入口"]],
+    build(a, snap) {
+      const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null)), seen = [];
+      let h = n ? 0 : null;
+      const view = (hit) => [
+        { t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === hit ? "c" : i === h ? "a" : seen.includes(i) ? "e" : "" })), next, ptrs: { head: h } },
+        { t: "chips", label: "seen（存的是节点本身，这里写成 值#下标）", items: seen.map((i) => `${v[i]}#${i}`), empty: "空" },
+      ];
+      snap("开始", "从头节点出发，把走过的每个节点都放进集合 seen。", view(-1), { facts: [["seen 大小", 0]] });
+      while (h !== null && !seen.includes(h)) {
+        seen.push(h);
+        const cur = h; h = next[h];
+        snap("记下", `${v[cur]}#${cur} 第一次走到，放进 seen，再走到${h === null ? "空" : ` ${v[h]}#${h}`}。`, view(-1), { facts: [["seen 大小", seen.length]] });
+      }
+      if (h === null) snap("没有环", "走到了空，链表没有环，返回空。", view(-1), { kind: "warn", ans: null, facts: [["seen 大小", seen.length]] });
+      else snap("找到入口", `${v[h]}#${h} 已经在 seen 里了。它是第一个被走到两次的节点：从链表尾巴绕回来的箭头指的就是它，所以它是环的入口（下标 ${h}）。`, view(h), { kind: "ok", ans: h, facts: [["seen 大小", seen.length]] });
+    },
+  }],
   points: [
     { t: "第二阶段都走一步", body: "相遇之后两个指针的速度要一样，都是每次一步。" },
     { t: "入口就是头节点时", body: "这时 a = 0，相遇点就是头节点，第二阶段的循环一次都不执行，直接返回。" },

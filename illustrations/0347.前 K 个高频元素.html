@@ -229,6 +229,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -247,7 +249,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在看的数</span><span><i class="sw b"></i>被挤掉的</span><span><i class="sw c"></i>堆顶（门槛）</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在看的数</span><span><i class="sw b"></i>被挤掉的</span><span><i class="sw c"></i>堆顶（门槛）</span></div>
       </div>
     </div>
   </section>
@@ -329,7 +331,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,1,1,2,2,3],"k":2}
     const vals = R.distinct(R.int(3, 4), 1, 9), counts = R.shuffle([1, 2, 3, 4]).slice(0, vals.length);
     const nums = R.shuffle(vals.flatMap((v, i) => Array(counts[i]).fill(v))), k = R.int(1, 2);
     return { args: { nums, k }, note: `nums = ${R.fmt(nums)}, k = ${k}`, py: `Solution().topKFrequent(${R.py(nums)}, ${k})`, cmp: "unordered" };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "计数 + 小顶堆", note: null, legend: [["a","正在看的数"],["b","被挤掉的"],["c","堆顶（门槛）"]], build(a, snap) {
     const { nums, k } = a, cnt = new Map();
     for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);
     const ents = [...cnt], heap = [];
@@ -348,7 +351,33 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,1,1,2,2,3],"k":2}
     }
     const ans = heap.slice().reverse().map(([, x]) => x);
     snap("完成", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(",")}]。`, view(null, outs), { kind: "ok", ans });
-  } };
+  } },
+{ t: "桶排序", note: "和 O(n) 写法一样：出现次数不会超过 n，所以开 n + 1 个桶，第 c 个桶放出现 c 次的数。再从次数最大的桶往回取，取够 k 个就停。", legend: [["a","正在处理"],["c","已经取进结果"],["d","第 0 个桶用不到"]], build(a, snap) {
+      const { nums, k } = a, n = nums.length, cnt = new Map();
+      for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);
+      const ents = [...cnt], B = Array.from({ length: n + 1 }, () => []), res = [];
+      let cur = -1, low = n + 1;
+      const view = (x) => [
+        { t: "chips", label: "计数（数 × 次数）", items: ents.map(([v, c]) => ({ v: `${v} × ${c}`, cls: v === x ? "a" : "" })) },
+        { t: "array", label: "buckets[c]：出现 c 次的数", items: B.map((b, c) => ({ v: b.join(","), cls: c === cur ? "a" : c >= low && b.length ? "c" : c === 0 ? "d" : "" })) },
+        { t: "chips", label: "结果", items: res.map((v) => ({ v, cls: "c" })), empty: "还没有" },
+      ];
+      snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null));
+      for (const [x, c] of ents) { B[c].push(x); cur = c; snap("放进桶", `${x} 出现 ${c} 次，放进第 ${c} 个桶。`, view(x)); }
+      cur = -1;
+      snap("从后往前取", `次数越大越靠后。从第 ${n} 个桶往回扫，空桶直接跳过。`, view(null));
+      for (let c = n; c >= 1; c--) {
+        if (!B[c].length) continue;
+        cur = c; low = c; res.push(...B[c]);
+        const enough = res.length >= k;
+        snap("取出", `第 ${c} 个桶里有 ${B[c].join("、")}（各出现 ${c} 次），放进结果。` + (enough ? `已经有 ${res.length} 个，够 k = ${k} 个了。` : `还不够 ${k} 个，继续往回扫。`), view(null));
+        if (enough) break;
+      }
+      const ans = res.slice(0, k);
+      cur = -1;
+      snap("完成", `前 ${k} 个高频元素是 [${ans.join(",")}]。`, view(null), { kind: "ok", ans });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -470,16 +499,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,1,1,2,2,3],"k":2}
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

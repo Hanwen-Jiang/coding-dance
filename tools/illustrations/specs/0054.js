@@ -45,6 +45,7 @@ assert s.spiralOrder([[1,2,3,4],[5,6,7,8],[9,10,11,12]]) == [1,2,3,4,8,12,11,10,
 assert s.spiralOrder([[1,2,3]]) == [1,2,3]
 assert s.spiralOrder([[1],[2],[3]]) == [1,2,3]
 `,
+  method: "收缩边界",
   legend: [["a", "这一段刚走的"], ["d", "之前走过的"], ["e", "边界围住的未走区域"]],
   presets: [
     { label: "示例 1", args: { m: [[1, 2, 3], [4, 5, 6], [7, 8, 9]] }, note: "matrix = [[1,2,3],[4,5,6],[7,8,9]]", expect: [1, 2, 3, 6, 9, 8, 7, 4, 5] },
@@ -81,6 +82,30 @@ assert s.spiralOrder([[1],[2],[3]]) == [1,2,3]
     walk([]);
     snap("完成", `边界交错，所有格子都走过了。结果是 [${res.join(", ")}]。`, view(), { kind: "ok", ans: res, facts: facts() });
   },
+  alts: [{
+    t: "取第一行再旋转",
+    note: "和简洁写法一样：螺旋的第一段永远是第一行。拿走它，把剩下的部分逆时针转 90°，原来的最右一列就成了新的第一行。重复到矩阵为空。",
+    legend: [["a", "这一步拿走的第一行"]],
+    build(a, snap) {
+      let M = a.m.map((r) => r.slice()), round = 0;
+      const res = [];
+      const view = (hl) => [
+        M.length ? { t: "grid", label: "matrix（剩下的部分）", rows: M.map((r, i) => r.map((v) => ({ v, cls: hl && i === 0 ? "a" : "" }))) } : { t: "note", label: "matrix", html: "空" },
+        { t: "chips", label: "结果", items: res.slice(), empty: "还没有" },
+      ];
+      snap("开始", "每一轮：拿走第一行接到结果后面，再把剩下的逆时针转 90°。", view(false));
+      while (M.length) {
+        round++;
+        snap("拿走第一行", `第一行是 [${M[0].join(", ")}]，接到结果后面。`, view(true));
+        res.push(...M.shift());
+        if (!M.length) break;
+        const col = M.map((r) => r[r.length - 1]);
+        M = M[0].map((_, j) => M.map((r) => r[j])).reverse();
+        snap("逆时针转 90°", `剩下的部分逆时针转 90°：zip(*matrix) 把列变成行，再 [::-1] 倒过来。原来最右边一列 [${col.join(", ")}] 现在是第一行。`, view(false));
+      }
+      snap("完成", `矩阵拿空了，结果是 [${res.join(", ")}]。`, view(false), { kind: "ok", ans: res });
+    },
+  }],
   points: [
     { t: "两个 if 不能省", body: "只有一行或一列的矩阵，少了这两个检查就会输出重复的数。" },
     { t: "走完立刻收边界", body: "每走完一条边就马上更新对应的边界，下一条边的起点自然避开了拐角。" },

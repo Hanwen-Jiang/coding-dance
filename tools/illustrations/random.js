@@ -457,8 +457,8 @@ const GEN = {
     return { args: { ops }, note: ops.map(([o, w]) => `${o}("${w}")`).join(" "), py: `__ops(Trie(), ${R.py(ops)})` };
   },
   215: (R) => {
-    const nums = R.arr(R.int(6, 9), 1, 9), k = R.int(1, nums.length), heap = R.chance(0.3);
-    return { args: heap ? { nums, k, heap } : { nums, k }, note: `${heap ? "小顶堆写法：" : ""}nums = ${R.fmt(nums)}, k = ${k}`, py: `Solution().findKthLargest(${R.py(nums)}, ${k})` };
+    const nums = R.arr(R.int(6, 9), 1, 9), k = R.int(1, nums.length);
+    return { args: { nums, k }, note: `nums = ${R.fmt(nums)}, k = ${k}`, py: `Solution().findKthLargest(${R.py(nums)}, ${k})` };
   },
   226: (R) => {
     const t = R.tree(R.int(3, 7), () => R.int(1, 9));

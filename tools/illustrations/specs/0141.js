@@ -39,6 +39,7 @@ assert s.hasCycle(mk([1], -1)) is False
 assert s.hasCycle(mk([1,2,3,4], -1)) is False
 assert s.hasCycle(mk([], -1)) is False
 `,
+  method: "快慢指针",
   legend: [["a", "slow"], ["b", "fast"], ["c", "相遇"]],
   presets: [
     { label: "示例 1", args: { v: [3, 2, 0, -4], pos: 1 }, note: "head = [3,2,0,-4], pos = 1", expect: true },
@@ -57,6 +58,27 @@ assert s.hasCycle(mk([], -1)) is False
     }
     snap("没有环", "fast 或者它的下一个节点是空，说明链表有尽头，没有环。", view(false), { kind: "warn", ans: false });
   },
+  alts: [{
+    t: "集合",
+    note: "和简洁写法一样：把走过的节点放进集合，同一个节点第二次出现就说明有环。好懂，但要 O(n) 额外空间。",
+    legend: [["a", "当前节点"], ["e", "已经在 seen 里"], ["c", "第二次走到的节点"]],
+    build(a, snap) {
+      const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null)), seen = [];
+      let h = n ? 0 : null;
+      const view = (hit) => [
+        { t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === hit ? "c" : i === h ? "a" : seen.includes(i) ? "e" : "" })), next, ptrs: { head: h } },
+        { t: "chips", label: "seen（存的是节点本身，这里写成 值#下标）", items: seen.map((i) => `${v[i]}#${i}`), empty: "空" },
+      ];
+      snap("开始", "从头节点出发，把走过的每个节点都放进集合 seen。", view(-1), { facts: [["seen 大小", 0]] });
+      while (h !== null && !seen.includes(h)) {
+        seen.push(h);
+        const cur = h; h = next[h];
+        snap("记下", `${v[cur]}#${cur} 第一次走到，放进 seen，再走到${h === null ? "空" : ` ${v[h]}#${h}`}。`, view(-1), { facts: [["seen 大小", seen.length]] });
+      }
+      if (h === null) snap("没有环", "走到了空，链表有尽头，没有环。", view(-1), { kind: "warn", ans: false, facts: [["seen 大小", seen.length]] });
+      else snap("有环", `${v[h]}#${h} 已经在 seen 里了：同一个节点第二次走到，说明有环。`, view(h), { kind: "ok", ans: true, facts: [["seen 大小", seen.length]] });
+    },
+  }],
   points: [
     { t: "比较的是节点", body: "用 <code>is</code> 比较两个指针是不是同一个节点，不能比较值，值可能重复。" },
     { t: "先走再比", body: "两个指针一开始都在头节点，要先各走一次再判断是否相遇。" },

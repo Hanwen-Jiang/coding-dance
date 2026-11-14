@@ -221,6 +221,8 @@ class Solution:
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -239,7 +241,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>slow</span><span><i class="sw b"></i>fast</span><span><i class="sw c"></i>两者相遇</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>slow</span><span><i class="sw b"></i>fast</span><span><i class="sw c"></i>两者相遇</span></div>
       </div>
     </div>
   </section>
@@ -323,7 +325,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,3,4,2,2]},"note":
     for (let k = R.int(0, 1); k > 0; k--) { const i = R.int(0, n); if (nums[i] !== d && nums.filter((x) => x === nums[i]).length === 1) nums[i] = d; }
     const out = R.shuffle(nums);
     return { args: { nums: out }, note: `nums = ${R.fmt(out)}`, py: `Solution().findDuplicate(${R.py(out)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "快慢指针", note: null, legend: [["a","slow"],["b","fast"],["c","两者相遇"]], build(a, snap) {
     const nums = a.nums;
     let slow = 0, fast = 0;
     const view = (meet) => [
@@ -342,7 +345,28 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,3,4,2,2]},"note":
       snap(slow === fast ? "入口" : "同速走", slow === fast ? `两个指针在 ${slow} 再次相遇，这就是环的入口，也就是重复的数。` : `slow 到 ${slow}，fast 到 ${fast}。`, view(slow === fast), { facts: [["slow", slow], ["fast", fast]] });
     }
     snap("完成", `重复的数是 <b>${slow}</b>。`, view(true), { kind: "ok", ans: slow, facts: [["slow", slow], ["fast", fast]] });
-  } };
+  } },
+{ t: "对值二分", note: "和简洁写法一样：设重复的数是 d。数一数 nums 里 ≤ x 的有几个：x &lt; d 时不会超过 x，x ≥ d 时一定超过 x。二分找第一个超过的 x。", legend: [["a","mid"],["e","nums 里 ≤ mid 的数"],["d","已经排除的值"],["c","答案"]], build(a, snap) {
+      const nums = a.nums, n = nums.length; let lo = 0, hi = n;
+      const view = (mid, ans) => [
+        { t: "array", label: "nums", items: nums.map((v) => ({ v, cls: mid >= 0 && v <= mid ? "e" : "" })) },
+        { t: "array", label: "候选的值 x（0 到 n − 1）", items: Array.from({ length: n }, (_, x) => ({ v: x, cls: x === ans ? "c" : x === mid ? "a" : x < lo || x >= hi ? "d" : "" })), idx: false, ptrs: { lo, hi: hi < n ? hi : null, mid: mid >= 0 ? mid : null } },
+      ];
+      const f = (c) => ({ facts: [["lo", lo], ["hi", hi], ["≤ mid 的个数", c === undefined ? "—" : c]] });
+      snap("开始", `值都在 1 到 ${n - 1} 之间。1 到 x 只有 x 个不同的值，如果 nums 里 ≤ x 的数超过 x 个，1 到 x 里一定有重复。在 [${lo}, ${hi}) 里二分。`, view(-1, -1), f());
+      while (lo < hi) {
+        const mid = (lo + hi) >> 1, c = nums.filter((v) => v <= mid).length;
+        if (c > mid) {
+          hi = mid;
+          snap("往左", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，比 ${mid} 多，重复的数 ≤ ${mid}。hi = ${mid}。`, view(mid, -1), f(c));
+        } else {
+          lo = mid + 1;
+          snap("往右", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，没有超过 ${mid}，重复的数比 ${mid} 大。lo = ${mid + 1}。`, view(mid, -1), f(c));
+        }
+      }
+      snap("完成", `lo = hi = ${lo}，它是第一个「≤ x 的数超过 x 个」的值，重复的数是 <b>${lo}</b>。时间 O(n log n)。`, view(-1, lo), { kind: "ok", ans: lo, ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -464,16 +488,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,3,4,2,2]},"note":
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

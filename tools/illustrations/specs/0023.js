@@ -63,6 +63,7 @@ for _ in range(100):
     ls = [sorted(random.randint(-9, 9) for _ in range(random.randint(0, 6))) for _ in range(random.randint(0, 6))]
     assert toL(s.mergeKLists([L(x) for x in ls])) == sorted(sum(ls, []))
 `,
+  method: "小顶堆",
   legend: [["a", "在堆里的头节点"], ["d", "已经接走"], ["c", "刚弹出的最小值"], ["k", "结果"]],
   presets: [
     { label: "示例 1", args: { ls: [[1, 4, 5], [1, 3, 4], [2, 6]] }, note: "lists = [[1,4,5],[1,3,4],[2,6]]", expect: [1, 1, 2, 3, 4, 4, 5, 6] },
@@ -90,6 +91,37 @@ for _ in range(100):
     }
     snap("完成", `堆空了，所有节点都接好了：[${out.join(", ")}]。`, view(), { kind: "ok", ans: out });
   },
+  alts: [{
+    t: "分治两两合并",
+    note: "和「另一种写法」一样：每一轮把相邻的两个链表合并成一个（就是「合并两个有序链表」），链表个数减半，直到只剩一个。",
+    legend: [["a", "正在合并的两个"], ["d", "这一轮已经合并过"], ["c", "刚合并出来的"]],
+    build(a, snap) {
+      let ls = a.ls.map((l) => l.slice()), round = 0;
+      const merge2 = (p, q) => { const r = []; let i = 0, j = 0; while (i < p.length && j < q.length) r.push(p[i] <= q[j] ? p[i++] : q[j++]); return r.concat(p.slice(i), q.slice(j)); };
+      const view = (hl, nx) => [
+        ...ls.map((l, i) => ({ t: "chips", label: `${nx ? "这一轮 · " : ""}链表 ${i}`, items: l.map((v) => ({ v, cls: hl.includes(i) ? "a" : nx && i < Math.min(...hl) ? "d" : "" })), empty: "空" })),
+        ...(nx || []).map((l, t) => ({ t: "chips", label: `下一轮 · 链表 ${t}`, items: l.map((v) => ({ v, cls: t === nx.length - 1 ? "c" : "" })), empty: "空" })),
+      ];
+      if (!ls.length) { snap("完成", "没有链表，返回空。", [{ t: "note", label: "lists", html: "空" }], { kind: "ok", ans: [] }); return; }
+      snap("开始", `一共 ${ls.length} 个链表。每一轮把相邻的两个合并成一个，个数减半。`, view([], null));
+      while (ls.length > 1) {
+        round++;
+        const nx = [];
+        for (let i = 0; i < ls.length; i += 2) {
+          if (i + 1 < ls.length) {
+            nx.push(merge2(ls[i], ls[i + 1]));
+            snap(`第 ${round} 轮`, `合并链表 ${i} 和链表 ${i + 1}：两个头比大小，小的先接上，得到 [${nx[nx.length - 1].join(", ")}]。`, view([i, i + 1], nx));
+          } else {
+            nx.push(ls[i]);
+            snap(`第 ${round} 轮`, `链表 ${i} 落单了，和空链表合并等于它自己，原样进入下一轮。`, view([i], nx));
+          }
+        }
+        ls = nx;
+        snap(`第 ${round} 轮完`, ls.length > 1 ? `还剩 ${ls.length} 个链表，继续下一轮。` : "只剩一个链表了。", view([], null));
+      }
+      snap("完成", `合并完成：[${ls[0].join(", ")}]。一共 ${round} 轮，每轮每个节点只被处理一次，所以是 O(n log k)。`, view([], null), { kind: "ok", ans: ls[0] });
+    },
+  }],
   points: [
     { t: "堆里要放编号", body: "值相等时 Python 会接着比较元组的下一项。<code>ListNode</code> 不能比较大小，所以中间放一个链表编号。" },
     { t: "空链表要跳过", body: "建堆时用 <code>if node</code> 过滤掉空链表。" },

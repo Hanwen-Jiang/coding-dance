@@ -40,6 +40,8 @@ assert s.topKFrequent([1], 1) == [1]
 assert sorted(s.topKFrequent([4,1,-1,2,-1,2,3], 2)) == [-1,2]
 assert sorted(s.topKFrequent([5,5,6,6,6,7], 1)) == [6]
 `,
+  method: "计数 + 小顶堆",
+  cmp: "unordered",
   legend: [["a", "正在看的数"], ["b", "被挤掉的"], ["c", "堆顶（门槛）"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 1, 1, 2, 2, 3], k: 2 }, note: "nums = [1,1,1,2,2,3], k = 2", expect: [1, 2] },
@@ -65,6 +67,36 @@ assert sorted(s.topKFrequent([5,5,6,6,6,7], 1)) == [6]
     const ans = heap.slice().reverse().map(([, x]) => x);
     snap("完成", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(",")}]。`, view(null, outs), { kind: "ok", ans });
   },
+  alts: [{
+    t: "桶排序",
+    note: "和 O(n) 写法一样：出现次数不会超过 n，所以开 n + 1 个桶，第 c 个桶放出现 c 次的数。再从次数最大的桶往回取，取够 k 个就停。",
+    legend: [["a", "正在处理"], ["c", "已经取进结果"], ["d", "第 0 个桶用不到"]],
+    build(a, snap) {
+      const { nums, k } = a, n = nums.length, cnt = new Map();
+      for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);
+      const ents = [...cnt], B = Array.from({ length: n + 1 }, () => []), res = [];
+      let cur = -1, low = n + 1;
+      const view = (x) => [
+        { t: "chips", label: "计数（数 × 次数）", items: ents.map(([v, c]) => ({ v: `${v} × ${c}`, cls: v === x ? "a" : "" })) },
+        { t: "array", label: "buckets[c]：出现 c 次的数", items: B.map((b, c) => ({ v: b.join(","), cls: c === cur ? "a" : c >= low && b.length ? "c" : c === 0 ? "d" : "" })) },
+        { t: "chips", label: "结果", items: res.map((v) => ({ v, cls: "c" })), empty: "还没有" },
+      ];
+      snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null));
+      for (const [x, c] of ents) { B[c].push(x); cur = c; snap("放进桶", `${x} 出现 ${c} 次，放进第 ${c} 个桶。`, view(x)); }
+      cur = -1;
+      snap("从后往前取", `次数越大越靠后。从第 ${n} 个桶往回扫，空桶直接跳过。`, view(null));
+      for (let c = n; c >= 1; c--) {
+        if (!B[c].length) continue;
+        cur = c; low = c; res.push(...B[c]);
+        const enough = res.length >= k;
+        snap("取出", `第 ${c} 个桶里有 ${B[c].join("、")}（各出现 ${c} 次），放进结果。` + (enough ? `已经有 ${res.length} 个，够 k = ${k} 个了。` : `还不够 ${k} 个，继续往回扫。`), view(null));
+        if (enough) break;
+      }
+      const ans = res.slice(0, k);
+      cur = -1;
+      snap("完成", `前 ${k} 个高频元素是 [${ans.join(",")}]。`, view(null), { kind: "ok", ans });
+    },
+  }],
   points: [
     { t: "堆里放 (次数, 数)", body: "元组按第一项比较，次数放前面。次数相同时会比较第二项，数是整数，不会报错。" },
     { t: "小顶堆而不是大顶堆", body: "大顶堆要把所有元素都放进去再弹 k 次，O(n log n)；小顶堆只留 k 个，O(n log k)。" },

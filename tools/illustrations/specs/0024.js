@@ -34,6 +34,7 @@ assert toL(s.swapPairs(L([]))) == []
 assert toL(s.swapPairs(L([1]))) == [1]
 assert toL(s.swapPairs(L([1,2,3]))) == [2,1,3]
 `,
+  method: "迭代",
   legend: [["g", "prev"], ["a", "a"], ["b", "b"], ["k", "已经交换好"]],
   presets: [
     { label: "示例 1", args: { v: [1, 2, 3, 4] }, note: "head = [1,2,3,4]", expect: [2, 1, 4, 3] },
@@ -53,6 +54,33 @@ assert toL(s.swapPairs(L([1,2,3]))) == [2,1,3]
     }
     snap("完成", (p + 1 < o.length ? `后面只剩 ${o[p + 1]} 一个节点，不够一对，保持不动。` : "后面没有节点了。") + `结果是 [${o.slice(1).join(", ")}]。`, view(), { kind: "ok", ans: o.slice(1) });
   },
+  alts: [{
+    t: "递归",
+    note: "和简洁写法一样：每一层负责最前面的一对。先递归交换从第三个节点开始的部分，拿到结果后，第一个节点接上它，第二个节点指回第一个。",
+    legend: [["a", "这一层负责的一对"], ["e", "在调用栈上，还没交换"], ["k", "已经交换好的部分"]],
+    build(a, snap) {
+      const v = a.v, n = v.length, calls = [], done = new Set(); let tail = [];
+      const view = (cur) => [
+        { t: "array", label: "原链表", items: v.map((x, i) => ({ v: x, cls: cur >= 0 && (i === cur || i === cur + 1) ? "a" : done.has(i) ? "k" : calls.some((c) => c === i || c + 1 === i) ? "e" : "" })), idx: false },
+        { t: "chips", label: "递归调用栈（右边是最里层）", items: calls.map((i) => ({ v: `swapPairs(${v[i]})`, cls: i === cur ? "a" : "e" })), empty: "空" },
+        { t: "chips", label: "已经交换好的部分", items: tail.map((x) => ({ v: x, cls: "k" })), empty: "还没有" },
+      ];
+      let i = 0;
+      for (; i + 1 < n; i += 2) {
+        calls.push(i);
+        snap("往下递归", `swapPairs(${v[i]})：${v[i]} 和 ${v[i + 1]} 是一对。先递归处理从${i + 2 < n ? ` ${v[i + 2]}` : "空"}开始的部分，拿到结果再交换这一对。`, view(i));
+      }
+      if (i < n) { tail = [v[i]]; done.add(i); snap("到底", `swapPairs(${v[i]})：只剩一个节点，凑不成一对，原样返回。`, view(-1)); }
+      else snap("到底", "swapPairs(空)：没有节点了，返回空。", view(-1));
+      while (calls.length) {
+        const c = calls[calls.length - 1], old = tail.slice();
+        tail = [v[c + 1], v[c], ...tail]; done.add(c); done.add(c + 1);
+        snap("交换", `回到 swapPairs(${v[c]})：${v[c]}.next 接上下一层返回的${old.length ? ` [${old.join(", ")}]` : "空"}，${v[c + 1]}.next 指向 ${v[c]}。返回 ${v[c + 1]}，这一段变成 [${tail.join(", ")}]。`, view(c));
+        calls.pop();
+      }
+      snap("完成", `递归全部返回，结果是 [${tail.join(", ")}]。`, view(-1), { kind: "ok", ans: tail });
+    },
+  }],
   points: [
     { t: "指针赋值的顺序", body: "分三行写时，要先用掉 <code>b.next</code> 再改它。Python 的多重赋值会先算完右边再赋值，可以写成一行。" },
     { t: "循环条件", body: "<code>prev.next and prev.next.next</code>：后面至少有两个节点才交换。" },

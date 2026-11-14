@@ -218,6 +218,25 @@ class Solution:
         return sum(min(l, r) - h for l, r, h in zip(left, right, height))</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>另一种写法：单调栈，按层接水<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>栈里的柱子从底到顶越来越矮。来了一根更高的柱子，栈顶就是一个坑的坑底，它下面那根是左墙，新柱子是右墙，一次接上一层水。</p>
+<pre class="code">class Solution:
+    def trap(self, height: List[int]) -&gt; int:
+        stack, water = [], 0                <span class="cmt"># 栈里存下标，高度从底到顶递减</span>
+        for i, h in enumerate(height):
+            while stack and height[stack[-1]] &lt; h:
+                bottom = stack.pop()        <span class="cmt"># 坑底</span>
+                if not stack:
+                    break                   <span class="cmt"># 左边没有墙，接不住</span>
+                left = stack[-1]
+                width = i - left - 1
+                water += (min(height[left], h) - height[bottom]) * width
+            stack.append(i)
+        return water</pre>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -225,6 +244,8 @@ class Solution:
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -243,7 +264,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>l 和 r</span><span><i class="sw d"></i>已经算完的格子</span><span><i class="sw wat"></i>已确定的水</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>l 和 r</span><span><i class="sw d"></i>已经算完的格子</span><span><i class="sw wat"></i>已确定的水</span></div>
       </div>
     </div>
   </section>
@@ -253,7 +274,7 @@ class Solution:
     <div class="points">
       <div class="point"><h3>先更新最高值再算水</h3><p>先把当前柱子计入 leftMax / rightMax，这样 <code>leftMax − height[l]</code> 不会是负数。</p></div>
       <div class="point"><h3>为什么矮的那边可以先算</h3><p>leftMax < rightMax 时，l 右边一定存在不低于 leftMax 的柱子，所以 l 这格的水位不会被右边限制。</p></div>
-      <div class="point"><h3>复杂度</h3><p>时间 O(n)，空间 O(1)。单调栈也能做，是按层接水的另一种思路。</p></div>
+      <div class="point"><h3>复杂度</h3><p>双指针时间 O(n)、空间 O(1)；前缀最大值和单调栈都是时间 O(n)、空间 O(n)。</p></div>
     </div>
   </section>
 </div>
@@ -324,7 +345,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[0,1,0,2,1,0,1,3,2,1,2,
 })(); const r = ((R) => {
     const h = R.arr(R.int(8, 12), 0, 4);
     return { args: { h }, note: `height = ${R.fmt(h)}`, py: `Solution().trap(${R.py(h)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "双指针", note: null, legend: [["a","l 和 r"],["d","已经算完的格子"],["wat","已确定的水"]], build(a, snap) {
     const h = a.h, n = h.length, w = new Array(n).fill(0);
     let l = 0, r = n - 1, lm = 0, rm = 0, total = 0;
     const view = (done) => [{ t: "bars", label: "height", items: h.map((v, i) => ({ v, water: w[i], cls: !done && (i === l || i === r) ? "a" : i < l || i > r || done ? "d" : "" })), ptrs: done ? {} : { l, r } }];
@@ -343,7 +365,52 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[0,1,0,2,1,0,1,3,2,1,2,
       }
     }
     snap("完成", `两个指针相遇。一共接到 <b>${total}</b> 格水。`, view(true), { kind: "ok", ans: total, facts: facts() });
-  } };
+  } },
+{ t: "前缀最大值", note: "和简洁写法一样：每一格的水位 = min(左边最高, 右边最高)。先从左往右、从右往左各算一遍最高值，再逐格相减。要 O(n) 额外空间。", legend: [["a","当前格子"],["k","两边最高里较小的那个，就是这一格的水位"],["wat","接到的水"]], build(a, snap) {
+      const h = a.h, n = h.length, w = Array(n).fill(0), L = Array(n).fill(null), R = Array(n).fill(null);
+      let total = 0;
+      const view = (i) => [
+        { t: "bars", label: "height", items: h.map((v, k) => ({ v, water: w[k], cls: k === i ? "a" : "" })) },
+        { t: "array", label: "left：从左往右到这里为止最高的柱子", items: L.map((v, k) => ({ v: v === null ? "" : v, cls: k === i && L[k] <= R[k] ? "k" : "" })) },
+        { t: "array", label: "right：从右往左到这里为止最高的柱子", items: R.map((v, k) => ({ v: v === null ? "" : v, cls: k === i && R[k] < L[k] ? "k" : "" })) },
+      ];
+      const f = () => ({ facts: [["接到的水", total]] });
+      snap("开始", "一格能接多少水，取决于它左边最高和右边最高的柱子里较矮的那根。先把两个方向的最高都算出来。", view(-1), f());
+      for (let k = 0; k < n; k++) L[k] = Math.max(k ? L[k - 1] : 0, h[k]);
+      snap("算 left", "accumulate(height, max)：从左往右走，每格记下到这里为止（包括自己）最高的柱子。", view(-1), f());
+      for (let k = n - 1; k >= 0; k--) R[k] = Math.max(k < n - 1 ? R[k + 1] : 0, h[k]);
+      snap("算 right", "再从右往左走一遍，每格记下它右边（包括自己）最高的柱子。", view(-1), f());
+      for (let i = 0; i < n; i++) {
+        const lv = Math.min(L[i], R[i]), add = lv - h[i];
+        w[i] = add; total += add;
+        snap(`下标 ${i}`, `left = ${L[i]}，right = ${R[i]}，水位是较小的 ${lv}。这一格接 ${lv} − ${h[i]} = <b>${add}</b>。`, view(i), f());
+      }
+      snap("完成", `每一格都算完了，一共接到 <b>${total}</b> 格水。`, view(-1), { kind: "ok", ans: total, ...f() });
+    } },
+{ t: "单调栈", note: "和「另一种写法」一样：前面两种是一列一列算水，这种是一层一层算。栈里的柱子从底到顶越来越矮；来了更高的柱子，就和栈里的柱子围出一个坑，接上一层水。", legend: [["a","右墙：当前柱子"],["b","坑底"],["k","左墙"],["e","在栈里"],["wat","接到的水"]], build(a, snap) {
+      const h = a.h, n = h.length, level = h.slice(), stack = [];
+      let total = 0;
+      const view = (i, bottom, left) => [
+        { t: "bars", label: "height", items: h.map((v, k) => ({ v, water: level[k] - v, cls: k === i ? "a" : k === bottom ? "b" : k === left ? "k" : stack.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 && i < n ? i : null } },
+        { t: "chips", label: "栈（存下标，右边是栈顶）", items: stack.map((k) => `${k}:${h[k]}`), empty: "空" },
+      ];
+      const f = () => ({ facts: [["接到的水", total]] });
+      snap("开始", "从左往右看每根柱子。栈里放还在等右墙的柱子，高度从底到顶递减。", view(-1, -1, -1), f());
+      for (let i = 0; i < n; i++) {
+        while (stack.length && h[stack[stack.length - 1]] < h[i]) {
+          const bottom = stack.pop();
+          if (!stack.length) { snap("左边没墙", `${h[i]} 比栈顶的 ${h[bottom]} 高，弹出 ${bottom}。可它左边没有柱子了，围不成坑，接不住水。`, view(i, bottom, -1), { kind: "warn", ...f() }); break; }
+          const left = stack[stack.length - 1], width = i - left - 1, top = Math.min(h[left], h[i]), add = (top - h[bottom]) * width;
+          for (let k = left + 1; k < i; k++) level[k] = top;
+          total += add;
+          snap("接一层水", `${h[i]} 比栈顶的 ${h[bottom]} 高，弹出坑底 ${bottom}。左墙是下标 ${left}（高 ${h[left]}），右墙是 ${i}（高 ${h[i]}）。这一层宽 ${i} − ${left} − 1 = ${width}，高 min(${h[left]}, ${h[i]}) − ${h[bottom]} = ${top - h[bottom]}，接 <b>${add}</b>。`, view(i, bottom, left), f());
+        }
+        stack.push(i);
+        snap("压栈", `把下标 ${i}（高 ${h[i]}）压栈，等它的右墙。`, view(i, -1, -1), f());
+      }
+      snap("完成", `所有柱子都看完了，一共接到 <b>${total}</b> 格水。`, view(-1, -1, -1), { kind: "ok", ans: total, ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -465,16 +532,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[0,1,0,2,1,0,1,3,2,1,2,
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

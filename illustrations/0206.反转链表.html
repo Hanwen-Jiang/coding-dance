@@ -231,6 +231,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -249,7 +251,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>cur</span><span><i class="sw b"></i>prev</span><span><i class="sw k"></i>箭头已经掉头</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>cur</span><span><i class="sw b"></i>prev</span><span><i class="sw k"></i>箭头已经掉头</span></div>
       </div>
     </div>
   </section>
@@ -330,7 +332,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5]},"note":"he
 })(); const r = ((R) => {
     const v = R.arr(R.int(2, 7), 1, 9);
     return { args: { v }, note: `head = ${R.fmt(v)}`, py: `toL(Solution().reverseList(L(${R.py(v)})))` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "迭代", note: null, legend: [["a","cur"],["b","prev"],["k","箭头已经掉头"]], build(a, snap) {
     const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null));
     let prev = null, cur = 0;
     const view = () => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === cur ? "a" : i === prev ? "b" : prev !== null && i < prev ? "k" : "" })), next: next.slice(), ptrs: { prev, cur } }];
@@ -343,7 +346,33 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5]},"note":"he
       snap("往前走", cur === null ? "prev 移到刚处理完的节点，cur 走到了空，循环结束。" : `prev 移到 ${v[prev]}，cur 移到 ${v[cur]}。`, view());
     }
     snap("完成", `所有箭头都掉了头。prev 指着的 ${v[prev]} 就是新的头节点。`, view(), { kind: "ok", ans: v.slice().reverse() });
-  } };
+  } },
+{ t: "递归", note: "和递归写法一样：先把 head 后面的部分反转好，再让 head 的下一个节点指回 head，head 自己指向空。", legend: [["a","这一层的 head"],["e","在调用栈上，还没返回"],["c","new_head：反转后的头"],["k","已经反转好的部分"]], build(a, snap) {
+      const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null)), calls = [];
+      let nh = null;
+      const view = (cur) => [
+        { t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === cur ? "a" : i === nh ? "c" : calls.includes(i) ? "e" : nh !== null && i > cur ? "k" : "" })), next: next.slice(), ptrs: { head: cur >= 0 ? cur : null, new_head: nh } },
+        { t: "chips", label: "递归调用栈（右边是最里层）", items: calls.map((i) => ({ v: `reverseList(${v[i]})`, cls: i === cur ? "a" : "e" })), empty: "空" },
+      ];
+      if (!n) { snap("完成", "链表是空的，直接返回空。", [{ t: "note", label: "链表", html: "空" }], { kind: "ok", ans: [] }); return; }
+      for (let i = 0; i < n; i++) {
+        calls.push(i);
+        if (i === n - 1) {
+          nh = i;
+          snap("到底", `reverseList(${v[i]})：${v[i]} 后面没有节点了，它自己就是反转后的头，直接返回。`, view(i));
+          calls.pop();
+        } else snap("往下递归", `reverseList(${v[i]})：先把 ${v[i]} 后面的部分反转好，再处理 ${v[i]} 自己。`, view(i));
+      }
+      for (let i = n - 2; i >= 0; i--) {
+        next[i + 1] = i;
+        snap("指回来", `回到 reverseList(${v[i]})，后面已经反转好了，新的头是 ${v[nh]}。head.next 是 ${v[i + 1]}，让 ${v[i + 1]}.next 指回 ${v[i]}。`, view(i));
+        next[i] = null;
+        snap("断开", `再把 ${v[i]}.next 设成空，${v[i]} 成了新的尾巴。把 new_head ${v[nh]} 返回给上一层。`, view(i));
+        calls.pop();
+      }
+      snap("完成", `递归全部返回，新的头节点是 ${v[nh]}。`, view(-1), { kind: "ok", ans: v.slice().reverse() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -465,16 +494,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5]},"note":"he
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

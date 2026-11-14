@@ -38,6 +38,7 @@ assert s.longestConsecutive([0,3,7,2,5,8,4,6,0,1]) == 9
 assert s.longestConsecutive([]) == 0
 assert s.longestConsecutive([1,0,1,2]) == 3
 `,
+  method: "只从起点数",
   legend: [["a", "正在检查"], ["w", "不是起点，跳过"], ["e", "这一段数到的"], ["c", "最长的一段"]],
   presets: [
     { label: "示例 1", args: { nums: [100, 4, 200, 1, 3, 2] }, note: "nums = [100,4,200,1,3,2]", expect: 4 },
@@ -66,6 +67,29 @@ assert s.longestConsecutive([1,0,1,2]) == 3
     }
     snap("完成", `所有数都看过了，最长连续序列的长度是 <b>${best}</b>（${bestRun[0]} 到 ${bestRun[bestRun.length - 1]}）。`, view(null), { kind: "ok", ans: best, facts: [["最长", best]] });
   },
+  alts: [{
+    t: "更新两个端点",
+    note: "和简洁写法一样：lens[x] 记 x 所在连续段的长度，但只保证每段的两个端点是准的。新来的 x 把左边以 x−1 结尾的段和右边以 x+1 开头的段连起来，只更新新段的两个端点。",
+    legend: [["a", "当前的数"], ["d", "已经处理"], ["c", "这一步更新的端点"], ["w", "重复，跳过"]],
+    build(a, snap) {
+      const nums = a.nums, lens = new Map(); let best = 0;
+      const view = (i, upd, dup) => [
+        { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === i ? (dup ? "w" : "a") : t < i ? "d" : "" })), ptrs: { i: i >= 0 && i < nums.length ? i : null } },
+        { t: "chips", label: "lens（数 → 所在段的长度，只有端点是准的）", items: [...lens.keys()].sort((p, q) => p - q).map((x) => ({ v: `${x} → ${lens.get(x)}`, cls: upd && upd.includes(x) ? "c" : "" })), empty: "空" },
+      ];
+      const f = () => ({ facts: [["最长", best]] });
+      snap("开始", "lens 一开始是空的。逐个处理 nums 里的数。", view(-1, null, false), f());
+      nums.forEach((x, i) => {
+        if (lens.has(x)) { snap("重复", `${x} 已经处理过了，跳过。`, view(i, null, true), { kind: "warn", ...f() }); return; }
+        const l = lens.get(x - 1) || 0, r = lens.get(x + 1) || 0, len = l + r + 1;
+        lens.set(x, len); lens.set(x - l, len); lens.set(x + r, len);
+        best = Math.max(best, len);
+        const left = l ? `左边是一段 ${x - l}…${x - 1}（长 ${l}）` : `左边没有 ${x - 1}`, right = r ? `右边是一段 ${x + 1}…${x + r}（长 ${r}）` : `右边没有 ${x + 1}`;
+        snap("连起来", `${x}：${left}，${right}。连起来是 ${x - l}…${x + r}，长度 ${l} + ${r} + 1 = <b>${len}</b>。把两个端点 ${x - l} 和 ${x + r} 都更新成 ${len}。`, view(i, [x, x - l, x + r], false), f());
+      });
+      snap("完成", `全部处理完，最长连续序列的长度是 <b>${best}</b>。每个数只处理一次，时间 O(n)。`, view(nums.length, null, false), { kind: "ok", ans: best, ...f() });
+    },
+  }],
   points: [
     { t: "遍历集合，不要遍历 nums", body: "nums 里有大量重复的起点时，遍历 nums 会让同一段被反复数，力扣有专门卡这一点的用例。" },
     { t: "起点判断是关键", body: "少了 <code>if x - 1 in s</code> 这一行，结果仍然对，但会退化成 O(n²)。" },

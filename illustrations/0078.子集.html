@@ -222,6 +222,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -240,7 +242,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>刚放进来的数</span><span><i class="sw e"></i>这一层可以选的范围</span><span><i class="sw c"></i>收集的子集</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>刚放进来的数</span><span><i class="sw e"></i>这一层可以选的范围</span><span><i class="sw c"></i>收集的子集</span></div>
       </div>
     </div>
   </section>
@@ -321,7 +323,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
 })(); const r = ((R) => {
     const nums = R.distinct(R.int(2, 4), 0, 9);
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().subsets(${R.py(nums)})`, cmp: "unordered" };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "回溯", note: null, legend: [["a","刚放进来的数"],["e","这一层可以选的范围"],["c","收集的子集"]], build(a, snap) {
     const nums = a.nums, res = [], path = [];
     const view = (start, pick) => [
       { t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i === pick ? "a" : start >= 0 && i >= start ? "e" : "" })), ptrs: { start: start >= 0 && start < nums.length ? start : null } },
@@ -341,7 +344,23 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
     };
     dfs(0);
     snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
-  } };
+  } },
+{ t: "逐个加入", note: "和简洁写法一样：从只有空集开始。每来一个数 x，已有的每个子集都可以选择加上 x，于是子集个数翻一倍。", legend: [["a","正在加入的数"],["c","这一轮新生成的子集"]], build(a, snap) {
+      const nums = a.nums; let res = [[]], fresh = 0;
+      const view = (k) => [
+        { t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i === k ? "a" : i < k ? "d" : "" })) },
+        { t: "chips", label: "res", items: res.map((r, i) => ({ v: `[${r.join(",")}]`, cls: i >= res.length - fresh ? "c" : "" })) },
+      ];
+      snap("开始", "res 里只有一个空集。", view(-1), { facts: [["子集个数", 1]] });
+      nums.forEach((x, k) => {
+        const add = res.map((s) => [...s, x]);
+        res = res.concat(add); fresh = add.length;
+        snap(`加入 ${x}`, `已有的 ${add.length} 个子集每个都加上 ${x}，得到 ${add.map((s) => `[${s.join(",")}]`).join("、")}，接在 res 后面。子集个数翻倍成 ${res.length}。`, view(k), { facts: [["子集个数", res.length]] });
+      });
+      fresh = 0;
+      snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(nums.length), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["子集个数", res.length]] });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -463,16 +482,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

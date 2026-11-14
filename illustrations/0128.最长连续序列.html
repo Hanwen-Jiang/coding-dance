@@ -224,6 +224,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -242,7 +244,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在检查</span><span><i class="sw w"></i>不是起点，跳过</span><span><i class="sw e"></i>这一段数到的</span><span><i class="sw c"></i>最长的一段</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在检查</span><span><i class="sw w"></i>不是起点，跳过</span><span><i class="sw e"></i>这一段数到的</span><span><i class="sw c"></i>最长的一段</span></div>
       </div>
     </div>
   </section>
@@ -323,7 +325,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[100,4,200,1,3,2]},"
 })(); const r = ((R) => {
     const nums = R.arr(R.int(5, 9), 0, 12);
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().longestConsecutive(${R.py(nums)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "只从起点数", note: null, legend: [["a","正在检查"],["w","不是起点，跳过"],["e","这一段数到的"],["c","最长的一段"]], build(a, snap) {
     const set = [...new Set(a.nums)], has = new Set(set);
     let best = 0, bestRun = [];
     const view = (cur, run, skip) => [{ t: "chips", label: "集合（已去重）", items: set.map((v) => ({ v, cls: v === cur ? (skip ? "w" : "a") : run && run.includes(v) ? "e" : !run && bestRun.includes(v) ? "c" : "" })) }];
@@ -345,7 +348,26 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[100,4,200,1,3,2]},"
       snap("这段结束", `${y + 1} 不在集合里，这段到此为止，长度 ${run.length}。` + (improved ? `更新最长为 <b>${best}</b>。` : `没有超过当前最长 ${best}。`), view(null, run), { facts: [["最长", best], ["当前长度", run.length]] });
     }
     snap("完成", `所有数都看过了，最长连续序列的长度是 <b>${best}</b>（${bestRun[0]} 到 ${bestRun[bestRun.length - 1]}）。`, view(null), { kind: "ok", ans: best, facts: [["最长", best]] });
-  } };
+  } },
+{ t: "更新两个端点", note: "和简洁写法一样：lens[x] 记 x 所在连续段的长度，但只保证每段的两个端点是准的。新来的 x 把左边以 x−1 结尾的段和右边以 x+1 开头的段连起来，只更新新段的两个端点。", legend: [["a","当前的数"],["d","已经处理"],["c","这一步更新的端点"],["w","重复，跳过"]], build(a, snap) {
+      const nums = a.nums, lens = new Map(); let best = 0;
+      const view = (i, upd, dup) => [
+        { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === i ? (dup ? "w" : "a") : t < i ? "d" : "" })), ptrs: { i: i >= 0 && i < nums.length ? i : null } },
+        { t: "chips", label: "lens（数 → 所在段的长度，只有端点是准的）", items: [...lens.keys()].sort((p, q) => p - q).map((x) => ({ v: `${x} → ${lens.get(x)}`, cls: upd && upd.includes(x) ? "c" : "" })), empty: "空" },
+      ];
+      const f = () => ({ facts: [["最长", best]] });
+      snap("开始", "lens 一开始是空的。逐个处理 nums 里的数。", view(-1, null, false), f());
+      nums.forEach((x, i) => {
+        if (lens.has(x)) { snap("重复", `${x} 已经处理过了，跳过。`, view(i, null, true), { kind: "warn", ...f() }); return; }
+        const l = lens.get(x - 1) || 0, r = lens.get(x + 1) || 0, len = l + r + 1;
+        lens.set(x, len); lens.set(x - l, len); lens.set(x + r, len);
+        best = Math.max(best, len);
+        const left = l ? `左边是一段 ${x - l}…${x - 1}（长 ${l}）` : `左边没有 ${x - 1}`, right = r ? `右边是一段 ${x + 1}…${x + r}（长 ${r}）` : `右边没有 ${x + 1}`;
+        snap("连起来", `${x}：${left}，${right}。连起来是 ${x - l}…${x + r}，长度 ${l} + ${r} + 1 = <b>${len}</b>。把两个端点 ${x - l} 和 ${x + r} 都更新成 ${len}。`, view(i, [x, x - l, x + r], false), f());
+      });
+      snap("完成", `全部处理完，最长连续序列的长度是 <b>${best}</b>。每个数只处理一次，时间 O(n)。`, view(nums.length, null, false), { kind: "ok", ans: best, ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -467,16 +489,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[100,4,200,1,3,2]},"
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

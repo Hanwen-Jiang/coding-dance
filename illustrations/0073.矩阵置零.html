@@ -230,6 +230,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -248,7 +250,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在看的格子</span><span><i class="sw w"></i>写下的记号</span><span><i class="sw c"></i>被清零的格子</span><span><i class="sw e"></i>记号区（第一行、第一列）</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在看的格子</span><span><i class="sw w"></i>写下的记号</span><span><i class="sw c"></i>被清零的格子</span><span><i class="sw e"></i>记号区（第一行、第一列）</span></div>
       </div>
     </div>
   </section>
@@ -331,7 +333,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,1,1],[1,0,1],[1,1,1
     const m = Array.from({ length: r }, () => Array.from({ length: c }, () => (R.chance(0.15) ? 0 : R.int(1, 9))));
     if (!m.flat().includes(0)) m[R.int(0, r - 1)][R.int(0, c - 1)] = 0;
     return { args: { m }, note: `matrix = ${R.fmt(m)}`, py: `__inplace(Solution().setZeroes, ${R.py(m)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "第一行第一列做标记", note: null, legend: [["a","正在看的格子"],["w","写下的记号"],["c","被清零的格子"],["e","记号区（第一行、第一列）"]], build(a, snap) {
     const M = a.m.map((r) => r.slice()), m = M.length, n = M[0].length, cls = M.map((r) => r.map(() => ""));
     const view = (ci, cj) => [{ t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : cls[i][j] || (i === 0 || j === 0 ? "e" : "") }))) }];
     const row0 = M[0].includes(0), col0 = M.some((r) => r[0] === 0);
@@ -348,7 +351,25 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,1,1],[1,0,1],[1,1,1
     if (col0) for (let i = 0; i < m; i++) { M[i][0] = 0; cls[i][0] = "c"; }
     snap("最后处理第一行和第一列", (row0 ? "第一行原来有 0，整行清零。" : "第一行原来没有 0，保持不动。") + (col0 ? "第一列原来有 0，整列清零。" : "第一列原来没有 0，保持不动。"), view(), { facts: facts() });
     snap("完成", "所有该清零的行和列都处理完了。", view(), { kind: "ok", ans: M, facts: facts() });
-  } };
+  } },
+{ t: "记下行和列", note: "和简洁写法一样：先扫一遍，把含 0 的行号和列号分别放进两个集合，再统一清零。好写，但要 O(m + n) 额外空间。", legend: [["a","找到的 0"],["e","要清零的行和列"],["c","被清零的格子"]], build(a, snap) {
+      const M = a.m.map((r) => r.slice()), m = M.length, n = M[0].length, rows = new Set(), cols = new Set(), cls = M.map((r) => r.map(() => ""));
+      const sorted = (s) => [...s].sort((p, q) => p - q);
+      const view = (ci, cj) => [
+        { t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : cls[i][j] || (rows.has(i) || cols.has(j) ? "e" : "") }))) },
+        { t: "chips", label: "rows：要清零的行", items: sorted(rows), empty: "空" },
+        { t: "chips", label: "cols：要清零的列", items: sorted(cols), empty: "空" },
+      ];
+      snap("开始", "先只看不改：找出所有 0，记下它们所在的行和列。", view(-1, -1));
+      for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (M[i][j] === 0) {
+        rows.add(i); cols.add(j);
+        snap("记下", `matrix[${i}][${j}] 是 0，记下第 ${i} 行和第 ${j} 列。`, view(i, j));
+      }
+      for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (rows.has(i) || cols.has(j)) { M[i][j] = 0; cls[i][j] = "c"; }
+      snap("统一清零", `再扫一遍：行号在 rows 里，或者列号在 cols 里，就清零。`, view(-1, -1));
+      snap("完成", "所有该清零的行和列都处理完了。", view(-1, -1), { kind: "ok", ans: M });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -470,16 +491,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,1,1],[1,0,1],[1,1,1
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

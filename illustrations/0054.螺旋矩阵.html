@@ -232,6 +232,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -250,7 +252,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>这一段刚走的</span><span><i class="sw d"></i>之前走过的</span><span><i class="sw e"></i>边界围住的未走区域</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>这一段刚走的</span><span><i class="sw d"></i>之前走过的</span><span><i class="sw e"></i>边界围住的未走区域</span></div>
       </div>
     </div>
   </section>
@@ -331,7 +333,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
 })(); const r = ((R) => {
     const r = R.int(2, 4), c = R.int(2, 4), m = Array.from({ length: r }, (_, i) => Array.from({ length: c }, (_, j) => i * c + j + 1));
     return { args: { m }, note: `matrix = ${R.fmt(m)}`, py: `Solution().spiralOrder(${R.py(m)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "收缩边界", note: null, legend: [["a","这一段刚走的"],["d","之前走过的"],["e","边界围住的未走区域"]], build(a, snap) {
     const M = a.m, res = [], seen = M.map((r) => r.map(() => 0));
     let top = 0, bottom = M.length - 1, left = 0, right = M[0].length - 1;
     const view = () => [
@@ -361,7 +364,27 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
     }
     walk([]);
     snap("完成", `边界交错，所有格子都走过了。结果是 [${res.join(", ")}]。`, view(), { kind: "ok", ans: res, facts: facts() });
-  } };
+  } },
+{ t: "取第一行再旋转", note: "和简洁写法一样：螺旋的第一段永远是第一行。拿走它，把剩下的部分逆时针转 90°，原来的最右一列就成了新的第一行。重复到矩阵为空。", legend: [["a","这一步拿走的第一行"]], build(a, snap) {
+      let M = a.m.map((r) => r.slice()), round = 0;
+      const res = [];
+      const view = (hl) => [
+        M.length ? { t: "grid", label: "matrix（剩下的部分）", rows: M.map((r, i) => r.map((v) => ({ v, cls: hl && i === 0 ? "a" : "" }))) } : { t: "note", label: "matrix", html: "空" },
+        { t: "chips", label: "结果", items: res.slice(), empty: "还没有" },
+      ];
+      snap("开始", "每一轮：拿走第一行接到结果后面，再把剩下的逆时针转 90°。", view(false));
+      while (M.length) {
+        round++;
+        snap("拿走第一行", `第一行是 [${M[0].join(", ")}]，接到结果后面。`, view(true));
+        res.push(...M.shift());
+        if (!M.length) break;
+        const col = M.map((r) => r[r.length - 1]);
+        M = M[0].map((_, j) => M.map((r) => r[j])).reverse();
+        snap("逆时针转 90°", `剩下的部分逆时针转 90°：zip(*matrix) 把列变成行，再 [::-1] 倒过来。原来最右边一列 [${col.join(", ")}] 现在是第一行。`, view(false));
+      }
+      snap("完成", `矩阵拿空了，结果是 [${res.join(", ")}]。`, view(false), { kind: "ok", ans: res });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -483,16 +506,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

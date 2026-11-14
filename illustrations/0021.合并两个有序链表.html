@@ -221,6 +221,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -239,7 +241,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在比较的两个头</span><span><i class="sw d"></i>已经接走</span><span><i class="sw k"></i>结果链表</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在比较的两个头</span><span><i class="sw d"></i>已经接走</span><span><i class="sw k"></i>结果链表</span></div>
       </div>
     </div>
   </section>
@@ -320,7 +322,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"x":[1,2,4],"y":[1,3,4]},"n
 })(); const r = ((R) => {
     const x = R.sorted(R.arr(R.int(0, 5), 1, 9)), y = R.sorted(R.arr(R.int(1, 5), 1, 9));
     return { args: { x, y }, note: `list1 = ${R.fmt(x)}, list2 = ${R.fmt(y)}`, py: `toL(Solution().mergeTwoLists(L(${R.py(x)}), L(${R.py(y)})))` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "迭代", note: null, legend: [["a","正在比较的两个头"],["d","已经接走"],["k","结果链表"]], build(a, snap) {
     const { x, y } = a, out = []; let i = 0, j = 0;
     const lv = (label, arr, p, name) => ({ t: "list", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? "d" : t === p ? "a" : "" })), ptrs: { [name]: p < arr.length ? p : null } });
     const view = (done) => [lv("list1", x, i, "list1"), lv("list2", y, j, "list2"), { t: "list", label: "结果（接在 dummy 后面）", nodes: [{ v: "D", cls: "d" }, ...out.map((v) => ({ v, cls: "k" }))], showNil: !!done, ptrs: { cur: out.length } }];
@@ -333,7 +336,33 @@ const SPEC = { presets: [{"label":"示例 1","args":{"x":[1,2,4],"y":[1,3,4]},"n
     out.push(...rest); i = x.length; j = y.length;
     snap("接上剩下的", rest.length ? `一个链表走完了。${which} 剩下的 [${rest.join(", ")}] 本来就有序，整段接上。` : "两个链表同时走完。", view(true));
     snap("完成", `返回 dummy.next，也就是 [${out.join(", ")}]。`, view(true), { kind: "ok", ans: out });
-  } };
+  } },
+{ t: "递归", note: "和简洁写法一样：每一层选出两个头里较小的那个，它后面接什么要等下一层合并完剩下的部分。所以选是从前往后选，接是从后往前接。", legend: [["a","正在比较的两个头"],["d","已经被某一层选走"],["e","调用栈"],["k","已经接好的部分"]], build(a, snap) {
+      const { x, y } = a, calls = []; let i = 0, j = 0, tail = [];
+      const lv = (label, arr, p, name) => ({ t: "list", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? "d" : t === p ? "a" : "" })), ptrs: { [name]: p < arr.length ? p : null } });
+      const view = () => [lv("list1", x, i, "list1"), lv("list2", y, j, "list2"),
+        { t: "chips", label: "递归调用栈（右边是最里层；写的是这一层选中的节点）", items: calls.map((v, t) => ({ v: `选了 ${v}`, cls: t === calls.length - 1 ? "a" : "e" })), empty: "空" },
+        { t: "chips", label: "已经接好的部分", items: tail.map((v) => ({ v, cls: "k" })), empty: "还没有" }];
+      snap("开始", "每一层只做一件事：两个头里挑小的，它的 next 等于「剩下部分的合并结果」。", view());
+      while (i < x.length && j < y.length) {
+        const eq = x[i] === y[j], fromX = x[i] <= y[j], pick = fromX ? x[i] : y[j], cmp = `${x[i]} 和 ${y[j]}`;
+        calls.push(pick);
+        if (fromX) i++; else j++;
+        snap("递归进入", `比较两个头 ${cmp}，` + (eq ? `一样大，取 list1 的 ${pick}` : `${fromX ? "list1" : "list2"} 的 ${pick} 更小`) + `。这一层返回 ${pick}，它后面接什么，交给下一层去合并。`, view());
+      }
+      tail = i < x.length ? x.slice(i) : y.slice(j);
+      const which = i < x.length ? "list2" : "list1";
+      i = x.length; j = y.length;
+      snap("到底", tail.length ? `${which} 已经空了，这一层直接返回另一个链表剩下的 [${tail.join(", ")}]。` : "两个链表都空了，返回空。", view());
+      while (calls.length) {
+        const v = calls[calls.length - 1], old = tail.slice();
+        tail = [v, ...tail];
+        snap("返回", `回到选了 ${v} 的那一层：${v}.next 接上下一层返回的${old.length ? ` [${old.join(", ")}]` : "空链表"}，再把 ${v} 返回给上一层。`, view());
+        calls.pop();
+      }
+      snap("完成", `递归全部返回，结果是 [${tail.join(", ")}]。`, view(), { kind: "ok", ans: tail });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -455,16 +484,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"x":[1,2,4],"y":[1,3,4]},"n
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

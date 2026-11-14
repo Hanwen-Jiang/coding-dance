@@ -255,9 +255,11 @@ class Solution:
   </section>
 
   <section aria-labelledby="h-demo">
-    <h2 id="h-demo">快速选择演示</h2>
+    <h2 id="h-demo">第 K 大演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -276,7 +278,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw e"></i>这一轮的范围</span><span><i class="sw a"></i>刚处理的数</span><span><i class="sw g"></i>小于 pivot</span><span><i class="sw k"></i>等于 pivot</span><span><i class="sw w"></i>大于 pivot</span><span><i class="sw d"></i>已经扔掉</span><span><i class="sw c"></i>答案</span></div>
+        <div class="legend" id="legend"><span><i class="sw e"></i>这一轮的范围</span><span><i class="sw a"></i>刚处理的数</span><span><i class="sw g"></i>小于 pivot</span><span><i class="sw k"></i>等于 pivot</span><span><i class="sw w"></i>大于 pivot</span><span><i class="sw d"></i>已经扔掉</span><span><i class="sw c"></i>答案</span></div>
       </div>
     </div>
   </section>
@@ -293,7 +295,7 @@ class Solution:
 </div>
 
 <script>
-const SPEC = { presets: [{"label":"示例 1","args":{"nums":[3,2,1,5,6,4],"k":2},"note":"nums = [3,2,1,5,6,4], k = 2"},{"label":"示例 2","args":{"nums":[3,2,3,1,2,4,5,5,6],"k":4},"note":"nums = [3,2,3,1,2,4,5,5,6], k = 4"},{"label":"小顶堆写法","args":{"nums":[3,2,3,1,2,4,5,5,6],"k":4,"heap":true},"note":"同一组数，换成大小为 k 的小顶堆：nums = [3,2,3,1,2,4,5,5,6], k = 4"}], random: () => { const R = (function makeR() {
+const SPEC = { presets: [{"label":"示例 1","args":{"nums":[3,2,1,5,6,4],"k":2},"note":"nums = [3,2,1,5,6,4], k = 2"},{"label":"示例 2","args":{"nums":[3,2,3,1,2,4,5,5,6],"k":4},"note":"nums = [3,2,3,1,2,4,5,5,6], k = 4"}], random: () => { const R = (function makeR() {
   const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const pick = (xs) => xs[int(0, xs.length - 1)];
   const chance = (p) => Math.random() < p;
@@ -356,30 +358,11 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[3,2,1,5,6,4],"k":2}
   };
   return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };
 })(); const r = ((R) => {
-    const nums = R.arr(R.int(6, 9), 1, 9), k = R.int(1, nums.length), heap = R.chance(0.3);
-    return { args: heap ? { nums, k, heap } : { nums, k }, note: `${heap ? "小顶堆写法：" : ""}nums = ${R.fmt(nums)}, k = ${k}`, py: `Solution().findKthLargest(${R.py(nums)}, ${k})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+    const nums = R.arr(R.int(6, 9), 1, 9), k = R.int(1, nums.length);
+    return { args: { nums, k }, note: `nums = ${R.fmt(nums)}, k = ${k}`, py: `Solution().findKthLargest(${R.py(nums)}, ${k})` };
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "快速选择", note: "和标准解法一样做三路划分，每轮只往目标下标所在的那一段继续找。", legend: [["e","这一轮的范围"],["a","刚处理的数"],["g","小于 pivot"],["k","等于 pivot"],["w","大于 pivot"],["d","已经扔掉"],["c","答案"]], build(a, snap) {
     const nums = a.nums.slice(), n = nums.length, k = a.k;
-    if (a.heap) {
-      // 另一种常考写法：堆里始终留着目前最大的 k 个数，堆顶是其中最小的
-      const heap = [];
-      const up = (i) => { while (i > 0) { const p = (i - 1) >> 1; if (heap[p] <= heap[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
-      const down = (i) => { for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < heap.length && heap[l] < heap[s]) s = l; if (r < heap.length && heap[r] < heap[s]) s = r; if (s === i) break; [heap[s], heap[i]] = [heap[i], heap[s]]; i = s; } };
-      const nodes = () => { const N = {}; heap.forEach((v, i) => (N[i] = { v, l: 2 * i + 1 < heap.length ? 2 * i + 1 : null, r: 2 * i + 2 < heap.length ? 2 * i + 2 : null })); return N; };
-      const view = (j, fin) => [
-        { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === j ? "a" : t < j ? "d" : "" })), ptrs: {} },
-        heap.length ? { t: "tree", label: `小顶堆（最多 ${k} 个，堆顶是其中最小的）`, nodes: nodes(), root: 0, cls: { 0: fin ? "c" : "b" } } : { t: "note", label: "小顶堆", html: "空" },
-      ];
-      const f = () => ({ facts: [["堆大小", `${heap.length} / ${k}`], ["堆顶", heap.length ? heap[0] : "—"]] });
-      snap("开始", `堆里只留目前见过的最大的 ${k} 个数。全部看完后，堆顶就是第 ${k} 大。`, view(-1), f());
-      nums.forEach((x, j) => {
-        if (heap.length < k) { heap.push(x); up(heap.length - 1); snap("入堆", `堆里还不到 ${k} 个，${x} 直接放进去，调整后堆顶是 ${heap[0]}。`, view(j), f()); }
-        else if (x > heap[0]) { const old = heap[0]; heap[0] = x; down(0); snap("替换堆顶", `${x} 比堆顶 ${old} 大，有资格进前 ${k}。换掉堆顶再往下调整，新的堆顶是 ${heap[0]}。`, view(j), f()); }
-        else snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，跳过。`, view(j), f());
-      });
-      snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, true), { kind: "ok", ans: heap[0], ...f() });
-      return;
-    }
     const target = n - k;
     let lo = 0, hi = n - 1, lt = 0, i = 0, gt = n - 1, pv = null, hl = -1, done = -1;
     const cls = (j) => (j === done ? "c" : j < lo || j > hi ? "d" : j === hl ? "a" : pv === null ? "e" : j < lt ? "g" : j < i ? "k" : j > gt ? "w" : "e");
@@ -401,7 +384,27 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[3,2,1,5,6,4],"k":2}
       else if (target > gt) { snap("去右边", `划分完了：${parts}。目标下标 ${target} 在大于区，左边两段直接扔掉。`, view(), f()); lo = gt + 1; pv = null; }
       else { done = target; snap("找到", `划分完了：${parts}。目标下标 ${target} 落在等于区，答案就是 pivot <b>${pv}</b>。`, view(), { kind: "ok", ans: pv, ...f() }); return; }
     }
-  } };
+  } },
+{ t: "小顶堆", note: "堆里始终留着目前见过的最大的 k 个数，堆顶是其中最小的。新来的数比堆顶大才有资格进去，把堆顶换掉。", legend: [["a","正在看的数"],["d","已经看过"],["b","堆顶：目前的第 k 大"],["c","答案"]], build(a, snap) {
+      const nums = a.nums.slice(), n = nums.length, k = a.k;
+      const heap = [];
+      const up = (i) => { while (i > 0) { const p = (i - 1) >> 1; if (heap[p] <= heap[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+      const down = (i) => { for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < heap.length && heap[l] < heap[s]) s = l; if (r < heap.length && heap[r] < heap[s]) s = r; if (s === i) break; [heap[s], heap[i]] = [heap[i], heap[s]]; i = s; } };
+      const nodes = () => { const N = {}; heap.forEach((v, i) => (N[i] = { v, l: 2 * i + 1 < heap.length ? 2 * i + 1 : null, r: 2 * i + 2 < heap.length ? 2 * i + 2 : null })); return N; };
+      const view = (j, fin) => [
+        { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === j ? "a" : t < j ? "d" : "" })), ptrs: {} },
+        heap.length ? { t: "tree", label: `小顶堆（最多 ${k} 个，堆顶是其中最小的）`, nodes: nodes(), root: 0, cls: { 0: fin ? "c" : "b" } } : { t: "note", label: "小顶堆", html: "空" },
+      ];
+      const f = () => ({ facts: [["堆大小", `${heap.length} / ${k}`], ["堆顶", heap.length ? heap[0] : "—"]] });
+      snap("开始", `堆里只留目前见过的最大的 ${k} 个数。全部看完后，堆顶就是第 ${k} 大。`, view(-1), f());
+      nums.forEach((x, j) => {
+        if (heap.length < k) { heap.push(x); up(heap.length - 1); snap("入堆", `堆里还不到 ${k} 个，${x} 直接放进去，调整后堆顶是 ${heap[0]}。`, view(j), f()); }
+        else if (x > heap[0]) { const old = heap[0]; heap[0] = x; down(0); snap("替换堆顶", `${x} 比堆顶 ${old} 大，有资格进前 ${k}。换掉堆顶再往下调整，新的堆顶是 ${heap[0]}。`, view(j), f()); }
+        else snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，跳过。`, view(j), f());
+      });
+      snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, true), { kind: "ok", ans: heap[0], ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -523,16 +526,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[3,2,1,5,6,4],"k":2}
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

@@ -220,6 +220,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -238,7 +240,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>当前字符</span><span><i class="sw d"></i>已经处理</span><span><i class="sw e"></i>栈里等待配对的左括号</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>当前字符</span><span><i class="sw d"></i>已经处理</span><span><i class="sw e"></i>栈里等待配对的左括号</span></div>
       </div>
     </div>
   </section>
@@ -325,7 +327,8 @@ const SPEC = { presets: [{"label":"嵌套","args":{"s":"{[()]}"},"note":"s = \"{
     };
     const s = R.chance(0.5) ? valid(R.int(1, 4)) : R.word(R.int(2, 8), "()[]{}");
     return { args: { s }, note: `s = "${s}"`, py: `Solution().isValid("${s}")` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "栈", note: null, legend: [["a","当前字符"],["d","已经处理"],["e","栈里等待配对的左括号"]], build(a, snap) {
     const s = a.s, pairs = { ")": "(", "]": "[", "}": "{" }, stack = [];
     const view = (i, bad) => [
       { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t === i ? (bad ? "b" : "a") : t < i ? "d" : "" })), ptrs: { i: i >= 0 && i < s.length ? i : null } },
@@ -342,7 +345,30 @@ const SPEC = { presets: [{"label":"嵌套","args":{"s":"{[()]}"},"note":"s = \"{
     }
     if (stack.length) snap("无效", `字符串走完了，但栈里还剩 ${stack.length} 个左括号没关上。返回 false。`, view(s.length), { kind: "warn", ans: false });
     else snap("完成", "字符串走完，栈也空了，每个括号都配上了。返回 true。", view(s.length), { kind: "ok", ans: true });
-  } };
+  } },
+{ t: "反复删一对", note: "和简洁写法一样：每一轮依次把所有 ()、[]、{} 删掉，删到删不动为止。合法的串最后一定删成空串。", legend: [["a","这一下要删掉的一对"]], build(a, snap) {
+      let s = a.s, round = 0;
+      const view = (hl) => [s.length
+        ? { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: hl.has(t) ? "a" : "" })) }
+        : { t: "note", label: "s", html: "空串" }];
+      const f = () => ({ facts: [["轮数", round], ["剩下", s.length]] });
+      const has = () => ["()", "[]", "{}"].some((p) => s.includes(p));
+      snap("开始", "合法的串里一定有一对挨在一起的括号。把它们删掉，剩下的部分合法性不变。", view(new Set()), f());
+      while (has()) {
+        round++;
+        for (const p of ["()", "[]", "{}"]) {
+          const hl = new Set();
+          for (let k = s.indexOf(p); k >= 0; k = s.indexOf(p, k + 2)) { hl.add(k); hl.add(k + 1); }
+          if (!hl.size) continue;
+          snap(`第 ${round} 轮`, `找到 ${hl.size / 2} 对相邻的 <code>${p}</code>，全部删掉。`, view(hl), f());
+          s = s.split(p).join("");
+        }
+        snap(`第 ${round} 轮完`, s.length ? (has() ? `删完变成 "${s}"，里面又出现了相邻的一对，再来一轮。` : `删完变成 "${s}"，已经没有相邻的一对了。`) : "删成空串了。", view(new Set()), f());
+      }
+      if (s.length) snap("无效", `删不动了，还剩 "${s}"，说明有括号配不上。返回 false。`, view(new Set()), { kind: "warn", ans: false, ...f() });
+      else snap("完成", "整个串都删光了，每个括号都配上了。返回 true。", view(new Set()), { kind: "ok", ans: true, ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -464,16 +490,36 @@ const SPEC = { presets: [{"label":"嵌套","args":{"s":"{[()]}"},"note":"s = \"{
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

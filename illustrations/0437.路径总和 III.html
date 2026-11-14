@@ -227,6 +227,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -245,7 +247,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw e"></i>当前路径上的节点</span><span><i class="sw a"></i>当前节点</span><span><i class="sw c"></i>以它结尾有满足条件的路径</span></div>
+        <div class="legend" id="legend"><span><i class="sw e"></i>当前路径上的节点</span><span><i class="sw a"></i>当前节点</span><span><i class="sw c"></i>以它结尾有满足条件的路径</span></div>
       </div>
     </div>
   </section>
@@ -326,7 +328,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[10,5,-3,3,2,null,11,3,
 })(); const r = ((R) => {
     const t = R.tree(R.int(4, 8), () => R.int(-3, 6)), target = R.int(-2, 8);
     return { args: { t: t.heap, target }, note: `root = ${R.fmt(t.lc)}, targetSum = ${target}`, py: `Solution().pathSum(T(${R.py(t.lc)}), ${target})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "前缀和 + 哈希表", note: null, legend: [["e","当前路径上的节点"],["a","当前节点"],["c","以它结尾有满足条件的路径"]], build(a, snap) {
     const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
     const T = a.target, cnt = { 0: 1 }, path = [], badges = {}, hitSet = new Set(); let total = 0;
     const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : hitSet.has(+id) ? "c" : path.includes(+id) ? "e" : ""; return [{ t: "tree", nodes: N, root: 0, cls, on: path.slice(), badges: { ...badges } }, { t: "chips", label: "当前路径上的前缀和（前缀和 × 次数）", items: Object.entries(cnt).filter(([, c]) => c > 0).map(([k, c]) => `${k} × ${c}`) }]; };
@@ -343,7 +346,37 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[10,5,-3,3,2,null,11,3,
     };
     dfs(0, 0);
     snap("完成", `一共有 <b>${total}</b> 条路径的和等于 ${T}。`, view(-1), { kind: "ok", ans: total, ...f() });
-  } };
+  } },
+{ t: "双重递归", note: "和简洁写法一样：外层按前序把每个节点都当一次起点，内层从起点往下走，数和为 targetSum 的路径。每个起点都要把下面的子树走一遍，时间 O(n²)。", legend: [["b","起点（下面写的是从它出发找到几条）"],["e","从起点走过来的路径"],["a","当前节点"],["c","路径和正好等于 targetSum"]], build(a, snap) {
+      const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+      const T = a.target, badges = {}, starts = []; let total = 0;
+      const view = (start, path, cur, hit) => {
+        const cls = {};
+        for (const id in N) { const i = +id; cls[id] = i === cur ? (hit ? "c" : "a") : i === start ? "b" : path.includes(i) ? "e" : ""; }
+        return [{ t: "tree", nodes: N, root: 0, cls, on: path.slice(), badges: { ...badges } }];
+      };
+      const f = () => ({ facts: [["targetSum", T], ["找到", total]] });
+      if (!N[0]) { snap("完成", "树是空的，没有路径。", [{ t: "note", label: "树", html: "空" }], { kind: "ok", ans: 0, ...f() }); return; }
+      snap("开始", "外层递归按前序（根 → 左 → 右）把每个节点都当一次起点；内层从起点往下走，看路径和是不是 targetSum。", view(-1, [], -1, false), f());
+      const pre = (id) => { if (id === null || !N[id]) return; starts.push(id); pre(N[id].l); pre(N[id].r); };
+      pre(0);
+      for (const s of starts) {
+        let cnt = 0; const path = [];
+        badges[s] = "0 条";
+        const down = (id, sum) => {
+          if (id === null || !N[id]) return;
+          path.push(id); sum += N[id].v;
+          const hit = sum === T;
+          if (hit) { cnt++; total++; badges[s] = `${cnt} 条`; }
+          snap(`起点 ${N[s].v}`, (id === s ? `以 ${N[s].v} 为起点，路径和是 ${sum}。` : `从 ${N[s].v} 往下走到 ${N[id].v}，路径和是 ${sum}。`) + (hit ? `等于 ${T}，找到一条。` : ""), view(s, path, id, hit), hit ? { kind: "ok", ...f() } : f());
+          down(N[id].l, sum); down(N[id].r, sum);
+          path.pop();
+        };
+        down(s, 0);
+      }
+      snap("完成", `每个节点都当过一次起点，一共有 <b>${total}</b> 条路径的和等于 ${T}。`, view(-1, [], -1, false), { kind: "ok", ans: total, ...f() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -465,16 +498,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[10,5,-3,3,2,null,11,3,
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

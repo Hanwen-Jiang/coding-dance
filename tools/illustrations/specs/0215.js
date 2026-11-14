@@ -69,17 +69,20 @@ for _ in range(30):
     k = random.randint(1, len(a))
     assert s.findKthLargest(a[:], k) == sorted(a)[-k]
 `,
-  demoTitle: "快速选择演示",
+  demoTitle: "第 K 大演示",
+  method: "快速选择",
+  methodNote: "和标准解法一样做三路划分，每轮只往目标下标所在的那一段继续找。",
   legend: [["e", "这一轮的范围"], ["a", "刚处理的数"], ["g", "小于 pivot"], ["k", "等于 pivot"], ["w", "大于 pivot"], ["d", "已经扔掉"], ["c", "答案"]],
   presets: [
     { label: "示例 1", args: { nums: [3, 2, 1, 5, 6, 4], k: 2 }, note: "nums = [3,2,1,5,6,4], k = 2", expect: 5 },
     { label: "示例 2", args: { nums: [3, 2, 3, 1, 2, 4, 5, 5, 6], k: 4 }, note: "nums = [3,2,3,1,2,4,5,5,6], k = 4", expect: 4 },
-    { label: "小顶堆写法", args: { nums: [3, 2, 3, 1, 2, 4, 5, 5, 6], k: 4, heap: true }, note: "同一组数，换成大小为 k 的小顶堆：nums = [3,2,3,1,2,4,5,5,6], k = 4", expect: 4 },
   ],
-  build(a, snap) {
-    const nums = a.nums.slice(), n = nums.length, k = a.k;
-    if (a.heap) {
-      // 另一种常考写法：堆里始终留着目前最大的 k 个数，堆顶是其中最小的
+  alts: [{
+    t: "小顶堆",
+    note: "堆里始终留着目前见过的最大的 k 个数，堆顶是其中最小的。新来的数比堆顶大才有资格进去，把堆顶换掉。",
+    legend: [["a", "正在看的数"], ["d", "已经看过"], ["b", "堆顶：目前的第 k 大"], ["c", "答案"]],
+    build(a, snap) {
+      const nums = a.nums.slice(), n = nums.length, k = a.k;
       const heap = [];
       const up = (i) => { while (i > 0) { const p = (i - 1) >> 1; if (heap[p] <= heap[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
       const down = (i) => { for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < heap.length && heap[l] < heap[s]) s = l; if (r < heap.length && heap[r] < heap[s]) s = r; if (s === i) break; [heap[s], heap[i]] = [heap[i], heap[s]]; i = s; } };
@@ -96,8 +99,10 @@ for _ in range(30):
         else snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，跳过。`, view(j), f());
       });
       snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, true), { kind: "ok", ans: heap[0], ...f() });
-      return;
-    }
+    },
+  }],
+  build(a, snap) {
+    const nums = a.nums.slice(), n = nums.length, k = a.k;
     const target = n - k;
     let lo = 0, hi = n - 1, lt = 0, i = 0, gt = n - 1, pv = null, hl = -1, done = -1;
     const cls = (j) => (j === done ? "c" : j < lo || j > hi ? "d" : j === hl ? "a" : pv === null ? "e" : j < lt ? "g" : j < i ? "k" : j > gt ? "w" : "e");

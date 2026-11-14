@@ -49,6 +49,7 @@ assert s.isValidBST(T([5,4,6,None,None,3,7])) is False
 assert s.isValidBST(T([1,1])) is False
 assert s.isValidBST(T([2147483647])) is True
 `,
+  method: "递归传上下界",
   legend: [["a", "当前节点"], ["c", "在允许的范围内"], ["w", "超出范围"]],
   presets: [
     { label: "示例 1", args: { t: [2, 1, 3] }, note: "root = [2,1,3]", expect: true },
@@ -74,6 +75,39 @@ assert s.isValidBST(T([2147483647])) is True
     const ans = check(0, -Infinity, Infinity, " 是根节点");
     snap("完成", ans ? "所有节点都在各自的范围内，是合法的二叉搜索树。" : "有节点超出了祖先给它的范围，返回 false。", view(-1), { kind: ans ? "ok" : "warn", ans });
   },
+  alts: [{
+    t: "中序要严格递增",
+    note: "和「另一种写法」一样：二叉搜索树的中序遍历一定严格递增。按中序走一遍，每个节点都和前一个比，一旦不比前一个大就不是。",
+    legend: [["a", "中序刚轮到的节点"], ["c", "比前一个大"], ["w", "不比前一个大"]],
+    build(a, snap) {
+      const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+      const seq = [], st = {}, order = {}; let prev = -Infinity, bad = false;
+      const f = (x) => (x === -Infinity ? "−∞" : x);
+      const view = (cur) => {
+        const cls = {};
+        for (const id in N) cls[id] = +id === cur && st[id] !== "w" ? "a" : st[id] || "";
+        return [{ t: "tree", nodes: N, root: 0, cls, badges: { ...order } }, { t: "chips", label: "中序序列（必须严格递增）", items: seq.map((v, i) => ({ v, cls: bad && i === seq.length - 1 ? "w" : "c" })), empty: "还没有" }];
+      };
+      snap("开始", "按中序（左 → 自己 → 右）走一遍，每个节点都和前一个比较。prev 一开始是 −∞。", view(-1), { facts: [["prev", "−∞"]] });
+      const inorder = (id) => {
+        if (id === null || bad) return;
+        const nd = N[id];
+        inorder(nd.l);
+        if (bad) return;
+        seq.push(nd.v); order[id] = "第 " + seq.length;
+        if (nd.v <= prev) {
+          st[id] = "w"; bad = true;
+          snap("不是递增", `中序轮到 ${nd.v}，前一个是 ${prev}，${nd.v} 不比它大。中序不是严格递增，返回 false。`, view(id), { kind: "warn", facts: [["prev", f(prev)]] });
+          return;
+        }
+        const old = prev; prev = nd.v; st[id] = "c";
+        snap("比前一个大", `中序轮到 ${nd.v}，比前一个 ${f(old)} 大。prev 更新成 ${nd.v}。`, view(id), { facts: [["prev", prev]] });
+        inorder(nd.r);
+      };
+      inorder(0);
+      snap("完成", bad ? "中序序列不是严格递增的，不是二叉搜索树。" : `中序序列 [${seq.join(", ")}] 严格递增，是合法的二叉搜索树。`, view(-1), { kind: bad ? "warn" : "ok", ans: !bad, facts: [["prev", f(prev)]] });
+    },
+  }],
   points: [
     { t: "严格大于、严格小于", body: "二叉搜索树里不能有相等的值，所以范围是开区间，用 <code>&lt;</code> 而不是 <code>&lt;=</code>。" },
     { t: "初始范围用无穷", body: "节点值可以取到 32 位整数的最大最小值，所以上下界要用 <code>float('inf')</code>，不能用某个具体的大数。" },

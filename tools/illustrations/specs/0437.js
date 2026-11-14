@@ -43,6 +43,7 @@ assert s.pathSum(T([]), 0) == 0
 assert s.pathSum(T([1,2,3]), 3) == 2
 assert s.pathSum(T([0,1,1]), 1) == 4
 `,
+  method: "前缀和 + 哈希表",
   legend: [["e", "当前路径上的节点"], ["a", "当前节点"], ["c", "以它结尾有满足条件的路径"]],
   presets: [
     { label: "示例 1", args: { t: [10, 5, -3, 3, 2, null, 11, 3, -2, null, 1], target: 8 }, note: "root = [10,5,-3,3,2,null,11,3,-2,null,1], targetSum = 8", expect: 3 },
@@ -66,6 +67,40 @@ assert s.pathSum(T([0,1,1]), 1) == 4
     dfs(0, 0);
     snap("完成", `一共有 <b>${total}</b> 条路径的和等于 ${T}。`, view(-1), { kind: "ok", ans: total, ...f() });
   },
+  alts: [{
+    t: "双重递归",
+    note: "和简洁写法一样：外层按前序把每个节点都当一次起点，内层从起点往下走，数和为 targetSum 的路径。每个起点都要把下面的子树走一遍，时间 O(n²)。",
+    legend: [["b", "起点（下面写的是从它出发找到几条）"], ["e", "从起点走过来的路径"], ["a", "当前节点"], ["c", "路径和正好等于 targetSum"]],
+    build(a, snap) {
+      const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+      const T = a.target, badges = {}, starts = []; let total = 0;
+      const view = (start, path, cur, hit) => {
+        const cls = {};
+        for (const id in N) { const i = +id; cls[id] = i === cur ? (hit ? "c" : "a") : i === start ? "b" : path.includes(i) ? "e" : ""; }
+        return [{ t: "tree", nodes: N, root: 0, cls, on: path.slice(), badges: { ...badges } }];
+      };
+      const f = () => ({ facts: [["targetSum", T], ["找到", total]] });
+      if (!N[0]) { snap("完成", "树是空的，没有路径。", [{ t: "note", label: "树", html: "空" }], { kind: "ok", ans: 0, ...f() }); return; }
+      snap("开始", "外层递归按前序（根 → 左 → 右）把每个节点都当一次起点；内层从起点往下走，看路径和是不是 targetSum。", view(-1, [], -1, false), f());
+      const pre = (id) => { if (id === null || !N[id]) return; starts.push(id); pre(N[id].l); pre(N[id].r); };
+      pre(0);
+      for (const s of starts) {
+        let cnt = 0; const path = [];
+        badges[s] = "0 条";
+        const down = (id, sum) => {
+          if (id === null || !N[id]) return;
+          path.push(id); sum += N[id].v;
+          const hit = sum === T;
+          if (hit) { cnt++; total++; badges[s] = `${cnt} 条`; }
+          snap(`起点 ${N[s].v}`, (id === s ? `以 ${N[s].v} 为起点，路径和是 ${sum}。` : `从 ${N[s].v} 往下走到 ${N[id].v}，路径和是 ${sum}。`) + (hit ? `等于 ${T}，找到一条。` : ""), view(s, path, id, hit), hit ? { kind: "ok", ...f() } : f());
+          down(N[id].l, sum); down(N[id].r, sum);
+          path.pop();
+        };
+        down(s, 0);
+      }
+      snap("完成", `每个节点都当过一次起点，一共有 <b>${total}</b> 条路径的和等于 ${T}。`, view(-1, [], -1, false), { kind: "ok", ans: total, ...f() });
+    },
+  }],
   points: [
     { t: "先查再加", body: "先查 <code>cnt[cur - target]</code> 再把 <code>cur</code> 加进去，否则 target = 0 时会把空路径算进去。" },
     { t: "回溯撤销", body: "从一个节点返回时 <code>cnt[cur] -= 1</code>，哈希表里只保留当前这条根到节点路径上的前缀和。" },

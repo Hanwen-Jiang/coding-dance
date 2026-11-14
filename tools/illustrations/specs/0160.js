@@ -40,6 +40,7 @@ for xa, xb, cm in [([4,1],[5,6,1],[8,4,5]), ([1,9,1],[3],[2,4]), ([2,6,4],[1,5],
     A, B, c = mk(xa, xb, cm)
     assert s.getIntersectionNode(A, B) is c
 `,
+  method: "双指针换路",
   legend: [["a", "pa"], ["b", "pb"], ["g", "公共部分"], ["c", "相遇的交点"]],
   presets: [
     { label: "示例 1", args: { xa: [4, 1], xb: [5, 6, 1], cm: [8, 4, 5] }, note: "A = [4,1,8,4,5], B = [5,6,1,8,4,5]，从 8 开始相交", expect: 8 },
@@ -68,6 +69,37 @@ for xa, xb, cm in [([4,1],[5,6,1],[8,4,5]), ([1,9,1],[3],[2,4]), ([2,6,4],[1,5],
     if (pa === null) snap("没有交点", "两个指针同时走到了空。它们走过的总长度相同，却一直没碰到同一个节点，说明两个链表不相交。", view(), { kind: "warn", ans: null, facts: facts() });
     else snap("相遇", `pa 和 pb 同时到了 <b>${cm[pa[1]]}</b>。两个指针都走了「A 独有 + B 独有 + 若干公共」这么长，这里就是交点。`, view(), { kind: "ok", ans: cm[pa[1]], facts: facts() });
   },
+  alts: [{
+    t: "集合",
+    note: "和简洁写法一样：先把 A 上的节点全部放进集合，再从 B 的头往后走，第一个已经在集合里的节点就是交点。要 O(m) 额外空间。",
+    legend: [["a", "当前节点"], ["e", "在集合里（A 上的节点）"], ["c", "交点"]],
+    build(a, snap) {
+      const { xa, xb, cm } = a, seenA = new Set(), seenC = new Set();
+      let cur = null, name = "headA", hit = null;
+      const row = (label, arr, w) => ({ t: "list", label, nodes: arr.length ? arr.map((v, i) => ({ v, cls: hit !== null && w === "C" && i === hit ? "c" : cur && cur[0] === w && cur[1] === i ? "a" : (w === "A" && seenA.has(i)) || (w === "C" && seenC.has(i)) ? "e" : "" })) : [{ v: "无", cls: "d" }], showNil: w === "C" || !cm.length, ptrs: { [name]: cur && cur[0] === w ? cur[1] : null } });
+      const view = () => [row("A 独有的部分（后面接公共部分）", xa, "A"), row("B 独有的部分（后面接公共部分）", xb, "B"), row("公共部分", cm, "C")];
+      const f = () => ({ facts: [["集合大小", seenA.size + seenC.size]] });
+      snap("开始", "第一步：从 A 的头走到尾，把每个节点都放进集合。比较的是节点本身，不是值。", view(), f());
+      const pathA = [...xa.map((_, i) => ["A", i]), ...cm.map((_, i) => ["C", i])];
+      for (const p of pathA) {
+        cur = p; (p[0] === "A" ? seenA : seenC).add(p[1]);
+        snap("放进集合", `A 上的节点 ${p[0] === "A" ? xa[p[1]] : cm[p[1]]} 放进集合。`, view(), f());
+      }
+      cur = null; name = "headB";
+      snap("换到 B", "A 走完了。第二步：从 B 的头往后走，看每个节点在不在集合里。", view(), f());
+      for (let i = 0; i < xb.length; i++) {
+        cur = ["B", i];
+        snap("不在集合里", `B 上的节点 ${xb[i]} 不在集合里，不是 A 上的节点，继续往后走。`, view(), f());
+      }
+      if (!cm.length) {
+        cur = null;
+        snap("没有交点", "B 走到了空，一直没碰到 A 上的节点，两个链表不相交。", view(), { kind: "warn", ans: null, ...f() });
+        return;
+      }
+      cur = ["C", 0]; hit = 0;
+      snap("找到交点", `节点 <b>${cm[0]}</b> 已经在集合里了：它同时在 A 和 B 上，是 B 碰到的第一个这样的节点，就是交点。`, view(), { kind: "ok", ans: cm[0], ...f() });
+    },
+  }],
   points: [
     { t: "比较的是节点", body: "用 <code>is</code> 判断是不是同一个节点。值相同不代表是同一个节点。" },
     { t: "走到空再换", body: "条件是 <code>if pa</code> 而不是 <code>if pa.next</code>。这样不相交时两个指针会同时为空，循环能正常结束。" },

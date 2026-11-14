@@ -46,6 +46,7 @@ for _ in range(30):
     a = [random.randint(0, 2) for _ in range(random.randint(1, 15))]
     assert f(a[:]) == sorted(a)
 `,
+  method: "三指针交换",
   legend: [["e", "确定是 0"], ["g", "确定是 1"], ["w", "确定是 2"], ["a", "nums[i]"]],
   presets: [
     { label: "示例 1", args: { nums: [2, 0, 2, 1, 1, 0] }, note: "nums = [2,0,2,1,1,0]", expect: [0, 0, 1, 1, 2, 2] },
@@ -63,6 +64,26 @@ for _ in range(30):
     }
     snap("完成", `i 超过了 hi，中间没有没看过的数了。结果 [${nums.join(",")}]。`, view(), { kind: "ok", ans: nums.slice() });
   },
+  alts: [{
+    t: "先写 2 再覆盖",
+    note: "和简洁写法一样：读到一个数，先把这一格写成 2；是 0 或 1，就在 p1 处写 1，1 的区域往后扩；是 0，再在 p0 处写 0。后写的覆盖先写的。",
+    legend: [["e", "0"], ["g", "1"], ["w", "2"], ["a", "这一步写过的格子"]],
+    build(a, snap) {
+      const nums = a.nums.slice(), n = nums.length; let p0 = 0, p1 = 0;
+      const col = { 0: "e", 1: "g", 2: "w" };
+      const view = (i, wr) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: wr.has(k) ? "a" : k <= i ? col[v] : "" })), ptrs: { p0, p1, i: i >= 0 && i < n ? i : null } }];
+      const f = () => ({ facts: [["0 的个数", p0], ["1 的个数", p1 - p0]] });
+      snap("开始", "p0 是下一个 0 该写的位置，p1 是下一个 1 该写的位置。i 左边已经排好：[0, p0) 是 0，[p0, p1) 是 1，[p1, i) 是 2。", view(-1, new Set()), f());
+      for (let i = 0; i < n; i++) {
+        const x = nums[i], wr = new Set([i]), ops = [`nums[${i}] 写成 2`];
+        nums[i] = 2;
+        if (x < 2) { nums[p1] = 1; wr.add(p1); ops.push(`nums[${p1}] 写成 1，p1 前进`); p1++; }
+        if (x === 0) { nums[p0] = 0; wr.add(p0); ops.push(`nums[${p0}] 写成 0，p0 前进`); p0++; }
+        snap(`读到 ${x}`, `nums[${i}] 原来是 ${x}。${ops.join("；")}。`, view(i, wr), f());
+      }
+      snap("完成", `全部读完，结果 [${nums.join(",")}]。`, view(n, new Set()), { kind: "ok", ans: nums.slice(), ...f() });
+    },
+  }],
   points: [
     { t: "换 2 时 i 不前进", body: "从右边换过来的数可能是 0、1、2 中任意一个，必须再判断一次。" },
     { t: "循环条件是 i <= hi", body: "hi 指向的位置还没看过，要包含在内。" },

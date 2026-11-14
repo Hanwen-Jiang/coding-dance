@@ -36,6 +36,7 @@ assert s.coinChange([1], 0) == 0
 assert s.coinChange([1,3,4], 6) == 2
 assert s.coinChange([186,419,83,408], 6249) == 20
 `,
+  method: "按金额递推",
   legend: [["a", "正在算的金额"], ["e", "候选 dp[i − c]"], ["c", "取到最小的那个"]],
   presets: [
     { label: "示例 1", args: { coins: [1, 2, 5], amount: 11 }, note: "coins = [1,2,5], amount = 11", expect: 3 },
@@ -56,6 +57,32 @@ assert s.coinChange([186,419,83,408], 6249) == 20
     const ans = dp[amount] === Infinity ? -1 : dp[amount];
     snap("完成", ans < 0 ? `dp[${amount}] 是 ∞，凑不出来，返回 <b>-1</b>。` : `凑出 ${amount} 最少要 <b>${ans}</b> 枚硬币。`, view(-1, [], -1, true), { kind: ans < 0 ? "warn" : "ok", ans });
   },
+  alts: [{
+    t: "完全背包",
+    note: "和简洁写法一样：外层一种一种地加入硬币，内层金额从小到大更新。正序更新时 dp[i − c] 可能刚用过面值 c，所以同一种硬币可以用很多枚。",
+    legend: [["a", "正在算的金额 / 这一轮的面值"], ["e", "dp[i − c]"], ["c", "变少了，更新"]],
+    build(a, snap) {
+      const { coins, amount } = a, dp = Array(amount + 1).fill(Infinity); dp[0] = 0;
+      const show = (v) => (v === Infinity ? "∞" : v);
+      const view = (i, from, c, upd) => [
+        { t: "array", label: "coins", items: coins.map((x) => ({ v: x, cls: x === c ? "a" : "" })), idx: false },
+        { t: "array", label: "dp[i]：凑出 i 最少几枚", items: dp.map((v, k) => ({ v: show(v), cls: k === i ? (upd ? "c" : "a") : k === from ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
+      ];
+      snap("开始", "dp[0] = 0，其他金额先设成 ∞。", view(-1, -1, null, false));
+      for (const c of coins) {
+        const touched = new Set();
+        snap(`加入面值 ${c}`, `现在允许用面值 ${c}，从金额 ${c} 开始往上更新。`, view(-1, -1, c, false));
+        for (let i = c; i <= amount; i++) {
+          const cand = dp[i - c] + 1, old = dp[i], upd = cand < old;
+          if (upd) { dp[i] = cand; touched.add(i); }
+          const reuse = touched.has(i - c) ? `（dp[${i - c}] 这一轮刚用 ${c} 更新过，相当于 ${c} 又用了一枚）` : "";
+          snap(`面值 ${c}`, `金额 ${i}：最后一枚用 ${c}，要 dp[${i - c}] + 1 = ${show(cand)}${reuse}。` + (upd ? `比原来的 ${show(old)} 少，dp[${i}] 更新成 <b>${cand}</b>。` : `不比原来的 ${show(old)} 少，不变。`), view(i, i - c, c, upd));
+        }
+      }
+      const ans = dp[amount] === Infinity ? -1 : dp[amount];
+      snap("完成", ans < 0 ? `dp[${amount}] 还是 ∞，凑不出来，返回 <b>-1</b>。` : `凑出 ${amount} 最少要 <b>${ans}</b> 枚硬币。`, view(amount, -1, null, true), { kind: ans < 0 ? "warn" : "ok", ans });
+    },
+  }],
   points: [
     { t: "初始化成无穷大", body: "不能初始化成 0 或 -1，否则取 min 时会出错。凑不出来的金额一直保持 inf。" },
     { t: "两层循环可以交换", body: "求最少枚数时，先枚举金额还是先枚举硬币都对。求组合数（第 518 题）时顺序就有讲究了。" },

@@ -219,6 +219,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -237,7 +239,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>slow</span><span><i class="sw b"></i>fast</span><span><i class="sw c"></i>相遇</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>slow</span><span><i class="sw b"></i>fast</span><span><i class="sw c"></i>相遇</span></div>
       </div>
     </div>
   </section>
@@ -318,7 +320,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[3,2,0,-4],"pos":1},"no
 })(); const r = ((R) => {
     const v = R.arr(R.int(2, 7), -5, 9), pos = R.chance(0.6) ? R.int(0, v.length - 1) : -1;
     return { args: { v, pos }, note: `head = ${R.fmt(v)}, pos = ${pos}`, py: `Solution().hasCycle(__cyc(${R.py(v)}, ${pos}))` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "快慢指针", note: null, legend: [["a","slow"],["b","fast"],["c","相遇"]], build(a, snap) {
     const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null));
     let slow = 0, fast = 0;
     const view = (met) => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: met && i === slow ? "c" : i === slow ? "a" : i === fast ? "b" : "" })), next, ptrs: { slow, fast } }];
@@ -329,7 +332,24 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[3,2,0,-4],"pos":1},"no
       snap("各走一步", `slow 走一步到 ${v[slow]}，fast 走两步${fast === null ? "，走出了链表" : "到 " + v[fast]}。`, view(false));
     }
     snap("没有环", "fast 或者它的下一个节点是空，说明链表有尽头，没有环。", view(false), { kind: "warn", ans: false });
-  } };
+  } },
+{ t: "集合", note: "和简洁写法一样：把走过的节点放进集合，同一个节点第二次出现就说明有环。好懂，但要 O(n) 额外空间。", legend: [["a","当前节点"],["e","已经在 seen 里"],["c","第二次走到的节点"]], build(a, snap) {
+      const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null)), seen = [];
+      let h = n ? 0 : null;
+      const view = (hit) => [
+        { t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === hit ? "c" : i === h ? "a" : seen.includes(i) ? "e" : "" })), next, ptrs: { head: h } },
+        { t: "chips", label: "seen（存的是节点本身，这里写成 值#下标）", items: seen.map((i) => `${v[i]}#${i}`), empty: "空" },
+      ];
+      snap("开始", "从头节点出发，把走过的每个节点都放进集合 seen。", view(-1), { facts: [["seen 大小", 0]] });
+      while (h !== null && !seen.includes(h)) {
+        seen.push(h);
+        const cur = h; h = next[h];
+        snap("记下", `${v[cur]}#${cur} 第一次走到，放进 seen，再走到${h === null ? "空" : ` ${v[h]}#${h}`}。`, view(-1), { facts: [["seen 大小", seen.length]] });
+      }
+      if (h === null) snap("没有环", "走到了空，链表有尽头，没有环。", view(-1), { kind: "warn", ans: false, facts: [["seen 大小", seen.length]] });
+      else snap("有环", `${v[h]}#${h} 已经在 seen 里了：同一个节点第二次走到，说明有环。`, view(h), { kind: "ok", ans: true, facts: [["seen 大小", seen.length]] });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -451,16 +471,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[3,2,0,-4],"pos":1},"no
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

@@ -39,6 +39,7 @@ assert s.dailyTemperatures([30,60,90]) == [1,1,0]
 assert s.dailyTemperatures([90,80,70]) == [0,0,0]
 assert s.dailyTemperatures([70,70,71]) == [2,1,0]
 `,
+  method: "单调栈",
   legend: [["e", "在栈里等待"], ["a", "今天"], ["c", "刚等到答案"]],
   presets: [
     { label: "示例 1", args: { t: [73, 74, 75, 71, 69, 72, 76, 73] }, note: "temperatures = [73,74,75,71,69,72,76,73]", expect: [1, 1, 4, 2, 1, 1, 0, 0] },
@@ -63,6 +64,32 @@ assert s.dailyTemperatures([70,70,71]) == [2,1,0]
     stack.forEach((k) => (ans[k] = 0));
     snap("完成", "栈里剩下的日子到最后也没等到更高温度，答案填 0。", view(-1, -1), { kind: "ok", ans: ans.slice() });
   },
+  alts: [{
+    t: "从右往左跳",
+    note: "和简洁写法一样，不用栈：从右往左填 answer。比较第 i 天和第 j 天，第 j 天不够热时，answer[j] 直接告诉我们下一个比第 j 天热的日子，跳过去接着比。",
+    legend: [["a", "第 i 天"], ["e", "正在比较的第 j 天"], ["c", "找到更热的那天"]],
+    build(a, snap) {
+      const T = a.t, n = T.length, ans = Array(n).fill(0), filled = new Set([n - 1]);
+      const view = (i, j, hit) => [
+        { t: "bars", label: "temperatures", items: T.map((v, k) => ({ v, cls: k === i ? "a" : k === hit ? "c" : k === j ? "e" : "" })), ptrs: { i: i >= 0 ? i : null, j: j >= 0 ? j : null } },
+        { t: "array", label: "answer（从右往左填）", items: ans.map((v, k) => ({ v: filled.has(k) ? v : "", cls: k === i && hit >= 0 ? "c" : "" })) },
+      ];
+      snap("开始", `从右往左算。最后一天后面没有日子了，answer[${n - 1}] = 0。`, view(-1, -1, -1));
+      for (let i = n - 2; i >= 0; i--) {
+        let j = i + 1;
+        snap("看第 i 天", `第 ${i} 天 ${T[i]}°，先和第二天比：第 ${j} 天 ${T[j]}°。`, view(i, j, -1));
+        while (T[j] <= T[i] && ans[j]) {
+          const nj = j + ans[j];
+          snap("跳", `第 ${j} 天 ${T[j]}° 不比 ${T[i]}° 热。answer[${j}] = ${ans[j]}：第 ${j} 天之后第一个比它热的是第 ${nj} 天，中间的日子都不比第 ${j} 天热，更比不过 ${T[i]}°。直接跳到第 ${nj} 天（${T[nj]}°）。`, view(i, nj, -1));
+          j = nj;
+        }
+        filled.add(i);
+        if (T[j] > T[i]) { ans[i] = j - i; snap("找到", `第 ${j} 天 ${T[j]}° 比 ${T[i]}° 热，answer[${i}] = ${j} − ${i} = <b>${j - i}</b>。`, view(i, j, j)); }
+        else snap("等不到", `第 ${j} 天 ${T[j]}° 不比 ${T[i]}° 热，而且 answer[${j}] = 0，它后面再没有更热的日子。answer[${i}] = 0。`, view(i, j, -1), { kind: "warn" });
+      }
+      snap("完成", `answer 填完了：[${ans.join(",")}]。`, view(-1, -1, -1), { kind: "ok", ans: ans.slice() });
+    },
+  }],
   points: [
     { t: "栈里存下标", body: "要算相隔几天，所以存下标，温度用下标去取。" },
     { t: "严格大于才弹出", body: "相同温度不算升温，<code>&lt;</code> 不能写成 <code>&lt;=</code>。" },

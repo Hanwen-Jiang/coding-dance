@@ -46,6 +46,8 @@ assert norm(s.combinationSum([2,3,5], 8)) == [[2,2,2,2],[2,3,3],[3,5]]
 assert s.combinationSum([2], 1) == []
 assert norm(s.combinationSum([7,3,2], 18)) == norm(s.combinationSum([2,3,7], 18))
 `,
+  method: "回溯 + 剪枝",
+  cmp: "unordered",
   legend: [["a", "这一步选的数"], ["e", "这一层可以选的范围"], ["w", "太大，剪掉"], ["c", "凑够了"]],
   presets: [
     { label: "示例 1", args: { c: [2, 3, 6, 7], target: 7 }, note: "candidates = [2,3,6,7], target = 7", expect: [[2, 2, 3], [7]] },
@@ -72,6 +74,39 @@ assert norm(s.combinationSum([7,3,2], 18)) == norm(s.combinationSum([2,3,7], 18)
     dfs(0, target);
     snap("完成", `一共找到 ${res.length} 个组合：${res.map((r) => `[${r.join(",")}]`).join("、")}。`, view(-1, -1), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["组合数", res.length]] });
   },
+  alts: [{
+    t: "选或不选",
+    note: "和简洁写法一样：对第 i 个数只有两种决定：再选一次它（i 不动），或者以后都不选它（i + 1）。两条分支返回的组合拼起来就是答案。",
+    legend: [["a", "选它"], ["b", "不选它了"], ["w", "超过 target"], ["d", "已经决定不选的数"]],
+    build(a, snap) {
+      const c = a.c, target = a.target, path = [], found = [];
+      const view = (i, cls) => [
+        { t: "array", label: "candidates", items: c.map((v, k) => ({ v, cls: k === i ? cls : k < i ? "d" : "" })), ptrs: { i: i >= 0 && i < c.length ? i : null } },
+        { t: "chips", label: "这条分支上选了的数", items: path.slice(), empty: "空" },
+        { t: "chips", label: "找到的组合", items: found.map((r) => `[${r.join(",")}]`), empty: "还没有" },
+      ];
+      const f = (r) => ({ facts: [["还差", r]] });
+      const dfs = (i, remain) => {
+        if (remain === 0) {
+          found.push(path.slice());
+          snap("凑够了", `还差 0：这条分支选的 [${path.join(",")}] 正好凑出 ${target}。返回 [[]]，回去的路上每一层把自己选的数加在前面。`, view(-1, ""), { kind: "ok", ...f(0) });
+          return [[]];
+        }
+        if (remain < 0) { snap("超了", `还差 ${remain}，已经超过 target 了，这条分支返回空。`, view(i, "w"), { kind: "warn", ...f(remain) }); return []; }
+        if (i === c.length) { snap("没得选了", `所有数都决定过了，还差 ${remain}，这条分支返回空。`, view(i, ""), { kind: "warn", ...f(remain) }); return []; }
+        const x = c[i];
+        path.push(x);
+        snap("选", `考虑 ${x}，还差 ${remain}。先走「再选一次 ${x}」：还差 ${remain - x}，下一层还停在 ${x}。`, view(i, "a"), f(remain - x));
+        const A = dfs(i, remain - x).map((r) => [x, ...r]);
+        path.pop();
+        snap("不选", `「选 ${x}」这条分支走完了。再走「以后都不选 ${x}」：还差 ${remain}，看下一个数。`, view(i, "b"), f(remain));
+        return A.concat(dfs(i + 1, remain));
+      };
+      snap("开始", `从 [${c.join(",")}] 里选数凑出 ${target}。每一层只对一个数做决定。`, view(-1, ""), f(target));
+      const res = dfs(0, target);
+      snap("完成", `两种决定都试完了，一共 ${res.length} 个组合${res.length ? "：" + res.map((r) => `[${r.join(",")}]`).join("、") : ""}。`, view(-1, ""), { kind: "ok", ans: res, facts: [["组合数", res.length]] });
+    },
+  }],
   points: [
     { t: "递归传 i 而不是 i + 1", body: "传 i 表示当前数还能再选；如果每个数只能用一次（第 40 题），就传 i + 1。" },
     { t: "收集时要拷贝", body: "<code>res.append(path[:])</code>。直接放 path 的话，回溯会把它改掉。" },

@@ -35,6 +35,7 @@ assert s.lengthOfLIS([7,7,7,7,7,7,7]) == 1
 assert s.lengthOfLIS([1]) == 1
 assert s.lengthOfLIS([4,10,4,3,8,9]) == 3
 `,
+  method: "动态规划 O(n²)",
   legend: [["a", "正在算的 nums[i]"], ["e", "比它小、可以接的"], ["c", "接上后最长的那个"]],
   presets: [
     { label: "示例 1", args: { nums: [10, 9, 2, 5, 3, 7, 101, 18] }, note: "nums = [10,9,2,5,3,7,101,18]", expect: 4 },
@@ -56,6 +57,35 @@ assert s.lengthOfLIS([4,10,4,3,8,9]) == 3
     const ans = Math.max(...dp);
     snap("完成", `答案是 dp 里的最大值 <b>${ans}</b>，不一定是最后一个。`, view(-1, [], -1), { kind: "ok", ans, facts: [["目前最长", ans]] });
   },
+  alts: [{
+    t: "贪心 + 二分",
+    note: "和简洁写法一样：tails[k] 记「长度为 k+1 的递增子序列，结尾最小可以是多少」。新数比所有结尾都大就接在最后；否则用二分找到第一个 ≥ 它的结尾，换成它。",
+    legend: [["a", "当前的数"], ["c", "接在最后，长度 +1"], ["w", "换成更小的结尾"]],
+    build(a, snap) {
+      const nums = a.nums, n = nums.length, tails = [];
+      const view = (i, k, mode) => [
+        { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === i ? "a" : t < i ? "d" : "" })), ptrs: { i: i >= 0 && i < n ? i : null } },
+        tails.length
+          ? { t: "array", label: "tails[k]：长度为 k+1 的递增子序列的最小结尾", items: tails.map((v, t) => ({ v, cls: t === k ? (mode === "add" ? "c" : "w") : "" })) }
+          : { t: "note", label: "tails", html: "空" },
+      ];
+      const f = () => ({ facts: [["最长", tails.length]] });
+      snap("开始", "tails 一开始是空的。它始终是递增的，所以可以二分。", view(-1, -1), f());
+      for (let i = 0; i < n; i++) {
+        const x = nums[i];
+        let lo = 0, hi = tails.length;
+        while (lo < hi) { const mid = (lo + hi) >> 1; if (tails[mid] < x) lo = mid + 1; else hi = mid; }
+        if (lo === tails.length) {
+          tails.push(x);
+          snap("接到最后", `${x} 比 tails 里所有结尾都大，接在最长的那个后面。现在最长是 <b>${tails.length}</b>。`, view(i, lo, "add"), f());
+        } else {
+          const old = tails[lo]; tails[lo] = x;
+          snap("替换", `二分找到第一个 ≥ ${x} 的位置 k = ${lo}（原来是 ${old}）。长度为 ${lo + 1} 的递增子序列，结尾可以从 ${old} 换成更小的 ${x}，后面更容易接上新数。`, view(i, lo, "rep"), f());
+        }
+      }
+      snap("完成", `答案是 tails 的长度 <b>${tails.length}</b>。注意 tails 本身不一定是一个真正的递增子序列，只有长度是对的。`, view(n, -1), { kind: "ok", ans: tails.length, ...f() });
+    },
+  }],
   points: [
     { t: "严格递增", body: "判断条件是 <code>nums[j] &lt; nums[i]</code>，相等不能接。二分写法对应用 bisect_left。" },
     { t: "答案是 max(dp)", body: "最长的子序列可能在中间结束，比如 [1,2,0]。" },

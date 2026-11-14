@@ -214,6 +214,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -232,7 +234,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw a"></i>正在交换的一对</span><span><i class="sw e"></i>主对角线</span><span><i class="sw k"></i>已翻转的行</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在交换的一对</span><span><i class="sw e"></i>主对角线</span><span><i class="sw k"></i>已翻转的行</span></div>
       </div>
     </div>
   </section>
@@ -313,7 +315,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
 })(); const r = ((R) => {
     const n = R.int(2, 4), m = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => i * n + j + 1));
     return { args: { m }, note: `matrix = ${R.fmt(m)}`, py: `__inplace(Solution().rotate, ${R.py(m)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "转置 + 每行翻转", note: null, legend: [["a","正在交换的一对"],["e","主对角线"],["k","已翻转的行"]], build(a, snap) {
     const M = a.m.map((r) => r.slice()), n = M.length; let rowsDone = 0, phase = 1;
     const view = (p, q) => [{ t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: (p && p[0] === i && p[1] === j) || (q && q[0] === i && q[1] === j) ? "a" : i < rowsDone ? "k" : phase === 1 && i === j ? "e" : "" }))) }];
     snap("开始", "第一步：沿主对角线（左上到右下）翻转。对角线上的数不动。", view());
@@ -328,7 +331,19 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
       snap("翻转每一行", `第 ${i} 行左右翻转，变成 [${M[i].join(", ")}]。`, view());
     }
     snap("完成", "两步做完，矩阵顺时针旋转了 90 度。", view(), { kind: "ok", ans: M });
-  } };
+  } },
+{ t: "上下翻转 + zip", note: "和简洁写法一样：先上下翻转（matrix[::-1]），再用 zip(*rows) 转置。zip 每次从每一行各取一个数，凑成新的一行。", legend: [["a","zip 这一次取的一列"],["c","得到的新一行"]], build(a, snap) {
+      const M = a.m.map((r) => r.slice()), n = M.length, F = M.slice().reverse(), out = [];
+      const grid = (label, rows, hl) => ({ t: "grid", label, rows: rows.map((r, i) => r.map((v, j) => ({ v, cls: hl(i, j) }))) });
+      snap("开始", "顺时针转 90° 等于：先上下翻转，再沿主对角线转置。", [grid("matrix", M, () => "")]);
+      snap("上下翻转", `matrix[::-1]：行的顺序倒过来，原来的最后一行 [${F[0].join(", ")}] 成了第一行。`, [grid("matrix[::-1]", F, () => "")]);
+      for (let j = 0; j < n; j++) {
+        out.push(F.map((r) => r[j]));
+        snap("zip 出一行", `zip 从翻转后的每一行各取第 ${j} 个数，得到 [${out[j].join(", ")}]，作为结果的第 ${j} 行。`, [grid("matrix[::-1]", F, (i, jj) => (jj === j ? "a" : "")), grid("结果", out, (i) => (i === j ? "c" : ""))]);
+      }
+      snap("完成", "matrix[:] = … 把结果写回原来的列表对象，矩阵顺时针旋转了 90°。", [grid("matrix", out, () => "")], { kind: "ok", ans: out });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -450,16 +465,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });

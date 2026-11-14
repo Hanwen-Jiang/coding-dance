@@ -40,6 +40,7 @@ assert toL(s.removeNthFromEnd(L([1]), 1)) == []
 assert toL(s.removeNthFromEnd(L([1,2]), 1)) == [1]
 assert toL(s.removeNthFromEnd(L([1,2]), 2)) == [2]
 `,
+  method: "快慢指针",
   legend: [["a", "slow"], ["b", "fast"], ["w", "要删除的节点"], ["d", "哑节点 / 已删除"]],
   presets: [
     { label: "示例 1", args: { v: [1, 2, 3, 4, 5], n: 2 }, note: "head = [1,2,3,4,5], n = 2", expect: [1, 2, 3, 5] },
@@ -60,6 +61,35 @@ assert toL(s.removeNthFromEnd(L([1,2]), 2)) == [2]
     const ans = a.v.filter((_, i) => i + 1 !== del);
     snap("完成", `返回 dummy.next，结果是 [${ans.join(", ")}]。`, view(), { kind: "ok", ans });
   },
+  alts: [{
+    t: "递归数位置",
+    note: "和简洁写法一样：递归一路走到空，返回时从尾往头数，返回值就是「倒数第几个」。数到 n + 1 的那个节点，删掉它后面那个。",
+    legend: [["a", "正在执行的这一层"], ["e", "在调用栈上，还没返回"], ["d", "哑节点 / 已删除"]],
+    build(a, snap) {
+      const v = ["D", ...a.v], len = v.length, n = a.n, next = v.map((_, i) => (i + 1 < len ? i + 1 : null));
+      const k = {}, calls = []; let del = -1;
+      const view = (cur) => [
+        { t: "list", label: "链表（D 是哑节点；下面写的是倒数第几个）", nodes: v.map((x, i) => ({ v: x, cls: i === del ? "d" : i === cur ? "a" : calls.includes(i) ? "e" : i === 0 ? "d" : "" })), next: next.slice(), ptrs: Object.fromEntries(Object.entries(k).map(([i, x]) => [`k=${x}`, +i])) },
+        { t: "chips", label: "递归调用栈（右边是最里层）", items: calls.map((i) => ({ v: `rec(${v[i]})`, cls: i === cur ? "a" : "e" })), empty: "空" },
+      ];
+      snap("开始", `从哑节点 D 开始递归。要删的是倒数第 ${n} 个，所以要找倒数第 ${n + 1} 个，也就是它前面那个节点。`, view(-1));
+      for (let i = 0; i < len; i++) {
+        calls.push(i);
+        snap("往下递归", `调用 rec(${v[i]})。它要先等 rec(${i + 1 < len ? v[i + 1] : "空"}) 返回，才知道自己是倒数第几个。`, view(i));
+      }
+      snap("到底", "rec(空) 直接返回 0：空节点后面没有节点。开始往回返回。", view(-1));
+      for (let i = len - 1; i >= 0; i--) {
+        k[i] = len - i;
+        if (k[i] === n + 1) {
+          del = i + 1; next[i] = del + 1 < len ? del + 1 : null;
+          snap("删除", `rec(${v[i]}) 得到 ${k[i] - 1} + 1 = <b>${k[i]}</b>，正好是 n + 1：${v[i]} 是要删节点的前一个。把 ${v[i]}.next 改成指向${next[i] === null ? "空" : " " + v[next[i]]}，倒数第 ${n} 个 ${v[del]} 被删掉。`, view(i), { kind: "warn" });
+        } else snap("返回", `rec(${v[i]}) 拿到后面返回的 ${k[i] - 1}，加 1 得 ${k[i]}：${i === 0 ? "哑节点 D 也算一个" : `${v[i]} 是倒数第 ${k[i]} 个`}。`, view(i));
+        calls.pop();
+      }
+      const ans = a.v.filter((_, i) => i + 1 !== del);
+      snap("完成", `递归全部返回。dummy.next 开始的链表就是结果：[${ans.join(", ")}]。`, view(-1), { kind: "ok", ans });
+    },
+  }],
   points: [
     { t: "slow 从 dummy 出发", body: "这样 slow 最后停在要删节点的<strong>前一个</strong>，才能改指针。" },
     { t: "循环条件是 fast.next", body: "让 fast 停在最后一个节点，而不是走到空，否则 slow 会多走一步。" },

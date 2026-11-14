@@ -225,6 +225,8 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
         <div class="views" id="views"></div>
@@ -243,7 +245,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend"><span><i class="sw e"></i>在栈里等待</span><span><i class="sw a"></i>今天</span><span><i class="sw c"></i>刚等到答案</span></div>
+        <div class="legend" id="legend"><span><i class="sw e"></i>在栈里等待</span><span><i class="sw a"></i>今天</span><span><i class="sw c"></i>刚等到答案</span></div>
       </div>
     </div>
   </section>
@@ -324,7 +326,8 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[73,74,75,71,69,72,76,7
 })(); const r = ((R) => {
     const t = R.arr(R.int(5, 8), 60, 80);
     return { args: { t }, note: `temperatures = ${R.fmt(t)}`, py: `Solution().dailyTemperatures(${R.py(t)})` };
-  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+  })(R); return { args: r.args, note: r.note }; }, methods: [
+{ t: "单调栈", note: null, legend: [["e","在栈里等待"],["a","今天"],["c","刚等到答案"]], build(a, snap) {
     const T = a.t, n = T.length, ans = Array(n).fill(null), stack = [];
     const view = (i, hit) => [
       { t: "bars", label: "temperatures", items: T.map((v, k) => ({ v, cls: k === i ? "a" : k === hit ? "c" : stack.includes(k) ? "e" : "" })), ptrs: { 今天: i >= 0 ? i : null } },
@@ -342,7 +345,29 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[73,74,75,71,69,72,76,7
     }
     stack.forEach((k) => (ans[k] = 0));
     snap("完成", "栈里剩下的日子到最后也没等到更高温度，答案填 0。", view(-1, -1), { kind: "ok", ans: ans.slice() });
-  } };
+  } },
+{ t: "从右往左跳", note: "和简洁写法一样，不用栈：从右往左填 answer。比较第 i 天和第 j 天，第 j 天不够热时，answer[j] 直接告诉我们下一个比第 j 天热的日子，跳过去接着比。", legend: [["a","第 i 天"],["e","正在比较的第 j 天"],["c","找到更热的那天"]], build(a, snap) {
+      const T = a.t, n = T.length, ans = Array(n).fill(0), filled = new Set([n - 1]);
+      const view = (i, j, hit) => [
+        { t: "bars", label: "temperatures", items: T.map((v, k) => ({ v, cls: k === i ? "a" : k === hit ? "c" : k === j ? "e" : "" })), ptrs: { i: i >= 0 ? i : null, j: j >= 0 ? j : null } },
+        { t: "array", label: "answer（从右往左填）", items: ans.map((v, k) => ({ v: filled.has(k) ? v : "", cls: k === i && hit >= 0 ? "c" : "" })) },
+      ];
+      snap("开始", `从右往左算。最后一天后面没有日子了，answer[${n - 1}] = 0。`, view(-1, -1, -1));
+      for (let i = n - 2; i >= 0; i--) {
+        let j = i + 1;
+        snap("看第 i 天", `第 ${i} 天 ${T[i]}°，先和第二天比：第 ${j} 天 ${T[j]}°。`, view(i, j, -1));
+        while (T[j] <= T[i] && ans[j]) {
+          const nj = j + ans[j];
+          snap("跳", `第 ${j} 天 ${T[j]}° 不比 ${T[i]}° 热。answer[${j}] = ${ans[j]}：第 ${j} 天之后第一个比它热的是第 ${nj} 天，中间的日子都不比第 ${j} 天热，更比不过 ${T[i]}°。直接跳到第 ${nj} 天（${T[nj]}°）。`, view(i, nj, -1));
+          j = nj;
+        }
+        filled.add(i);
+        if (T[j] > T[i]) { ans[i] = j - i; snap("找到", `第 ${j} 天 ${T[j]}° 比 ${T[i]}° 热，answer[${i}] = ${j} − ${i} = <b>${j - i}</b>。`, view(i, j, j)); }
+        else snap("等不到", `第 ${j} 天 ${T[j]}° 不比 ${T[i]}° 热，而且 answer[${j}] = 0，它后面再没有更热的日子。answer[${i}] = 0。`, view(i, j, -1), { kind: "warn" });
+      }
+      snap("完成", `answer 填完了：[${ans.join(",")}]。`, view(-1, -1, -1), { kind: "ok", ans: ans.slice() });
+    } }
+] };
 (function () {
   const $ = (id) => document.getElementById(id);
   const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -464,16 +489,36 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[73,74,75,71,69,72,76,7
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
-  function load(k) {
+  // 多种解法共用同一组输入：mi 是当前解法，cur 是当前输入（切换解法时保留）
+  const M = SPEC.methods || [{ t: "", legend: null, build: SPEC.build }];
+  let mi = 0, cur = null;
+  function run() {
     stop();
-    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    const m = M[mi];
     steps = [];
-    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
-    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    m.build(JSON.parse(JSON.stringify(cur.p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
     go(0);
   }
+  function setMethod(i) {
+    mi = i;
+    const m = M[i];
+    document.querySelectorAll("#methods button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === String(i))));
+    $("mnote").hidden = !m.note; $("mnote").textContent = m.note || "";
+    if (m.legend) $("legend").innerHTML = m.legend.map(([c, t]) => `<span><i class="sw ${c}"></i>${E(t)}</span>`).join("");
+    if (cur) run();
+  }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    cur = { k, p: k >= 0 ? SPEC.presets[k] : SPEC.random() };
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (cur.p.note || "");
+    run();
+  }
+  if ($("methods")) {
+    $("methods").innerHTML = M.map((m, i) => `<button type="button" data-m="${i}" aria-pressed="false">${E(m.t)}</button>`).join("");
+    document.querySelectorAll("#methods button").forEach((b) => { b.onclick = () => setMethod(Number(b.dataset.m)); });
+  }
+  setMethod(0);
   $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
     (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });
