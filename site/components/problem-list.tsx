@@ -3,6 +3,7 @@
 import { Card, Chip, SearchField } from "@heroui/react";
 import { EmptyState, KPIGroup, Segment } from "@heroui-pro/react";
 import { KPI } from "@heroui-pro/react/kpi";
+import clsx from "clsx";
 import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
@@ -161,6 +162,14 @@ export function ProblemList() {
     return make(data?.topics ?? [], (p) => p.topic, (a, b) => a.planOrder - b.planOrder);
   }, [problems, data, groupBy, filter, query]);
 
+  // 顶部统计：宽屏用 title，手机用 short（只有状态名，色块和进度矩阵一致）
+  const stats: { title: string; short: string; value: number; status?: Status }[] = [
+    { title: "已通过", short: "已通过", value: counts.已通过, status: "已通过" },
+    { title: "曾通过 · 待复习", short: "曾通过", value: counts.曾通过, status: "曾通过" },
+    { title: "尝试过 · 未通过", short: "尝试过", value: counts.尝试过, status: "尝试过" },
+    { title: "未开始", short: "未开始", value: counts.未开始, status: "未开始" },
+    { title: "有我的题解", short: "我的题解", value: counts.history },
+  ];
   const total = problems.length || 100;
   const shownCount = groups.reduce((s, g) => s + g.items.length, 0);
 
@@ -176,32 +185,38 @@ export function ProblemList() {
           <HeroTyping />
         </div>
         <div className="mt-10 flex flex-col gap-4">
-          <KPIGroup>
-            {(
-              [
-                ["已通过", counts.已通过],
-                ["曾通过 · 待复习", counts.曾通过],
-                ["尝试过 · 未通过", counts.尝试过],
-                ["未开始", counts.未开始],
-                ["有我的题解", counts.history],
-              ] as const
-            ).flatMap(([title, value], i) => [
+          {/* 宽屏：五个 KPI 一行 */}
+          <KPIGroup className="max-md:hidden">
+            {stats.flatMap((s, i) => [
               ...(i ? [<KPIGroup.Separator key={`s${i}`} />] : []),
-              <KPI key={title}>
+              <KPI key={s.title}>
                 <KPI.Header>
-                  <KPI.Title>{title}</KPI.Title>
+                  <KPI.Title>{s.title}</KPI.Title>
                 </KPI.Header>
                 <KPI.Content>
                   {/* 数据到之前用骨架占住同样的高度，不显示一个假的 0 */}
-                  {ready ? <KPI.Value maximumFractionDigits={0} value={value} /> : <Skel className="my-1 h-7 w-14" />}
+                  {ready ? <KPI.Value maximumFractionDigits={0} value={s.value} /> : <Skel className="my-1 h-7 w-14" />}
                 </KPI.Content>
               </KPI>,
             ])}
           </KPIGroup>
+          {/* 手机：一张卡片里五列，数字在上、短标签在下；色块同时当下面进度矩阵的图例 */}
+          <Card aria-label="进度统计" className="grid grid-cols-5 gap-0 p-0 md:hidden">
+            {stats.map((s, i) => (
+              <div key={s.title} className={clsx("flex min-w-0 flex-col items-center gap-1 px-0.5 py-3.5", i === stats.length - 1 && "border-l border-separator")}>
+                {ready ? <span className="text-xl leading-7 font-semibold tabular-nums">{s.value}</span> : <Skel className="h-7 w-8" />}
+                {s.status ? (
+                  <StatusPixel className="h-4 text-[11px] leading-4 whitespace-nowrap" status={s.status} />
+                ) : (
+                  <span className="inline-flex h-4 items-center text-[11px] leading-4 whitespace-nowrap text-muted">{s.short}</span>
+                )}
+              </div>
+            ))}
+          </Card>
           <Card className="gap-3 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
               <span className="font-pixel tracking-wider">PROGRESS · {ready ? `${counts.已通过 + counts.曾通过}/${total}` : "--/100"}</span>
-              <span className="flex items-center gap-3">
+              <span className="flex items-center gap-3 max-md:hidden">
                 <StatusPixel status="已通过" />
                 <StatusPixel status="曾通过" />
                 <StatusPixel status="尝试过" />
