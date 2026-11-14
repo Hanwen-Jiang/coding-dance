@@ -5,6 +5,7 @@ import NextLink from "next/link";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
+import { AccountButton } from "@/components/account";
 import { PixelIcon, PixelLogo, PixelTitle } from "@/components/pixel";
 
 function ThemeSwitch() {
@@ -42,6 +43,7 @@ export function SiteHeader() {
             <PixelIcon cell={1.5} name="arrow" />
           </a>
           <ThemeSwitch />
+          <AccountButton />
         </div>
       </div>
     </header>

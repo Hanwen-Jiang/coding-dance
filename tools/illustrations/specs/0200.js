@@ -1,6 +1,5 @@
-// 图解页面是手写的（illustrations/0200.岛屿数量.html），这里只提供提示和代码，build 只跑测试、不生成页面。
 module.exports = {
-  id: 200, name: "岛屿数量", title: "岛屿数量图解", level: "中等", topic: "图论", handwritten: true,
+  id: 200, name: "岛屿数量", title: "岛屿数量图解", level: "中等", topic: "图论",
   h1: "岛屿数量，一步一步看",
   lede: "扫到一块没数过的陆地就 +1，然后立刻把这整座岛淹掉，后面再扫到它的格子就直接跳过。",
   hints: [
@@ -68,6 +67,51 @@ assert s.numIslands(g(["0"])) == 0
 assert s.numIslands(g(["1"])) == 1
 assert s.numIslands(g(["101","010","101"])) == 5
 `,
+  demoTitle: "海图演示",
+  legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在栈里等着扩散"], ["a", "正在扩散的格子"], ["c", "已经淹掉（颜色和数字区分不同的岛）"]],
+  presets: [
+    { label: "示例 1", args: { grid: ["11110", "11010", "11000", "00000"] }, note: 'grid = ["11110","11010","11000","00000"]', expect: 1 },
+    { label: "示例 2", args: { grid: ["11000", "11000", "00100", "00011"] }, note: 'grid = ["11000","11000","00100","00011"]', expect: 3 },
+    { label: "斜着不算相连", args: { grid: ["101", "010", "101"] }, note: 'grid = ["101","010","101"]', expect: 5 },
+  ],
+  build(a, snap) {
+    const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
+    const mark = g.map((r) => r.map(() => 0)); // 0 还没淹，k 表示属于第 k 座岛
+    const COL = ["c", "g", "w"];
+    let count = 0, stack = [], cur = null;
+    const inStack = (i, j) => stack.some(([x, y]) => x === i && y === j);
+    const view = () => [
+      { t: "grid", label: "grid（淹掉的格子写的是第几座岛）", rows: g.map((r, i) => r.map((v, j) => {
+        const k = mark[i][j];
+        const cls = cur && cur[0] === i && cur[1] === j ? "a" : inStack(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
+        return { v: k || v, cls };
+      })) },
+      { t: "chips", label: "栈（右边是栈顶）", items: stack.map(([x, y]) => `(${x},${y})`), empty: "空" },
+    ];
+    const f = () => ({ facts: [["岛屿数", count]] });
+    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再把整座岛淹掉。`, view(), f());
+    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
+      if (g[i][j] !== "1" || mark[i][j]) continue;
+      count++;
+      mark[i][j] = count;
+      stack = [[i, j]];
+      snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先给它做上记号放进栈里，从这里开始把整座岛淹掉。`, view(), f());
+      while (stack.length) {
+        cur = stack.pop();
+        const [x, y] = cur, added = [];
+        for (const [p, q] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+          if (p < 0 || q < 0 || p >= m || q >= n || g[p][q] !== "1" || mark[p][q]) continue;
+          mark[p][q] = count;
+          stack.push([p, q]);
+          added.push(`(${p},${q})`);
+        }
+        snap("扩散", `弹出 (${x},${y})，看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号放进栈里。` : "四周没有新的陆地。"), view(), f());
+      }
+      cur = null;
+      snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), f());
+    }
+    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+  },
   points: [
     { t: "先判断再递归", body: "进 <code>sink</code> 第一件事就是判断越界和是不是陆地，四个方向就不用各写一遍判断。" },
     { t: "先做记号再扩散", body: "记号要在扩散之前做，否则两个相邻格子会互相跳来跳去，死循环。" },

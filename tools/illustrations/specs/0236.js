@@ -1,6 +1,5 @@
-// 图解页面是手写的（illustrations/0236.二叉树的最近公共祖先.html），这里只提供提示和代码，build 只跑测试、不生成页面。
 module.exports = {
-  id: 236, name: "二叉树的最近公共祖先", title: "二叉树的最近公共祖先图解", level: "中等", topic: "二叉树", handwritten: true,
+  id: 236, name: "二叉树的最近公共祖先", title: "二叉树的最近公共祖先图解", level: "中等", topic: "二叉树",
   h1: "二叉树的最近公共祖先，让答案自己往上冒",
   lede: "每个节点只问左右子树一句话：你们那边找到 p 或 q 了吗？左右都说找到了，自己就是答案。",
   hints: [
@@ -58,6 +57,44 @@ assert s.lowestCommonAncestor(r, find(r,6), find(r,4)).val == 5
 r = T([1,2])
 assert s.lowestCommonAncestor(r, find(r,1), find(r,2)).val == 1
 `,
+  demoTitle: "递归演示",
+  legend: [["e", "在调用栈上"], ["a", "当前节点"], ["b", "p 或 q"], ["c", "已经返回（下面标的是交上去的节点）"], ["k", "答案"]],
+  presets: [
+    { label: "示例 1", args: { t: [3, 5, 1, 6, 2, 0, 8, null, null, 7, 4], p: 5, q: 1 }, note: "root = [3,5,1,6,2,0,8,null,null,7,4], p = 5, q = 1", expect: 3 },
+    { label: "示例 2", args: { t: [3, 5, 1, 6, 2, 0, 8, null, null, 7, 4], p: 5, q: 4 }, note: "同一棵树，p = 5, q = 4（q 在 p 下面）", expect: 5 },
+    { label: "都在左子树", args: { t: [3, 5, 1, 6, 2, 0, 8, null, null, 7, 4], p: 7, q: 6 }, note: "同一棵树，p = 7, q = 6", expect: 5 },
+  ],
+  build(a, snap) {
+    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+    const stack = [], badges = {}, done = new Set();
+    const isPQ = (id) => N[id].v === a.p || N[id].v === a.q;
+    const view = (cur, ans) => {
+      const cls = {};
+      for (const id in N) cls[id] = +id === ans ? "k" : +id === cur ? "a" : isPQ(+id) ? "b" : done.has(+id) ? "c" : stack.includes(+id) ? "e" : "";
+      return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: { ...badges } }];
+    };
+    const f = () => ({ facts: [["p", a.p], ["q", a.q]] });
+    snap("开始", `找 ${a.p} 和 ${a.q} 的最近公共祖先。每个节点只问左右子树一句话：你们那边找到 p 或 q 了吗？`, view(-1), f());
+    const rec = (id) => {
+      if (id === null || !N[id]) return null;
+      stack.push(id);
+      if (isPQ(id)) {
+        done.add(id); badges[id] = "交 " + N[id].v; stack.pop();
+        snap("碰到目标", `${N[id].v} 就是要找的节点，不用再往下找，直接把自己交上去。`, view(id), f());
+        return id;
+      }
+      snap("进入", `进入 ${N[id].v}，先问左子树，再问右子树。`, view(id), f());
+      const l = rec(N[id].l), r = rec(N[id].r);
+      const ret = l !== null && r !== null ? id : l !== null ? l : r;
+      badges[id] = ret === null ? "空" : "交 " + N[ret].v; done.add(id); stack.pop();
+      const msg = l !== null && r !== null ? `左边交上来 ${N[l].v}，右边交上来 ${N[r].v}，p、q 分在两边，<b>${N[id].v}</b> 就是最近公共祖先，把自己交上去。`
+        : ret !== null ? `只有一边找到了 ${N[ret].v}，原样往上交。` : "左右两边都没找到，返回空。";
+      snap("返回", `${N[id].v}：${msg}`, view(id), f());
+      return ret;
+    };
+    const res = rec(0);
+    snap("完成", `根节点最后交上来的是 <b>${N[res].v}</b>，它就是 ${a.p} 和 ${a.q} 的最近公共祖先。`, view(-1, res), { kind: "ok", ans: N[res].v, ...f() });
+  },
   points: [
     { t: "比较的是节点不是值", body: "用 <code>is</code> 比较节点本身。题目保证值不重复，但用节点比较更稳。" },
     { t: "返回值有两种含义", body: "可能是找到的 p 或 q，也可能是已经确定的答案。上层不用区分，原样往上交就行。" },

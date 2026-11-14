@@ -17,13 +17,10 @@ const TIER_STYLE: Record<Tier, { color: "accent" | "default" | "warning" | "succ
   P0: { color: "accent", variant: "primary" },
   P1: { color: "accent", variant: "soft" },
   P2: { color: "default", variant: "secondary" },
-  复习: { color: "warning", variant: "soft" },
-  已通过: { color: "success", variant: "soft" },
-  困难: { color: "danger", variant: "soft" },
+  P3: { color: "default", variant: "tertiary" as "secondary" },
 };
 
 export function TierChip({ tier, size = "sm" }: { tier: Tier; size?: "sm" | "md" }) {
-  if (tier === "已通过") return null; // 和状态重复，不再单独显示
   const s = TIER_STYLE[tier];
   return (
     <Chip color={s.color} size={size} variant={s.variant}>

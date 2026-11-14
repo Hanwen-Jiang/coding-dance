@@ -72,6 +72,17 @@ def __ops(obj, ops, alias=None):
     return [getattr(obj, alias.get(o[0], o[0]))(*o[1:]) for o in ops]
 
 
+def __lca(vals, p, q):
+    root = T(vals)
+    def find(r, v):
+        if not r:
+            return None
+        if r.val == v:
+            return r
+        return find(r.left, v) or find(r.right, v)
+    return Solution().lowestCommonAncestor(root, find(root, p), find(root, q)).val
+
+
 def __pre(root):
     return [root.val] + __pre(root.left) + __pre(root.right) if root else []
 

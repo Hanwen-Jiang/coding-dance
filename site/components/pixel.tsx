@@ -6,7 +6,7 @@ import clsx from "clsx";
 import NextLink from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useState } from "react";
 
-import type { Level, ProblemSummary, Status } from "@/lib/types";
+import type { Level, Problem, Status } from "@/lib/types";
 
 // 5×7 点阵字体
 const GLYPHS: Record<string, string[]> = {
@@ -344,6 +344,9 @@ const ICONS: Record<string, string[]> = {
   moon: ["...###...", "..##.....", ".##......", ".##......", ".##......", ".##......", ".###...#.", "..######.", "...####.."],
   arrow: ["...####", ".....##", "....#.#", "...#..#", "..#....", ".#.....", "#......"],
   dice: ["#######", "#.....#", "#.#...#", "#..#..#", "#...#.#", "#.....#", "#######"],
+  cat: ["#.......#", "##.....##", "#########", "##.###.##", "#########", ".#######.", "..##.##..", "..#...#.."],
+  exit: ["####...", "#......", "#...#..", "#.#####", "#...#..", "#......", "####..."],
+  star: ["....#....", "....#....", "...###...", "#########", ".#######.", "..#####..", "..##.##..", ".##...##."],
 };
 
 export function PixelIcon({ name, cell = 2, className }: { name: keyof typeof ICONS; cell?: number; className?: string }) {
@@ -422,7 +425,7 @@ export function StatusPixel({ status, withLabel = true, className }: { status: S
  * 进度矩阵：每道题一个像素格，颜色表示状态，点一下进入这道题。
  * 数据还没到时先画 100 个灰格子占位；数据到了，同一批格子按顺序变色，布局不跳。
  */
-export function ProgressMatrix({ problems, count = 100 }: { problems: ProblemSummary[] | null; count?: number }) {
+export function ProgressMatrix({ problems, count = 100 }: { problems: Problem[] | null; count?: number }) {
   const n = problems?.length || count;
   return (
     <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-[5px] sm:grid-cols-[repeat(25,minmax(0,1fr))] lg:grid-cols-[repeat(50,minmax(0,1fr))]">

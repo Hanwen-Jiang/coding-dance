@@ -428,6 +428,11 @@ const GEN = {
     const t = R.tree(R.int(3, 8), () => R.int(1, 9));
     return { args: { t: t.heap }, note: `root = ${R.fmt(t.lc)}`, py: `Solution().rightSideView(T(${R.py(t.lc)}))` };
   },
+  200: (R) => {
+    const r = R.int(3, 5), c = R.int(3, 6), p = R.pick([0.4, 0.5, 0.6]);
+    const grid = Array.from({ length: r }, () => Array.from({ length: c }, () => (Math.random() < p ? "1" : "0")).join(""));
+    return { args: { grid }, note: `grid = ${R.fmt(grid)}`, py: `Solution().numIslands([list(r) for r in ${R.py(grid)}])` };
+  },
   206: (R) => {
     const v = R.arr(R.int(2, 7), 1, 9);
     return { args: { v }, note: `head = ${R.fmt(v)}`, py: `toL(Solution().reverseList(L(${R.py(v)})))` };
@@ -451,6 +456,10 @@ const GEN = {
     }
     return { args: { ops }, note: ops.map(([o, w]) => `${o}("${w}")`).join(" "), py: `__ops(Trie(), ${R.py(ops)})` };
   },
+  215: (R) => {
+    const nums = R.arr(R.int(6, 9), 1, 9), k = R.int(1, nums.length), heap = R.chance(0.3);
+    return { args: heap ? { nums, k, heap } : { nums, k }, note: `${heap ? "小顶堆写法：" : ""}nums = ${R.fmt(nums)}, k = ${k}`, py: `Solution().findKthLargest(${R.py(nums)}, ${k})` };
+  },
   226: (R) => {
     const t = R.tree(R.int(3, 7), () => R.int(1, 9));
     return { args: { t: t.heap }, note: `root = ${R.fmt(t.lc)}`, py: `__lv(Solution().invertTree(T(${R.py(t.lc)})))` };
@@ -458,6 +467,11 @@ const GEN = {
   230: (R) => {
     const t = R.bst(R.distinct(R.int(3, 7), 1, 20)), n = t.heap.filter((x) => x != null).length, k = R.int(1, n);
     return { args: { t: t.heap, k }, note: `root = ${R.fmt(t.lc)}, k = ${k}`, py: `Solution().kthSmallest(T(${R.py(t.lc)}), ${k})` };
+  },
+  236: (R) => {
+    const vals = R.distinct(R.int(4, 8), 1, 20), t = R.tree(vals.length, (k) => vals[k]);
+    const [p, q] = R.shuffle(vals).slice(0, 2);
+    return { args: { t: t.heap, p, q }, note: `root = ${R.fmt(t.lc)}, p = ${p}, q = ${q}`, py: `__lca(${R.py(t.lc)}, ${p}, ${q})` };
   },
   234: (R) => {
     let v = R.arr(R.int(1, 4), 1, 5);

@@ -10,9 +10,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CodePanel } from "@/components/code-panel";
 import { DemoPlayer } from "@/components/demo/demo-player";
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
-import { LevelPixels, PixelBullet, PixelLoader, PixelText, Skel, StatusPixel } from "@/components/pixel";
+import { StatusPicker } from "@/components/account";
+import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel, StatusPixel } from "@/components/pixel";
 import { TierChip, TopicChip } from "@/components/tags";
-import type { ProblemDetail, Spec } from "@/lib/types";
+import { useProgress } from "@/lib/progress";
+import type { HistoryFile, ProblemDetail, Spec } from "@/lib/types";
 import { TIER_INFO } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
@@ -134,25 +136,86 @@ function Solutions({ spec }: { spec: Spec }) {
   );
 }
 
+function HistoryEmpty({ title, desc, action }: { title: string; desc: React.ReactNode; action?: React.ReactNode }) {
+  return (
+    <EmptyState className="rounded-3xl border border-dashed border-border" size="sm">
+      <EmptyState.Header>
+        <EmptyState.Media variant="icon">
+          <HistoryIcon />
+        </EmptyState.Media>
+        <EmptyState.Title>{title}</EmptyState.Title>
+        <EmptyState.Description>{desc}</EmptyState.Description>
+      </EmptyState.Header>
+      {action && <EmptyState.Content>{action}</EmptyState.Content>}
+    </EmptyState>
+  );
+}
+
+/** 我的历史题解：从当前用户自己的进度仓读，没登录时提示登录 */
 function History({ d }: { d: ProblemDetail }) {
-  if (!d.history.length) {
+  const { loading, session, loginHref } = useProgress();
+  const id = d.summary.id;
+  const user = session?.user?.login;
+  const canRead = !!user && !!session?.repo?.exists;
+  const [state, setState] = useState<{ key: string; history: HistoryFile[] | null; error: string | null }>({ key: "", history: null, error: null });
+  const key = canRead ? `${user}/${id}` : "";
+
+  useEffect(() => {
+    if (!canRead) return;
+    let alive = true;
+    fetch(`/api/solutions/${id}`, { cache: "no-store" })
+      .then(async (r) => {
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || `请求失败（${r.status}）`);
+        return j.history as HistoryFile[];
+      })
+      .then((h) => alive && setState({ key, history: h, error: null }))
+      .catch((e: Error) => alive && setState({ key, history: null, error: e.message }));
+    return () => {
+      alive = false;
+    };
+  }, [canRead, id, key]);
+
+  if (loading) return <Skel className="h-24 w-full rounded-3xl" />;
+  if (!session?.user) {
     return (
-      <EmptyState className="rounded-3xl border border-dashed border-border" size="sm">
-        <EmptyState.Header>
-          <EmptyState.Media variant="icon">
-            <HistoryIcon />
-          </EmptyState.Media>
-          <EmptyState.Title>还没有我的提交</EmptyState.Title>
-          <EmptyState.Description>通过后把代码存进仓库的 solutions/ 目录，这里会自动出现。</EmptyState.Description>
-        </EmptyState.Header>
-      </EmptyState>
+      <HistoryEmpty
+        action={
+          session?.configured ? (
+            <a className="no-underline" href={loginHref()}>
+              <Button size="sm" variant="outline">
+                <PixelIcon cell={1.75} name="cat" />
+                GitHub 登录
+              </Button>
+            </a>
+          ) : undefined
+        }
+        desc="登录 GitHub 后，这里显示你自己的进度仓里这道题的代码。"
+        title="登录后显示你的题解"
+      />
+    );
+  }
+  if (!session.repo?.exists) return <HistoryEmpty desc="先在首页创建你的进度仓，之后存进去的题解会出现在这里。" title="还没有进度仓" />;
+  if (state.key !== key) return <Skel className="h-24 w-full rounded-3xl" />;
+  if (state.error) return <HistoryEmpty desc={state.error} title="没能读到你的题解" />;
+  const history = state.history ?? [];
+  if (!history.length) {
+    return (
+      <HistoryEmpty
+        desc={
+          <>
+            在 <span className="font-mono">{session.repo.name}</span> 里按 <span className="font-mono">solutions/&lt;语言&gt;/{String(id).padStart(4, "0")}.{d.summary.name}.&lt;后缀&gt;</span> 存一份代码，这里会自动出现。
+          </>
+        }
+        title="这道题还没有你的提交"
+      />
     );
   }
   return (
-    <Tabs className="w-full" defaultSelectedKey={d.history[0].file}>
+    <Tabs className="w-full" defaultSelectedKey={history[0].file}>
       <Tabs.ListContainer>
         <Tabs.List aria-label="历史题解">
-          {d.history.map((h) => (
+          {history.map((h) => (
             <Tabs.Tab key={h.file} id={h.file}>
               {h.label}
               <Tabs.Indicator />
@@ -160,7 +223,7 @@ function History({ d }: { d: ProblemDetail }) {
           ))}
         </Tabs.List>
       </Tabs.ListContainer>
-      {d.history.map((h) => (
+      {history.map((h) => (
         <Tabs.Panel key={h.file} className="flex flex-col gap-2 pt-4" id={h.file}>
           <span className="font-mono text-xs text-muted">{h.file}</span>
           <CodePanel code={h.code} label={h.label} lang={h.lang} />
@@ -257,6 +320,7 @@ function DemoSection({ d }: { d: ProblemDetail }) {
 
 export function ProblemView({ id }: { id: number }) {
   const { data: d, error, loading } = useApi<ProblemDetail>(`/api/problem/${id}`);
+  const progressCtx = useProgress();
 
   useEffect(() => {
     if (d) document.title = `${d.summary.id}. ${d.summary.name} · 热题 100 题解手册`;
@@ -280,6 +344,7 @@ export function ProblemView({ id }: { id: number }) {
   }
 
   const s = d.summary;
+  const { session, statusOf } = progressCtx;
   const sections = SECTIONS.filter((x) => (x.id === "points" ? d.spec?.points?.length : true));
 
   return (
@@ -305,8 +370,9 @@ export function ProblemView({ id }: { id: number }) {
                 <LevelPixels level={s.level} />
                 <TopicChip topic={s.topic} />
                 <TierChip tier={s.tier} />
-                <StatusPixel status={s.status} />
+                {session?.user && session.repo?.exists ? null : <StatusPixel status={statusOf(s.id)} />}
               </div>
+              <StatusPicker id={s.id} />
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

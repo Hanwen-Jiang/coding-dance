@@ -4,7 +4,10 @@ import { CodeBlock } from "@heroui-pro/react/code-block";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
-const SHIKI_LANG: Record<string, string> = { python: "python", java: "java", go: "go", cpp: "cpp" };
+const SHIKI_LANG: Record<string, string> = {
+  python: "python", java: "java", go: "go", cpp: "cpp", c: "c", javascript: "javascript", typescript: "typescript",
+  rust: "rust", kotlin: "kotlin", swift: "swift", csharp: "csharp",
+};
 
 export function CodePanel({ code, lang, label }: { code: string; lang: string; label: string }) {
   const { resolvedTheme } = useTheme();

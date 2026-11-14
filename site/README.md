@@ -20,6 +20,23 @@
 
 所以平时只要改仓库、push，网站最多一分钟后就会显示新内容（Functions 在内存里缓存 60 秒），不用重新部署。
 
+## 登录和每个人自己的进度
+
+- 题目资源（资源仓）对所有人都一样；进度和题解来自登录用户自己账号下的 `hot100-progress` 仓库。没登录时显示 0 进度。
+- 登录走 GitHub OAuth App，只申请 `public_repo` 权限。首次登录后，网站用模板仓 `Hanwen-Jiang/hot100-progress-template`（wrangler.toml 里的 `TEMPLATE_REPO`）在用户账号下生成公开的进度仓；创建时有一个默认勾上的「给模板仓点个 Star」开关，用户可以关掉。
+- 用户的令牌用 `SESSION_SECRET` 加密后放在 HttpOnly Cookie 里，浏览器脚本读不到；写操作只接受本站页面发起的请求。
+- 进度仓的文件规则见模板仓 README；`functions/_lib/progress.ts` 按同一套规则读写。
+
+需要的加密环境变量：
+
+```bash
+wrangler pages secret put GITHUB_OAUTH_CLIENT_ID --project-name lc-hot100
+wrangler pages secret put GITHUB_OAUTH_CLIENT_SECRET --project-name lc-hot100
+wrangler pages secret put SESSION_SECRET --project-name lc-hot100
+```
+
+OAuth App 在 GitHub → Settings → Developer settings → OAuth Apps 里创建：Homepage URL 填 `https://leetcode.cgent.link`，Authorization callback URL 填 `https://leetcode.cgent.link/api/auth/callback`。这三个变量没设齐时，网站照常能看，只是不显示登录入口。
+
 ## 令牌
 
 仓库是私有的，Functions 用加密环境变量 `GITHUB_TOKEN` 读它。令牌只存在 Cloudflare 里：

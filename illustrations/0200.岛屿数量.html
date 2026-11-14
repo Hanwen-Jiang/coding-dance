@@ -5,235 +5,161 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* 版式：一张「海图」——左侧是可逐步播放的网格海图，右侧是航海日志式的状态面板；上方是分层提示 */
+/* 版式：全系列统一。上面是分层提示和代码，中间左边是可逐步播放的演示，右边是状态说明 */
 :root {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --ink: #16313a;
-  --muted: #666666;
-  --line: #dddddd;
-  --water: #d2e4e8;
-  --water-ink: #8fb0b7;
-  --land: #e2cf9f;
-  --land-ink: #7d6534;
-  --accent: #0d6c79;
-  --accent-soft: #d3eaec;
-  --skip: #9a6a12;
-  --skip-soft: #f5e8c9;
+  --bg: #ffffff; --surface: #ffffff; --ink: #1a1a1a; --muted: #666666; --line: #dddddd; --dim: #f0f0f0; --dim-ink: #a3a3a3;
+  --accent: #2b5fb8; --accent-soft: #e4ecf9;
+  --warm: #c8641e; --warm-soft: #fbe9dc;
+  --ok: #2e8a57; --ok-soft: #dcf0e4;
+  --vio: #7a55c2; --vio-soft: #ece5f8;
+  --water: #7db7e8;
   --font-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
   --font-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
-  --i1: #2e8a58; --i2: #c25530; --i3: #6f55bd; --i4: #b48a12; --i5: #2a70b9; --i6: #b03d74;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #000000; --surface: #000000; --ink: #d9e8ea; --muted: #9a9a9a; --line: #2e2e2e;
-    --water: #1b343a; --water-ink: #4c6f77; --land: #7f6c45; --land-ink: #efdcb0;
-    --accent: #52c3d0; --accent-soft: #163c42; --skip: #e7b75a; --skip-soft: #3a2f17;
-    --i1: #3fae72; --i2: #e0744c; --i3: #9a82e6; --i4: #d6aa2c; --i5: #4d95e0; --i6: #d763a0;
+    --bg: #000000; --surface: #000000; --ink: #e8e8e8; --muted: #9a9a9a; --line: #2e2e2e; --dim: #1a1a1a; --dim-ink: #5c5c5c;
+    --accent: #7ea6f0; --accent-soft: #1a2740; --warm: #f0a060; --warm-soft: #3a2413; --ok: #5cc68a; --ok-soft: #133022;
+    --vio: #b093ee; --vio-soft: #271d3d; --water: #3b78ad;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #000000; --surface: #000000; --ink: #d9e8ea; --muted: #9a9a9a; --line: #2e2e2e;
-  --water: #1b343a; --water-ink: #4c6f77; --land: #7f6c45; --land-ink: #efdcb0;
-  --accent: #52c3d0; --accent-soft: #163c42; --skip: #e7b75a; --skip-soft: #3a2f17;
-  --i1: #3fae72; --i2: #e0744c; --i3: #9a82e6; --i4: #d6aa2c; --i5: #4d95e0; --i6: #d763a0;
+  --bg: #000000; --surface: #000000; --ink: #e8e8e8; --muted: #9a9a9a; --line: #2e2e2e; --dim: #1a1a1a; --dim-ink: #5c5c5c;
+  --accent: #7ea6f0; --accent-soft: #1a2740; --warm: #f0a060; --warm-soft: #3a2413; --ok: #5cc68a; --ok-soft: #133022;
+  --vio: #b093ee; --vio-soft: #271d3d; --water: #3b78ad;
   color-scheme: dark;
 }
-
 * { box-sizing: border-box; }
-body {
-  background: var(--bg);
-  color: var(--ink);
-  font-family: var(--font-body);
-  font-size: 15px;
-  line-height: 1.7;
-}
-.wrap {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding-block: 32px 56px;
-  padding-left: max(16px, env(safe-area-inset-left, 0px));
-  padding-right: max(16px, env(safe-area-inset-right, 0px));
-  display: flex;
-  flex-direction: column;
-  gap: 40px;
-}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 1040px; margin: 0 auto; padding-block: 32px 56px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 40px; }
 h1, h2 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.3; }
-h1 { font-size: clamp(28px, 5vw, 40px); font-weight: 800; }
+h1 { font-size: clamp(26px, 5vw, 38px); font-weight: 800; }
 h2 { font-size: 22px; font-weight: 600; }
+h3 { margin: 0; font-size: 15px; }
 p { margin: 0; }
-.eyebrow {
-  font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em;
-  text-transform: uppercase; color: var(--accent);
-}
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
 .lede { color: var(--muted); max-width: 62ch; }
-header { display: flex; flex-direction: column; gap: 10px; }
-section { display: flex; flex-direction: column; gap: 16px; }
+header, section { display: flex; flex-direction: column; gap: 14px; }
 code, .mono { font-family: var(--font-mono); font-size: .92em; }
-
-/* ---------- 分层提示 ---------- */
 .hints { display: flex; flex-direction: column; gap: 10px; }
-details {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-}
-summary {
-  cursor: pointer;
-  list-style: none;
-  padding: 14px 18px;
-  display: flex; align-items: baseline; gap: 12px;
-  font-weight: 700;
-}
+details { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+summary { cursor: pointer; list-style: none; padding: 14px 18px; display: flex; align-items: baseline; gap: 12px; font-weight: 700; }
 summary::-webkit-details-marker { display: none; }
-summary .lvl {
-  font-family: var(--font-mono); font-size: 12px; font-weight: 600;
-  color: var(--accent); background: var(--accent-soft);
-  padding: 1px 8px; border-radius: 99px; flex: none;
-}
+summary .lvl { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 1px 8px; border-radius: 99px; flex: none; }
 summary .peek { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: auto; flex: none; }
 details[open] summary .peek { visibility: hidden; }
 summary:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.hint-body { padding: 0 18px 16px; max-width: 70ch; display: flex; flex-direction: column; gap: 8px; }
-pre.code {
-  margin: 0; padding: 14px 16px; overflow-x: auto;
-  background: var(--bg); border: 1px solid var(--line); border-radius: 8px;
-  font-family: var(--font-mono); font-size: 13px; line-height: 1.65;
-}
+.hint-body { padding: 0 18px 16px; max-width: 72ch; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+pre.code { margin: 0; padding: 14px 16px; overflow-x: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; font-family: var(--font-mono); font-size: 13px; line-height: 1.65; }
+.cmt { color: var(--muted); }
 
-/* ---------- 演示区 ---------- */
-.stage {
-  display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: 28px;
-  align-items: start;
-}
+.stage { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 28px; align-items: start; }
 @media (max-width: 760px) { .stage { grid-template-columns: minmax(0, 1fr); } }
-
-.chart {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 18px;
-  display: flex; flex-direction: column; gap: 14px;
-  min-width: 0;
-}
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { border: 0; border-radius: 0; }
 .seg button + button { border-left: 1px solid var(--line); }
-button {
-  font: inherit; font-size: 14px;
-  color: var(--ink); background: var(--surface);
-  border: 1px solid var(--line); border-radius: 8px;
-  padding: 6px 12px; cursor: pointer;
-}
+button { font: inherit; font-size: 14px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
 button:hover { background: var(--accent-soft); }
 button[aria-pressed="true"] { background: var(--accent); color: var(--surface); }
 button.primary { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 button:disabled { opacity: .45; cursor: default; background: var(--surface); }
-.edit-note { color: var(--muted); font-size: 13px; }
+button.primary:disabled { color: var(--ink); border-color: var(--line); }
+[hidden] { display: none !important; }
+.input-note { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.views { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.v { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.vl { font-size: 12px; color: var(--muted); }
+.scroll { overflow-x: auto; padding: 4px 2px; }
 
-.grid-scroll { overflow-x: auto; }
-.grid {
-  --n: 5;
-  display: grid;
-  grid-template-columns: 22px repeat(var(--n), minmax(36px, 64px));
-  gap: 4px;
-  width: max-content;
-  margin: 0 auto;
-}
-.axis {
-  font-family: var(--font-mono); font-size: 11px; color: var(--muted);
-  display: grid; place-items: center;
-}
-.cell {
-  position: relative;
-  aspect-ratio: 1;
-  max-width: 100%;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  padding: 0;
-  font-family: var(--font-mono); font-size: 13px; font-weight: 600;
-  display: grid; place-items: center;
-  transition: background-color .25s ease, color .25s ease, transform .2s ease;
-}
-.cell.water {
-  color: var(--water-ink);
-  background:
-    repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--water-ink) 18%, transparent) 6px 7px),
-    var(--water);
-}
-.cell.land { background: var(--land); color: var(--land-ink); }
-.cell.isl { color: #fff; }
-.cell.cur { outline: 3px solid var(--accent); outline-offset: 2px; z-index: 2; }
-.cell.cur.skipped { outline-color: var(--skip); }
-.cell.pop { transform: scale(1.08); box-shadow: 0 0 0 3px var(--surface), 0 0 0 6px currentColor; z-index: 3; }
-.cell.instack::after {
-  content: ""; position: absolute; inset: 5px;
-  border: 2px dashed rgba(255,255,255,.85); border-radius: 4px;
-}
-.cell.pushed .tag {
-  position: absolute; top: -7px; right: -7px;
-  font-size: 10px; line-height: 1; padding: 3px 5px; border-radius: 99px;
-  background: var(--ink); color: var(--surface);
-}
-@media (prefers-reduced-motion: reduce) {
-  .cell { transition: none; }
-  .cell.pop { transform: none; }
-}
+
+.arr { display: flex; gap: 4px; width: max-content; min-width: 100%; }
+.cc { flex: 1 1 0; min-width: 30px; max-width: 58px; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
+.cell { height: 38px; border: 1px solid var(--line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; transition: background-color .25s ease; }
+.ci { text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+.cp { min-height: 18px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.cp span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.25; color: var(--accent); white-space: nowrap; }
+.bar-slot { height: 150px; display: flex; flex-direction: column; justify-content: flex-end; }
+.bar { border: 1px solid var(--line); border-radius: 4px 4px 2px 2px; display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; padding-top: 2px; min-height: 3px; background: var(--dim); color: var(--ink); }
+.bar.a, .bar.b, .bar.c { color: var(--surface); }
+.wat { background: var(--water); border-radius: 3px 3px 0 0; }
+.bv { text-align: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; line-height: 1.3; }
+
+.grid { display: grid; gap: 4px; width: max-content; }
+.grid .cell { width: 40px; height: 40px; }
+.grid .ax { display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
+.chip { font-family: var(--font-mono); font-size: 13px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); }
+.empty { color: var(--muted); font-size: 13px; }
+
+svg.g2 { display: block; height: auto; }
+svg.g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; }
+svg.g2 .edge.on { stroke: var(--accent); stroke-width: 2.6; }
+svg.g2 .edge.warm { stroke: var(--warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
+svg.g2 .ah { fill: var(--muted); }
+svg.g2 rect.n, svg.g2 circle.n { fill: var(--surface); stroke: var(--line); stroke-width: 2; transition: fill .25s ease; }
+svg.g2 .n.a { fill: var(--accent); stroke: var(--accent); }
+svg.g2 .n.b { fill: var(--warm); stroke: var(--warm); }
+svg.g2 .n.c { fill: var(--ok); stroke: var(--ok); }
+svg.g2 .n.d { fill: var(--dim); stroke: var(--dim); }
+svg.g2 .n.e { fill: var(--accent-soft); stroke: var(--accent); }
+svg.g2 .n.g { fill: var(--vio-soft); stroke: var(--vio); }
+svg.g2 .n.w { fill: var(--warm-soft); stroke: var(--warm); }
+svg.g2 .n.k { fill: var(--ok-soft); stroke: var(--ok); }
+svg.g2 text { font-family: var(--font-mono); font-size: 14px; font-weight: 600; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
+svg.g2 text.inv { fill: var(--surface); }
+svg.g2 text.dimt { fill: var(--dim-ink); }
+svg.g2 text.pt { font-size: 11px; fill: var(--accent); }
+svg.g2 text.nil { font-size: 12px; fill: var(--muted); font-weight: 400; }
+svg.g2 rect.bd { fill: var(--surface); stroke: var(--muted); stroke-width: 1.2; }
+svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 
 .scrub { display: flex; align-items: center; gap: 10px; }
 .scrub input { flex: 1; min-width: 0; accent-color: var(--accent); }
 .scrub .mono { color: var(--muted); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-
-/* ---------- 航海日志面板 ---------- */
 .log { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-.tally {
-  display: flex; align-items: baseline; gap: 14px;
-  border-bottom: 1px solid var(--line); padding-bottom: 12px;
-}
-.tally .num {
-  font-family: var(--font-display); font-weight: 800; font-size: 64px; line-height: 1;
-  color: var(--accent); font-variant-numeric: tabular-nums;
-}
-.tally .lab { color: var(--muted); }
-.phase {
-  font-family: var(--font-mono); font-size: 12px; letter-spacing: .08em;
-  align-self: flex-start; padding: 2px 10px; border-radius: 99px;
-  background: var(--accent-soft); color: var(--accent);
-}
-.phase.skip { background: var(--skip-soft); color: var(--skip); }
-.msg { font-size: 16px; min-height: 3.4em; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.fact { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.fact .fk { font-size: 12px; color: var(--muted); }
+.fact .fv { font-family: var(--font-display); font-weight: 800; font-size: 26px; line-height: 1.15; font-variant-numeric: tabular-nums; color: var(--accent); overflow-wrap: anywhere; }
+.fact .fv.long { font-family: var(--font-mono); font-size: 14px; font-weight: 600; line-height: 1.5; }
+.phase { font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; align-self: flex-start; padding: 2px 10px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); }
+.phase.ok { background: var(--ok-soft); color: var(--ok); }
+.phase.warn { background: var(--warm-soft); color: var(--warm); }
+.msg { font-size: 16px; min-height: 5.2em; }
 .msg b { color: var(--accent); }
-.stackbox { display: flex; flex-direction: column; gap: 8px; }
-.stackbox .head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
-.chip {
-  font-family: var(--font-mono); font-size: 12px;
-  padding: 3px 9px; border-radius: 6px;
-  border: 1px solid var(--line); background: var(--surface);
-}
-.chip.top { border-color: var(--accent); color: var(--accent); font-weight: 600; }
-.empty { color: var(--muted); font-size: 13px; }
-.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 13px; color: var(--muted); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
-.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; }
-
-/* ---------- 要点 ---------- */
+.sw { width: 14px; height: 14px; border-radius: 3px; display: inline-block; border: 1px solid var(--line); }
+.sw.dash { border: 0; border-top: 2px dashed var(--warm); border-radius: 0; height: 0; width: 18px; }
 .points { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
 .point { display: flex; flex-direction: column; gap: 6px; padding-top: 12px; border-top: 2px solid var(--line); }
-.point h3 { margin: 0; font-size: 15px; }
 .point p { color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
+
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+.a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
+.b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
+.c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
+.d { background: var(--dim); color: var(--dim-ink); border-color: transparent; }
+.e { background: var(--accent-soft); color: var(--ink); border-color: var(--accent); }
+.g { background: var(--vio-soft); color: var(--ink); border-color: var(--vio); }
+.w { background: var(--warm-soft); color: var(--ink); border-color: var(--warm); }
+.k { background: var(--ok-soft); color: var(--ink); border-color: var(--ok); }
+.bar.d { color: var(--dim-ink); }
 </style>
 
 <div class="wrap">
   <header>
     <div class="eyebrow">LeetCode 200 · 中等 · 图论</div>
     <h1>岛屿数量，一步一步看</h1>
-    <p class="lede">先看提示，卡住时再往下翻一层。下面的海图可以逐步播放：看清楚「什么时候 +1」和「为什么同一座岛不会被数两次」，这道题就会了。</p>
+    <p class="lede">扫到一块没数过的陆地就 +1，然后立刻把这整座岛淹掉，后面再扫到它的格子就直接跳过。</p>
   </header>
 
   <section aria-labelledby="h-hints">
@@ -250,33 +176,78 @@ button:disabled { opacity: .45; cursor: default; background: var(--surface); }
         <summary><span class="lvl">提示 2</span>怎么避免重复计数<span class="peek">点开</span></summary>
         <div class="hint-body">
           <p>扫到一块<strong>还没被数过</strong>的陆地，答案就 +1。</p>
-          <p>难点在后面：同一座岛有很多格子，之后还会扫到它们。所以 +1 之后，要<strong>立刻把这座岛的所有格子都做上记号</strong>（比如直接改成 <code>'0'</code>，相当于把岛「淹掉」），以后扫到就直接跳过。</p>
+          <p>同一座岛有很多格子，之后还会扫到它们。所以 +1 之后，要<strong>立刻把这座岛的所有格子都做上记号</strong>（比如直接改成 <code>'0'</code>，相当于把岛「淹掉」），以后扫到就直接跳过。</p>
         </div>
       </details>
       <details>
         <summary><span class="lvl">提示 3</span>怎么找出整座岛<span class="peek">点开</span></summary>
         <div class="hint-body">
           <p>从刚发现的格子出发，往上、下、左、右四个方向扩散：遇到陆地就做记号并继续扩散，遇到水或者走出边界就停。</p>
-          <p>这就是 <strong>DFS</strong>（递归或用栈）或 <strong>BFS</strong>（用队列），两种都能过。下面的动画用的是栈。</p>
+          <p>这就是 <strong>DFS</strong>（递归或用栈）或 <strong>BFS</strong>（用队列），两种都能过。</p>
         </div>
       </details>
       <details>
-        <summary><span class="lvl">最后</span>伪代码骨架（想自己写就先别看）<span class="peek">点开</span></summary>
+        <summary><span class="lvl">代码</span>标准解法：DFS 淹没整座岛<span class="peek">点开</span></summary>
         <div class="hint-body">
-<pre class="code">count = 0
-for 每个格子 (i, j):
-    if grid[i][j] == '1':
-        count += 1
-        sink(i, j)          // 把这整座岛淹掉
+<pre class="code">class Solution:
+    def numIslands(self, grid: List[List[str]]) -&gt; int:
+        m, n = len(grid), len(grid[0])
 
-sink(i, j):
-    if (i, j) 越界 或 grid[i][j] != '1':
-        return
-    grid[i][j] = '0'        // 做记号
-    sink(i-1, j); sink(i+1, j)
-    sink(i, j-1); sink(i, j+1)
+        def sink(i, j):
+            if not (0 &lt;= i &lt; m and 0 &lt;= j &lt; n) or grid[i][j] != '1':
+                return                      <span class="cmt"># 越界或不是陆地</span>
+            grid[i][j] = '0'                <span class="cmt"># 先做记号，再扩散</span>
+            sink(i - 1, j)
+            sink(i + 1, j)
+            sink(i, j - 1)
+            sink(i, j + 1)
 
-return count</pre>
+        count = 0
+        for i in range(m):
+            for j in range(n):
+                if grid[i][j] == '1':
+                    count += 1
+                    sink(i, j)
+        return count</pre>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">代码</span>简洁写法：sink 顺便返回 1<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>让 sink 在淹掉一座新岛时返回 1，否则返回 0，答案就是对所有格子求和。</p>
+<pre class="code">class Solution:
+    def numIslands(self, grid: List[List[str]]) -&gt; int:
+        def sink(i, j):
+            if 0 &lt;= i &lt; len(grid) and 0 &lt;= j &lt; len(grid[0]) and grid[i][j] == '1':
+                grid[i][j] = '0'
+                for x, y in (i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1):
+                    sink(x, y)
+                return 1
+            return 0
+        return sum(sink(i, j) for i in range(len(grid)) for j in range(len(grid[0])))</pre>
+        </div>
+      </details>
+      <details>
+        <summary><span class="lvl">代码</span>另一种写法：BFS<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>递归太深担心爆栈时，用队列一圈一圈往外扩。入队时就做记号，避免同一个格子重复入队。</p>
+<pre class="code">class Solution:
+    def numIslands(self, grid: List[List[str]]) -&gt; int:
+        m, n, count = len(grid), len(grid[0]), 0
+        for i in range(m):
+            for j in range(n):
+                if grid[i][j] != '1':
+                    continue
+                count += 1
+                grid[i][j] = '0'
+                q = deque([(i, j)])
+                while q:
+                    x, y = q.popleft()
+                    for a, b in (x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1):
+                        if 0 &lt;= a &lt; m and 0 &lt;= b &lt; n and grid[a][b] == '1':
+                            grid[a][b] = '0'    <span class="cmt"># 入队时就做记号</span>
+                            q.append((a, b))
+        return count</pre>
         </div>
       </details>
     </div>
@@ -285,43 +256,26 @@ return count</pre>
   <section aria-labelledby="h-demo">
     <h2 id="h-demo">海图演示</h2>
     <div class="stage">
-      <div class="chart">
-        <div class="toolbar">
-          <div class="seg" role="group" aria-label="选择示例">
-            <button id="ex1" type="button" aria-pressed="false">示例 1</button>
-            <button id="ex2" type="button" aria-pressed="true">示例 2</button>
-            <button id="exr" type="button" aria-pressed="false">随机</button>
-          </div>
-          <span class="edit-note">点格子可以改地图</span>
-        </div>
-        <div class="grid-scroll"><div class="grid" id="grid" aria-label="网格海图"></div></div>
+      <div class="panel">
+        <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
+        <div class="input-note" id="inote"></div>
+        <div class="views" id="views"></div>
         <div class="toolbar">
           <button id="reset" type="button">重置</button>
           <button id="prev" type="button">上一步</button>
           <button id="next" type="button" class="primary">下一步</button>
           <button id="play" type="button">自动播放</button>
-          <button id="jump" type="button">跳到下一座岛</button>
         </div>
         <div class="scrub">
           <input id="slider" type="range" min="0" max="0" value="0" aria-label="步骤">
           <span class="mono" id="stepno">0 / 0</span>
         </div>
       </div>
-
       <div class="log" aria-live="polite">
-        <div class="tally"><span class="num" id="count">0</span><span class="lab">座岛屿</span></div>
-        <span class="phase" id="phase">开始</span>
+        <div class="facts" id="facts"></div>
+        <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="stackbox">
-          <div class="head"><span>待扩散的格子（栈）</span><span>右边是栈顶</span></div>
-          <div class="chips" id="stack"></div>
-        </div>
-        <div class="legend">
-          <span><i class="sw" style="background:var(--water)"></i>水 0</span>
-          <span><i class="sw" style="background:var(--land)"></i>未标记的陆地 1</span>
-          <span><i class="sw" style="background:var(--i1)"></i>已标记（颜色区分岛）</span>
-          <span><i class="sw" style="border:2px dashed var(--muted)"></i>在栈里等待扩散</span>
-        </div>
+        <div class="legend"><span><i class="sw d"></i>水 0</span><span><i class="sw "></i>还没淹的陆地 1</span><span><i class="sw e"></i>在栈里等着扩散</span><span><i class="sw a"></i>正在扩散的格子</span><span><i class="sw c"></i>已经淹掉（颜色和数字区分不同的岛）</span></div>
       </div>
     </div>
   </section>
@@ -331,191 +285,257 @@ return count</pre>
     <div class="points">
       <div class="point"><h3>先判断再递归</h3><p>进 <code>sink</code> 第一件事就是判断越界和是不是陆地，四个方向就不用各写一遍判断。</p></div>
       <div class="point"><h3>先做记号再扩散</h3><p>记号要在扩散之前做，否则两个相邻格子会互相跳来跳去，死循环。</p></div>
-      <div class="point"><h3>格子是字符</h3><p>Java 里 <code>grid</code> 是 <code>char[][]</code>，比较要写 <code>'1'</code>，不是数字 <code>1</code>。</p></div>
-      <div class="point"><h3>复杂度</h3><p>每个格子最多被访问常数次，时间 <span class="mono">O(m·n)</span>；最坏情况下递归深度也是 <span class="mono">O(m·n)</span>。</p></div>
+      <div class="point"><h3>格子是字符</h3><p><code>grid</code> 里存的是字符 <code>'1'</code> 和 <code>'0'</code>，不是数字。</p></div>
+      <div class="point"><h3>复杂度</h3><p>每个格子最多被访问常数次，时间 O(m·n)；最坏情况下递归深度也是 O(m·n)。</p></div>
     </div>
   </section>
 </div>
 
 <script>
-(function () {
-  const EX = {
-    ex1: ["11110", "11010", "11000", "00000"],
-    ex2: ["11000", "11000", "00100", "00011"],
+const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11000","00000"]},"note":"grid = [\"11110\",\"11010\",\"11000\",\"00000\"]"},{"label":"示例 2","args":{"grid":["11000","11000","00100","00011"]},"note":"grid = [\"11000\",\"11000\",\"00100\",\"00011\"]"},{"label":"斜着不算相连","args":{"grid":["101","010","101"]},"note":"grid = [\"101\",\"010\",\"101\"]"}], random: () => { const R = (function makeR() {
+  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = (xs) => xs[int(0, xs.length - 1)];
+  const chance = (p) => Math.random() < p;
+  const shuffle = (xs) => {
+    const a = xs.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = int(0, i);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   };
-  const DIRS = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
-  const COLORS = 6;
+  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));
+  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);
+  const sorted = (xs) => xs.slice().sort((x, y) => x - y);
+  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join("");
+  const fmt = (x) => JSON.stringify(x);
+  const py = (x) => JSON.stringify(x).replace(/null/g, "None").replace(/true/g, "True").replace(/false/g, "False");
+  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）
+  const toLc = (heap) => {
+    const out = [];
+    const q = heap.length && heap[0] != null ? [0] : [];
+    while (q.length) {
+      const i = q.shift();
+      if (i < 0) { out.push(null); continue; }
+      out.push(heap[i]);
+      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);
+    }
+    while (out.length && out[out.length - 1] === null) out.pop();
+    return out;
+  };
+  const trim = (heap) => {
+    while (heap.length && heap[heap.length - 1] == null) heap.pop();
+    return heap;
+  };
+  /** 随机形状的树，n 个节点，值由 val(k) 给出 */
+  const tree = (n, val, maxId = 30) => {
+    const ids = [0];
+    let guard = 0;
+    while (ids.length < n && guard++ < 500) {
+      const p = pick(ids), c = 2 * p + int(1, 2);
+      if (c <= maxId && !ids.includes(c)) ids.push(c);
+    }
+    const heap = [];
+    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));
+    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;
+    trim(heap);
+    return { heap, lc: toLc(heap) };
+  };
+  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */
+  const bst = (vals) => {
+    const heap = [];
+    for (const v of vals) {
+      let i = 0;
+      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;
+      if (i <= 30) heap[i] = v;
+    }
+    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;
+    trim(heap);
+    return { heap, lc: toLc(heap) };
+  };
+  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };
+})(); const r = ((R) => {
+    const r = R.int(3, 5), c = R.int(3, 6), p = R.pick([0.4, 0.5, 0.6]);
+    const grid = Array.from({ length: r }, () => Array.from({ length: c }, () => (Math.random() < p ? "1" : "0")).join(""));
+    return { args: { grid }, note: `grid = ${R.fmt(grid)}`, py: `Solution().numIslands([list(r) for r in ${R.py(grid)}])` };
+  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
+    const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
+    const mark = g.map((r) => r.map(() => 0)); // 0 还没淹，k 表示属于第 k 座岛
+    const COL = ["c", "g", "w"];
+    let count = 0, stack = [], cur = null;
+    const inStack = (i, j) => stack.some(([x, y]) => x === i && y === j);
+    const view = () => [
+      { t: "grid", label: "grid（淹掉的格子写的是第几座岛）", rows: g.map((r, i) => r.map((v, j) => {
+        const k = mark[i][j];
+        const cls = cur && cur[0] === i && cur[1] === j ? "a" : inStack(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
+        return { v: k || v, cls };
+      })) },
+      { t: "chips", label: "栈（右边是栈顶）", items: stack.map(([x, y]) => `(${x},${y})`), empty: "空" },
+    ];
+    const f = () => ({ facts: [["岛屿数", count]] });
+    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再把整座岛淹掉。`, view(), f());
+    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
+      if (g[i][j] !== "1" || mark[i][j]) continue;
+      count++;
+      mark[i][j] = count;
+      stack = [[i, j]];
+      snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先给它做上记号放进栈里，从这里开始把整座岛淹掉。`, view(), f());
+      while (stack.length) {
+        cur = stack.pop();
+        const [x, y] = cur, added = [];
+        for (const [p, q] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+          if (p < 0 || q < 0 || p >= m || q >= n || g[p][q] !== "1" || mark[p][q]) continue;
+          mark[p][q] = count;
+          stack.push([p, q]);
+          added.push(`(${p},${q})`);
+        }
+        snap("扩散", `弹出 (${x},${y})，看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号放进栈里。` : "四周没有新的陆地。"), view(), f());
+      }
+      cur = null;
+      snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), f());
+    }
+    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+  } };
+(function () {
   const $ = (id) => document.getElementById(id);
-  const fmt = ([r, c]) => `(${r},${c})`;
+  const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const INV = new Set(["a", "b", "c"]);
+  const lab = (v) => (v.label ? `<div class="vl">${v.label}</div>` : "");
+  const norm = (it) => (it !== null && typeof it === "object" ? it : { v: it });
+  const show = (x) => (x === null || x === undefined ? "" : E(x));
 
-  let grid = [], steps = [], idx = 0, timer = null, current = "ex2";
-
-  function parse(rows) { return rows.map((r) => [...r].map(Number)); }
-
-  function randomGrid() {
-    const m = 5, n = 6;
-    return Array.from({ length: m }, () => Array.from({ length: n }, () => (Math.random() < 0.45 ? 1 : 0)));
+  function ptrMap(ptrs) {
+    const m = {};
+    for (const [name, i] of Object.entries(ptrs || {})) if (i !== null && i !== undefined) (m[i] = m[i] || []).push(name);
+    return m;
   }
-
-  function build() {
-    const m = grid.length, n = grid[0].length;
-    const mark = grid.map((r) => r.map(() => 0));
-    let count = 0, stack = [];
-    steps = [];
-    const snap = (o) => steps.push({ mark: mark.map((r) => r.slice()), count, stack: stack.map((p) => p.slice()), ...o });
-
-    snap({ phase: "开始", msg: "从左上角 (0,0) 开始，一行一行扫描每个格子。" });
-    for (let i = 0; i < m; i++) {
-      for (let j = 0; j < n; j++) {
-        if (grid[i][j] === 0) {
-          snap({ phase: "扫描", cur: [i, j], msg: `${fmt([i, j])} 是水，跳过。` });
-        } else if (mark[i][j]) {
-          snap({ phase: "跳过", skip: true, cur: [i, j], msg: `${fmt([i, j])} 是陆地，但它已经被标记为第 ${mark[i][j]} 座岛的一部分，<b>不再计数</b>。这就是做记号的作用。` });
-        } else {
-          count++;
-          mark[i][j] = count;
-          stack = [[i, j]];
-          snap({ phase: "发现新岛", cur: [i, j], island: count, msg: `${fmt([i, j])} 是一块还没标记的陆地：<b>岛屿数 +1 → ${count}</b>。接下来从这里出发，把整座岛都标记出来。` });
-          while (stack.length) {
-            const [r, c] = stack.pop();
-            const pushed = [];
-            for (const [dr, dc] of DIRS) {
-              const nr = r + dr, nc = c + dc;
-              if (nr < 0 || nr >= m || nc < 0 || nc >= n) continue;
-              if (grid[nr][nc] !== 1 || mark[nr][nc]) continue;
-              mark[nr][nc] = count;
-              stack.push([nr, nc]);
-              pushed.push([nr, nc]);
-            }
-            const msg = pushed.length
-              ? `从栈顶取出 ${fmt([r, c])}，看它的上下左右：${pushed.map(fmt).join("、")} 是相连的陆地，标记为第 ${count} 座岛并放进栈。`
-              : `从栈顶取出 ${fmt([r, c])}，上下左右要么是水、要么出界、要么已标记，没有新格子。`;
-            snap({ phase: "扩散", cur: [i, j], pop: [r, c], pushed, island: count, msg });
-          }
-          snap({ phase: "这座岛标记完", cur: [i, j], msg: `栈空了，第 ${count} 座岛的每一格都有了记号。回到 ${fmt([i, j])}，继续往后扫描。` });
-        }
+  function vArray(v) {
+    const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
+    const cols = v.items.map(norm).map((it, i) =>
+      `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
+      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
+  }
+  function vBars(v) {
+    const items = v.items.map(norm), pm = ptrMap(v.ptrs);
+    const max = Math.max(1, ...items.map((it) => it.v + (it.water || 0)), v.max || 0);
+    const cols = items.map((it, i) =>
+      `<div class="cc"><div class="bar-slot">` +
+      (it.v / max < 0.16 ? `<div class="bv">${it.v}</div>` : "") +
+      (it.water ? `<div class="wat" style="height:${(it.water / max) * 100}%"></div>` : "") +
+      `<div class="bar ${it.cls || ""}" style="height:${(it.v / max) * 100}%">${it.v / max < 0.16 ? "" : it.v}</div></div>` +
+      `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
+  }
+  function vGrid(v) {
+    const n = v.rows[0].length;
+    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    v.rows.forEach((r, i) => {
+      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+    });
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+  }
+  function vChips(v) {
+    const items = v.items.map(norm);
+    return `<div class="v">${lab(v)}<div class="chips">${items.length ? items.map((it) => `<span class="chip ${it.cls || ""}">${show(it.v)}</span>`).join("") : `<span class="empty">${v.empty || "空"}</span>`}</div></div>`;
+  }
+  let uid = 0;
+  function vList(v) {
+    const nodes = v.nodes.map(norm), n = nodes.length, GAP = 62, BW = 40, BH = 32, X0 = 30, Y = 46;
+    const W = X0 * 2 + n * GAP, H = 108, id = "ah" + uid++;
+    const cx = (i) => X0 + i * GAP + BW / 2;
+    let s = `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
+    const next = v.next || nodes.map((_, i) => (i + 1 < n ? i + 1 : null));
+    const edge = (i, j, cls, lift, arc) => {
+      if (j === null || j === undefined) return;
+      if (j === -1) {
+        if (i === n - 1) s += `<line class="edge ${cls}" x1="${cx(i) + BW / 2}" y1="${Y}" x2="${cx(i) + BW / 2 + 12}" y2="${Y}"></line><text class="nil" x="${cx(i) + BW / 2 + 20}" y="${Y}">∅</text>`;
+        else if (i === 0) s += `<line class="edge ${cls}" x1="${cx(i) - BW / 2}" y1="${Y}" x2="${cx(i) - BW / 2 - 10}" y2="${Y}"></line><text class="nil" x="${cx(i) - BW / 2 - 18}" y="${Y}">∅</text>`;
+        else s += `<line class="edge ${cls}" x1="${cx(i)}" y1="${Y - BH / 2}" x2="${cx(i)}" y2="${Y - BH / 2 - 9}"></line><text class="nil" x="${cx(i)}" y="${Y - BH / 2 - 17}">∅</text>`;
+        return;
       }
-    }
-    snap({ phase: "结束", msg: `所有格子扫描完毕，答案是 <b>${count}</b> 座岛屿。` });
+      if (j === i + 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
+      else if (j === i - 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
+      else if (j === i) s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i) - 8} ${Y - BH / 2} C${cx(i) - 18} ${Y - 40} ${cx(i) + 18} ${Y - 40} ${cx(i) + 8} ${Y - BH / 2 - 2}"></path>`;
+      else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 16 + Math.abs(j - i) * 4);
+        s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`; }
+    };
+    next.forEach((j, i) => { if (!nodes[i].hide) edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, nodes[i].ecls || "", false); });
+    (v.extra || []).forEach(([i, j]) => edge(i, j, "warm", j > i, true));
+    const pm = ptrMap(v.ptrs);
+    nodes.forEach((nd, i) => {
+      if (nd.hide) return;
+      const c = (nd.cls || "").split(" ")[0];
+      s += `<rect class="n ${nd.cls || ""}" x="${cx(i) - BW / 2}" y="${Y - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
+      s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx(i)}" y="${Y}">${show(nd.v)}</text>`;
+      (pm[i] || []).forEach((nm, k) => { s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`; });
+    });
+    return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;
   }
-
-  function renderGrid() {
-    const m = grid.length, n = grid[0].length;
-    const g = $("grid");
-    g.style.setProperty("--n", n);
-    g.innerHTML = "";
-    g.appendChild(Object.assign(document.createElement("span"), { className: "axis" }));
-    for (let j = 0; j < n; j++) g.appendChild(Object.assign(document.createElement("span"), { className: "axis", textContent: j }));
-    for (let i = 0; i < m; i++) {
-      g.appendChild(Object.assign(document.createElement("span"), { className: "axis", textContent: i }));
-      for (let j = 0; j < n; j++) {
-        const b = document.createElement("button");
-        b.type = "button";
-        b.id = `c-${i}-${j}`;
-        b.className = "cell";
-        b.addEventListener("click", () => {
-          grid[i][j] ^= 1;
-          setPressed(null);
-          restart();
-        });
-        g.appendChild(b);
-      }
+  function vTree(v) {
+    const pos = {}, par = {}, PAD = v.badges ? 44 : 28, GAPX = v.badges ? 54 : 46; let x = 0, depth = 0;
+    const walk = (id, d) => { if (id === null || id === undefined || !v.nodes[id]) return; const nd = v.nodes[id];
+      walk(nd.l, d + 1); pos[id] = [PAD + x * GAPX, 28 + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
+      for (const c of [nd.l, nd.r]) if (c !== null && c !== undefined && v.nodes[c]) par[c] = id; };
+    walk(v.root, 0);
+    const W = Math.max(PAD * 2 + (x - 1) * GAPX, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
+    const cls = v.cls || {}, on = new Set(v.on || []);
+    let s = "";
+    for (const id in par) { const [x1, y1] = pos[par[id]], [x2, y2] = pos[id];
+      s += `<line class="edge ${on.has(+id) && on.has(+par[id]) ? "on" : ""}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`; }
+    for (const id in pos) { const [px, py] = pos[id], c = (cls[id] || "").split(" ")[0];
+      s += `<circle class="n ${cls[id] || ""}" cx="${px}" cy="${py}" r="17"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(v.nodes[id].v)}</text>`;
+      const b = v.badges && v.badges[id];
+      if (b !== undefined && b !== null) { const t = String(b), w = Math.max(26, t.length * 7 + 10);
+        s += `<rect class="bd" x="${px - w / 2}" y="${py + 21}" width="${w}" height="16" rx="8"></rect><text class="bt" x="${px}" y="${py + 29}">${E(t)}</text>`; }
     }
+    return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W * 1.15}px;max-width:100%"><g>${s}</g></svg></div></div>`;
   }
+  const R = { array: vArray, bars: vBars, grid: vGrid, chips: vChips, list: vList, tree: vTree, note: (v) => `<div class="v">${lab(v)}<div>${v.html}</div></div>` };
 
-  function show() {
+  let steps = [], idx = 0, timer = null;
+  function render() {
     const s = steps[idx];
-    const m = grid.length, n = grid[0].length;
-    const inStack = new Set(s.stack.map(([r, c]) => `${r},${c}`));
-    const pushed = new Set((s.pushed || []).map(([r, c]) => `${r},${c}`));
-    for (let i = 0; i < m; i++) {
-      for (let j = 0; j < n; j++) {
-        const el = $(`c-${i}-${j}`);
-        const k = s.mark[i][j];
-        const key = `${i},${j}`;
-        el.className = "cell " + (grid[i][j] ? "land" : "water");
-        el.style.background = "";
-        el.style.color = "";
-        if (k) {
-          el.classList.add("isl");
-          el.style.background = `var(--i${((k - 1) % COLORS) + 1})`;
-        }
-        if (inStack.has(key)) el.classList.add("instack");
-        if (s.cur && s.cur[0] === i && s.cur[1] === j) {
-          el.classList.add("cur");
-          if (s.skip) el.classList.add("skipped");
-        }
-        if (s.pop && s.pop[0] === i && s.pop[1] === j) el.classList.add("pop");
-        el.innerHTML = k ? `#${k}` : String(grid[i][j]);
-        if (pushed.has(key)) {
-          el.classList.add("pushed");
-          el.innerHTML += '<span class="tag">入栈</span>';
-        }
-        el.setAttribute("aria-label", `第 ${i} 行第 ${j} 列，${grid[i][j] ? "陆地" : "水"}${k ? `，第 ${k} 座岛` : ""}`);
-      }
-    }
-    $("count").textContent = s.count;
+    $("views").innerHTML = s.views.map((v) => R[v.t](v)).join("");
+    const f = $("facts");
+    f.hidden = !(s.facts && s.facts.length);
+    f.innerHTML = (s.facts || []).map(([k, val]) => `<div class="fact"><span class="fk">${E(k)}</span><span class="fv${String(val).length > 6 ? " long" : ""}">${E(val)}</span></div>`).join("");
     const ph = $("phase");
     ph.textContent = s.phase;
-    ph.className = "phase" + (s.skip ? " skip" : "");
+    ph.className = "phase" + (s.kind ? " " + s.kind : "");
     $("msg").innerHTML = s.msg;
-    const st = $("stack");
-    st.innerHTML = s.stack.length
-      ? s.stack.map((p, t) => `<span class="chip${t === s.stack.length - 1 ? " top" : ""}">${fmt(p)}</span>`).join("")
-      : '<span class="empty">空</span>';
-    $("slider").max = steps.length - 1;
-    $("slider").value = idx;
+    $("slider").max = steps.length - 1; $("slider").value = idx;
     $("stepno").textContent = `${idx} / ${steps.length - 1}`;
-    $("prev").disabled = idx === 0;
-    $("next").disabled = idx === steps.length - 1;
-    $("jump").disabled = !steps.slice(idx + 1).some((x) => x.phase === "发现新岛");
+    $("prev").disabled = idx === 0; $("next").disabled = idx === steps.length - 1;
   }
-
-  function go(i) { idx = Math.max(0, Math.min(steps.length - 1, i)); show(); }
-
-  function stop() {
-    if (timer) clearInterval(timer);
-    timer = null;
-    $("play").textContent = "自动播放";
-  }
+  function go(i) { idx = Math.max(0, Math.min(steps.length - 1, i)); render(); }
+  function stop() { if (timer) clearInterval(timer); timer = null; $("play").textContent = "自动播放"; }
   function play() {
     if (timer) return stop();
     if (idx === steps.length - 1) go(0);
     $("play").textContent = "暂停";
-    timer = setInterval(() => {
-      if (idx >= steps.length - 1) return stop();
-      go(idx + 1);
-    }, 650);
+    timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
-
-  function restart() { stop(); build(); renderGrid(); go(0); }
-  function load(name) {
-    current = name;
-    grid = name === "exr" ? randomGrid() : parse(EX[name]);
-    setPressed(name);
-    restart();
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
+  function load(k) {
+    stop();
+    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
+    steps = [];
+    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
+    go(0);
   }
-  function setPressed(name) {
-    for (const id of ["ex1", "ex2", "exr"]) $(id).setAttribute("aria-pressed", String(id === name));
-  }
-
-  $("ex1").onclick = () => load("ex1");
-  $("ex2").onclick = () => load("ex2");
-  $("exr").onclick = () => load("exr");
+  $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
+    (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
+  SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });
+  if (SPEC.random) $("preR").onclick = () => load(-1);
   $("reset").onclick = () => { stop(); go(0); };
   $("prev").onclick = () => { stop(); go(idx - 1); };
   $("next").onclick = () => { stop(); go(idx + 1); };
   $("play").onclick = play;
-  $("jump").onclick = () => {
-    stop();
-    const k = steps.findIndex((x, t) => t > idx && x.phase === "发现新岛");
-    if (k >= 0) go(k);
-  };
   $("slider").oninput = (e) => { stop(); go(Number(e.target.value)); };
-
-  load("ex2");
-  // 打开时停在第一次「发现新岛」，第一眼就能看到关键一步
-  const first = steps.findIndex((x) => x.phase === "发现新岛");
-  if (first > 0) go(first);
+  load(0);
 })();
 </script>

@@ -5,6 +5,11 @@ compatibility_date = "2026-10-01"
 # 网站的数据就是这个仓库：Pages Functions 在运行时通过 GitHub API 读取。
 # 私有仓库需要令牌：wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 # 令牌只存在 Cloudflare 的加密环境变量里，不要写进这个文件或仓库里的任何地方。
+# 登录用的 GitHub OAuth App：GITHUB_OAUTH_CLIENT_ID、GITHUB_OAUTH_CLIENT_SECRET，会话加密密钥 SESSION_SECRET，
+# 也都用 wrangler pages secret put 设置。三者都设好之前，网站照常能看，只是没有登录入口。
 [vars]
 GITHUB_REPO = "Hanwen-Jiang/leetcode"
 GITHUB_BRANCH = "main"
+# 0 进度的进度仓模板，登录用户的进度仓用它生成，名字是 PROGRESS_REPO
+TEMPLATE_REPO = "Hanwen-Jiang/hot100-progress-template"
+PROGRESS_REPO = "hot100-progress"

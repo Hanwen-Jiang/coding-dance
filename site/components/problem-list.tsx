@@ -9,7 +9,9 @@ import { useEffect, useMemo, useState } from "react";
 import { HistoryIcon, PlayIcon, SearchOffIcon } from "@/components/icons";
 import { LevelPixels, PixelTitle, ProgressMatrix, Skel, StatusPixel, TYPING_WORDS, TypingPixels } from "@/components/pixel";
 import { TierChip, TopicChip, langShort } from "@/components/tags";
-import type { IndexData, ProblemSummary, Status } from "@/lib/types";
+import { LoginHint, SetupCard } from "@/components/account";
+import { useProgress } from "@/lib/progress";
+import type { IndexData, Problem, Status } from "@/lib/types";
 import { LEVEL_ORDER, TIER_INFO, TIER_ORDER, byImportance } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
@@ -45,7 +47,7 @@ function usePersisted<T extends string>(key: string, initial: T): [T, (v: T) => 
   return [v, set];
 }
 
-function ProblemCard({ p, groupBy, i }: { p: ProblemSummary; groupBy: GroupBy; i: number }) {
+function ProblemCard({ p, groupBy, i }: { p: Problem; groupBy: GroupBy; i: number }) {
   return (
     <NextLink
       className="reveal-item group block h-full rounded-3xl no-underline outline-none focus-visible:ring-2 focus-visible:ring-accent"
@@ -127,7 +129,13 @@ export function ProblemList() {
   const [filter, setFilter] = usePersisted<StatusFilter>("lc.status", "all");
   const [query, setQuery] = useState("");
 
-  const problems = data?.problems ?? [];
+  // 题目资源对所有人一样；状态和题解来自当前用户的进度仓（没登录就是 0 进度）
+  const { loading: sessionLoading, statusOf, langsOf } = useProgress();
+  const problems: Problem[] = useMemo(
+    () => (data?.problems ?? []).map((p) => ({ ...p, status: statusOf(p.id), langs: langsOf(p.id) })),
+    [data, statusOf, langsOf],
+  );
+  const ready = !!data && !sessionLoading;
   const counts = useMemo(() => {
     const c = { 已通过: 0, 曾通过: 0, 未开始: 0, history: 0, spec: 0 };
     for (const p of problems) {
@@ -143,7 +151,7 @@ export function ProblemList() {
     const shown = problems
       .filter((p) => filter === "all" || p.status === filter)
       .filter((p) => !q || String(p.id) === q || p.name.toLowerCase().includes(q) || p.topic.includes(q));
-    const make = (keys: string[], key: (p: ProblemSummary) => string, sort: (a: ProblemSummary, b: ProblemSummary) => number) =>
+    const make = (keys: string[], key: (p: Problem) => string, sort: (a: Problem, b: Problem) => number) =>
       keys
         .map((k) => ({ key: k, items: shown.filter((p) => key(p) === k).sort(sort) }))
         .filter((g) => g.items.length);
@@ -183,22 +191,24 @@ export function ProblemList() {
                 </KPI.Header>
                 <KPI.Content>
                   {/* 数据到之前用骨架占住同样的高度，不显示一个假的 0 */}
-                  {data ? <KPI.Value maximumFractionDigits={0} value={value} /> : <Skel className="my-1 h-7 w-14" />}
+                  {ready ? <KPI.Value maximumFractionDigits={0} value={value} /> : <Skel className="my-1 h-7 w-14" />}
                 </KPI.Content>
               </KPI>,
             ])}
           </KPIGroup>
           <Card className="gap-3 p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted">
-              <span className="font-pixel tracking-wider">PROGRESS · {data ? `${counts.已通过 + counts.曾通过}/${total}` : "--/100"}</span>
+              <span className="font-pixel tracking-wider">PROGRESS · {ready ? `${counts.已通过 + counts.曾通过}/${total}` : "--/100"}</span>
               <span className="flex items-center gap-3">
                 <StatusPixel status="已通过" />
                 <StatusPixel status="曾通过" />
                 <StatusPixel status="未开始" />
               </span>
             </div>
-            <ProgressMatrix problems={data ? problems.slice().sort(byImportance) : null} />
+            <ProgressMatrix problems={ready ? problems.slice().sort(byImportance) : null} />
           </Card>
+          <SetupCard />
+          <LoginHint />
         </div>
       </section>
 
