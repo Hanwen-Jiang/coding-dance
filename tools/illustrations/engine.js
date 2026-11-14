@@ -119,17 +119,20 @@
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
   function load(k) {
     stop();
-    const p = SPEC.presets[k];
+    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
     steps = [];
-    SPEC.build(p.args, (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === k)));
-    $("inote").textContent = p.note || "";
+    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
     go(0);
   }
-  $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" aria-pressed="false">${E(p.label)}</button>`).join("");
+  $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
+    (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });
+  if (SPEC.random) $("preR").onclick = () => load(-1);
   $("reset").onclick = () => { stop(); go(0); };
   $("prev").onclick = () => { stop(); go(idx - 1); };
   $("next").onclick = () => { stop(); go(idx + 1); };

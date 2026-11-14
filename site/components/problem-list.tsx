@@ -203,7 +203,7 @@ export function ProblemList() {
       </section>
 
       <section className="flex flex-col gap-6">
-        <div className="sticky top-14 z-30 -mx-4 flex flex-col gap-3 border-b border-separator bg-background/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 md:flex-row md:items-center md:justify-between">
+        <div className="z-30 -mx-4 flex flex-col gap-3 border-b border-separator bg-background/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 md:sticky md:top-14 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             <Segment aria-label="分组方式" selectedKey={groupBy} onSelectionChange={(k) => setGroupBy(k as GroupBy)}>
               {GROUPS.map((g) => (

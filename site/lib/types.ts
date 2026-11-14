@@ -42,6 +42,8 @@ export interface Demo {
   presets: { label: string; args: unknown; note: string }[];
   /** spec 里 build 方法的源码 */
   build: string;
+  /** 随机输入：自包含的函数源码，调用后返回 { args, note }；没有时为 null */
+  random?: string | null;
 }
 
 export interface Spec {

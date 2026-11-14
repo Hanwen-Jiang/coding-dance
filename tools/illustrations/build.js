@@ -1,6 +1,8 @@
 // 生成 illustrations/<编号>.<题名>.html，并把提示、代码、注意点导出到 tools/illustrations/data/<编号>.json（网站读这份数据）。
 // 用法：node tools/illustrations/build.js [题号...]        只导出数据、跳过测试和页面：加 --data-only
+// 随机演示的输入在 random.js 里；build 时每题随机 40 组输入，演示的答案要和标准 Python 解法一致。
 const fs = require("fs"), path = require("path"), cp = require("child_process"), os = require("os");
+const { makeR, GEN, randomSource } = require("./random");
 const dir = __dirname, out = path.join(dir, "../../illustrations"), dataDir = path.join(dir, "data");
 const dataOnly = process.argv.includes("--data-only");
 fs.mkdirSync(dataDir, { recursive: true });
@@ -14,8 +16,39 @@ const exportData = (S) => fs.writeFileSync(path.join(dataDir, `${String(S.id).pa
     legend: S.legend || [],
     presets: S.presets.map(({ label, args, note }) => ({ label, args, note: note || "" })),
     build: S.build.toString(),
+    // 「随机」：一段自包含的函数源码，调用后返回 { args, note }
+    random: randomSource(S.id),
   },
 }, null, 1) + "\n");
+const pyCmd = () => (process.env.PYTHON || "python3").split(" "); // 没装 Python 时可设 PYTHON="node pyrun.js" 之类的替代命令
+const randomPrelude = fs.readFileSync(path.join(dir, "random_prelude.py"), "utf8");
+const deepSort = (x) => (Array.isArray(x) ? x.map(deepSort).sort((a, b) => (JSON.stringify(a) < JSON.stringify(b) ? -1 : 1)) : x);
+const same = (a, b) => (typeof a === "number" && typeof b === "number" ? Math.abs(a - b) < 1e-9
+  : Array.isArray(a) && Array.isArray(b) ? a.length === b.length && a.every((x, i) => same(x, b[i])) : JSON.stringify(a) === JSON.stringify(b));
+/** 随机 n 组输入：演示要能跑完并给出答案，答案要和标准解法（codes[0]）一致 */
+function checkRandom(S, n = 40) {
+  const R = makeR(), samples = [];
+  for (let k = 0; k < n; k++) {
+    const r = GEN[S.id](R), steps = [];
+    S.build(JSON.parse(JSON.stringify(r.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
+    const last = steps[steps.length - 1];
+    if (!last || !("ans" in last)) throw new Error(`${S.id}: random demo gave no answer for ${r.note}`);
+    samples.push({ r, ans: last.ans });
+  }
+  const script = prelude + "\n" + randomPrelude + "\n" + S.codes[0].code + "\n__res = []\nfor __f in [" + samples.map((s) => `lambda: ${s.r.py}`).join(",\n") + "]:\n    __res.append(__f())\nprint(json.dumps(__res))\n";
+  const tmp = path.join(os.tmpdir(), `ill_rand_${S.id}_${Math.random().toString(36).slice(2)}.py`);
+  fs.writeFileSync(tmp, script);
+  let res;
+  try { res = JSON.parse(cp.execFileSync(pyCmd()[0], [...pyCmd().slice(1), tmp], { stdio: ["ignore", "pipe", "pipe"] }).toString().trim().split("\n").pop()); }
+  catch (e) { throw new Error(`${S.id}: random check python failed\n${e.stderr || e.message}`); }
+  finally { fs.unlinkSync(tmp); }
+  samples.forEach((s, i) => {
+    let a = s.ans, b = res[i];
+    if (s.r.cmp === "unordered") { a = deepSort(a); b = deepSort(b); }
+    if (s.r.cmp === "length") a = a.length;
+    if (!same(a, b)) throw new Error(`${S.id}: random demo answer ${JSON.stringify(s.ans)} != python ${JSON.stringify(res[i])} for ${s.r.note}`);
+  });
+}
 const css = fs.readFileSync(path.join(dir, "style.css"), "utf8");
 const engine = fs.readFileSync(path.join(dir, "engine.js"), "utf8");
 const prelude = fs.readFileSync(path.join(dir, "pytest_prelude.py"), "utf8");
@@ -44,10 +77,15 @@ for (const f of fs.readdirSync(path.join(dir, "specs")).sort()) {
     if (!t) throw new Error(`${S.id}: code "${c.t}" has no test`);
     const tmp = path.join(os.tmpdir(), `ill_${S.id}_${Math.random().toString(36).slice(2)}.py`);
     fs.writeFileSync(tmp, prelude + "\n" + c.code + "\n" + t + "\n");
-    const py = (process.env.PYTHON || "python3").split(" "); // 没装 Python 时可设 PYTHON="node pyrun.js" 之类的替代命令
+    const py = pyCmd();
     try { cp.execFileSync(py[0], [...py.slice(1), tmp], { stdio: ["ignore", "pipe", "pipe"] }); }
     catch (e) { throw new Error(`${S.id}: python test failed for "${c.t}"\n${e.stderr}`); }
     finally { fs.unlinkSync(tmp); }
+  }
+  // 3) 随机演示：和标准解法对答案
+  if (!S.handwritten) {
+    if (!GEN[S.id]) throw new Error(`${S.id}: random.js 里没有这道题的随机输入`);
+    checkRandom(S);
   }
   exportData(S);
   if (S.handwritten) { n++; console.log("ok", S.id, S.name, "(handwritten, tests only)"); continue; }
@@ -114,7 +152,7 @@ ${S.points.map((p) => `      <div class="point"><h3>${p.t}</h3><p>${p.body}</p><
 </div>
 
 <script>
-const SPEC = { presets: ${JSON.stringify(S.presets.map(({ label, args, note }) => ({ label, args, note })))}, ${S.build.toString()} };
+const SPEC = { presets: ${JSON.stringify(S.presets.map(({ label, args, note }) => ({ label, args, note })))}, random: ${randomSource(S.id)}, ${S.build.toString()} };
 ${engine}</script>
 `;
   fs.writeFileSync(path.join(out, `${String(S.id).padStart(4, "0")}.${S.name}.html`), html);

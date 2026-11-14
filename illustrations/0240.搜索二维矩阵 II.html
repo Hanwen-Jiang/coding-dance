@@ -244,7 +244,72 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 </div>
 
 <script>
-const SPEC = { presets: [{"label":"示例 1：找 5","args":{"t":5},"note":"target = 5"},{"label":"示例 2：找 20","args":{"t":20},"note":"target = 20"},{"label":"找 18","args":{"t":18},"note":"target = 18"}], build(a, snap) {
+const SPEC = { presets: [{"label":"示例 1：找 5","args":{"t":5},"note":"target = 5"},{"label":"示例 2：找 20","args":{"t":20},"note":"target = 20"},{"label":"找 18","args":{"t":18},"note":"target = 18"}], random: () => { const R = (function makeR() {
+  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = (xs) => xs[int(0, xs.length - 1)];
+  const chance = (p) => Math.random() < p;
+  const shuffle = (xs) => {
+    const a = xs.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = int(0, i);
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));
+  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);
+  const sorted = (xs) => xs.slice().sort((x, y) => x - y);
+  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join("");
+  const fmt = (x) => JSON.stringify(x);
+  const py = (x) => JSON.stringify(x).replace(/null/g, "None").replace(/true/g, "True").replace(/false/g, "False");
+  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）
+  const toLc = (heap) => {
+    const out = [];
+    const q = heap.length && heap[0] != null ? [0] : [];
+    while (q.length) {
+      const i = q.shift();
+      if (i < 0) { out.push(null); continue; }
+      out.push(heap[i]);
+      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);
+    }
+    while (out.length && out[out.length - 1] === null) out.pop();
+    return out;
+  };
+  const trim = (heap) => {
+    while (heap.length && heap[heap.length - 1] == null) heap.pop();
+    return heap;
+  };
+  /** 随机形状的树，n 个节点，值由 val(k) 给出 */
+  const tree = (n, val, maxId = 30) => {
+    const ids = [0];
+    let guard = 0;
+    while (ids.length < n && guard++ < 500) {
+      const p = pick(ids), c = 2 * p + int(1, 2);
+      if (c <= maxId && !ids.includes(c)) ids.push(c);
+    }
+    const heap = [];
+    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));
+    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;
+    trim(heap);
+    return { heap, lc: toLc(heap) };
+  };
+  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */
+  const bst = (vals) => {
+    const heap = [];
+    for (const v of vals) {
+      let i = 0;
+      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;
+      if (i <= 30) heap[i] = v;
+    }
+    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;
+    trim(heap);
+    return { heap, lc: toLc(heap) };
+  };
+  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };
+})(); const r = ((R) => {
+    const t = R.int(0, 31);
+    return { args: { t }, note: `target = ${t}`, py: `Solution().searchMatrix([[1,4,7,11,15],[2,5,8,12,19],[3,6,9,16,22],[10,13,14,17,24],[18,21,23,26,30]], ${t})` };
+  })(R); return { args: r.args, note: r.note }; }, build(a, snap) {
     const M = [[1, 4, 7, 11, 15], [2, 5, 8, 12, 19], [3, 6, 9, 16, 22], [10, 13, 14, 17, 24], [18, 21, 23, 26, 30]], t = a.t;
     let i = 0, j = M[0].length - 1;
     const view = (hit) => [{ t: "grid", label: "matrix", rows: M.map((r, x) => r.map((v, y) => ({ v, cls: x === i && y === j ? (hit ? "c" : "a") : x < i || y > j ? "d" : "" }))) }];
@@ -378,17 +443,20 @@ const SPEC = { presets: [{"label":"示例 1：找 5","args":{"t":5},"note":"targ
     $("play").textContent = "暂停";
     timer = setInterval(() => { if (idx >= steps.length - 1) return stop(); go(idx + 1); }, 1100);
   }
+  // k 是预设的下标；k === -1 表示随机生成一组输入（每点一次换一组）
   function load(k) {
     stop();
-    const p = SPEC.presets[k];
+    const p = k >= 0 ? SPEC.presets[k] : SPEC.random();
     steps = [];
-    SPEC.build(p.args, (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
-    document.querySelectorAll("#presets button").forEach((b, i) => b.setAttribute("aria-pressed", String(i === k)));
-    $("inote").textContent = p.note || "";
+    SPEC.build(JSON.parse(JSON.stringify(p.args)), (phase, msg, views, o) => steps.push({ phase, msg, views, ...(o || {}) }));
+    document.querySelectorAll("#presets button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.k === String(k))));
+    $("inote").textContent = (k < 0 ? "随机：" : "") + (p.note || "");
     go(0);
   }
-  $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" aria-pressed="false">${E(p.label)}</button>`).join("");
+  $("presets").innerHTML = SPEC.presets.map((p, i) => `<button type="button" id="pre${i}" data-k="${i}" aria-pressed="false">${E(p.label)}</button>`).join("") +
+    (SPEC.random ? `<button type="button" id="preR" data-k="-1" aria-pressed="false" title="每点一次换一组随机输入">随机</button>` : "");
   SPEC.presets.forEach((_, i) => { $("pre" + i).onclick = () => load(i); });
+  if (SPEC.random) $("preR").onclick = () => load(-1);
   $("reset").onclick = () => { stop(); go(0); };
   $("prev").onclick = () => { stop(); go(idx - 1); };
   $("next").onclick = () => { stop(); go(idx + 1); };

@@ -2,8 +2,10 @@
 
 import { Accordion, Breadcrumbs, Button, Card, Tabs } from "@heroui/react";
 import { EmptyState } from "@heroui-pro/react";
+import clsx from "clsx";
 import NextLink from "next/link";
-import { useEffect, useState } from "react";
+import { useTheme } from "next-themes";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CodePanel } from "@/components/code-panel";
 import { DemoPlayer } from "@/components/demo/demo-player";
@@ -197,16 +199,59 @@ function Loading() {
   );
 }
 
+/**
+ * 手写的图解页面（200、215、236）：同源内嵌，只露出演示部分（提示、代码页面上已经有了），
+ * 跟随网站的深浅色，高度随内容自动调整，手机上不会被截断。
+ */
+function HandwrittenDemo({ src }: { src: string }) {
+  const ref = useRef<HTMLIFrameElement>(null);
+  const { resolvedTheme } = useTheme();
+  const [height, setHeight] = useState(720);
+  const [ready, setReady] = useState(false);
+
+  const tune = useCallback(() => {
+    const doc = ref.current?.contentDocument;
+    if (!doc?.body) return;
+    doc.documentElement.dataset.theme = resolvedTheme === "dark" ? "dark" : "light";
+    if (!doc.getElementById("embed-style")) {
+      const st = doc.createElement("style");
+      st.id = "embed-style";
+      st.textContent =
+        "header,section[aria-labelledby=h-hints],section[aria-labelledby=h-points]{display:none!important}" +
+        ".wrap{padding-top:16px!important;padding-bottom:16px!important}body{margin:0;background:transparent!important}";
+      doc.head.appendChild(st);
+    }
+    setHeight(Math.ceil(doc.documentElement.scrollHeight));
+    setReady(true);
+  }, [resolvedTheme]);
+
+  useEffect(() => {
+    tune();
+    const doc = ref.current?.contentDocument;
+    if (!doc?.body) return;
+    const ro = new ResizeObserver(() => setHeight(Math.ceil(doc.documentElement.scrollHeight)));
+    ro.observe(doc.body);
+    return () => ro.disconnect();
+  }, [tune]);
+
+  return (
+    <Card className="overflow-hidden p-0">
+      {!ready && <PixelLoader label="LOADING" />}
+      <iframe
+        ref={ref}
+        className={clsx("w-full border-0 transition-opacity duration-300", ready ? "opacity-100" : "h-0 opacity-0")}
+        src={src}
+        style={ready ? { height } : undefined}
+        title="动画演示"
+        onLoad={tune}
+      />
+    </Card>
+  );
+}
+
 function DemoSection({ d }: { d: ProblemDetail }) {
   if (d.spec?.demo) return <DemoPlayer demo={d.spec.demo} />;
-  if (d.illustrationUrl) {
-    // 手写的图解页面（200、215、236）直接内嵌
-    return (
-      <Card className="overflow-hidden p-0">
-        <iframe className="h-[1180px] w-full border-0" loading="lazy" src={d.illustrationUrl} title="动画演示" />
-      </Card>
-    );
-  }
+  if (d.illustrationUrl) return <HandwrittenDemo src={d.illustrationUrl} />;
   return <p className="text-sm text-muted">这道题还没有动画演示。</p>;
 }
 

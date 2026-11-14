@@ -312,9 +312,11 @@ export function PixelTitle({
     setGrid({ w, h: maxY - minY + 1, on: on.map(([x, y]) => [x, y - minY]) });
   }, [text, px, weight]);
 
-  // 普通文字只给屏幕阅读器；先按像素版本的高度占好位置，像素画出来时不会挤动下面的内容
+  // 普通文字只给屏幕阅读器；像素画出来之前先按估算的高度占好位置（窄屏上按比例缩小），画出来后由 SVG 自己撑开
+  const units = [...text].reduce((s, ch) => s + (/[　-鿿＀-￯]/.test(ch) ? 1 : 0.62), 0);
+  const reserve = `min(${Math.round(px * 1.05 * cell)}px, calc((100vw - 32px) * ${(1.05 / units).toFixed(4)}))`;
   return (
-    <Tag className={clsx("pixel-title", className)} style={{ minHeight: Math.round(px * 1.05 * cell) }}>
+    <Tag className={clsx("pixel-title", className)} style={grid ? undefined : { minHeight: reserve }}>
       <span className="sr-only">{text}</span>
       {grid && (
         <svg aria-hidden className="block h-auto max-w-full" style={{ width: `${grid.w * cell}px` }} viewBox={`0 0 ${grid.w} ${grid.h}`}>
@@ -341,6 +343,7 @@ const ICONS: Record<string, string[]> = {
   sun: ["....#....", ".#.....#.", "...###...", "..#####..", "#.#####.#", "..#####..", "...###...", ".#.....#.", "....#...."],
   moon: ["...###...", "..##.....", ".##......", ".##......", ".##......", ".##......", ".###...#.", "..######.", "...####.."],
   arrow: ["...####", ".....##", "....#.#", "...#..#", "..#....", ".#.....", "#......"],
+  dice: ["#######", "#.....#", "#.#...#", "#..#..#", "#...#.#", "#.....#", "#######"],
 };
 
 export function PixelIcon({ name, cell = 2, className }: { name: keyof typeof ICONS; cell?: number; className?: string }) {

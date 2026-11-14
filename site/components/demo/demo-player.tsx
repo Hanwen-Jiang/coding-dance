@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { renderViews } from "@/components/demo/render";
 import { ChevronLeft, ChevronRight, PlayIcon } from "@/components/icons";
+import { PixelIcon } from "@/components/pixel";
 import type { Demo } from "@/lib/types";
 
 type Step = { phase: string; msg: string; views: Record<string, unknown>[]; kind?: string; facts?: [string, unknown][] };
@@ -17,6 +18,19 @@ function compile(src: string): BuildFn | null {
   try {
     // eslint-disable-next-line @typescript-eslint/no-implied-eval
     return new Function(`return { ${src} }`)().build as BuildFn;
+  } catch {
+    return null;
+  }
+}
+
+type Input = { args: unknown; note: string; label?: string };
+
+/** 「随机」：数据里是一段自包含的函数源码，调用后返回 { args, note } */
+function compileRandom(src: string | null | undefined): (() => Input) | null {
+  if (!src) return null;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-implied-eval
+    return new Function(`return (${src})`)() as () => Input;
   } catch {
     return null;
   }
@@ -41,8 +55,12 @@ const PauseIcon = () => (
 
 export function DemoPlayer({ demo }: { demo: Demo }) {
   const build = useMemo(() => compile(demo.build), [demo.build]);
-  const [preset, setPreset] = useState(0);
-  const steps = useMemo(() => (build ? runSteps(build, demo.presets[preset]?.args) : []), [build, demo.presets, preset]);
+  const random = useMemo(() => compileRandom(demo.random), [demo.random]);
+  // sel 是预设的下标，或者 "random"
+  const [sel, setSel] = useState("0");
+  const [rolled, setRolled] = useState<Input | null>(null);
+  const input: Input | null = sel === "random" ? rolled : demo.presets[Number(sel)] ?? null;
+  const steps = useMemo(() => (build && input ? runSteps(build, input.args) : []), [build, input]);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -50,10 +68,20 @@ export function DemoPlayer({ demo }: { demo: Demo }) {
   const last = Math.max(0, steps.length - 1);
   const go = useCallback((i: number) => setIdx(Math.max(0, Math.min(last, i))), [last]);
 
+  const reroll = () => {
+    if (!random) return;
+    try {
+      setRolled(random());
+      setSel("random");
+    } catch {
+      /* 随机输入生成失败就留在当前示例 */
+    }
+  };
+
   useEffect(() => {
     setIdx(0);
     setPlaying(false);
-  }, [preset]);
+  }, [input]);
 
   useEffect(() => {
     if (!playing) return;
@@ -99,16 +127,40 @@ export function DemoPlayer({ demo }: { demo: Demo }) {
       }}
     >
       <Card className="min-w-0 gap-4 p-4 sm:p-5">
-        {demo.presets.length > 1 && (
-          <Segment aria-label="选择示例" selectedKey={String(preset)} size="sm" onSelectionChange={(k) => setPreset(Number(k))}>
-            {demo.presets.map((p, i) => (
-              <Segment.Item key={i} id={String(i)}>
-                {p.label}
-              </Segment.Item>
-            ))}
-          </Segment>
+        {(demo.presets.length > 1 || random) && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Segment
+              aria-label="选择示例"
+              className="max-w-full overflow-x-auto"
+              selectedKey={sel}
+              size="sm"
+              onSelectionChange={(k) => (String(k) === "random" ? reroll() : setSel(String(k)))}
+            >
+              {demo.presets.map((p, i) => (
+                <Segment.Item key={i} id={String(i)}>
+                  {p.label}
+                </Segment.Item>
+              ))}
+              {random ? (
+                <Segment.Item key="random" id="random">
+                  随机
+                </Segment.Item>
+              ) : null}
+            </Segment>
+            {sel === "random" && (
+              <Button size="sm" variant="ghost" onPress={reroll}>
+                <PixelIcon cell={2} name="dice" />
+                换一组
+              </Button>
+            )}
+          </div>
         )}
-        {demo.presets[preset]?.note && <div className="font-mono text-xs text-muted [overflow-wrap:anywhere]">{demo.presets[preset].note}</div>}
+        {input?.note && (
+          <div className="font-mono text-xs text-muted [overflow-wrap:anywhere]">
+            {sel === "random" && <span className="font-pixel me-2 text-[10px] tracking-wider text-accent">RANDOM</span>}
+            {input.note}
+          </div>
+        )}
         <div className="dm-views" dangerouslySetInnerHTML={{ __html: html }} />
         <div className="flex flex-col gap-3 border-t border-separator pt-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -181,7 +233,7 @@ export function DemoPlayer({ demo }: { demo: Demo }) {
         >
           {s.phase}
         </span>
-        <p key={`${preset}-${idx}`} className="dm-msg min-h-[5.5em] text-base leading-7" dangerouslySetInnerHTML={{ __html: s.msg }} />
+        <p key={`${sel}-${idx}`} className="dm-msg min-h-[5.5em] text-base leading-7" dangerouslySetInnerHTML={{ __html: s.msg }} />
         {demo.legend.length > 0 && (
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
             {demo.legend.map(([cls, t]) => (
