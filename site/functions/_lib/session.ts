@@ -37,6 +37,9 @@ export const SESSION_DAYS = 30;
 const enc = new TextEncoder();
 const dec = new TextDecoder();
 
+/** 通过 PowerShell 管道写入的 secret 可能带 BOM 或换行；trim() 两样都会去掉 */
+export const clean = (v?: string) => (v || "").trim();
+
 export const b64u = (bytes: ArrayBuffer | Uint8Array) => {
   const a = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   let s = "";
@@ -90,7 +93,7 @@ export async function exchangeToken(env: AuthEnv, params: Record<string, string>
   const r = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
     headers: { Accept: "application/json", "Content-Type": "application/json", "User-Agent": "lc-hot100-site" },
-    body: JSON.stringify({ client_id: env.GITHUB_APP_CLIENT_ID, client_secret: env.GITHUB_APP_CLIENT_SECRET, ...params }),
+    body: JSON.stringify({ client_id: clean(env.GITHUB_APP_CLIENT_ID), client_secret: clean(env.GITHUB_APP_CLIENT_SECRET), ...params }),
   });
   const j = (await r.json().catch(() => ({}))) as { access_token?: string; refresh_token?: string; expires_in?: number };
   if (!j.access_token) return null;

@@ -14,4 +14,4 @@ GITHUB_BRANCH = "main"
 TEMPLATE_REPO = "Hanwen-Jiang/hot100-progress-template"
 PROGRESS_REPO = "hot100-progress"
 # GitHub App 的 slug（https://github.com/apps/<slug>），建好 App 后填上
-GITHUB_APP_SLUG = ""
+GITHUB_APP_SLUG = "hot-100"
