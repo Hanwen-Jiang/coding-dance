@@ -3,6 +3,7 @@ import "@/styles/globals.css";
 import type { Metadata, Viewport } from "next";
 
 import { Providers } from "./providers";
+import { OverlayScrollbar } from "@/components/overlay-scrollbar";
 import { SiteHeader } from "@/components/site-header";
 
 export const metadata: Metadata = {
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span className="font-pixel me-2 text-[11px] tracking-wider">EOF</span>
             题面来自力扣，版权归力扣所有 · 数据实时读取自刷题仓库
           </footer>
+          <OverlayScrollbar />
         </Providers>
       </body>
     </html>

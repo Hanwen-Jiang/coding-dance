@@ -14,6 +14,23 @@ html {
   scroll-padding-top: 5rem;
 }
 
+/* ———— 滚动条不占位置 ————
+   页面滚动条：鼠标设备上藏掉原生的（Windows 上它固定占 17px，有的页面有、有的没有，内容会左右跳），
+   换成浮在内容上面的细滚动条（components/overlay-scrollbar.tsx）。触屏设备本来就是浮动的，不动它。
+   页面里局部的滚动区域（代码块、表格）：细一点，轨道透明。 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+}
+@media (pointer: fine) {
+  html {
+    scrollbar-width: none;
+  }
+  html::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* ———— 逐步演示（移植自 tools/illustrations/style.css，颜色换成站点的令牌） ———— */
 .demo {
   --dm-line: var(--border);
