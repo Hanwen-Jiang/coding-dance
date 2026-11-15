@@ -5,7 +5,7 @@ import { Button, Card, Checkbox, Dropdown } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ExternalIcon } from "@/components/icons";
 import { PixelBullet, PixelIcon, PixelTitle } from "@/components/pixel";
@@ -85,8 +85,8 @@ const STAR_INFO: Record<string, string> = {
   "Hanwen-Jiang/leetcode": "这个网站，以及全部题解和动画的源码",
 };
 
-/** 还没 Star 的仓库和用户的勾选（默认全勾，可以逐个取消） */
-function useStarChoice() {
+/** 还没 Star 的仓库和用户的勾选（默认全勾，可以逐个取消）。没登录时列出全部仓库，登录后再点 */
+export function useStarChoice() {
   const { session, star } = useProgress();
   const pending = useMemo(() => (session?.stars ?? []).filter((s) => !s.starred).map((s) => s.repo), [session]);
   const [off, setOff] = useState<Set<string>>(new Set());
@@ -105,6 +105,23 @@ function useStarChoice() {
   return { all: session?.stars ?? [], pending, chosen, off, toggle, run, busy, results };
 }
 type StarChoice = ReturnType<typeof useStarChoice>;
+
+/** 注册、登录时的「顺手 Star」：说明 + 仓库列表。login 时勾着的会在登录回来后点，注册时在点开通按钮时一起点 */
+export function StarPicker({ c, when }: { c: StarChoice; when: "login" | "setup" }) {
+  if (!c.all.length) return null;
+  return (
+    <div className="flex flex-col gap-3 border-t border-separator pt-4">
+      <span className="text-sm text-muted">
+        {!c.pending.length
+          ? "下面这些你都已经 Star 了，谢谢。"
+          : when === "login"
+            ? "觉得有用的话，顺手点个 Star：勾着的会在你登录后自动点上，不想点的取消勾选。"
+            : "觉得有用的话，开通时顺手点个 Star：勾着的会在你点上面的按钮时一起点，不想点的取消勾选。"}
+      </span>
+      <StarList c={c} />
+    </div>
+  );
+}
 
 /** 仓库列表：没 Star 的带勾选框；接口没点上的，给一个去 GitHub 手动点的链接 */
 function StarList({ c }: { c: StarChoice }) {
@@ -194,9 +211,8 @@ export function SetupCard() {
             GitHub 会打开「新建仓库」页面，名字已经填好 <span className="font-mono text-foreground">{session.repoName}</span>，可见性选 Public，点 Create repository 就行。
           </p>
           <div className="flex flex-wrap gap-2">
-            <a className="no-underline" href={session.createUrl} rel="noopener noreferrer" target="_blank" onClick={() => { c.run(); }}>
-              <Button size="sm">在 GitHub 上创建<ExternalIcon /></Button>
-            </a>
+            {/* 在 Button 自己的 onPress 里点 Star 再打开：Button 不让点击冒泡到外面，包一层 <a onClick> 是收不到的 */}
+            <Button size="sm" onPress={() => { c.run(); window.open(session.createUrl, "_blank", "noopener,noreferrer"); }}>在 GitHub 上创建<ExternalIcon /></Button>
             <Button isPending={checking} size="sm" variant="outline" onPress={recheck}>我建好了</Button>
           </div>
         </Step>
@@ -207,9 +223,7 @@ export function SetupCard() {
           <div className="flex flex-wrap gap-2">
             {repo.manageUrl ? (
               <>
-                <a className="no-underline" href={repo.manageUrl} rel="noopener noreferrer" target="_blank" onClick={() => { c.run(); }}>
-                  <Button size="sm">把仓库加进已装的 App<ExternalIcon /></Button>
-                </a>
+                <Button size="sm" onPress={() => { c.run(); window.open(repo.manageUrl!, "_blank", "noopener,noreferrer"); }}>把仓库加进已装的 App<ExternalIcon /></Button>
                 <Button isPending={checking} size="sm" variant="outline" onPress={recheck}>我加好了</Button>
               </>
             ) : (
@@ -218,74 +232,45 @@ export function SetupCard() {
           </div>
         </Step>
       </div>
-      {c.all.length > 0 && (
-        <div className="flex flex-col gap-3 border-t border-separator pt-4">
-          <span className="text-sm text-muted">
-            {c.pending.length ? "觉得有用的话，开通时顺手点个 Star（勾着的会在你点上面的按钮时一起点，不想点的取消勾选）：" : "下面这些你都已经 Star 了，谢谢。"}
-          </span>
-          <StarList c={c} />
-        </div>
-      )}
+      <StarPicker c={c} when="setup" />
     </Card>
   );
 }
 
-const LATER_KEY = "hot100:star-later";
-
-/** 已经开通的用户：还有没 Star 的仓库时，首页上的一张小卡片。可以「以后再说」（两周内不再出现） */
-export function StarCard() {
-  const { ready } = useProgress();
-  const c = useStarChoice();
-  const [hidden, setHidden] = useState(true);
-  const [thanks, setThanks] = useState(false);
-  useEffect(() => {
-    try { setHidden(Date.now() - Number(localStorage.getItem(LATER_KEY) || 0) < 14 * 864e5); } catch { setHidden(false); }
-  }, []);
-  if (!ready || (!c.pending.length && !thanks) || hidden) return null;
-  const later = () => { try { localStorage.setItem(LATER_KEY, String(Date.now())); } catch { /* 存不了就只隐藏这一次 */ } setHidden(true); };
-  const go = async () => { const res = await c.run(); if (res.some((r) => r.starred)) setThanks(true); };
+/**
+ * 「用 GitHub 登录」按钮：点的时候记下用户勾选的仓库，登录回来后自动 Star。
+ * 在 Button 自己的 onPress 里记下再跳转：Button 不让点击冒泡，包一层 <a onClick> 是收不到的。
+ */
+export function LoginButton({ c, size }: { c: StarChoice; size?: "sm" | "md" | "lg" }) {
+  const { loginHref, starAfterLogin } = useProgress();
   return (
-    <Card className="reveal gap-4 p-5 sm:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <span className="text-warning"><PixelIcon cell={2.5} name="star" /></span>
-          <span className="text-base font-semibold">{c.pending.length ? "觉得有用的话，点个 Star" : "谢谢你的 Star"}</span>
-        </div>
-        {c.pending.length > 0 && (
-          <div className="flex gap-2">
-            <Button isDisabled={!c.chosen.length} isPending={c.busy} size="sm" onPress={go}>
-              Star 勾选的 {c.chosen.length} 个
-            </Button>
-            <Button size="sm" variant="ghost" onPress={later}>以后再说</Button>
-          </div>
-        )}
-      </div>
-      <StarList c={c} />
-    </Card>
+    <Button size={size} onPress={() => { starAfterLogin(c.chosen); window.location.href = loginHref(); }}>
+      <PixelIcon cell={1.75} name="cat" />
+      用 GitHub 登录
+    </Button>
   );
 }
 
-/** 没登录时首页上的登录提示 */
+/** 没登录时首页上的登录提示；下面列出请用户顺手 Star 的仓库（默认全勾） */
 export function LoginHint() {
-  const { loading, session, loginHref } = useProgress();
+  const { loading, session } = useProgress();
+  const c = useStarChoice();
   if (loading || !session?.configured || session.user) return null;
   return (
-    <Card className="reveal flex-row flex-wrap items-center justify-between gap-4 p-5 sm:px-6">
-      <div className="flex min-w-0 flex-1 items-start gap-4">
-        <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-foreground/[0.06]"><PixelIcon cell={2.5} name="cat" /></span>
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="text-base font-semibold">登录后，这里显示你自己的进度</span>
-          <span className="text-sm leading-6 text-muted">
-            现在看到的是 0 进度。用 GitHub 登录后，进度、题解和尝试记录都存在你账号下的 <span className="font-mono">{session.repoName}</span> 仓库里，网站只申请这一个仓库的权限。
-          </span>
+    <Card className="reveal gap-5 p-5 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-4">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-foreground/[0.06]"><PixelIcon cell={2.5} name="cat" /></span>
+          <div className="flex min-w-0 flex-col gap-1">
+            <span className="text-base font-semibold">登录后，这里显示你自己的进度</span>
+            <span className="text-sm leading-6 text-muted">
+              现在看到的是 0 进度。用 GitHub 登录后，进度、题解和尝试记录都存在你账号下的 <span className="font-mono">{session.repoName}</span> 仓库里，网站只申请这一个仓库的权限。
+            </span>
+          </div>
         </div>
+        <LoginButton c={c} />
       </div>
-      <a className="no-underline" href={loginHref()}>
-        <Button>
-          <PixelIcon cell={1.75} name="cat" />
-          用 GitHub 登录
-        </Button>
-      </a>
+      <StarPicker c={c} when="login" />
     </Card>
   );
 }

@@ -12,6 +12,7 @@ import NextLink from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { LoginButton, StarPicker, useStarChoice } from "@/components/account";
 import { PixelBullet, PixelIcon, Skel } from "@/components/pixel";
 import { useProgress } from "@/lib/progress";
 import { bookmarklet } from "@/lib/sync/bookmarklet.ts";
@@ -638,8 +639,20 @@ function PlanView({ plan, excluded, toggle }: { plan: Plan; excluded: Set<string
 
 // ───────────────────────── 页面 ─────────────────────────
 
+/** 没登录：登录按钮，下面是顺手 Star 的仓库（默认全勾，登录回来后自动点） */
+function LoginCard({ repoName }: { repoName: string }) {
+  const c = useStarChoice();
+  return (
+    <div className="flex flex-col items-center gap-5 py-2">
+      <Title center sub={<>同步时由本站用你的 GitHub 登录，把记录写进你账号下的 <span className="font-mono">{repoName}</span>。网站只申请这一个仓库的权限。</>}>先用 GitHub 登录</Title>
+      <LoginButton c={c} size="lg" />
+      <div className="w-full max-w-lg text-left"><StarPicker c={c} when="login" /></div>
+    </div>
+  );
+}
+
 export function SyncApp() {
-  const { session, loading, loginHref } = useProgress();
+  const { session, loading } = useProgress();
   const repoReady = !!(session?.user && session.repo?.exists && session.repo.accessible);
   const [fromLc, setFromLc] = useState<boolean | null>(null);
   useEffect(() => { setFromLc(new URLSearchParams(window.location.search).has("from")); }, []);
@@ -664,10 +677,7 @@ export function SyncApp() {
               <NextLink className="no-underline" href="/"><Button size="lg">去首页开通</Button></NextLink>
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-5 py-2">
-              <Title center sub={<>同步时由本站用你的 GitHub 登录，把记录写进你账号下的 <span className="font-mono">{session?.repoName ?? "hot100-progress"}</span>。网站只申请这一个仓库的权限。</>}>先用 GitHub 登录</Title>
-              <a className="no-underline" href={loginHref()}><Button size="lg"><PixelIcon cell={1.75} name="cat" />用 GitHub 登录</Button></a>
-            </div>
+            <LoginCard repoName={session?.repoName ?? "hot100-progress"} />
           )
         ) : view === "setup" ? (
           <SetupStage />

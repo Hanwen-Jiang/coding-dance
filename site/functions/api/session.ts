@@ -29,11 +29,13 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
     // GitHub 自己的「用模板新建仓库」页面
     createUrl: `https://github.com/new?template_owner=${tOwner}&template_name=${tName}&name=${env.PROGRESS_REPO}&visibility=public`,
   };
+  const list = starRepos(env);
+  // 没登录时也列出请用户 Star 的仓库：登录卡片上让用户先勾选，登录回来后再点
+  const anon = list.map((r) => ({ repo: r, starred: false }));
   const { session: s, cookie } = await getSession(request, env);
-  if (!s) return privateJson({ ...base, user: null, repo: null, starred: false, stars: [] }, 200, [cookie]);
+  if (!s) return privateJson({ ...base, user: null, repo: null, starred: false, stars: anon }, 200, [cookie]);
 
   const repo = `${s.l}/${env.PROGRESS_REPO}`;
-  const list = starRepos(env);
   const [me, rr, inst, ...starred] = await Promise.all([
     gh(s.t, "GET", "/user"),
     gh(s.t, "GET", `/repos/${repo}`),
@@ -42,7 +44,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
   ]);
   if (me.status === 401) {
     // 用户在 GitHub 上撤销了授权：清掉会话
-    return privateJson({ ...base, user: null, repo: null, starred: false, stars: [] }, 200, [setCookie(SESSION_COOKIE, "", 0)]);
+    return privateJson({ ...base, user: null, repo: null, starred: false, stars: anon }, 200, [setCookie(SESSION_COOKIE, "", 0)]);
   }
   // 每个仓库 Star 了没有
   const stars = list.map((r, i) => ({ repo: r, starred: starred[i].status === 204 }));

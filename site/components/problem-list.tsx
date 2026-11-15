@@ -10,7 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { HistoryIcon, PlayIcon, SearchOffIcon } from "@/components/icons";
 import { LevelPixels, PixelTitle, ProgressMatrix, Skel, StatusPixel, TYPING_WORDS, TypingPixels } from "@/components/pixel";
 import { TierChip, TopicChip, langShort } from "@/components/tags";
-import { LoginHint, SetupCard, StarCard } from "@/components/account";
+import { LoginHint, SetupCard } from "@/components/account";
 import { useProgress } from "@/lib/progress";
 import type { IndexData, Problem, Status } from "@/lib/types";
 import { LEVEL_ORDER, TIER_INFO, TIER_ORDER, byImportance } from "@/lib/types";
@@ -226,7 +226,6 @@ export function ProblemList() {
             <ProgressMatrix problems={ready ? problems.slice().sort(byImportance) : null} />
           </Card>
           <SetupCard />
-          <StarCard />
           <LoginHint />
           {/* 进度仓开通好了：提示可以从力扣同步 */}
           {session?.repo?.exists && session.repo.accessible && (
