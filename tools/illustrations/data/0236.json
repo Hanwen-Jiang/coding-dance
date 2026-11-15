@@ -49,6 +49,7 @@
    "t": "标准解法：后序递归",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def lowestCommonAncestor(self, root, p, q):\n        if root is None or root is p or root is q:\n            return root                 # 空，或者就是要找的节点\n        left = self.lowestCommonAncestor(root.left, p, q)\n        right = self.lowestCommonAncestor(root.right, p, q)\n        if left and right:\n            return root                 # p、q 分在两边\n        return left or right            # 哪边有就交哪边"
   },
   {
@@ -180,6 +181,7 @@
       "答案"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });\n    const stack = [], badges = {}, done = new Set();\n    const isPQ = (id) => N[id].v === a.p || N[id].v === a.q;\n    const view = (cur, ans) => {\n      const cls = {};\n      for (const id in N) cls[id] = +id === ans ? \"k\" : +id === cur ? \"a\" : isPQ(+id) ? \"b\" : done.has(+id) ? \"c\" : stack.includes(+id) ? \"e\" : \"\";\n      return [{ t: \"tree\", nodes: N, root: 0, cls, on: stack.slice(), badges: { ...badges } }];\n    };\n    const f = () => ({ facts: [[\"p\", a.p], [\"q\", a.q]] });\n    snap(\"开始\", `找 ${a.p} 和 ${a.q} 的最近公共祖先。每个节点只问左右子树一句话：你们那边找到 p 或 q 了吗？`, view(-1), f());\n    const rec = (id) => {\n      if (id === null || !N[id]) return null;\n      stack.push(id);\n      if (isPQ(id)) {\n        done.add(id); badges[id] = \"交 \" + N[id].v; stack.pop();\n        snap(\"碰到目标\", `${N[id].v} 就是要找的节点，不用再往下找，直接把自己交上去。`, view(id), f());\n        return id;\n      }\n      snap(\"进入\", `进入 ${N[id].v}，先问左子树，再问右子树。`, view(id), f());\n      const l = rec(N[id].l), r = rec(N[id].r);\n      const ret = l !== null && r !== null ? id : l !== null ? l : r;\n      badges[id] = ret === null ? \"空\" : \"交 \" + N[ret].v; done.add(id); stack.pop();\n      const msg = l !== null && r !== null ? `左边交上来 ${N[l].v}，右边交上来 ${N[r].v}，p、q 分在两边，<b>${N[id].v}</b> 就是最近公共祖先，把自己交上去。`\n        : ret !== null ? `只有一边找到了 ${N[ret].v}，原样往上交。` : \"左右两边都没找到，返回空。\";\n      snap(\"返回\", `${N[id].v}：${msg}`, view(id), f());\n      return ret;\n    };\n    const res = rec(0);\n    snap(\"完成\", `根节点最后交上来的是 <b>${N[res].v}</b>，它就是 ${a.p} 和 ${a.q} 的最近公共祖先。`, view(-1, res), { kind: \"ok\", ans: N[res].v, ...f() });\n  }"
    },
    {

@@ -48,6 +48,7 @@
    "t": "标准解法：两遍扫描 + 反转",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def nextPermutation(self, nums: List[int]) -> None:\n        i = len(nums) - 2\n        while i >= 0 and nums[i] >= nums[i + 1]:    # 从右往左找第一个下降\n            i -= 1\n        if i >= 0:\n            j = len(nums) - 1\n            while nums[j] <= nums[i]:               # 右边第一个比 nums[i] 大的\n                j -= 1\n            nums[i], nums[j] = nums[j], nums[i]\n        l, r = i + 1, len(nums) - 1                 # 右段反转成升序\n        while l < r:\n            nums[l], nums[r] = nums[r], nums[l]\n            l, r = l + 1, r - 1"
   },
   {
@@ -141,6 +142,7 @@
       "改好的部分"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums.slice(), n = nums.length;\n    const view = (cls, ptrs) => [{ t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: cls(k) })), ptrs: ptrs || {} }];\n    snap(\"开始\", `要找比 [${nums.join(\",\")}] 大的排列里最小的那个。先从右往左找第一个比右边小的数。`, view(() => \"\"));\n    let i = n - 2;\n    while (i >= 0 && nums[i] >= nums[i + 1]) {\n      snap(\"找下降\", `nums[${i}] = ${nums[i]} ≥ nums[${i + 1}] = ${nums[i + 1]}，还在降序段里，继续往左。`, view((k) => (k === i ? \"a\" : k > i ? \"e\" : \"\"), { i }));\n      i--;\n    }\n    if (i >= 0) {\n      snap(\"找到 i\", `nums[${i}] = ${nums[i]} &lt; nums[${i + 1}] = ${nums[i + 1]}。右边 [${nums.slice(i + 1).join(\",\")}] 是降序，已经最大了，要动的是第 <b>${i}</b> 位。`, view((k) => (k === i ? \"a\" : k > i ? \"e\" : \"\"), { i }));\n      let j = n - 1;\n      while (nums[j] <= nums[i]) j--;\n      snap(\"找 j\", `在右段里从右往左找，第一个比 ${nums[i]} 大的是 nums[${j}] = <b>${nums[j]}</b>，它是右段里比 ${nums[i]} 大的最小的数。`, view((k) => (k === i ? \"a\" : k === j ? \"b\" : k > i ? \"e\" : \"\"), { i, j }));\n      [nums[i], nums[j]] = [nums[j], nums[i]];\n      snap(\"交换\", `交换后第 ${i} 位变成 ${nums[i]}，排列变大了。右段 [${nums.slice(i + 1).join(\",\")}] 仍然是降序。`, view((k) => (k === i ? \"c\" : k > i ? \"e\" : \"\"), { i }));\n    } else {\n      snap(\"整体降序\", \"一直找到最左边都没有下降的位置，说明已经是最大的排列。把整个数组反转，回到最小的排列。\", view(() => \"e\"));\n    }\n    let l = i + 1, r = n - 1;\n    while (l < r) { [nums[l], nums[r]] = [nums[r], nums[l]]; l++; r--; }\n    snap(\"反转右段\", `把第 ${i + 1} 位之后反转成升序，让右边尽量小。结果是 <b>[${nums.join(\",\")}]</b>。`, view((k) => (k > i ? \"c\" : \"\")), { kind: \"ok\", ans: nums.slice() });\n  }"
    }
   ],

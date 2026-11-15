@@ -46,6 +46,7 @@
    "t": "标准解法：二维 DP",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        dp = [[0] * n for _ in range(m)]\n        for i in range(m):\n            for j in range(n):\n                if i == 0 and j == 0:\n                    dp[i][j] = grid[0][0]\n                elif i == 0:\n                    dp[i][j] = dp[i][j - 1] + grid[i][j]    # 第一行只能从左边来\n                elif j == 0:\n                    dp[i][j] = dp[i - 1][j] + grid[i][j]    # 第一列只能从上面来\n                else:\n                    dp[i][j] = min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j]\n        return dp[-1][-1]"
   },
   {
@@ -133,6 +134,7 @@
       "最优路径"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const g = a.grid, m = g.length, n = g[0].length, dp = g.map((r) => r.map(() => null));\n    let path = [];\n    const cls = (i, j, ci, cj) => (path.some(([x, y]) => x === i && y === j) ? \"c\" : i === ci && j === cj ? \"a\" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? \"e\" : \"\");\n    const view = (ci, cj) => [\n      { t: \"grid\", label: \"grid\", rows: g.map((r, i) => r.map((v, j) => ({ v, cls: cls(i, j, ci, cj) }))) },\n      { t: \"grid\", label: \"dp[i][j]：走到 (i, j) 的最小路径和\", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? \"\" : v, cls: cls(i, j, ci, cj) }))) },\n    ];\n    snap(\"开始\", `从左上角 ${g[0][0]} 出发，只能向右或向下。`, view(-1, -1));\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      let msg;\n      if (!i && !j) { dp[i][j] = g[0][0]; msg = `起点，dp = ${g[0][0]}。`; }\n      else if (!i) { dp[i][j] = dp[i][j - 1] + g[i][j]; msg = `第一行只能从左边来：${dp[i][j - 1]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else if (!j) { dp[i][j] = dp[i - 1][j] + g[i][j]; msg = `第一列只能从上面来：${dp[i - 1][j]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else { const u = dp[i - 1][j], l = dp[i][j - 1]; dp[i][j] = Math.min(u, l) + g[i][j]; msg = `上面 ${u}，左边 ${l}，取小的 ${Math.min(u, l)}，加上自己 ${g[i][j]}，dp = <b>${dp[i][j]}</b>。`; }\n      snap(`(${i}, ${j})`, msg, view(i, j));\n    }\n    let i = m - 1, j = n - 1; path = [[i, j]];\n    while (i || j) { if (!i) j--; else if (!j) i--; else if (dp[i - 1][j] <= dp[i][j - 1]) i--; else j--; path.unshift([i, j]); }\n    snap(\"完成\", `最小路径和是 <b>${dp[m - 1][n - 1]}</b>，路径是 ${path.map(([x, y]) => g[x][y]).join(\" → \")}。`, view(-1, -1), { kind: \"ok\", ans: dp[m - 1][n - 1] });\n  }"
    }
   ],

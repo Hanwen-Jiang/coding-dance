@@ -47,6 +47,7 @@
    "t": "标准解法：贪心",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def partitionLabels(self, s: str) -> List[int]:\n        last = {c: i for i, c in enumerate(s)}  # 每个字母最后出现的位置\n        res, start, end = [], 0, 0\n        for i, c in enumerate(s):\n            end = max(end, last[c])             # 这一段至少要到 end\n            if i == end:                        # 走到边界，切一刀\n                res.append(end - start + 1)\n                start = i + 1\n        return res"
   },
   {
@@ -115,6 +116,7 @@
       "已经切好的片段"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const s = a.s, last = {}, res = [], segs = [];\n    for (let i = 0; i < s.length; i++) last[s[i]] = i;\n    let start = 0, end = 0;\n    const segOf = (k) => segs.findIndex(([x, y]) => k >= x && k <= y);\n    const view = (i) => [\n      { t: \"array\", label: \"s\", items: s.split(\"\").map((c, k) => { const g = segOf(k); return { v: c, cls: g >= 0 ? (g % 2 ? \"g\" : \"k\") : k === i ? \"a\" : i >= 0 && k === last[s[i]] ? \"b\" : k >= start && k <= end && i >= 0 ? \"e\" : \"\" }; }), ptrs: { i: i >= 0 ? i : null, end: i >= 0 ? end : null } },\n      { t: \"chips\", label: \"片段长度\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `先记下每个字母最后出现的位置，比如 '${s[0]}' 最后在 ${last[s[0]]}。然后从左往右走。`, view(-1));\n    for (let i = 0; i < s.length; i++) {\n      const old = end; end = Math.max(end, last[s[i]]);\n      if (i === end) {\n        snap(\"切一刀\", `'${s[i]}' 最后出现在 ${last[s[i]]}。走到了 end = ${end}，这一段 [${start}, ${end}] 里的字母都不会再出现了，切下来，长度 <b>${end - start + 1}</b>。`, view(i), { kind: \"ok\", facts: [[\"start\", start], [\"end\", end]] });\n        res.push(end - start + 1); segs.push([start, end]); start = i + 1;\n      } else snap(end > old ? \"撑大边界\" : \"继续\", `'${s[i]}' 最后出现在 ${last[s[i]]}。` + (end > old ? `片段至少要到 ${end}，end 从 ${old} 变成 <b>${end}</b>。` : `没有超过 end = ${end}。`), view(i), { facts: [[\"start\", start], [\"end\", end]] });\n    }\n    snap(\"完成\", `一共切成 ${res.length} 段，长度是 [${res.join(\",\")}]。`, view(-1), { kind: \"ok\", ans: res.slice() });\n  }"
    }
   ],

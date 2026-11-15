@@ -46,6 +46,7 @@
    "t": "标准解法：BFS 按层遍历",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def rightSideView(self, root: Optional[TreeNode]) -> List[int]:\n        res, q = [], deque([root] if root else [])\n        while q:\n            res.append(q[-1].val)           # 这一层最右边的节点\n            for _ in range(len(q)):\n                node = q.popleft()\n                if node.left:\n                    q.append(node.left)\n                if node.right:\n                    q.append(node.right)\n        return res"
   },
   {
@@ -111,6 +112,7 @@
       "被看到的节点"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });\n    const res = [], seen = new Set(); let level = [0];\n    const view = (cur) => { const cls = {}; for (const id in N) cls[id] = seen.has(+id) ? \"c\" : cur.includes(+id) ? \"e\" : \"\"; return [{ t: \"tree\", nodes: N, root: 0, cls }, { t: \"chips\", label: \"右视图\", items: res.slice(), empty: \"还没有\" }]; };\n    snap(\"开始\", \"从根节点这一层开始，一层一层往下。\", view([]));\n    let d = 0;\n    while (level.length) {\n      const last = level[level.length - 1];\n      snap(`第 ${d} 层`, `这一层有 ${level.map((i) => N[i].v).join(\"、\")}，从右边看过来，最先看到的是最右边的 <b>${N[last].v}</b>。`, view(level));\n      res.push(N[last].v); seen.add(last);\n      const nx = [];\n      for (const i of level) { if (N[i].l !== null) nx.push(N[i].l); if (N[i].r !== null) nx.push(N[i].r); }\n      level = nx; d++;\n    }\n    snap(\"完成\", `右视图是 [${res.join(\", \")}]。`, view([]), { kind: \"ok\", ans: res.slice() });\n  }"
    },
    {

@@ -12,18 +12,18 @@ class Solution:
     def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:
         if not root:
             return []
-        res, q = [], deque([root])
+        res, q = [], deque([root])      #@init
         while q:
-            level = []
-            for _ in range(len(q)):     # 这一层有 len(q) 个节点
-                node = q.popleft()
-                level.append(node.val)
-                if node.left:
-                    q.append(node.left)
-                if node.right:
-                    q.append(node.right)
-            res.append(level)
-        return res
+            level = []                  #@level
+            for _ in range(len(q)):     # 这一层有 len(q) 个节点 #@level
+                node = q.popleft()      #@pop
+                level.append(node.val)  #@pop
+                if node.left:           #@push
+                    q.append(node.left)     #@push
+                if node.right:          #@push
+                    q.append(node.right)    #@push
+            res.append(level)           #@end
+        return res                      #@done
 ` }, { t: "简洁写法：用列表代替队列", kind: "elegant", note: "level 是这一层的节点，下一层用列表推导一次生成。", code: `
 class Solution:
     def levelOrder(self, root: Optional[TreeNode]) -> List[List[int]]:
@@ -40,6 +40,9 @@ assert s.levelOrder(T([1])) == [[1]]
 assert s.levelOrder(T([])) == []
 assert s.levelOrder(T([1,2,3,4,None,None,5])) == [[1],[2,3],[4,5]]
 `,
+  sig: { fn: "levelOrder", params: ["TreeNode"], ret: "List<List<int>>" },
+  call: (a, H) => [H.toLc(a.t)],
+  cases: [[[]], [[1]]],
   legend: [["a", "刚出队的节点"], ["e", "在队列里"], ["c", "已经处理完"]],
   presets: [
     { label: "示例 1", args: { t: [3, 9, 20, null, null, 15, 7] }, note: "root = [3,9,20,null,null,15,7]", expect: [[3], [9, 20], [15, 7]] },
@@ -54,19 +57,19 @@ assert s.levelOrder(T([1,2,3,4,None,None,5])) == [[1],[2,3],[4,5]]
       { t: "chips", label: "这一层", items: level.slice(), empty: "空" },
       { t: "chips", label: "结果", items: res.map((l) => `[${l.join(", ")}]`), empty: "还没有" },
     ]; };
-    snap("开始", "先把根节点放进队列。", view(-1));
+    snap("开始", "先把根节点放进队列。", view(-1), { at: "init" });
     while (q.length) {
       const n = q.length; level = [];
-      snap(`第 ${res.length + 1} 层开始`, `队列里现在有 ${n} 个节点，它们就是第 ${res.length + 1} 层。接下来正好取 ${n} 次。`, view(-1), { facts: [["这一层的节点数", n]] });
+      snap(`第 ${res.length + 1} 层开始`, `队列里现在有 ${n} 个节点，它们就是第 ${res.length + 1} 层。接下来正好取 ${n} 次。`, view(-1), { at: "level", facts: [["这一层的节点数", n]] });
       for (let t = 0; t < n; t++) {
         const id = q.shift(), nd = N[id], kids = [nd.l, nd.r].filter((c) => c !== null);
         level.push(nd.v); kids.forEach((c) => q.push(c)); done.add(id);
-        snap("出队", `取出 ${nd.v}，记进这一层。` + (kids.length ? `把它的孩子 ${kids.map((c) => N[c].v).join("、")} 放到队尾。` : "它没有孩子。"), view(id), { facts: [["这一层的节点数", n], ["已取", t + 1]] });
+        snap("出队", `取出 ${nd.v}，记进这一层。` + (kids.length ? `把它的孩子 ${kids.map((c) => N[c].v).join("、")} 放到队尾。` : "它没有孩子。"), view(id), { at: kids.length ? ["pop", "push"] : "pop", facts: [["这一层的节点数", n], ["已取", t + 1]] });
       }
       res.push(level); level = [];
-      snap("这一层结束", `取够了 ${n} 个，这一层是 [${res[res.length - 1].join(", ")}]。` + (q.length ? "队列里剩下的全是下一层的节点。" : "队列空了。"), view(-1));
+      snap("这一层结束", `取够了 ${n} 个，这一层是 [${res[res.length - 1].join(", ")}]。` + (q.length ? "队列里剩下的全是下一层的节点。" : "队列空了。"), view(-1), { at: "end" });
     }
-    snap("完成", `一共 ${res.length} 层。`, view(-1), { kind: "ok", ans: res });
+    snap("完成", `一共 ${res.length} 层。`, view(-1), { at: "done", kind: "ok", ans: res });
   },
   points: [
     { t: "先固定这一层的长度", body: "<code>for _ in range(len(q))</code> 里的长度只算一次。循环中队列在变长，但不影响这一层的次数。" },

@@ -47,6 +47,7 @@
    "t": "标准解法：回溯 + 排序剪枝",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def combinationSum(self, candidates: List[int], target: int) -> List[List[int]]:\n        candidates.sort()\n        res, path = [], []\n\n        def dfs(start, remain):\n            if remain == 0:\n                res.append(path[:])\n                return\n            for i in range(start, len(candidates)):\n                if candidates[i] > remain:      # 排过序，后面的只会更大\n                    break\n                path.append(candidates[i])\n                dfs(i, remain - candidates[i])  # 还从 i 开始：可以重复选\n                path.pop()\n\n        dfs(0, target)\n        return res"
   },
   {
@@ -126,6 +127,7 @@
       "凑够了"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const c = a.c.slice().sort((x, y) => x - y), target = a.target, res = [], path = [];\n    const view = (start, i, cls) => [\n      { t: \"array\", label: \"candidates（排好序）\", items: c.map((v, k) => ({ v, cls: k === i ? cls : k >= start && start >= 0 ? \"e\" : \"\" })), ptrs: { start: start >= 0 ? start : null, i: i >= 0 ? i : null } },\n      { t: \"chips\", label: \"path\", items: path.slice(), empty: \"空\" },\n      { t: \"chips\", label: \"已收集的组合\", items: res.map((r) => `[${r.join(\",\")}]`), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `从 [${c.join(\",\")}] 里选数凑出 ${target}，每个数可以选多次。`, view(-1, -1), { facts: [[\"还差\", target]] });\n    const dfs = (start, remain) => {\n      if (remain === 0) { res.push(path.slice()); snap(\"凑够了\", `path = [${path.join(\",\")}]，和正好是 ${target}，收集。`, view(-1, -1), { kind: \"ok\", facts: [[\"还差\", 0]] }); return; }\n      for (let i = start; i < c.length; i++) {\n        if (c[i] > remain) { snap(\"剪枝\", `还差 ${remain}，但 ${c[i]} 已经比它大了。后面的数只会更大，这一层到此为止。`, view(start, i, \"w\"), { kind: \"warn\", facts: [[\"还差\", remain]] }); break; }\n        path.push(c[i]);\n        snap(\"选\", `选 ${c[i]}，还差 ${remain} − ${c[i]} = <b>${remain - c[i]}</b>。下一层还从下标 ${i} 开始，${c[i]} 还能再选。`, view(start, i, \"a\"), { facts: [[\"还差\", remain - c[i]]] });\n        dfs(i, remain - c[i]);\n        path.pop();\n      }\n    };\n    dfs(0, target);\n    snap(\"完成\", `一共找到 ${res.length} 个组合：${res.map((r) => `[${r.join(\",\")}]`).join(\"、\")}。`, view(-1, -1), { kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"组合数\", res.length]] });\n  }"
    },
    {

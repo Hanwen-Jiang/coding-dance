@@ -402,29 +402,29 @@ const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11
         { t: "chips", label: "递归调用栈（右边是正在执行的那一层）", items: calls.map(([x, y], t) => ({ v: `sink(${x},${y})`, cls: t === calls.length - 1 ? "a" : "e" })), empty: "空：回到外面的两层循环" },
       ];
     };
-    const f = () => ({ facts: [["岛屿数", count], ["递归深度", calls.length]] });
+    const f = (at) => ({ at, facts: [["岛屿数", count], ["递归深度", calls.length]] });
     const sink = (i, j, dir) => {
       mark[i][j] = count;
       calls.push([i, j]);
-      if (dir) snap("递归进入", `往${dir}走到 (${i},${j})：是陆地，淹掉它，再从它出发按上、下、左、右递归。`, view(), f());
-      else snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。调用 sink(${i},${j})：先淹掉它，再按上、下、左、右递归。`, view(), f());
+      if (dir) snap("递归进入", `往${dir}走到 (${i},${j})：是陆地，淹掉它，再从它出发按上、下、左、右递归。`, view(), f("mark"));
+      else snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。调用 sink(${i},${j})：先淹掉它，再按上、下、左、右递归。`, view(), f(["found", "mark"]));
       for (const [di, dj, dn] of DIR) {
         const p = i + di, q = j + dj;
         if (p < 0 || q < 0 || p >= m || q >= n || g[p][q] !== "1" || mark[p][q]) continue;
         sink(p, q, dn);
         const rest = DIR.slice(DIR.findIndex((d) => d[2] === dn) + 1).map((d) => d[2]);
-        snap("返回", `sink(${p},${q}) 这一支淹完了，返回到 sink(${i},${j})。` + (rest.length ? `接着试它的「${rest.join("、")}」。` : "它四个方向都试过了。"), view(), f());
+        snap("返回", `sink(${p},${q}) 这一支淹完了，返回到 sink(${i},${j})。` + (rest.length ? `接着试它的「${rest.join("、")}」。` : "它四个方向都试过了。"), view(), f("spread"));
       }
       calls.pop();
     };
-    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再调用 sink 把整座岛淹掉。`, view(), f());
+    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再调用 sink 把整座岛淹掉。`, view(), f("init"));
     for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
       if (g[i][j] !== "1" || mark[i][j]) continue;
       count++;
       sink(i, j, null);
-      snap("淹完", `sink(${i},${j}) 返回了，调用栈空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f());
+      snap("淹完", `sink(${i},${j}) 返回了，调用栈空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f("scan"));
     }
-    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
   } },
 { t: "BFS 队列", note: "从新岛的第一格出发，用队列一圈一圈往外扩：出队一个格子，把它四周没淹的陆地做上记号放进队尾。离起点近的格子总是先被淹。", legend: [["d","水 0"],["","还没淹的陆地 1"],["e","在队列里排队"],["a","刚出队，正在看四周"],["c","已经淹掉（颜色和数字区分不同的岛）"]], build(a, snap) {
       const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
@@ -440,14 +440,14 @@ const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11
         })) },
         { t: "chips", label: "队列（左边是队头，先出队）", items: q.map(([x, y]) => `(${x},${y}) 第${ring[x][y]}圈`), empty: "空" },
       ];
-      const f = () => ({ facts: [["岛屿数", count], ["队列长度", q.length]] });
-      snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再用队列把整座岛淹掉。`, view(), f());
+      const f = (at) => ({ at, facts: [["岛屿数", count], ["队列长度", q.length]] });
+      snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再用队列把整座岛淹掉。`, view(), f("init"));
       for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
         if (g[i][j] !== "1" || mark[i][j]) continue;
         count++;
         mark[i][j] = count;
         q = [[i, j]];
-        snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。做上记号放进队列，它是第 0 圈。`, view(), f());
+        snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。做上记号放进队列，它是第 0 圈。`, view(), f("found"));
         while (q.length) {
           cur = q.shift();
           const [x, y] = cur, added = [];
@@ -458,12 +458,12 @@ const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11
             q.push([p, s]);
             added.push(`(${p},${s})`);
           }
-          snap("出队扩散", `队头 (${x},${y}) 出队（第 ${ring[x][y]} 圈），看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号排到队尾，它们是第 ${ring[x][y] + 1} 圈。` : "四周没有新的陆地。"), view(), f());
+          snap("出队扩散", `队头 (${x},${y}) 出队（第 ${ring[x][y]} 圈），看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号排到队尾，它们是第 ${ring[x][y] + 1} 圈。` : "四周没有新的陆地。"), view(), f(["pop", "expand"]));
         }
         cur = null;
-        snap("淹完", `队列空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f());
+        snap("淹完", `队列空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f("scan"));
       }
-      snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+      snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
     } },
 { t: "栈模拟 DFS", note: "和 BFS 的写法一样，只是把队列换成栈：每次弹出最后放进去的格子，所以会先沿着一个方向钻到底。入栈时就做记号。", legend: [["d","水 0"],["","还没淹的陆地 1"],["e","在栈里等着扩散"],["a","刚弹出，正在看四周"],["c","已经淹掉（颜色和数字区分不同的岛）"]], build(a, snap) {
     const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
@@ -479,14 +479,14 @@ const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11
       })) },
       { t: "chips", label: "栈（右边是栈顶）", items: stack.map(([x, y]) => `(${x},${y})`), empty: "空" },
     ];
-    const f = () => ({ facts: [["岛屿数", count]] });
-    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再把整座岛淹掉。`, view(), f());
+    const f = (at) => ({ at, facts: [["岛屿数", count]] });
+    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再把整座岛淹掉。`, view(), f("init"));
     for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
       if (g[i][j] !== "1" || mark[i][j]) continue;
       count++;
       mark[i][j] = count;
       stack = [[i, j]];
-      snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先给它做上记号放进栈里，从这里开始把整座岛淹掉。`, view(), f());
+      snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先给它做上记号放进栈里，从这里开始把整座岛淹掉。`, view(), f("found"));
       while (stack.length) {
         cur = stack.pop();
         const [x, y] = cur, added = [];
@@ -496,12 +496,12 @@ const SPEC = { presets: [{"label":"示例 1","args":{"grid":["11110","11010","11
           stack.push([p, q]);
           added.push(`(${p},${q})`);
         }
-        snap("扩散", `弹出 (${x},${y})，看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号放进栈里。` : "四周没有新的陆地。"), view(), f());
+        snap("扩散", `弹出 (${x},${y})，看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号放进栈里。` : "四周没有新的陆地。"), view(), f(["pop", "expand"]));
       }
       cur = null;
-      snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), f());
+      snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), f("scan"));
     }
-    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
     } }
 ] };
 (function () {

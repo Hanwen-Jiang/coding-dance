@@ -45,6 +45,7 @@
    "t": "标准解法：逐行递推",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def generate(self, numRows: int) -> List[List[int]]:\n        res = []\n        for i in range(numRows):\n            row = [1] * (i + 1)             # 首尾是 1\n            for j in range(1, i):\n                row[j] = res[i - 1][j - 1] + res[i - 1][j]\n            res.append(row)\n        return res"
   },
   {
@@ -105,6 +106,7 @@
       "首尾的 1"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const n = a.n, res = [];\n    const view = (ci, cj) => res.map((row, i) => ({ t: \"array\", label: `第 ${i} 行`, idx: false, items: row.map((v, j) => ({ v, cls: i === ci && j === cj ? \"a\" : ci >= 0 && i === ci - 1 && (j === cj - 1 || j === cj) ? \"e\" : (j === 0 || j === row.length - 1) ? \"c\" : \"\" })) }));\n    snap(\"开始\", \"从第 0 行 [1] 开始，一行一行往下生成。\", [{ t: \"note\", label: \"三角\", html: \"还没有\" }]);\n    for (let i = 0; i < n; i++) {\n      const row = Array(i + 1).fill(null); row[0] = 1; row[i] = 1; res.push(row);\n      snap(`第 ${i} 行`, `第 ${i} 行有 ${i + 1} 个数，先把首尾填成 1。`, view(-1, -1));\n      for (let j = 1; j < i; j++) {\n        row[j] = res[i - 1][j - 1] + res[i - 1][j];\n        snap(`第 ${i} 行`, `row[${j}] = 上一行的 ${res[i - 1][j - 1]} + ${res[i - 1][j]} = <b>${row[j]}</b>。`, view(i, j));\n      }\n    }\n    snap(\"完成\", `生成了 ${n} 行。`, view(-1, -1), { kind: \"ok\", ans: res.map((r) => r.slice()) });\n  }"
    }
   ],

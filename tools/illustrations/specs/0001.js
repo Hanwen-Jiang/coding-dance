@@ -10,12 +10,14 @@ module.exports = {
   codes: [{ t: "标准解法：一遍哈希表", kind: "elegant", code: `
 class Solution:
     def twoSum(self, nums: List[int], target: int) -> List[int]:
-        seen = {}                       # 数值 -> 下标
+        seen = {}                       # 数值 -> 下标 #@init
         for i, x in enumerate(nums):
-            if target - x in seen:      # 先查
-                return [seen[target - x], i]
-            seen[x] = i                 # 再存
+            if target - x in seen:      # 先查 #@check
+                return [seen[target - x], i]    #@found
+            seen[x] = i                 # 再存 #@save
 ` }],
+  sig: { fn: "twoSum", params: ["int[]", "int"], ret: "int[]" },
+  call: (a) => [a.nums, a.target],
   pytest: `
 s = Solution()
 assert s.twoSum([2,7,11,15], 9) == [0,1]
@@ -34,17 +36,17 @@ assert s.twoSum([3,3], 6) == [0,1]
       { t: "array", label: "nums", items: nums.map((v, j) => ({ v, cls: hit && (j === i || j === hit[0]) ? "c" : j === i ? "a" : j < i ? "d" : "" })), ptrs: { i } },
       { t: "chips", label: "哈希表 seen（数值 → 下标）", items: [...seen].map(([k, v]) => ({ v: `${k} → ${v}`, cls: hit && v === hit[0] ? "c" : "" })) },
     ];
-    snap("开始", `目标是找两个数加起来等于 <b>${target}</b>。从左往右走，哈希表一开始是空的。`, view(-1), { facts: [["target", target]] });
+    snap("开始", `目标是找两个数加起来等于 <b>${target}</b>。从左往右走，哈希表一开始是空的。`, view(-1), { at: "init", facts: [["target", target]] });
     for (let i = 0; i < nums.length; i++) {
       const x = nums[i], need = target - x;
       if (seen.has(need)) {
         const hit = [seen.get(need), i];
-        snap("找到", `当前 ${x}，需要 ${target} − ${x} = <b>${need}</b>。哈希表里有它，下标是 ${hit[0]}。答案是 [${hit[0]}, ${i}]。`, view(i, hit), { kind: "ok", ans: hit, facts: [["target", target], ["需要", need]] });
+        snap("找到", `当前 ${x}，需要 ${target} − ${x} = <b>${need}</b>。哈希表里有它，下标是 ${hit[0]}。答案是 [${hit[0]}, ${i}]。`, view(i, hit), { at: ["check", "found"], kind: "ok", ans: hit, facts: [["target", target], ["需要", need]] });
         return;
       }
-      snap("先查", `当前 ${x}，需要 ${target} − ${x} = <b>${need}</b>。哈希表里没有 ${need}。`, view(i), { facts: [["target", target], ["需要", need]] });
+      snap("先查", `当前 ${x}，需要 ${target} − ${x} = <b>${need}</b>。哈希表里没有 ${need}。`, view(i), { at: "check", facts: [["target", target], ["需要", need]] });
       seen.set(x, i);
-      snap("再存", `把 ${x} 和它的下标 ${i} 记进哈希表，留给后面的数来查。`, view(i), { facts: [["target", target], ["需要", need]] });
+      snap("再存", `把 ${x} 和它的下标 ${i} 记进哈希表，留给后面的数来查。`, view(i), { at: "save", facts: [["target", target], ["需要", need]] });
     }
   },
   points: [

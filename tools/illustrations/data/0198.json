@@ -48,6 +48,7 @@
    "t": "标准解法：动态规划",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def rob(self, nums: List[int]) -> int:\n        n = len(nums)\n        dp = [0] * (n + 1)              # dp[i]：前 i 间房最多偷多少\n        dp[1] = nums[0]\n        for i in range(2, n + 1):\n            dp[i] = max(dp[i - 1],                  # 不偷第 i 间\n                        dp[i - 2] + nums[i - 1])    # 偷第 i 间\n        return dp[n]"
   },
   {
@@ -127,6 +128,7 @@
       "答案"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums, n = nums.length, dp = Array(n + 1).fill(null);\n    dp[0] = 0; dp[1] = nums[0];\n    const view = (i, fin) => [\n      { t: \"array\", label: \"nums（第 1 间到第 n 间）\", idxFrom: 1, items: nums.map((v, k) => ({ v, cls: k === i - 1 ? \"b\" : \"\" })), ptrs: {} },\n      { t: \"array\", label: \"dp[i]：前 i 间最多偷多少\", items: dp.map((v, k) => ({ v, cls: fin && k === n ? \"c\" : k === i ? \"a\" : i >= 0 && (k === i - 1 || k === i - 2) ? \"e\" : \"\" })), ptrs: { i: i >= 0 ? i : null } },\n    ];\n    snap(\"开始\", `dp[0] = 0（没有房子），dp[1] = ${nums[0]}（只有第 1 间，偷了）。`, view(-1));\n    for (let i = 2; i <= n; i++) {\n      const no = dp[i - 1], yes = dp[i - 2] + nums[i - 1];\n      dp[i] = Math.max(no, yes);\n      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? \"，偷\" : \"，不偷\"}。`, view(i), { facts: [[\"不偷\", no], [\"偷\", yes]] });\n    }\n    snap(\"完成\", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { kind: \"ok\", ans: dp[n] });\n  }"
    }
   ],

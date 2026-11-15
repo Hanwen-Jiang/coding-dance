@@ -46,6 +46,7 @@
    "t": "标准解法：动态规划",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        INF = float(\"inf\")\n        dp = [0] + [INF] * amount           # dp[i]：凑出 i 最少几枚\n        for i in range(1, amount + 1):\n            for c in coins:\n                if c <= i and dp[i - c] + 1 < dp[i]:\n                    dp[i] = dp[i - c] + 1   # 最后一枚用 c\n        return dp[amount] if dp[amount] != INF else -1"
   },
   {
@@ -126,6 +127,7 @@
       "取到最小的那个"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const { coins, amount } = a, dp = Array(amount + 1).fill(null); dp[0] = 0;\n    const show = (v) => (v === Infinity ? \"∞\" : v);\n    const view = (i, cands, best, fin) => [{ t: \"array\", label: \"dp[i]：凑出 i 最少几枚\", items: dp.map((v, k) => ({ v: v === null ? \"\" : show(v), cls: fin && k === amount ? \"c\" : k === i ? \"a\" : k === best ? \"c\" : cands.includes(k) ? \"e\" : \"\" })), ptrs: { i: i >= 0 ? i : null } }];\n    snap(\"开始\", `面值有 [${coins.join(\",\")}]。dp[0] = 0：金额 0 不需要硬币。`, view(-1, [], -1));\n    for (let i = 1; i <= amount; i++) {\n      let best = Infinity, bk = -1; const cs = [], parts = [];\n      for (const c of coins) if (c <= i) { cs.push(i - c); parts.push(`用 ${c}：dp[${i - c}] + 1 = ${show(dp[i - c] + 1)}`); if (dp[i - c] + 1 < best) { best = dp[i - c] + 1; bk = i - c; } }\n      dp[i] = best;\n      snap(`金额 ${i}`, parts.length ? `最后一枚可以${parts.join(\"；\")}。dp[${i}] = <b>${show(best)}</b>。` : `所有面值都比 ${i} 大，凑不出来，dp[${i}] = ∞。`, view(i, cs, best === Infinity ? -1 : bk), { facts: [[\"dp[\" + i + \"]\", show(best)]] });\n    }\n    const ans = dp[amount] === Infinity ? -1 : dp[amount];\n    snap(\"完成\", ans < 0 ? `dp[${amount}] 是 ∞，凑不出来，返回 <b>-1</b>。` : `凑出 ${amount} 最少要 <b>${ans}</b> 枚硬币。`, view(-1, [], -1, true), { kind: ans < 0 ? \"warn\" : \"ok\", ans });\n  }"
    },
    {

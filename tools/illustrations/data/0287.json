@@ -47,6 +47,7 @@
    "t": "标准解法：快慢指针找环入口",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def findDuplicate(self, nums: List[int]) -> int:\n        slow = fast = 0\n        while True:                         # 把 i -> nums[i] 看成链表\n            slow = nums[slow]\n            fast = nums[nums[fast]]\n            if slow == fast:\n                break\n        slow = 0                            # 一个回到起点，再同速走\n        while slow != fast:\n            slow = nums[slow]\n            fast = nums[fast]\n        return slow                         # 相遇点就是环的入口"
   },
   {
@@ -119,6 +120,7 @@
       "两者相遇"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums;\n    let slow = 0, fast = 0;\n    const view = (meet) => [\n      { t: \"array\", label: \"nums（下标 i 指向下标 nums[i]）\", items: nums.map((v, k) => ({ v, cls: meet && k === slow ? \"c\" : k === slow ? \"a\" : k === fast ? \"b\" : \"\" })), ptrs: { slow, fast } },\n      { t: \"chips\", label: \"从 0 出发走过的路\", items: (() => { const out = [0]; let p = 0; for (let t = 0; t < nums.length + 2; t++) { p = nums[p]; out.push(p); } return out.map(String); })() },\n    ];\n    snap(\"开始\", `把下标当节点：0 → ${nums[0]} → ${nums[nums[0]]} → …，一定会进入一个环。slow、fast 都从 0 出发。`, view(false), { facts: [[\"slow\", slow], [\"fast\", fast]] });\n    do {\n      slow = nums[slow]; fast = nums[nums[fast]];\n      snap(slow === fast ? \"相遇\" : \"快慢指针\", slow === fast ? `slow 和 fast 在下标 ${slow} 相遇，说明有环。` : `slow 走一步到 ${slow}，fast 走两步到 ${fast}。`, view(slow === fast), { kind: slow === fast ? \"ok\" : \"\", facts: [[\"slow\", slow], [\"fast\", fast]] });\n    } while (slow !== fast);\n    slow = 0;\n    snap(\"回到起点\", \"slow 回到起点 0，fast 留在相遇点。接下来两个指针每次都只走一步。\", view(false), { facts: [[\"slow\", slow], [\"fast\", fast]] });\n    while (slow !== fast) {\n      slow = nums[slow]; fast = nums[fast];\n      snap(slow === fast ? \"入口\" : \"同速走\", slow === fast ? `两个指针在 ${slow} 再次相遇，这就是环的入口，也就是重复的数。` : `slow 到 ${slow}，fast 到 ${fast}。`, view(slow === fast), { facts: [[\"slow\", slow], [\"fast\", fast]] });\n    }\n    snap(\"完成\", `重复的数是 <b>${slow}</b>。`, view(true), { kind: \"ok\", ans: slow, facts: [[\"slow\", slow], [\"fast\", fast]] });\n  }"
    },
    {

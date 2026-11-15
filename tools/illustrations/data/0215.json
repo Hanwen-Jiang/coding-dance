@@ -53,6 +53,7 @@
    "t": "标准解法：随机 pivot + 三路划分",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "import random\n\nclass Solution:\n    def findKthLargest(self, nums: List[int], k: int) -> int:\n        target = len(nums) - k          # 第 k 大 = 升序下标 n-k\n        lo, hi = 0, len(nums) - 1\n        while True:\n            pivot = nums[random.randint(lo, hi)]\n            lt, i, gt = lo, lo, hi      # [lo,lt) 小于  [lt,i) 等于  (gt,hi] 大于\n            while i <= gt:\n                if nums[i] < pivot:\n                    nums[lt], nums[i] = nums[i], nums[lt]\n                    lt += 1\n                    i += 1\n                elif nums[i] > pivot:\n                    nums[i], nums[gt] = nums[gt], nums[i]\n                    gt -= 1             # 换过来的数还没看过，i 不动\n                else:\n                    i += 1\n            if target < lt:\n                hi = lt - 1             # 答案在小于区\n            elif target > gt:\n                lo = gt + 1             # 答案在大于区\n            else:\n                return pivot            # 落在等于区，就是 pivot"
   },
   {
@@ -170,6 +171,7 @@
       "答案"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums.slice(), n = nums.length, k = a.k;\n    const target = n - k;\n    let lo = 0, hi = n - 1, lt = 0, i = 0, gt = n - 1, pv = null, hl = -1, done = -1;\n    const cls = (j) => (j === done ? \"c\" : j < lo || j > hi ? \"d\" : j === hl ? \"a\" : pv === null ? \"e\" : j < lt ? \"g\" : j < i ? \"k\" : j > gt ? \"w\" : \"e\");\n    const view = () => [{ t: \"bars\", label: `nums（目标是升序后下标 ${target} 的数）`, items: nums.map((v, j) => ({ v, cls: cls(j) })), ptrs: pv === null ? { lo, hi } : { lt, i: i <= gt ? i : null, gt } }];\n    const f = () => ({ facts: [[\"目标下标\", target], [\"范围\", `[${lo}, ${hi}]`], [\"pivot\", pv === null ? \"—\" : pv]] });\n    snap(\"开始\", `第 ${k} 大，就是升序排好后下标 ${n} − ${k} = <b>${target}</b> 的数。只关心这一个位置放的是谁。`, view(), f());\n    for (;;) {\n      pv = nums[(lo + hi) >> 1]; lt = lo; i = lo; gt = hi; hl = -1;\n      snap(\"选 pivot\", `这一轮的范围是 [${lo}, ${hi}]。演示里取中间位置的 <b>${pv}</b> 当 pivot（代码里是随机选的）。`, view(), f());\n      while (i <= gt) {\n        const x = nums[i];\n        if (x < pv) { [nums[lt], nums[i]] = [nums[i], nums[lt]]; lt++; i++; hl = lt - 1; snap(\"小于\", `${x} &lt; ${pv}，放到左边的小于区。`, view(), f()); }\n        else if (x > pv) { [nums[i], nums[gt]] = [nums[gt], nums[i]]; gt--; hl = gt + 1; snap(\"大于\", `${x} &gt; ${pv}，换到右边的大于区。换过来的 ${nums[i]} 还没看过，i 不动。`, view(), f()); }\n        else { i++; hl = i - 1; snap(\"等于\", `${x} 等于 pivot，留在中间的等于区。`, view(), f()); }\n      }\n      hl = -1;\n      const parts = `小于区 [${lo}, ${lt - 1}]，等于区 [${lt}, ${gt}]，大于区 [${gt + 1}, ${hi}]`;\n      if (target < lt) { snap(\"去左边\", `划分完了：${parts}。目标下标 ${target} 在小于区，右边两段直接扔掉。`, view(), f()); hi = lt - 1; pv = null; }\n      else if (target > gt) { snap(\"去右边\", `划分完了：${parts}。目标下标 ${target} 在大于区，左边两段直接扔掉。`, view(), f()); lo = gt + 1; pv = null; }\n      else { done = target; snap(\"找到\", `划分完了：${parts}。目标下标 ${target} 落在等于区，答案就是 pivot <b>${pv}</b>。`, view(), { kind: \"ok\", ans: pv, ...f() }); return; }\n    }\n  }"
    },
    {

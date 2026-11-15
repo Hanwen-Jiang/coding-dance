@@ -10,21 +10,21 @@ module.exports = {
   codes: [{ t: "标准解法：迭代", code: `
 class Solution:
     def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        prev, cur = None, head
+        prev, cur = None, head          #@init
         while cur:
-            nxt = cur.next              # 先记住下一个
-            cur.next = prev             # 箭头掉头
-            prev, cur = cur, nxt        # 两个指针都往前走
-        return prev
-` }, { t: "递归写法", note: "先让后面的部分反转好，再把自己接到它的尾巴上。", code: `
+            nxt = cur.next              # 先记住下一个 #@flip
+            cur.next = prev             # 箭头掉头 #@flip
+            prev, cur = cur, nxt        # 两个指针都往前走 #@move
+        return prev                     #@done
+` }, { t: "递归写法", key: "rec", note: "先让后面的部分反转好，再把自己接到它的尾巴上。", code: `
 class Solution:
     def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        if not head or not head.next:
-            return head
-        new_head = self.reverseList(head.next)
-        head.next.next = head           # 让后一个节点指回自己
-        head.next = None
-        return new_head
+        if not head or not head.next:   #@base
+            return head                 #@base
+        new_head = self.reverseList(head.next)  #@down
+        head.next.next = head           # 让后一个节点指回自己 #@back
+        head.next = None                #@cut
+        return new_head                 #@ret
 ` }, { t: "简洁写法：一行三连换", kind: "elegant", note: "右边先全部算好再赋值，所以三个指针可以一次挪完，不用临时变量。", code: `
 class Solution:
     def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
@@ -39,6 +39,9 @@ assert toL(s.reverseList(L([1,2,3,4,5]))) == [5,4,3,2,1]
 assert toL(s.reverseList(L([1,2]))) == [2,1]
 assert toL(s.reverseList(L([]))) == []
 `,
+  sig: { fn: "reverseList", params: ["ListNode"], ret: "ListNode" },
+  call: (a) => [a.v],
+  cases: [[[]], [[7]]],
   method: "迭代",
   legend: [["a", "cur"], ["b", "prev"], ["k", "箭头已经掉头"]],
   presets: [
@@ -49,18 +52,19 @@ assert toL(s.reverseList(L([]))) == []
     const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null));
     let prev = null, cur = 0;
     const view = () => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === cur ? "a" : i === prev ? "b" : prev !== null && i < prev ? "k" : "" })), next: next.slice(), ptrs: { prev, cur } }];
-    snap("开始", "prev 是空，cur 在头节点。", view());
+    snap("开始", "prev 是空，cur 在头节点。", view(), { at: "init" });
     while (cur !== null) {
       const nxt = cur + 1 < n ? cur + 1 : null;
       next[cur] = prev;
-      snap("箭头掉头", `先记住 cur 的下一个节点${nxt === null ? "（空）" : " " + v[nxt]}。然后把 ${v[cur]} 的 next 改成指向 ${prev === null ? "空" : v[prev]}。`, view());
+      snap("箭头掉头", `先记住 cur 的下一个节点${nxt === null ? "（空）" : " " + v[nxt]}。然后把 ${v[cur]} 的 next 改成指向 ${prev === null ? "空" : v[prev]}。`, view(), { at: "flip" });
       prev = cur; cur = nxt;
-      snap("往前走", cur === null ? "prev 移到刚处理完的节点，cur 走到了空，循环结束。" : `prev 移到 ${v[prev]}，cur 移到 ${v[cur]}。`, view());
+      snap("往前走", cur === null ? "prev 移到刚处理完的节点，cur 走到了空，循环结束。" : `prev 移到 ${v[prev]}，cur 移到 ${v[cur]}。`, view(), { at: "move" });
     }
-    snap("完成", `所有箭头都掉了头。prev 指着的 ${v[prev]} 就是新的头节点。`, view(), { kind: "ok", ans: v.slice().reverse() });
+    snap("完成", `所有箭头都掉了头。prev 指着的 ${v[prev]} 就是新的头节点。`, view(), { at: "done", kind: "ok", ans: v.slice().reverse() });
   },
   alts: [{
     t: "递归",
+    code: "rec",
     note: "和递归写法一样：先把 head 后面的部分反转好，再让 head 的下一个节点指回 head，head 自己指向空。",
     legend: [["a", "这一层的 head"], ["e", "在调用栈上，还没返回"], ["c", "new_head：反转后的头"], ["k", "已经反转好的部分"]],
     build(a, snap) {
@@ -70,23 +74,23 @@ assert toL(s.reverseList(L([]))) == []
         { t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === cur ? "a" : i === nh ? "c" : calls.includes(i) ? "e" : nh !== null && i > cur ? "k" : "" })), next: next.slice(), ptrs: { head: cur >= 0 ? cur : null, new_head: nh } },
         { t: "chips", label: "递归调用栈（右边是最里层）", items: calls.map((i) => ({ v: `reverseList(${v[i]})`, cls: i === cur ? "a" : "e" })), empty: "空" },
       ];
-      if (!n) { snap("完成", "链表是空的，直接返回空。", [{ t: "note", label: "链表", html: "空" }], { kind: "ok", ans: [] }); return; }
+      if (!n) { snap("完成", "链表是空的，直接返回空。", [{ t: "note", label: "链表", html: "空" }], { at: "base", kind: "ok", ans: [] }); return; }
       for (let i = 0; i < n; i++) {
         calls.push(i);
         if (i === n - 1) {
           nh = i;
-          snap("到底", `reverseList(${v[i]})：${v[i]} 后面没有节点了，它自己就是反转后的头，直接返回。`, view(i));
+          snap("到底", `reverseList(${v[i]})：${v[i]} 后面没有节点了，它自己就是反转后的头，直接返回。`, view(i), { at: "base" });
           calls.pop();
-        } else snap("往下递归", `reverseList(${v[i]})：先把 ${v[i]} 后面的部分反转好，再处理 ${v[i]} 自己。`, view(i));
+        } else snap("往下递归", `reverseList(${v[i]})：先把 ${v[i]} 后面的部分反转好，再处理 ${v[i]} 自己。`, view(i), { at: "down" });
       }
       for (let i = n - 2; i >= 0; i--) {
         next[i + 1] = i;
-        snap("指回来", `回到 reverseList(${v[i]})，后面已经反转好了，新的头是 ${v[nh]}。head.next 是 ${v[i + 1]}，让 ${v[i + 1]}.next 指回 ${v[i]}。`, view(i));
+        snap("指回来", `回到 reverseList(${v[i]})，后面已经反转好了，新的头是 ${v[nh]}。head.next 是 ${v[i + 1]}，让 ${v[i + 1]}.next 指回 ${v[i]}。`, view(i), { at: "back" });
         next[i] = null;
-        snap("断开", `再把 ${v[i]}.next 设成空，${v[i]} 成了新的尾巴。把 new_head ${v[nh]} 返回给上一层。`, view(i));
+        snap("断开", `再把 ${v[i]}.next 设成空，${v[i]} 成了新的尾巴。把 new_head ${v[nh]} 返回给上一层。`, view(i), { at: ["cut", "ret"] });
         calls.pop();
       }
-      snap("完成", `递归全部返回，新的头节点是 ${v[nh]}。`, view(-1), { kind: "ok", ans: v.slice().reverse() });
+      snap("完成", `递归全部返回，新的头节点是 ${v[nh]}。`, view(-1), { at: "ret", kind: "ok", ans: v.slice().reverse() });
     },
   }],
   points: [

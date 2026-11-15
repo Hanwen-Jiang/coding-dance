@@ -48,6 +48,7 @@
    "t": "标准解法：拓扑排序（BFS）",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def canFinish(self, numCourses: int, prerequisites: List[List[int]]) -> bool:\n        graph = [[] for _ in range(numCourses)]\n        indeg = [0] * numCourses            # 还有几门先修课没上\n        for a, b in prerequisites:          # 先上 b 才能上 a\n            graph[b].append(a)\n            indeg[a] += 1\n        q = deque(i for i in range(numCourses) if indeg[i] == 0)\n        done = 0\n        while q:\n            b = q.popleft()\n            done += 1\n            for a in graph[b]:\n                indeg[a] -= 1\n                if indeg[a] == 0:           # 先修课都上完了\n                    q.append(a)\n        return done == numCourses           # 环上的课永远上不了"
   },
   {
@@ -152,6 +153,7 @@
       "永远上不了"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const n = a.n, g = Array.from({ length: n }, () => []), indeg = Array(n).fill(0);\n    for (const [x, y] of a.pre) { g[y].push(x); indeg[x]++; }\n    const q = [], taken = [];\n    const view = (cur, fin) => [\n      { t: \"chips\", label: \"先修关系（b → a：先上 b 才能上 a）\", items: a.pre.map(([x, y]) => `${y} → ${x}`) },\n      { t: \"array\", label: \"课程（格子里是入度：还差几门先修课）\", items: indeg.map((d, k) => ({ v: d, cls: k === cur ? \"a\" : taken.includes(k) ? \"c\" : q.includes(k) ? \"e\" : fin ? \"w\" : \"\" })), ptrs: {} },\n      { t: \"chips\", label: \"队列\", items: q.slice(), empty: \"空\" },\n    ];\n    for (let i = 0; i < n; i++) if (!indeg[i]) q.push(i);\n    snap(\"开始\", `入度为 0 的课 ${q.length ? q.join(\"、\") : \"没有\"} 没有先修课，可以直接上，放进队列。`, view(-1), { facts: [[\"已上\", 0], [\"总数\", n]] });\n    while (q.length) {\n      const b = q.shift(); taken.push(b); const freed = [];\n      for (const x of g[b]) { indeg[x]--; if (!indeg[x]) { q.push(x); freed.push(x); } }\n      snap(`上课 ${b}`, `上完课 ${b}。` + (g[b].length ? `它是 ${g[b].join(\"、\")} 的先修课，这些课的入度各减一。` : \"没有课依赖它。\") + (freed.length ? `${freed.join(\"、\")} 的入度变成 0，入队。` : \"\"), view(b), { facts: [[\"已上\", taken.length], [\"总数\", n]] });\n    }\n    const ok = taken.length === n;\n    snap(\"完成\", ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join(\"、\")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`, view(-1, true), { kind: ok ? \"ok\" : \"warn\", ans: ok, facts: [[\"已上\", taken.length], [\"总数\", n]] });\n  }"
    },
    {

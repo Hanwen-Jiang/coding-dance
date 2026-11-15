@@ -47,6 +47,7 @@
    "t": "标准解法：回溯",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        res, path = [], []\n\n        def dfs(start):\n            res.append(path[:])             # 每个节点都是一个子集\n            for i in range(start, len(nums)):\n                path.append(nums[i])\n                dfs(i + 1)                  # 下一个只能从后面选\n                path.pop()\n\n        dfs(0)\n        return res"
   },
   {
@@ -113,6 +114,7 @@
       "收集的子集"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums, res = [], path = [];\n    const view = (start, pick) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, i) => ({ v, cls: i === pick ? \"a\" : start >= 0 && i >= start ? \"e\" : \"\" })), ptrs: { start: start >= 0 && start < nums.length ? start : null } },\n      { t: \"chips\", label: \"path\", items: path.slice(), empty: \"空\" },\n      { t: \"chips\", label: \"已收集的子集\", items: res.map((r, k) => ({ v: `[${r.join(\",\")}]`, cls: k === res.length - 1 && pick < 0 ? \"c\" : \"\" })), empty: \"还没有\" },\n    ];\n    snap(\"开始\", \"从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。\", view(-1, -1));\n    const dfs = (start) => {\n      res.push(path.slice());\n      snap(\"收集\", `进入 dfs(${start})，先收集 <b>[${path.join(\",\")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : \"后面没有数可挑了，返回。\"), view(start, -1), { facts: [[\"已收集\", res.length]] });\n      for (let i = start; i < nums.length; i++) {\n        path.push(nums[i]);\n        snap(\"放入\", `把 ${nums[i]} 放进 path，变成 [${path.join(\",\")}]，然后进入 dfs(${i + 1})。`, view(start, i), { facts: [[\"已收集\", res.length]] });\n        dfs(i + 1);\n        path.pop();\n      }\n    };\n    dfs(0);\n    snap(\"完成\", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"已收集\", res.length]] });\n  }"
    },
    {

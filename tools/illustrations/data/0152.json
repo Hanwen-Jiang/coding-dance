@@ -46,6 +46,7 @@
    "t": "标准解法：维护最大积和最小积",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def maxProduct(self, nums: List[int]) -> int:\n        hi = lo = best = nums[0]            # 以当前位置结尾的最大积、最小积\n        for x in nums[1:]:\n            if x < 0:\n                hi, lo = lo, hi             # 乘负数，大小互换\n            hi = max(x, hi * x)\n            lo = min(x, lo * x)\n            best = max(best, hi)\n        return best"
   },
   {
@@ -126,6 +127,7 @@
       "最小积对应的子数组"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums, n = nums.length;\n    const H = [nums[0]], Lo = [nums[0]]; let best = nums[0];\n    const view = (i) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: k === i ? \"a\" : \"\" })), ptrs: { i } },\n      { t: \"array\", label: \"hi：以 i 结尾的最大积\", items: nums.map((_, k) => ({ v: k < H.length ? H[k] : \"\", cls: k === i ? \"c\" : \"\" })), ptrs: {} },\n      { t: \"array\", label: \"lo：以 i 结尾的最小积\", items: nums.map((_, k) => ({ v: k < Lo.length ? Lo[k] : \"\", cls: k === i ? \"b\" : \"\" })), ptrs: {} },\n    ];\n    snap(\"开始\", `第 0 个数 ${nums[0]}：以它结尾的子数组只有它自己，hi = lo = ${nums[0]}。`, view(0), { facts: [[\"最大积\", best]] });\n    for (let i = 1; i < n; i++) {\n      const x = nums[i], h = H[i - 1], l = Lo[i - 1], c = [x, h * x, l * x];\n      const nh = Math.max(...c), nl = Math.min(...c);\n      H.push(nh); Lo.push(nl); best = Math.max(best, nh);\n      snap(`看 ${x}`, `三个候选：${x} 自己、hi×${x} = ${h * x}、lo×${x} = ${l * x}。` + (x < 0 ? \"乘的是负数，原来的最小积变成了最大的候选。\" : \"\") + `新的 hi = <b>${nh}</b>，lo = ${nl}。`, view(i), { facts: [[\"最大积\", best]] });\n    }\n    snap(\"完成\", `所有 hi 里最大的是 <b>${best}</b>。`, view(-1), { kind: \"ok\", ans: best, facts: [[\"最大积\", best]] });\n  }"
    }
   ],

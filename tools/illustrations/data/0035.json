@@ -47,6 +47,7 @@
    "t": "标准解法：二分查找",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def searchInsert(self, nums: List[int], target: int) -> int:\n        lo, hi = 0, len(nums)               # 左闭右开 [lo, hi)\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if nums[mid] < target:\n                lo = mid + 1                # mid 及左边都太小\n            else:\n                hi = mid                    # mid 可能就是答案\n        return lo"
   },
   {
@@ -148,6 +149,7 @@
       "答案"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const { nums, target } = a, n = nums.length;\n    let lo = 0, hi = n;\n    const view = (mid, ans) => [{ t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: k === ans ? \"c\" : k === mid ? \"a\" : k < lo ? \"d\" : k >= hi ? \"k\" : \"e\" })), ptrs: { lo, mid, hi: hi < n ? hi : null } }];\n    const f = () => ({ facts: [[\"target\", target], [\"lo\", lo], [\"hi\", hi]] });\n    snap(\"开始\", `找第一个 ≥ ${target} 的下标。区间是 [0, ${n})，右端开着，因为可能要插在最后。`, view(-1), f());\n    while (lo < hi) {\n      const mid = (lo + hi) >> 1;\n      if (nums[mid] < target) { snap(\"太小\", `nums[${mid}] = ${nums[mid]} &lt; ${target}，答案在 mid 右边，lo = ${mid + 1}。`, view(mid), f()); lo = mid + 1; }\n      else { snap(\"够大\", `nums[${mid}] = ${nums[mid]} ≥ ${target}，mid 可能就是答案，hi = ${mid}。`, view(mid), f()); hi = mid; }\n    }\n    const msg = lo === n ? `所有数都比 ${target} 小，插在末尾，返回 <b>${n}</b>。` : nums[lo] === target ? `nums[${lo}] 就是 ${target}，返回 <b>${lo}</b>。` : `数组里没有 ${target}，它应该插在下标 <b>${lo}</b>，也就是 ${nums[lo]} 前面。`;\n    snap(\"完成\", `lo = hi = ${lo}。` + msg, view(-1, lo), { kind: \"ok\", ans: lo, ...f() });\n  }"
    }
   ],

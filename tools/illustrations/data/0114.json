@@ -46,6 +46,7 @@
    "t": "标准解法：原地挪左子树",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def flatten(self, root: Optional[TreeNode]) -> None:\n        cur = root\n        while cur:\n            if cur.left:\n                pre = cur.left\n                while pre.right:            # 左子树最右边的节点\n                    pre = pre.right\n                pre.right = cur.right       # 原来的右子树接到它后面\n                cur.right = cur.left        # 左子树挪到右边\n                cur.left = None\n            cur = cur.right"
   },
   {
@@ -122,6 +123,7 @@
       "已经展开好的部分"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });\n    const done = [];\n    const view = (cur, pre) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? \"a\" : +id === pre ? \"b\" : done.includes(+id) ? \"c\" : \"\"; return [{ t: \"tree\", nodes: N, root: 0, cls }]; };\n    snap(\"开始\", \"从根节点开始，沿着右指针一路往下处理。\", view(-1, -1));\n    let cur = 0;\n    while (cur !== null) {\n      const nd = N[cur];\n      if (nd.l !== null) {\n        let pre = nd.l; while (N[pre].r !== null) pre = N[pre].r;\n        snap(\"找 pre\", `${nd.v} 有左子树。左子树最右边的节点是 <b>${N[pre].v}</b>，它是左子树前序遍历的最后一个。`, view(cur, pre));\n        N[pre].r = nd.r; nd.r = nd.l; nd.l = null;\n        snap(\"挪过去\", `把 ${nd.v} 原来的右子树接到 ${N[pre].v} 后面，再把左子树整个挪到 ${nd.v} 的右边。`, view(cur, pre));\n      } else snap(\"没有左子树\", `${nd.v} 没有左子树，不用动。`, view(cur, -1));\n      done.push(cur); cur = nd.r;\n    }\n    const out = []; let p = 0; while (p !== null) { out.push(N[p].v); p = N[p].r; }\n    snap(\"完成\", `展开成了一条只用右指针的链：${out.join(\" → \")}，正是前序遍历的顺序。`, view(-1, -1), { kind: \"ok\", ans: out });\n  }"
    },
    {

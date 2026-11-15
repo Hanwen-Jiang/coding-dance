@@ -48,6 +48,7 @@
    "t": "标准解法：贪心，维护最远可达",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def canJump(self, nums: List[int]) -> bool:\n        far = 0                             # 目前能到的最远下标\n        for i, x in enumerate(nums):\n            if i > far:                     # 连 i 都到不了\n                return False\n            far = max(far, i + x)\n            if far >= len(nums) - 1:\n                return True\n        return True"
   },
   {
@@ -128,6 +129,7 @@
       "终点能到"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums, n = nums.length; let far = 0;\n    const view = (i, end) => [{ t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: end === \"ok\" && k === n - 1 ? \"c\" : k === i ? (end === \"bad\" ? \"w\" : \"a\") : k <= far ? \"e\" : end === \"bad\" ? \"w\" : \"\" })), ptrs: { i: i >= 0 ? i : null, far: Math.min(far, n - 1) } }];\n    snap(\"开始\", \"一开始站在下标 0，能到的最远位置 far = 0。\", view(-1), { facts: [[\"far\", far], [\"终点\", n - 1]] });\n    for (let i = 0; i < n; i++) {\n      if (i > far) { snap(\"到不了\", `下标 ${i} &gt; far = ${far}，连这里都到不了，终点更到不了。返回 <b>false</b>。`, view(i, \"bad\"), { kind: \"warn\", ans: false, facts: [[\"far\", far], [\"终点\", n - 1]] }); return; }\n      const old = far; far = Math.max(far, i + nums[i]);\n      if (far >= n - 1) { snap(\"能到终点\", `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，已经够到终点 ${n - 1}。返回 <b>true</b>。`, view(i, \"ok\"), { kind: \"ok\", ans: true, facts: [[\"far\", far], [\"终点\", n - 1]] }); return; }\n      snap(\"更新 far\", `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}。` + (far > old ? `far 从 ${old} 变成 <b>${far}</b>。` : `没有超过 far = ${far}。`), view(i), { facts: [[\"far\", far], [\"终点\", n - 1]] });\n    }\n  }"
    },
    {

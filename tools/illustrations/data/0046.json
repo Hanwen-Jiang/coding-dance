@@ -47,6 +47,7 @@
    "t": "标准解法：回溯 + used 数组",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def permute(self, nums: List[int]) -> List[List[int]]:\n        res, path, used = [], [], [False] * len(nums)\n\n        def dfs():\n            if len(path) == len(nums):\n                res.append(path[:])\n                return\n            for i, x in enumerate(nums):\n                if used[i]:\n                    continue\n                used[i] = True\n                path.append(x)\n                dfs()\n                path.pop()                  # 撤销选择\n                used[i] = False\n\n        dfs()\n        return res"
   },
   {
@@ -114,6 +115,7 @@
       "填满了"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums, n = nums.length, used = nums.map(() => false), path = [], res = [];\n    const view = (cur, done) => [\n      { t: \"array\", label: \"nums（灰色的已经用掉）\", items: nums.map((v, i) => ({ v, cls: i === cur ? \"a\" : used[i] ? \"d\" : \"\" })), ptrs: {} },\n      { t: \"array\", label: \"path（正在填的排列）\", items: Array.from({ length: n }, (_, k) => ({ v: k < path.length ? path[k] : \"\", cls: k < path.length ? (done ? \"c\" : k === path.length - 1 && cur >= 0 ? \"a\" : \"e\") : \"\" })), idx: true },\n      { t: \"chips\", label: \"已收集\", items: res.map((r) => `[${r.join(\",\")}]`), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `有 ${n} 个空位，从左往右填。每一位从还没用过的数里挑。`, view(-1));\n    const dfs = () => {\n      if (path.length === n) { res.push(path.slice()); snap(\"收集\", `${n} 个位置都填好了，得到 <b>[${path.join(\",\")}]</b>。`, view(-1, true), { kind: \"ok\", facts: [[\"已收集\", res.length]] }); return; }\n      for (let i = 0; i < n; i++) {\n        if (used[i]) continue;\n        used[i] = true; path.push(nums[i]);\n        snap(\"填第 \" + path.length + \" 位\", `第 ${path.length} 位填 <b>${nums[i]}</b>，把它标记成用过。`, view(i), { facts: [[\"已收集\", res.length]] });\n        dfs();\n        path.pop(); used[i] = false;\n      }\n    };\n    dfs();\n    snap(\"完成\", `一共 ${res.length} 个排列，正好是 ${n}! 个。`, view(-1), { kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"已收集\", res.length]] });\n  }"
    }
   ],

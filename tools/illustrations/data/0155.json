@@ -46,6 +46,7 @@
    "t": "标准解法：辅助栈",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class MinStack:\n    def __init__(self):\n        self.stack = []\n        self.mins = []                      # mins[-1] 是当前栈里的最小值\n\n    def push(self, val: int) -> None:\n        self.stack.append(val)\n        self.mins.append(min(val, self.mins[-1]) if self.mins else val)\n\n    def pop(self) -> None:\n        self.stack.pop()\n        self.mins.pop()                     # 和主栈同步弹出\n\n    def top(self) -> int:\n        return self.stack[-1]\n\n    def getMin(self) -> int:\n        return self.mins[-1]"
   },
   {
@@ -145,6 +146,7 @@
       "当前的最小值"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const ops = a.ops, st = [], mins = [], out = [];\n    const name = (o) => (o[0] === \"push\" ? `push(${o[1]})` : `${o[0]}()`);\n    const view = (i) => [\n      { t: \"chips\", label: \"操作\", items: ops.map((o, t) => ({ v: name(o), cls: t === i ? \"a\" : t < i ? \"d\" : \"\" })) },\n      { t: \"array\", label: \"stack（右边是栈顶）\", items: st.length ? st.slice() : [{ v: \"\", cls: \"d\" }], ptrs: {} },\n      { t: \"array\", label: \"mins（和 stack 一一对应）\", items: mins.length ? mins.map((v, k) => ({ v, cls: k === mins.length - 1 ? \"c\" : \"\" })) : [{ v: \"\", cls: \"d\" }], ptrs: {} },\n      { t: \"chips\", label: \"输出\", items: out.map((v) => (v === null ? \"null\" : v)), empty: \"还没有\" },\n    ];\n    snap(\"开始\", \"两个栈都是空的。\", view(-1));\n    ops.forEach((o, i) => {\n      let msg;\n      if (o[0] === \"push\") { const m = mins.length ? Math.min(o[1], mins[mins.length - 1]) : o[1]; st.push(o[1]); mins.push(m); out.push(null); msg = `把 ${o[1]} 压进 stack。压入后的最小值是 ${mins.length > 1 ? `min(${o[1]}, ${mins[mins.length - 2]})` : o[1]} = <b>${m}</b>，压进 mins。`; }\n      else if (o[0] === \"pop\") { const v = st.pop(); mins.pop(); out.push(null); msg = `弹出 ${v}，mins 也同步弹出一层。现在的最小值是 ${mins.length ? mins[mins.length - 1] : \"—\"}。`; }\n      else if (o[0] === \"top\") { out.push(st[st.length - 1]); msg = `栈顶是 <b>${st[st.length - 1]}</b>。`; }\n      else { out.push(mins[mins.length - 1]); msg = `mins 的栈顶就是最小值，返回 <b>${mins[mins.length - 1]}</b>，O(1)。`; }\n      snap(name(o), msg, view(i));\n    });\n    snap(\"完成\", `输出是 [${out.map((v) => (v === null ? \"null\" : v)).join(\", \")}]。`, view(ops.length), { kind: \"ok\", ans: out.slice() });\n  }"
    }
   ],

@@ -46,6 +46,7 @@
    "t": "标准解法：二分，和右端比较",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def findMin(self, nums: List[int]) -> int:\n        lo, hi = 0, len(nums) - 1\n        while lo < hi:\n            mid = (lo + hi) // 2\n            if nums[mid] > nums[hi]:        # mid 在前一段，最小值在右边\n                lo = mid + 1\n            else:                           # mid 在后一段，可能就是最小值\n                hi = mid\n        return nums[lo]"
   },
   {
@@ -148,6 +149,7 @@
       "最小值"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums; let lo = 0, hi = nums.length - 1;\n    const view = (mid, fin) => [{ t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: fin && k === lo ? \"c\" : k === mid ? \"a\" : k === hi && mid >= 0 ? \"b\" : k < lo || k > hi ? \"d\" : \"e\" })), ptrs: { lo, mid: mid >= 0 ? mid : null, hi } }];\n    snap(\"开始\", \"搜索范围是整个数组。每次拿 nums[mid] 和 nums[hi] 比。\", view(-1));\n    while (lo < hi) {\n      const mid = (lo + hi) >> 1;\n      if (nums[mid] > nums[hi]) { snap(\"在前一段\", `nums[mid] = ${nums[mid]} &gt; nums[hi] = ${nums[hi]}，mid 在前一段，最小值在它右边，lo = ${mid + 1}。`, view(mid)); lo = mid + 1; }\n      else { snap(\"在后一段\", `nums[mid] = ${nums[mid]} ≤ nums[hi] = ${nums[hi]}，mid 在后一段，最小值在 mid 或它左边，hi = ${mid}。`, view(mid)); hi = mid; }\n    }\n    snap(\"完成\", `lo = hi = ${lo}，最小值是 <b>${nums[lo]}</b>。`, view(-1, true), { kind: \"ok\", ans: nums[lo] });\n  }"
    }
   ],

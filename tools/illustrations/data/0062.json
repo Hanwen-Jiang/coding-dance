@@ -46,6 +46,7 @@
    "t": "标准解法：动态规划",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        dp = [[1] * n for _ in range(m)]    # 第一行、第一列都只有 1 种走法\n        for i in range(1, m):\n            for j in range(1, n):\n                dp[i][j] = dp[i - 1][j] + dp[i][j - 1]  # 从上面来 + 从左边来\n        return dp[-1][-1]"
   },
   {
@@ -108,6 +109,7 @@
       "终点"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const { m, n } = a, dp = Array.from({ length: m }, (_, i) => Array.from({ length: n }, (_, j) => (i === 0 || j === 0 ? 1 : null)));\n    const view = (ci, cj, fin) => [{ t: \"grid\", label: \"dp[i][j]：从左上走到 (i, j) 的路径数\", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? \"\" : v, cls: fin && i === m - 1 && j === n - 1 ? \"c\" : i === ci && j === cj ? \"a\" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? \"e\" : \"\" }))) }];\n    snap(\"开始\", \"第一行只能一直向右走，第一列只能一直向下走，路径数都是 1。\", view(-1, -1));\n    for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) {\n      dp[i][j] = dp[i - 1][j] + dp[i][j - 1];\n      snap(`(${i}, ${j})`, `从上面 (${i - 1}, ${j}) 来有 ${dp[i - 1][j]} 种，从左边 (${i}, ${j - 1}) 来有 ${dp[i][j - 1]} 种。dp = <b>${dp[i][j]}</b>。`, view(i, j));\n    }\n    snap(\"完成\", `到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), { kind: \"ok\", ans: dp[m - 1][n - 1] });\n  }"
    }
   ],

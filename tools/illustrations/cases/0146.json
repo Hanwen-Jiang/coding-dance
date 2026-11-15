@@ -1,0 +1,17 @@
+{
+ "sig": {"cls":"LRUCache","ctor":["int"],"methods":{"get":[["int"],"int"],"put":[["int","int"],"void"]}},
+ "cases": [
+  {"in":[["LRUCache","put","put","get","put","get","put","get","get","get"],[[2],[1,1],[2,2],[1],[3,3],[2],[4,4],[1],[3],[4]]],"out":[null,null,null,1,null,-1,null,-1,3,4]},
+  {"in":[["LRUCache","put","put","put","put","get","get"],[[2],[1,1],[2,2],[1,10],[3,3],[2],[1]]],"out":[null,null,null,null,null,-1,10]},
+  {"in":[["LRUCache","put","put","put","put","put","get"],[[3],[2,8],[3,6],[1,7],[2,5],[3,1],[1]]],"out":[null,null,null,null,null,null,7]},
+  {"in":[["LRUCache","put","put","put","get","put","put"],[[1],[3,6],[4,6],[2,9],[3],[1,8],[1,2]]],"out":[null,null,null,null,-1,null,null]},
+  {"in":[["LRUCache","put","put","get","put","get","put","put","put"],[[1],[2,5],[2,8],[4],[2,7],[2],[3,1],[1,7],[3,4]]],"out":[null,null,null,-1,null,7,null,null,null]},
+  {"in":[["LRUCache","put","put","get","get","get","put","put","get"],[[2],[1,9],[3,6],[1],[3],[4],[1,8],[1,9],[2]]],"out":[null,null,null,9,6,-1,null,null,-1]},
+  {"in":[["LRUCache","put","get","put","get","get","get","put"],[[2],[4,6],[4],[4,6],[4],[3],[3],[4,4]]],"out":[null,null,6,null,6,-1,-1,null]},
+  {"in":[["LRUCache","put","get","get","put","put","put"],[[3],[2,9],[1],[2],[1,5],[4,2],[3,5]]],"out":[null,null,-1,9,null,null,null]},
+  {"in":[["LRUCache","put","put","put","get","put","get"],[[3],[3,5],[2,8],[3,7],[4],[1,6],[2]]],"out":[null,null,null,null,-1,null,8]},
+  {"in":[["LRUCache","put","get","get","put","get","get","get","get","get"],[[3],[3,8],[2],[2],[4,2],[1],[1],[1],[1],[3]]],"out":[null,null,-1,-1,null,-1,-1,-1,-1,8]},
+  {"in":[["LRUCache","put","put","get","put","get","put","get"],[[3],[3,1],[3,5],[4],[1,1],[3],[4,5],[2]]],"out":[null,null,null,-1,null,5,null,-1]},
+  {"in":[["LRUCache","put","get","get","put","put","put","put","put","put"],[[2],[3,4],[1],[4],[2,9],[4,7],[4,5],[1,3],[3,2],[3,3]]],"out":[null,null,-1,-1,null,null,null,null,null,null]}
+ ]
+}

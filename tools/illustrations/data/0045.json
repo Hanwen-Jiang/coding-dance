@@ -46,6 +46,7 @@
    "t": "标准解法：贪心，按层扩展",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def jump(self, nums: List[int]) -> int:\n        jumps, end, far = 0, 0, 0           # end：当前这一跳能到的右端\n        for i in range(len(nums) - 1):      # 最后一个位置不用再跳\n            far = max(far, i + nums[i])\n            if i == end:                    # 这一层走完了，必须再跳一次\n                jumps += 1\n                end = far\n        return jumps"
   },
   {
@@ -126,6 +127,7 @@
       "终点"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums, n = nums.length; let jumps = 0, start = 0, end = 0, far = 0;\n    const view = (i, fin) => [{ t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: fin && k === n - 1 ? \"c\" : k === i ? \"a\" : k >= start && k <= end ? \"k\" : k > end && k <= far ? \"e\" : \"\" })), ptrs: { i: i >= 0 ? i : null, end: Math.min(end, n - 1), far: far > end ? Math.min(far, n - 1) : null } }];\n    const f = () => ({ facts: [[\"跳数\", jumps], [\"end\", end], [\"far\", far]] });\n    snap(\"开始\", \"跳 0 次能到的只有下标 0，这一层是 [0, 0]。\", view(-1), f());\n    for (let i = 0; i < n - 1; i++) {\n      far = Math.max(far, i + nums[i]);\n      if (i === end) {\n        snap(\"走到这一层末尾\", `站在 ${i}，最远能到 ${i + nums[i]}，far = ${far}。i 已经到了这一层的右端 end = ${end}，必须再跳一次。`, view(i), f());\n        jumps++; start = end + 1; end = far;\n        snap(\"跳一次\", `跳数变成 <b>${jumps}</b>。跳 ${jumps} 次能到的新区间是 [${start}, ${Math.min(end, n - 1)}]。`, view(-1), f());\n      } else snap(\"扩展 far\", `站在 ${i}，最远能到 ${i} + ${nums[i]} = ${i + nums[i]}，far = ${far}。还在这一层里，先不跳。`, view(i), f());\n    }\n    snap(\"完成\", `终点 ${n - 1} 在第 ${jumps} 跳的区间里，最少跳 <b>${jumps}</b> 次。`, view(-1, true), { kind: \"ok\", ans: jumps, ...f() });\n  }"
    }
   ],

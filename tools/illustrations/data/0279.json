@@ -46,6 +46,7 @@
    "t": "标准解法：动态规划",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def numSquares(self, n: int) -> int:\n        dp = [0] + [float(\"inf\")] * n       # dp[i]：和为 i 最少几个平方数\n        for i in range(1, n + 1):\n            j = 1\n            while j * j <= i:\n                dp[i] = min(dp[i], dp[i - j * j] + 1)   # 最后一个数取 j²\n                j += 1\n        return dp[n]"
   },
   {
@@ -112,6 +113,7 @@
       "取到最小的那个"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const n = a.n, dp = Array(n + 1).fill(null); dp[0] = 0;\n    const view = (i, cands, best, fin) => [{ t: \"array\", label: \"dp[i]：和为 i 最少几个平方数\", items: dp.map((v, k) => ({ v, cls: fin && k === n ? \"c\" : k === i ? \"a\" : k === best ? \"c\" : cands.includes(k) ? \"e\" : \"\" })), ptrs: { i: i >= 0 ? i : null } }];\n    snap(\"开始\", \"dp[0] = 0：和为 0 不需要任何数。\", view(-1, [], -1));\n    for (let i = 1; i <= n; i++) {\n      const cs = []; let best = Infinity, bk = -1, parts = [];\n      for (let j = 1; j * j <= i; j++) { const k = i - j * j; cs.push(k); parts.push(`${j * j}：dp[${k}] + 1 = ${dp[k] + 1}`); if (dp[k] + 1 < best) { best = dp[k] + 1; bk = k; } }\n      dp[i] = best;\n      snap(`dp[${i}]`, `最后一个数可以是 ${parts.join(\"；\")}。最小的是 <b>${best}</b>。`, view(i, cs, bk), { facts: [[\"dp[\" + i + \"]\", best]] });\n    }\n    snap(\"完成\", `和为 ${n} 最少需要 <b>${dp[n]}</b> 个完全平方数。`, view(-1, [], -1, true), { kind: \"ok\", ans: dp[n] });\n  }"
    }
   ],

@@ -47,6 +47,7 @@
    "t": "标准解法：摩尔投票",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def majorityElement(self, nums: List[int]) -> int:\n        cand, count = None, 0\n        for x in nums:\n            if count == 0:\n                cand = x                    # 票数归零，换候选人\n            count += 1 if x == cand else -1 # 相同 +1，不同就抵消一票\n        return cand"
   },
   {
@@ -119,6 +120,7 @@
       "看过的其他数"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums; let cand = null, count = 0;\n    const view = (i) => [{ t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: k === i ? \"a\" : k < i ? (v === cand ? \"k\" : \"d\") : \"\" })), ptrs: { i: i >= 0 ? i : null } }];\n    const f = () => ({ facts: [[\"候选人\", cand === null ? \"—\" : cand], [\"票数\", count]] });\n    snap(\"开始\", \"还没有候选人，票数 0。\", view(-1), f());\n    nums.forEach((x, i) => {\n      if (count === 0) { cand = x; count = 1; snap(\"新候选人\", `票数是 0，${x} 成为新的候选人，票数 1。`, view(i), f()); }\n      else if (x === cand) { count++; snap(\"+1\", `${x} 和候选人相同，票数 +1，变成 ${count}。`, view(i), f()); }\n      else { count--; snap(\"抵消\", `${x} 和候选人 ${cand} 不同，两者抵消，票数 −1，变成 ${count}。`, view(i), { kind: count === 0 ? \"warn\" : \"\", ...f() }); }\n    });\n    snap(\"完成\", `最后的候选人是 <b>${cand}</b>，它就是多数元素。`, view(-1), { kind: \"ok\", ans: cand, ...f() });\n  }"
    }
   ],

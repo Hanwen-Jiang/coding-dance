@@ -47,6 +47,7 @@
    "t": "标准解法：迭代中序遍历",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:\n        stack, cur = [], root\n        while True:\n            while cur:                      # 一路向左\n                stack.append(cur)\n                cur = cur.left\n            cur = stack.pop()\n            k -= 1\n            if k == 0:                      # 中序遍历的第 k 个\n                return cur.val\n            cur = cur.right"
   },
   {
@@ -132,6 +133,7 @@
       "答案"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });\n    const stack = [], done = [], badges = {}; let k = a.k, cur = 0;\n    const view = (now, ans) => { const cls = {}; for (const id in N) cls[id] = +id === ans ? \"k\" : +id === now ? \"a\" : done.includes(+id) ? \"c\" : stack.includes(+id) ? \"e\" : \"\"; return [{ t: \"tree\", nodes: N, root: 0, cls, on: stack.slice(), badges }, { t: \"chips\", label: \"栈（右边是栈顶）\", items: stack.map((i) => N[i].v), empty: \"空\" }]; };\n    snap(\"开始\", `中序遍历是从小到大的顺序，数到第 ${k} 个就是答案。`, view(-1), { facts: [[\"还要数\", k]] });\n    while (true) {\n      while (cur !== null && cur !== undefined && N[cur]) { stack.push(cur); snap(\"向左走\", `把 ${N[cur].v} 压栈，继续往左走。`, view(cur), { facts: [[\"还要数\", k]] }); cur = N[cur].l; }\n      cur = stack.pop(); k--; done.push(cur); badges[cur] = \"第 \" + done.length;\n      if (k === 0) { snap(\"找到\", `弹出 ${N[cur].v}，这是中序遍历的第 ${a.k} 个，答案是 <b>${N[cur].v}</b>。后面的节点不用再看了。`, view(-1, cur), { kind: \"ok\", ans: N[cur].v, facts: [[\"还要数\", 0]] }); return; }\n      snap(\"数一个\", `左边走到头了，弹出 ${N[cur].v}，它是第 ${done.length} 小的。还要再数 ${k} 个，转向它的右子树。`, view(cur), { facts: [[\"还要数\", k]] });\n      cur = N[cur].r;\n    }\n  }"
    }
   ],

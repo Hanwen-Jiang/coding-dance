@@ -48,6 +48,7 @@
    "t": "标准解法：单调栈",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def dailyTemperatures(self, temperatures: List[int]) -> List[int]:\n        ans = [0] * len(temperatures)\n        stack = []                          # 还在等待的日子（下标），温度从底到顶递减\n        for i, t in enumerate(temperatures):\n            while stack and temperatures[stack[-1]] < t:\n                j = stack.pop()\n                ans[j] = i - j              # 第 j 天等到了第 i 天\n            stack.append(i)\n        return ans"
   },
   {
@@ -121,6 +122,7 @@
       "刚等到答案"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const T = a.t, n = T.length, ans = Array(n).fill(null), stack = [];\n    const view = (i, hit) => [\n      { t: \"bars\", label: \"temperatures\", items: T.map((v, k) => ({ v, cls: k === i ? \"a\" : k === hit ? \"c\" : stack.includes(k) ? \"e\" : \"\" })), ptrs: { 今天: i >= 0 ? i : null } },\n      { t: \"array\", label: \"answer\", items: ans.map((v) => (v === null ? \"\" : v)), ptrs: {} },\n      { t: \"chips\", label: \"栈（存下标，右边是栈顶）\", items: stack.map((k) => `${k}:${T[k]}`), empty: \"空\" },\n    ];\n    snap(\"开始\", \"栈里放还在等更高温度的日子。\", view(-1, -1));\n    for (let i = 0; i < n; i++) {\n      while (stack.length && T[stack[stack.length - 1]] < T[i]) {\n        const j = stack.pop(); ans[j] = i - j;\n        snap(\"等到了\", `今天 ${T[i]} 比栈顶第 ${j} 天的 ${T[j]} 高，第 ${j} 天等了 <b>${i - j}</b> 天，弹出。`, view(i, j));\n      }\n      stack.push(i);\n      snap(\"压栈\", `${stack.length > 1 ? `栈顶 ${T[stack[stack.length - 2]]} 不比今天低，停下。` : \"\"}把第 ${i} 天（${T[i]}）压栈，开始等待。`, view(i, -1));\n    }\n    stack.forEach((k) => (ans[k] = 0));\n    snap(\"完成\", \"栈里剩下的日子到最后也没等到更高温度，答案填 0。\", view(-1, -1), { kind: \"ok\", ans: ans.slice() });\n  }"
    },
    {

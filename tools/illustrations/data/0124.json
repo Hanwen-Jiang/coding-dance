@@ -48,6 +48,7 @@
    "t": "标准解法：后序递归",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def maxPathSum(self, root: Optional[TreeNode]) -> int:\n        best = float(\"-inf\")\n\n        def gain(node):                     # 从 node 往下一条链的最大和\n            nonlocal best\n            if not node:\n                return 0\n            l = max(gain(node.left), 0)     # 负的就不要了\n            r = max(gain(node.right), 0)\n            best = max(best, node.val + l + r)  # 以 node 为最高点的路径\n            return node.val + max(l, r)     # 往上只能带一条链\n\n        gain(root)\n        return best"
   },
   {
@@ -128,6 +129,7 @@
       "最大路径"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });\n    const stack = [], badges = {}, done = new Set(); let best = -Infinity, bestSet = [];\n    // 从 id 往下沿着「往上交的链」走，得到这条链上的节点\n    const sub = (id) => { const out = [id]; let c = id; while (true) { const nd = N[c], gl = nd.l !== null ? Math.max(badges[nd.l], 0) : 0, gr = nd.r !== null ? Math.max(badges[nd.r], 0) : 0; const nx = gl >= gr ? (gl > 0 ? nd.l : null) : nd.r; if (nx === null) break; out.push(nx); c = nx; } return out; };\n    const view = (cur, fin) => { const cls = {}; for (const id in N) cls[id] = fin && bestSet.includes(+id) ? \"k\" : +id === cur ? \"a\" : done.has(+id) ? \"c\" : stack.includes(+id) ? \"e\" : \"\"; return [{ t: \"tree\", nodes: N, root: 0, cls, on: stack.slice(), badges: { ...badges } }]; };\n    const f = () => ({ facts: [[\"目前最大\", best === -Infinity ? \"−∞\" : best]] });\n    snap(\"开始\", \"后序遍历：先算左右子树往下的链，再算自己。\", view(-1), f());\n    const gain = (id) => {\n      if (id === null || !N[id]) return 0;\n      stack.push(id);\n      const l = Math.max(gain(N[id].l), 0), r = Math.max(gain(N[id].r), 0), v = N[id].v;\n      const through = v + l + r, up = v + Math.max(l, r);\n      if (through > best) { best = through; bestSet = [id]; if (l > 0) bestSet.push(...sub(N[id].l)); if (r > 0) bestSet.push(...sub(N[id].r)); }\n      badges[id] = up; done.add(id); stack.pop();\n      snap(`节点 ${v}`, `左链 ${l}，右链 ${r}（负的按 0 算）。以 ${v} 为最高点的路径和是 ${v} + ${l} + ${r} = <b>${through}</b>。往上交 ${v} + max(${l}, ${r}) = ${up}。`, view(id), f());\n      return up;\n    };\n    gain(0);\n    snap(\"完成\", `最大路径和是 <b>${best}</b>。`, view(-1, true), { kind: \"ok\", ans: best, ...f() });\n  }"
    }
   ],

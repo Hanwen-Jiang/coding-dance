@@ -46,6 +46,7 @@
    "t": "标准解法：异或",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def singleNumber(self, nums: List[int]) -> int:\n        res = 0\n        for x in nums:\n            res ^= x                        # 成对的数会互相抵消\n        return res"
   },
   {
@@ -108,6 +109,7 @@
       "已经异或过"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums, w = Math.max(3, ...nums.map((x) => x.toString(2).length));\n    const bin = (x) => x.toString(2).padStart(w, \"0\");\n    let res = 0;\n    const view = (i) => [{ t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: k === i ? \"a\" : k < i ? \"d\" : \"\" })), ptrs: { i: i >= 0 ? i : null } }];\n    snap(\"开始\", \"res 从 0 开始，依次和每个数做异或。\", view(-1), { facts: [[\"res\", res], [\"二进制\", bin(res)]] });\n    nums.forEach((x, i) => {\n      const old = res; res ^= x;\n      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，也就是 ${old} ^ ${x} = ${res}。`, view(i), { facts: [[\"res\", res], [\"二进制\", bin(res)]] });\n    });\n    snap(\"完成\", `成对的数都抵消了，剩下 <b>${res}</b>。`, view(-1), { kind: \"ok\", ans: res, facts: [[\"res\", res], [\"二进制\", bin(res)]] });\n  }"
    }
   ],

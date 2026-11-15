@@ -10,24 +10,24 @@ module.exports = {
   codes: [{ t: "标准解法：DFS 淹没整座岛", code: `
 class Solution:
     def numIslands(self, grid: List[List[str]]) -> int:
-        m, n = len(grid), len(grid[0])
+        m, n = len(grid), len(grid[0])      #@init
 
         def sink(i, j):
             if not (0 <= i < m and 0 <= j < n) or grid[i][j] != '1':
                 return                      # 越界或不是陆地
-            grid[i][j] = '0'                # 先做记号，再扩散
-            sink(i - 1, j)
-            sink(i + 1, j)
-            sink(i, j - 1)
-            sink(i, j + 1)
+            grid[i][j] = '0'                # 先做记号，再扩散 #@mark
+            sink(i - 1, j)                  #@spread
+            sink(i + 1, j)                  #@spread
+            sink(i, j - 1)                  #@spread
+            sink(i, j + 1)                  #@spread
 
-        count = 0
-        for i in range(m):
-            for j in range(n):
-                if grid[i][j] == '1':
-                    count += 1
-                    sink(i, j)
-        return count
+        count = 0                           #@init
+        for i in range(m):                  #@scan
+            for j in range(n):              #@scan
+                if grid[i][j] == '1':       #@found
+                    count += 1              #@found
+                    sink(i, j)              #@found
+        return count                        #@done
 ` }, { t: "简洁写法：sink 顺便返回 1", kind: "elegant", note: "让 sink 在淹掉一座新岛时返回 1，否则返回 0，答案就是对所有格子求和。", code: `
 class Solution:
     def numIslands(self, grid: List[List[str]]) -> int:
@@ -39,43 +39,46 @@ class Solution:
                 return 1
             return 0
         return sum(sink(i, j) for i in range(len(grid)) for j in range(len(grid[0])))
-` }, { t: "另一种写法：BFS", note: "递归太深担心爆栈时，用队列一圈一圈往外扩。入队时就做记号，避免同一个格子重复入队。", code: `
+` }, { t: "另一种写法：BFS", key: "bfs", note: "递归太深担心爆栈时，用队列一圈一圈往外扩。入队时就做记号，避免同一个格子重复入队。", code: `
 class Solution:
     def numIslands(self, grid: List[List[str]]) -> int:
-        m, n, count = len(grid), len(grid[0]), 0
-        for i in range(m):
-            for j in range(n):
+        m, n, count = len(grid), len(grid[0]), 0    #@init
+        for i in range(m):                          #@scan
+            for j in range(n):                      #@scan
                 if grid[i][j] != '1':
                     continue
-                count += 1
-                grid[i][j] = '0'
-                q = deque([(i, j)])
+                count += 1                          #@found
+                grid[i][j] = '0'                    #@found
+                q = deque([(i, j)])                 #@found
                 while q:
-                    x, y = q.popleft()
-                    for a, b in (x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1):
-                        if 0 <= a < m and 0 <= b < n and grid[a][b] == '1':
-                            grid[a][b] = '0'    # 入队时就做记号
-                            q.append((a, b))
-        return count
-` }, { t: "另一种写法：用栈模拟 DFS", note: "把 BFS 的队列换成栈（<code>popleft</code> 换成 <code>pop</code>），就是不用递归的 DFS。", code: `
+                    x, y = q.popleft()              #@pop
+                    for a, b in (x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1):    #@expand
+                        if 0 <= a < m and 0 <= b < n and grid[a][b] == '1':     #@expand
+                            grid[a][b] = '0'    # 入队时就做记号 #@expand
+                            q.append((a, b))    #@expand
+        return count                                #@done
+` }, { t: "另一种写法：用栈模拟 DFS", key: "stack", note: "把 BFS 的队列换成栈（<code>popleft</code> 换成 <code>pop</code>），就是不用递归的 DFS。", code: `
 class Solution:
     def numIslands(self, grid: List[List[str]]) -> int:
-        m, n, count = len(grid), len(grid[0]), 0
-        for i in range(m):
-            for j in range(n):
+        m, n, count = len(grid), len(grid[0]), 0    #@init
+        for i in range(m):                          #@scan
+            for j in range(n):                      #@scan
                 if grid[i][j] != '1':
                     continue
-                count += 1
-                grid[i][j] = '0'
-                stack = [(i, j)]
+                count += 1                          #@found
+                grid[i][j] = '0'                    #@found
+                stack = [(i, j)]                    #@found
                 while stack:
-                    x, y = stack.pop()
-                    for a, b in (x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1):
-                        if 0 <= a < m and 0 <= b < n and grid[a][b] == '1':
-                            grid[a][b] = '0'    # 入栈时就做记号
-                            stack.append((a, b))
-        return count
+                    x, y = stack.pop()              #@pop
+                    for a, b in (x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1):    #@expand
+                        if 0 <= a < m and 0 <= b < n and grid[a][b] == '1':     #@expand
+                            grid[a][b] = '0'    # 入栈时就做记号 #@expand
+                            stack.append((a, b))    #@expand
+        return count                                #@done
 ` }],
+  sig: { fn: "numIslands", params: ["char[][]"], ret: "int" },
+  call: (a) => [a.grid.map((r) => r.split(""))],
+  cases: [[[["0"]]], [[["1"]]]],
   pytest: `
 s = Solution()
 g = lambda rows: [list(r) for r in rows]
@@ -112,32 +115,33 @@ assert s.numIslands(g(["101","010","101"])) == 5
         { t: "chips", label: "递归调用栈（右边是正在执行的那一层）", items: calls.map(([x, y], t) => ({ v: `sink(${x},${y})`, cls: t === calls.length - 1 ? "a" : "e" })), empty: "空：回到外面的两层循环" },
       ];
     };
-    const f = () => ({ facts: [["岛屿数", count], ["递归深度", calls.length]] });
+    const f = (at) => ({ at, facts: [["岛屿数", count], ["递归深度", calls.length]] });
     const sink = (i, j, dir) => {
       mark[i][j] = count;
       calls.push([i, j]);
-      if (dir) snap("递归进入", `往${dir}走到 (${i},${j})：是陆地，淹掉它，再从它出发按上、下、左、右递归。`, view(), f());
-      else snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。调用 sink(${i},${j})：先淹掉它，再按上、下、左、右递归。`, view(), f());
+      if (dir) snap("递归进入", `往${dir}走到 (${i},${j})：是陆地，淹掉它，再从它出发按上、下、左、右递归。`, view(), f("mark"));
+      else snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。调用 sink(${i},${j})：先淹掉它，再按上、下、左、右递归。`, view(), f(["found", "mark"]));
       for (const [di, dj, dn] of DIR) {
         const p = i + di, q = j + dj;
         if (p < 0 || q < 0 || p >= m || q >= n || g[p][q] !== "1" || mark[p][q]) continue;
         sink(p, q, dn);
         const rest = DIR.slice(DIR.findIndex((d) => d[2] === dn) + 1).map((d) => d[2]);
-        snap("返回", `sink(${p},${q}) 这一支淹完了，返回到 sink(${i},${j})。` + (rest.length ? `接着试它的「${rest.join("、")}」。` : "它四个方向都试过了。"), view(), f());
+        snap("返回", `sink(${p},${q}) 这一支淹完了，返回到 sink(${i},${j})。` + (rest.length ? `接着试它的「${rest.join("、")}」。` : "它四个方向都试过了。"), view(), f("spread"));
       }
       calls.pop();
     };
-    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再调用 sink 把整座岛淹掉。`, view(), f());
+    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再调用 sink 把整座岛淹掉。`, view(), f("init"));
     for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
       if (g[i][j] !== "1" || mark[i][j]) continue;
       count++;
       sink(i, j, null);
-      snap("淹完", `sink(${i},${j}) 返回了，调用栈空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f());
+      snap("淹完", `sink(${i},${j}) 返回了，调用栈空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f("scan"));
     }
-    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
   },
   alts: [{
     t: "BFS 队列",
+    code: "bfs",
     note: "从新岛的第一格出发，用队列一圈一圈往外扩：出队一个格子，把它四周没淹的陆地做上记号放进队尾。离起点近的格子总是先被淹。",
     legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在队列里排队"], ["a", "刚出队，正在看四周"], ["c", "已经淹掉（颜色和数字区分不同的岛）"]],
     build(a, snap) {
@@ -154,14 +158,14 @@ assert s.numIslands(g(["101","010","101"])) == 5
         })) },
         { t: "chips", label: "队列（左边是队头，先出队）", items: q.map(([x, y]) => `(${x},${y}) 第${ring[x][y]}圈`), empty: "空" },
       ];
-      const f = () => ({ facts: [["岛屿数", count], ["队列长度", q.length]] });
-      snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再用队列把整座岛淹掉。`, view(), f());
+      const f = (at) => ({ at, facts: [["岛屿数", count], ["队列长度", q.length]] });
+      snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再用队列把整座岛淹掉。`, view(), f("init"));
       for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
         if (g[i][j] !== "1" || mark[i][j]) continue;
         count++;
         mark[i][j] = count;
         q = [[i, j]];
-        snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。做上记号放进队列，它是第 0 圈。`, view(), f());
+        snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。做上记号放进队列，它是第 0 圈。`, view(), f("found"));
         while (q.length) {
           cur = q.shift();
           const [x, y] = cur, added = [];
@@ -172,15 +176,16 @@ assert s.numIslands(g(["101","010","101"])) == 5
             q.push([p, s]);
             added.push(`(${p},${s})`);
           }
-          snap("出队扩散", `队头 (${x},${y}) 出队（第 ${ring[x][y]} 圈），看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号排到队尾，它们是第 ${ring[x][y] + 1} 圈。` : "四周没有新的陆地。"), view(), f());
+          snap("出队扩散", `队头 (${x},${y}) 出队（第 ${ring[x][y]} 圈），看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号排到队尾，它们是第 ${ring[x][y] + 1} 圈。` : "四周没有新的陆地。"), view(), f(["pop", "expand"]));
         }
         cur = null;
-        snap("淹完", `队列空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f());
+        snap("淹完", `队列空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f("scan"));
       }
-      snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+      snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
     },
   }, {
     t: "栈模拟 DFS",
+    code: "stack",
     note: "和 BFS 的写法一样，只是把队列换成栈：每次弹出最后放进去的格子，所以会先沿着一个方向钻到底。入栈时就做记号。",
     legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在栈里等着扩散"], ["a", "刚弹出，正在看四周"], ["c", "已经淹掉（颜色和数字区分不同的岛）"]],
     build(a, snap) {
@@ -197,14 +202,14 @@ assert s.numIslands(g(["101","010","101"])) == 5
       })) },
       { t: "chips", label: "栈（右边是栈顶）", items: stack.map(([x, y]) => `(${x},${y})`), empty: "空" },
     ];
-    const f = () => ({ facts: [["岛屿数", count]] });
-    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再把整座岛淹掉。`, view(), f());
+    const f = (at) => ({ at, facts: [["岛屿数", count]] });
+    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再把整座岛淹掉。`, view(), f("init"));
     for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
       if (g[i][j] !== "1" || mark[i][j]) continue;
       count++;
       mark[i][j] = count;
       stack = [[i, j]];
-      snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先给它做上记号放进栈里，从这里开始把整座岛淹掉。`, view(), f());
+      snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先给它做上记号放进栈里，从这里开始把整座岛淹掉。`, view(), f("found"));
       while (stack.length) {
         cur = stack.pop();
         const [x, y] = cur, added = [];
@@ -214,12 +219,12 @@ assert s.numIslands(g(["101","010","101"])) == 5
           stack.push([p, q]);
           added.push(`(${p},${q})`);
         }
-        snap("扩散", `弹出 (${x},${y})，看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号放进栈里。` : "四周没有新的陆地。"), view(), f());
+        snap("扩散", `弹出 (${x},${y})，看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号放进栈里。` : "四周没有新的陆地。"), view(), f(["pop", "expand"]));
       }
       cur = null;
-      snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), f());
+      snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), f("scan"));
     }
-    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f() });
+    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
     },
   }],
   points: [

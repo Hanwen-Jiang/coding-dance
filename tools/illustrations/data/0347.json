@@ -46,6 +46,7 @@
    "t": "标准解法：计数 + 小顶堆",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        cnt = Counter(nums)\n        heap = []                           # 小顶堆，只留次数最多的 k 个\n        for x, c in cnt.items():\n            heapq.heappush(heap, (c, x))\n            if len(heap) > k:\n                heapq.heappop(heap)         # 挤掉次数最少的\n        return [x for c, x in heap]"
   },
   {
@@ -129,6 +130,7 @@
       "堆顶（门槛）"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const { nums, k } = a, cnt = new Map();\n    for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n    const ents = [...cnt], heap = [];\n    const cmp = (p, q) => p[0] - q[0] || p[1] - q[1];\n    const view = (cur, out) => [\n      { t: \"chips\", label: \"计数（数 × 次数）\", items: ents.map(([x, c]) => ({ v: `${x} × ${c}`, cls: x === cur ? \"a\" : \"\" })) },\n      { t: \"array\", label: `小顶堆（按次数从小到大排，最左边是堆顶，最多 ${k} 个）`, items: heap.length ? heap.map(([c, x], i) => ({ v: `${x}(${c}次)`, cls: i === 0 ? \"c\" : \"\" })) : [{ v: \"\", cls: \"d\" }], idx: false },\n      { t: \"chips\", label: \"挤掉的\", items: out.map(([c, x]) => ({ v: `${x}(${c}次)`, cls: \"b\" })), empty: \"还没有\" },\n    ];\n    snap(\"计数\", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join(\"，\")}。`, view(null, []));\n    const outs = [];\n    for (const [x, c] of ents) {\n      heap.push([c, x]); heap.sort(cmp);\n      if (heap.length > k) { const o = heap.shift(); outs.push(o); snap(\"挤掉\", `放入 ${x}（${c} 次）后堆里超过 ${k} 个，弹出堆顶 ${o[1]}（${o[0]} 次），它是次数最少的。`, view(x, outs), { kind: \"warn\" }); }\n      else snap(\"入堆\", `放入 ${x}（${c} 次）。堆里还不到 ${k + 1} 个，不用挤。`, view(x, outs));\n    }\n    const ans = heap.slice().reverse().map(([, x]) => x);\n    snap(\"完成\", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(\",\")}]。`, view(null, outs), { kind: \"ok\", ans });\n  }"
    },
    {

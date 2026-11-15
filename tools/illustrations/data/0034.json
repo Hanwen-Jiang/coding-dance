@@ -47,6 +47,7 @@
    "t": "标准解法：手写 lower_bound",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def searchRange(self, nums: List[int], target: int) -> List[int]:\n        def lower_bound(x):                 # 第一个 >= x 的下标\n            lo, hi = 0, len(nums)           # 左闭右开 [lo, hi)\n            while lo < hi:\n                mid = (lo + hi) // 2\n                if nums[mid] < x:\n                    lo = mid + 1\n                else:\n                    hi = mid\n            return lo\n\n        start = lower_bound(target)\n        if start == len(nums) or nums[start] != target:\n            return [-1, -1]\n        return [start, lower_bound(target + 1) - 1]"
   },
   {
@@ -156,6 +157,7 @@
       "答案"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const { nums, target } = a, n = nums.length;\n    let found = [];\n    const view = (lo, hi, mid, x) => [{ t: \"array\", label: `nums（找第一个 ≥ ${x} 的位置）`, items: nums.map((v, k) => ({ v, cls: found.includes(k) ? \"c\" : k === mid ? \"a\" : k < lo ? \"d\" : k >= hi ? \"k\" : \"e\" })), ptrs: { lo, mid, hi: hi < n ? hi : null } }];\n    const lb = (x, tag) => {\n      let lo = 0, hi = n;\n      snap(tag, `找第一个 ≥ <b>${x}</b> 的下标。区间是左闭右开的 [${lo}, ${hi})。`, view(lo, hi, -1, x), { facts: [[\"x\", x], [\"lo\", lo], [\"hi\", hi]] });\n      while (lo < hi) {\n        const mid = (lo + hi) >> 1;\n        if (nums[mid] < x) {\n          snap(tag, `nums[${mid}] = ${nums[mid]} &lt; ${x}，mid 和它左边都不是答案，lo = ${mid + 1}。`, view(lo, hi, mid, x), { facts: [[\"x\", x], [\"lo\", lo], [\"hi\", hi]] });\n          lo = mid + 1;\n        } else {\n          snap(tag, `nums[${mid}] = ${nums[mid]} ≥ ${x}，mid 可能就是答案，右边界收到 hi = ${mid}。`, view(lo, hi, mid, x), { facts: [[\"x\", x], [\"lo\", lo], [\"hi\", hi]] });\n          hi = mid;\n        }\n      }\n      snap(tag, `lo = hi = ${lo}，第一个 ≥ ${x} 的下标是 <b>${lo}</b>${lo === n ? \"（等于 n，说明都比它小）\" : \"\"}。`, view(lo, hi, -1, x), { facts: [[\"x\", x], [\"lo\", lo], [\"hi\", hi]] });\n      return lo;\n    };\n    const start = lb(target, \"找开始\");\n    if (start === n || nums[start] !== target) {\n      snap(\"不存在\", `下标 ${start} ${start === n ? \"已经出界\" : `上的数是 ${nums[start]}，不是 ${target}`}。数组里没有 ${target}，返回 <b>[-1, -1]</b>。`, view(start, start, -1, target), { kind: \"warn\", ans: [-1, -1] });\n      return;\n    }\n    found = [start];\n    const end = lb(target + 1, \"找结束\") - 1;\n    found = [];\n    for (let k = start; k <= end; k++) found.push(k);\n    snap(\"完成\", `开始位置 ${start}，结束位置是第一个 ≥ ${target + 1} 的下标减一，等于 ${end}。答案 <b>[${start}, ${end}]</b>。`, view(end + 1, end + 1, -1, target + 1), { kind: \"ok\", ans: [start, end] });\n  }"
    }
   ],

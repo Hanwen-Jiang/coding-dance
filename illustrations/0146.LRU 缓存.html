@@ -371,24 +371,24 @@ const SPEC = { presets: [{"label":"示例 1","args":{"cap":2,"ops":[["put",1,1],
       { t: "chips", label: "哈希表里的键", items: order.map(([k]) => k).sort((x, y) => x - y), empty: "空" },
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : v)), empty: "还没有" },
     ];
-    snap("开始", `缓存容量是 ${cap}，一开始是空的。`, view(-1), { facts: [["容量", cap], ["已用", 0]] });
+    snap("开始", `缓存容量是 ${cap}，一开始是空的。`, view(-1), { at: "init", facts: [["容量", cap], ["已用", 0]] });
     ops.forEach((o, i) => {
-      hot = null; evicted = null; let msg;
+      hot = null; evicted = null; let msg, at; // at：这次操作走到了代码里的哪几段
       if (o[0] === "get") {
         const t = order.findIndex(([k]) => k === o[1]);
-        if (t < 0) { out.push(-1); msg = `get(${o[1]})：哈希表里没有键 ${o[1]}，返回 <b>-1</b>。`; }
-        else { const e = order.splice(t, 1)[0]; order.unshift(e); hot = e[0]; out.push(e[1]); msg = `get(${o[1]})：通过哈希表找到节点，返回 <b>${e[1]}</b>。它刚被用过，移到链表头部。`; }
+        if (t < 0) { out.push(-1); at = ["miss"]; msg = `get(${o[1]})：哈希表里没有键 ${o[1]}，返回 <b>-1</b>。`; }
+        else { const e = order.splice(t, 1)[0]; order.unshift(e); hot = e[0]; out.push(e[1]); at = ["hit"]; msg = `get(${o[1]})：通过哈希表找到节点，返回 <b>${e[1]}</b>。它刚被用过，移到链表头部。`; }
       } else {
         const t = order.findIndex(([k]) => k === o[1]);
-        if (t >= 0) { order.splice(t, 1); msg = `put(${o[1]},${o[2]})：键 ${o[1]} 已经存在，更新它的值，并移到链表头部。`; }
-        else msg = `put(${o[1]},${o[2]})：新的键，放到链表头部，同时记进哈希表。`;
+        if (t >= 0) { order.splice(t, 1); at = ["old", "put"]; msg = `put(${o[1]},${o[2]})：键 ${o[1]} 已经存在，更新它的值，并移到链表头部。`; }
+        else { at = ["put"]; msg = `put(${o[1]},${o[2]})：新的键，放到链表头部，同时记进哈希表。`; }
         order.unshift([o[1], o[2]]); hot = o[1]; out.push(null);
-        if (order.length > cap) { evicted = order.pop(); msg += `现在有 ${cap + 1} 个，超过容量。<b>淘汰链表尾部的键 ${evicted[0]}</b>，并从哈希表里删掉它。`; }
+        if (order.length > cap) { evicted = order.pop(); at.push("evict"); msg += `现在有 ${cap + 1} 个，超过容量。<b>淘汰链表尾部的键 ${evicted[0]}</b>，并从哈希表里删掉它。`; }
       }
-      snap(name(o), msg, view(i), { kind: evicted ? "warn" : "", facts: [["容量", cap], ["已用", order.length]] });
+      snap(name(o), msg, view(i), { at, kind: evicted ? "warn" : "", facts: [["容量", cap], ["已用", order.length]] });
     });
     hot = null; evicted = null;
-    snap("完成", `所有操作执行完，输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { kind: "ok", ans: out, facts: [["容量", cap], ["已用", order.length]] });
+    snap("完成", `所有操作执行完，输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { at: [], kind: "ok", ans: out, facts: [["容量", cap], ["已用", order.length]] });
   } }
 ] };
 (function () {

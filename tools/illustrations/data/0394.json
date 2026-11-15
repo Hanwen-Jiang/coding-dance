@@ -48,6 +48,7 @@
    "t": "标准解法：栈",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def decodeString(self, s: str) -> str:\n        stack, cur, k = [], \"\", 0\n        for c in s:\n            if c.isdigit():\n                k = k * 10 + int(c)         # 数字可能不止一位\n            elif c == \"[\":\n                stack.append((cur, k))      # 存档：括号外的前缀和重复次数\n                cur, k = \"\", 0\n            elif c == \"]\":\n                prev, times = stack.pop()\n                cur = prev + cur * times    # 展开后接回前缀\n            else:\n                cur += c\n        return cur"
   },
   {
@@ -100,6 +101,7 @@
       "已经处理过"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const s = a.s, stack = []; let cur = \"\", k = 0;\n    const view = (i) => [\n      { t: \"array\", label: \"s\", items: s.split(\"\").map((c, j) => ({ v: c, cls: j === i ? \"a\" : j < i ? \"d\" : \"\" })), ptrs: { i: i >= 0 && i < s.length ? i : null } },\n      { t: \"chips\", label: \"栈（存档：前缀, 次数）\", items: stack.map(([p, t]) => `(\"${p}\", ${t})`), empty: \"空\" },\n    ];\n    const f = () => ({ facts: [[\"cur\", `\"${cur}\"`], [\"k\", k]] });\n    snap(\"开始\", \"cur 是正在拼的字符串，k 是正在读的数字。\", view(-1), f());\n    for (let i = 0; i < s.length; i++) {\n      const c = s[i];\n      if (/\\d/.test(c)) { k = k * 10 + +c; snap(\"数字\", `读到数字 ${c}，k = <b>${k}</b>。`, view(i), f()); }\n      else if (c === \"[\") { stack.push([cur, k]); snap(\"存档\", `遇到 [，把括号外的前缀 \"${cur}\" 和次数 ${k} 压栈，cur 清空，开始拼括号里的内容。`, view(i), f()); cur = \"\"; k = 0; }\n      else if (c === \"]\") { const [p, t] = stack.pop(), old = cur; cur = p + cur.repeat(t); snap(\"展开\", `遇到 ]，弹出存档 (\"${p}\", ${t})。括号里是 \"${old}\"，重复 ${t} 次接到 \"${p}\" 后面，cur = <b>\"${cur}\"</b>。`, view(i), f()); }\n      else { cur += c; snap(\"字母\", `字母 ${c} 直接接到 cur 后面。`, view(i), f()); }\n    }\n    snap(\"完成\", `解码结果是 <b>\"${cur}\"</b>。`, view(s.length), { kind: \"ok\", ans: cur, ...f() });\n  }"
    },
    {

@@ -47,6 +47,7 @@
    "t": "标准解法：三指针（荷兰国旗）",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def sortColors(self, nums: List[int]) -> None:\n        lo, i, hi = 0, 0, len(nums) - 1     # [0,lo) 是 0，[lo,i) 是 1，(hi,end] 是 2\n        while i <= hi:\n            if nums[i] == 0:\n                nums[lo], nums[i] = nums[i], nums[lo]\n                lo += 1\n                i += 1\n            elif nums[i] == 2:\n                nums[i], nums[hi] = nums[hi], nums[i]\n                hi -= 1                     # 换过来的数还没看过，i 不动\n            else:\n                i += 1"
   },
   {
@@ -126,6 +127,7 @@
       "nums[i]"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const nums = a.nums.slice(); let lo = 0, i = 0, hi = nums.length - 1;\n    const view = () => [{ t: \"array\", label: \"nums\", items: nums.map((v, k) => ({ v, cls: k < lo ? \"e\" : k < i ? \"g\" : k > hi ? \"w\" : k === i ? \"a\" : \"\" })), ptrs: { lo, i, hi } }];\n    snap(\"开始\", \"一开始所有位置都还没看过。\", view());\n    while (i <= hi) {\n      const x = nums[i];\n      if (x === 0) { snap(\"是 0\", `nums[${i}] = 0，和 nums[lo=${lo}] 交换，放进 0 的区域。lo、i 都前进。`, view()); [nums[lo], nums[i]] = [nums[i], nums[lo]]; lo++; i++; }\n      else if (x === 2) { snap(\"是 2\", `nums[${i}] = 2，和 nums[hi=${hi}] = ${nums[hi]} 交换，放进 2 的区域。hi 后退，i 不动，换过来的 ${nums[hi]} 还没看过。`, view()); [nums[i], nums[hi]] = [nums[hi], nums[i]]; hi--; }\n      else { snap(\"是 1\", `nums[${i}] = 1，留在原地，i 前进。`, view()); i++; }\n    }\n    snap(\"完成\", `i 超过了 hi，中间没有没看过的数了。结果 [${nums.join(\",\")}]。`, view(), { kind: \"ok\", ans: nums.slice() });\n  }"
    },
    {

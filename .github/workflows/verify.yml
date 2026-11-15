@@ -1,0 +1,60 @@
+name: verify
+
+# 每次 push：重新生成一遍数据（演示答案、Python 测试、步骤标记都要过），
+# 再把六种语言的每段题解编译、运行，和 Python 标准解法的答案比对。
+on:
+  push:
+    branches: [main, multilang]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: 生成器和网站测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 生成数据和图解页面
+        run: node tools/illustrations/build.js
+      - name: 生成的文件要和提交的一致
+        run: git diff --exit-code -- tools/illustrations/data tools/illustrations/cases illustrations
+      - name: 同步逻辑的测试
+        working-directory: site
+        run: node lib/sync/test/sync.test.ts
+
+  judge:
+    name: 判题 ${{ matrix.lang }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        lang: [python, java, cpp, go, javascript, typescript]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - if: matrix.lang == 'python'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - if: matrix.lang == 'java'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - if: matrix.lang == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: false
+      - if: matrix.lang == 'typescript'
+        run: npm install -g typescript@5.6
+      - name: 判题
+        run: node tools/illustrations/judge/run.js --require --lang ${{ matrix.lang }}

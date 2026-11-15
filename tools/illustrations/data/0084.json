@@ -47,6 +47,7 @@
    "t": "标准解法：单调栈 + 哨兵",
    "kind": null,
    "note": null,
+   "key": "std",
    "code": "class Solution:\n    def largestRectangleArea(self, heights: List[int]) -> int:\n        heights = [0] + heights + [0]       # 两头加哨兵\n        stack, best = [], 0                 # 栈里下标对应的高度递增\n        for i, h in enumerate(heights):\n            while stack and heights[stack[-1]] > h:\n                top = stack.pop()           # 以它为高的矩形，右边界是 i\n                left = stack[-1]            # 左边界是新的栈顶\n                best = max(best, heights[top] * (i - left - 1))\n            stack.append(i)\n        return best"
   },
   {
@@ -133,6 +134,7 @@
       "目前最大的矩形"
      ]
     ],
+    "code": "std",
     "build": "build(a, snap) {\n    const H = [0, ...a.h, 0], stack = []; let best = 0, bestR = null;\n    const view = (i, top, rect) => [{ t: \"bars\", label: \"heights（两头是哨兵 0）\", items: H.map((v, k) => ({ v, cls: k === top ? \"b\" : k === i ? \"a\" : rect && k > rect[0] && k < rect[1] ? \"w\" : bestR && k > bestR[0] && k < bestR[1] && !rect ? \"c\" : stack.includes(k) ? \"e\" : (k === 0 || k === H.length - 1) ? \"d\" : \"\" })), ptrs: { i: i >= 0 ? i : null } },\n      { t: \"chips\", label: \"栈（存下标，右边是栈顶）\", items: stack.map((k) => `${k}:${H[k]}`), empty: \"空\" }];\n    snap(\"开始\", \"两头各加一根高度为 0 的哨兵柱子。栈里存下标，对应高度递增。\", view(-1, -1), { facts: [[\"最大面积\", best]] });\n    for (let i = 0; i < H.length; i++) {\n      while (stack.length && H[stack[stack.length - 1]] > H[i]) {\n        const top = stack.pop(), left = stack[stack.length - 1], area = H[top] * (i - left - 1);\n        const better = area > best; if (better) { best = area; bestR = [left, i]; }\n        snap(\"结算\", `${H[i]} 比栈顶的 ${H[top]} 矮，以 ${H[top]} 为高的矩形右边到不了 ${i}，左边到不了新栈顶 ${left}。宽 ${i - left - 1}，面积 <b>${area}</b>${better ? \"，是目前最大的\" : \"\"}。`, view(i, top, [left, i]), { facts: [[\"最大面积\", best]] });\n      }\n      stack.push(i);\n      if (i > 0 && i < H.length - 1) snap(\"压栈\", `${H[i]} 不比栈顶矮，压栈。`, view(i, -1), { facts: [[\"最大面积\", best]] });\n    }\n    snap(\"完成\", `最大矩形面积是 <b>${best}</b>。`, view(-1, -1), { kind: \"ok\", ans: best, facts: [[\"最大面积\", best]] });\n  }"
    }
   ],
