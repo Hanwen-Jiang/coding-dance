@@ -1,0 +1,10 @@
+# 所有文本文件在仓库里和工作区里都用 LF 换行。
+# 生成器（tools/illustrations/build.js）会把函数源码原样写进数据文件，换行不统一的话 Windows 和 Linux 上生成的结果会不一样。
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.zip binary
