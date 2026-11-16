@@ -332,16 +332,16 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[1,2,3],"k":3},"note
       { t: "chips", label: "哈希表 count（前缀和 → 出现次数）", items: [...count].map(([s, c]) => ({ v: `${s} → ${c}`, cls: s === hitKey ? "k" : "" })) },
     ];
     const facts = () => [["k", k], ["前缀和", pre], ["答案", res]];
-    snap("开始", "哈希表里先放 0 → 1：一个数都不取时前缀和是 0，出现了 1 次。", view(-1), { facts: facts() });
+    snap("开始", "哈希表里先放 0 → 1：一个数都不取时前缀和是 0，出现了 1 次。", view(-1), { at: "init", facts: facts() });
     nums.forEach((x, i) => {
       pre += x;
       const need = pre - k, c = count.get(need) || 0;
       res += c;
-      snap("先查", `加上 ${x}，前缀和变成 ${pre}。需要找之前等于 ${pre} − ${k} = <b>${need}</b> 的前缀和，` + (c ? `有 ${c} 个，说明有 ${c} 段以这里结尾的子数组和为 ${k}，答案加 ${c}。` : "没有。"), view(i, c ? need : undefined), { kind: c ? "ok" : "", facts: facts() });
+      snap("先查", `加上 ${x}，前缀和变成 ${pre}。需要找之前等于 ${pre} − ${k} = <b>${need}</b> 的前缀和，` + (c ? `有 ${c} 个，说明有 ${c} 段以这里结尾的子数组和为 ${k}，答案加 ${c}。` : "没有。"), view(i, c ? need : undefined), { at: "query", kind: c ? "ok" : "", facts: facts() });
       count.set(pre, (count.get(pre) || 0) + 1);
-      snap("再存", `把当前前缀和 ${pre} 的出现次数加 1。`, view(i), { facts: facts() });
+      snap("再存", `把当前前缀和 ${pre} 的出现次数加 1。`, view(i), { at: "store", facts: facts() });
     });
-    snap("完成", `一共有 <b>${res}</b> 段子数组的和等于 ${k}。`, view(nums.length), { kind: "ok", ans: res, facts: facts() });
+    snap("完成", `一共有 <b>${res}</b> 段子数组的和等于 ${k}。`, view(nums.length), { at: "done", kind: "ok", ans: res, facts: facts() });
   } }
 ] };
 (function () {

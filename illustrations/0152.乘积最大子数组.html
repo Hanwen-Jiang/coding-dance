@@ -330,14 +330,14 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,3,-2,4]},"note":"
       { t: "array", label: "hi：以 i 结尾的最大积", items: nums.map((_, k) => ({ v: k < H.length ? H[k] : "", cls: k === i ? "c" : "" })), ptrs: {} },
       { t: "array", label: "lo：以 i 结尾的最小积", items: nums.map((_, k) => ({ v: k < Lo.length ? Lo[k] : "", cls: k === i ? "b" : "" })), ptrs: {} },
     ];
-    snap("开始", `第 0 个数 ${nums[0]}：以它结尾的子数组只有它自己，hi = lo = ${nums[0]}。`, view(0), { facts: [["最大积", best]] });
+    snap("开始", `第 0 个数 ${nums[0]}：以它结尾的子数组只有它自己，hi = lo = ${nums[0]}。`, view(0), { at: "init", facts: [["最大积", best]] });
     for (let i = 1; i < n; i++) {
       const x = nums[i], h = H[i - 1], l = Lo[i - 1], c = [x, h * x, l * x];
       const nh = Math.max(...c), nl = Math.min(...c);
       H.push(nh); Lo.push(nl); best = Math.max(best, nh);
-      snap(`看 ${x}`, `三个候选：${x} 自己、hi×${x} = ${h * x}、lo×${x} = ${l * x}。` + (x < 0 ? "乘的是负数，原来的最小积变成了最大的候选。" : "") + `新的 hi = <b>${nh}</b>，lo = ${nl}。`, view(i), { facts: [["最大积", best]] });
+      snap(`看 ${x}`, `三个候选：${x} 自己、hi×${x} = ${h * x}、lo×${x} = ${l * x}。` + (x < 0 ? "乘的是负数，原来的最小积变成了最大的候选，所以代码里先把 hi、lo 互换。" : "") + `新的 hi = <b>${nh}</b>，lo = ${nl}。`, view(i), { at: x < 0 ? ["swap", "update"] : "update", facts: [["最大积", best]] });
     }
-    snap("完成", `所有 hi 里最大的是 <b>${best}</b>。`, view(-1), { kind: "ok", ans: best, facts: [["最大积", best]] });
+    snap("完成", `所有 hi 里最大的是 <b>${best}</b>。`, view(-1), { at: "done", kind: "ok", ans: best, facts: [["最大积", best]] });
   } }
 ] };
 (function () {

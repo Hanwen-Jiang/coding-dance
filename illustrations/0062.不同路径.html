@@ -318,12 +318,12 @@ const SPEC = { presets: [{"label":"3 × 7","args":{"m":3,"n":7},"note":"m = 3, n
 { t: "标准解法", note: null, legend: [["a","正在算的格子"],["e","上面和左边"],["c","终点"]], build(a, snap) {
     const { m, n } = a, dp = Array.from({ length: m }, (_, i) => Array.from({ length: n }, (_, j) => (i === 0 || j === 0 ? 1 : null)));
     const view = (ci, cj, fin) => [{ t: "grid", label: "dp[i][j]：从左上走到 (i, j) 的路径数", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m - 1 && j === n - 1 ? "c" : i === ci && j === cj ? "a" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? "e" : "" }))) }];
-    snap("开始", "第一行只能一直向右走，第一列只能一直向下走，路径数都是 1。", view(-1, -1));
+    snap("开始", "第一行只能一直向右走，第一列只能一直向下走，路径数都是 1。", view(-1, -1), { at: "init" });
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) {
       dp[i][j] = dp[i - 1][j] + dp[i][j - 1];
-      snap(`(${i}, ${j})`, `从上面 (${i - 1}, ${j}) 来有 ${dp[i - 1][j]} 种，从左边 (${i}, ${j - 1}) 来有 ${dp[i][j - 1]} 种。dp = <b>${dp[i][j]}</b>。`, view(i, j));
+      snap(`(${i}, ${j})`, `从上面 (${i - 1}, ${j}) 来有 ${dp[i - 1][j]} 种，从左边 (${i}, ${j - 1}) 来有 ${dp[i][j - 1]} 种。dp = <b>${dp[i][j]}</b>。`, view(i, j), { at: "cell" });
     }
-    snap("完成", `到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), { kind: "ok", ans: dp[m - 1][n - 1] });
+    snap("完成", `到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), { at: "done", kind: "ok", ans: dp[m - 1][n - 1] });
   } }
 ] };
 (function () {

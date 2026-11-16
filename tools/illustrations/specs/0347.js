@@ -10,29 +10,32 @@ module.exports = {
   codes: [{ t: "标准解法：计数 + 小顶堆", code: `
 class Solution:
     def topKFrequent(self, nums: List[int], k: int) -> List[int]:
-        cnt = Counter(nums)
-        heap = []                           # 小顶堆，只留次数最多的 k 个
+        cnt = Counter(nums)                 #@count
+        heap = []                           # 小顶堆，只留次数最多的 k 个 #@count
         for x, c in cnt.items():
-            heapq.heappush(heap, (c, x))
-            if len(heap) > k:
-                heapq.heappop(heap)         # 挤掉次数最少的
-        return [x for c, x in heap]
+            heapq.heappush(heap, (c, x))    #@push,pop
+            if len(heap) > k:               #@push,pop
+                heapq.heappop(heap)         # 挤掉次数最少的 #@pop
+        return [x for c, x in heap]         #@done
 ` }, { t: "简洁写法：most_common", kind: "elegant", note: "Counter.most_common(k) 内部就是用堆取前 k 个。", code: `
 class Solution:
     def topKFrequent(self, nums: List[int], k: int) -> List[int]:
         return [x for x, _ in Counter(nums).most_common(k)]
-` }, { t: "O(n) 写法：桶排序", code: `
+` }, { t: "O(n) 写法：桶排序", key: "bucket", code: `
 class Solution:
     def topKFrequent(self, nums: List[int], k: int) -> List[int]:
-        buckets = [[] for _ in range(len(nums) + 1)]
-        for x, c in Counter(nums).items():
-            buckets[c].append(x)            # 第 c 个桶放出现 c 次的数
-        res = []
-        for c in range(len(nums), 0, -1):
-            res += buckets[c]
-            if len(res) >= k:
-                return res[:k]
+        buckets = [[] for _ in range(len(nums) + 1)]    #@count
+        for x, c in Counter(nums).items():  #@count,put
+            buckets[c].append(x)            # 第 c 个桶放出现 c 次的数 #@put
+        res = []                            #@scan
+        for c in range(len(nums), 0, -1):   #@scan
+            res += buckets[c]               #@take
+            if len(res) >= k:               #@take
+                return res[:k]              #@done
 ` }],
+  sig: { fn: "topKFrequent", params: ["int[]", "int"], ret: "int[]", cmp: "unordered" },
+  call: (a) => [a.nums, a.k],
+  cases: [[[1], 1], [[5, 5, 6, 6, 6, 7], 1], [[1, 2], 2], [[3, 0, 1, 0], 1]],
   pytest: `
 s = Solution()
 assert sorted(s.topKFrequent([1,1,1,2,2,3], 2)) == [1,2]
@@ -57,18 +60,19 @@ assert sorted(s.topKFrequent([5,5,6,6,6,7], 1)) == [6]
       { t: "array", label: `小顶堆（按次数从小到大排，最左边是堆顶，最多 ${k} 个）`, items: heap.length ? heap.map(([c, x], i) => ({ v: `${x}(${c}次)`, cls: i === 0 ? "c" : "" })) : [{ v: "", cls: "d" }], idx: false },
       { t: "chips", label: "挤掉的", items: out.map(([c, x]) => ({ v: `${x}(${c}次)`, cls: "b" })), empty: "还没有" },
     ];
-    snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null, []));
+    snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null, []), { at: "count" });
     const outs = [];
     for (const [x, c] of ents) {
       heap.push([c, x]); heap.sort(cmp);
-      if (heap.length > k) { const o = heap.shift(); outs.push(o); snap("挤掉", `放入 ${x}（${c} 次）后堆里超过 ${k} 个，弹出堆顶 ${o[1]}（${o[0]} 次），它是次数最少的。`, view(x, outs), { kind: "warn" }); }
-      else snap("入堆", `放入 ${x}（${c} 次）。堆里还不到 ${k + 1} 个，不用挤。`, view(x, outs));
+      if (heap.length > k) { const o = heap.shift(); outs.push(o); snap("挤掉", `放入 ${x}（${c} 次）后堆里超过 ${k} 个，弹出堆顶 ${o[1]}（${o[0]} 次），它是次数最少的。`, view(x, outs), { at: "pop", kind: "warn" }); }
+      else snap("入堆", `放入 ${x}（${c} 次）。堆里还不到 ${k + 1} 个，不用挤。`, view(x, outs), { at: "push" });
     }
     const ans = heap.slice().reverse().map(([, x]) => x);
-    snap("完成", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(",")}]。`, view(null, outs), { kind: "ok", ans });
+    snap("完成", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(",")}]。`, view(null, outs), { at: "done", kind: "ok", ans });
   },
   alts: [{
     t: "桶排序",
+    code: "bucket",
     note: "和 O(n) 写法一样：出现次数不会超过 n，所以开 n + 1 个桶，第 c 个桶放出现 c 次的数。再从次数最大的桶往回取，取够 k 个就停。",
     legend: [["a", "正在处理"], ["c", "已经取进结果"], ["d", "第 0 个桶用不到"]],
     build(a, snap) {
@@ -81,20 +85,20 @@ assert sorted(s.topKFrequent([5,5,6,6,6,7], 1)) == [6]
         { t: "array", label: "buckets[c]：出现 c 次的数", items: B.map((b, c) => ({ v: b.join(","), cls: c === cur ? "a" : c >= low && b.length ? "c" : c === 0 ? "d" : "" })) },
         { t: "chips", label: "结果", items: res.map((v) => ({ v, cls: "c" })), empty: "还没有" },
       ];
-      snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null));
-      for (const [x, c] of ents) { B[c].push(x); cur = c; snap("放进桶", `${x} 出现 ${c} 次，放进第 ${c} 个桶。`, view(x)); }
+      snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null), { at: "count" });
+      for (const [x, c] of ents) { B[c].push(x); cur = c; snap("放进桶", `${x} 出现 ${c} 次，放进第 ${c} 个桶。`, view(x), { at: "put" }); }
       cur = -1;
-      snap("从后往前取", `次数越大越靠后。从第 ${n} 个桶往回扫，空桶直接跳过。`, view(null));
+      snap("从后往前取", `次数越大越靠后。从第 ${n} 个桶往回扫，空桶直接跳过。`, view(null), { at: "scan" });
       for (let c = n; c >= 1; c--) {
         if (!B[c].length) continue;
         cur = c; low = c; res.push(...B[c]);
         const enough = res.length >= k;
-        snap("取出", `第 ${c} 个桶里有 ${B[c].join("、")}（各出现 ${c} 次），放进结果。` + (enough ? `已经有 ${res.length} 个，够 k = ${k} 个了。` : `还不够 ${k} 个，继续往回扫。`), view(null));
+        snap("取出", `第 ${c} 个桶里有 ${B[c].join("、")}（各出现 ${c} 次），放进结果。` + (enough ? `已经有 ${res.length} 个，够 k = ${k} 个了。` : `还不够 ${k} 个，继续往回扫。`), view(null), { at: "take" });
         if (enough) break;
       }
       const ans = res.slice(0, k);
       cur = -1;
-      snap("完成", `前 ${k} 个高频元素是 [${ans.join(",")}]。`, view(null), { kind: "ok", ans });
+      snap("完成", `前 ${k} 个高频元素是 [${ans.join(",")}]。`, view(null), { at: "done", kind: "ok", ans });
     },
   }],
   points: [

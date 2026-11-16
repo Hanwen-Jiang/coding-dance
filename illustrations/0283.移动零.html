@@ -319,15 +319,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[0,1,0,3,12]},"note"
 { t: "标准解法", note: null, legend: [["c","已排好的非零数"],["a","i 正在看的数"],["w","j 和 i 之间的 0"]], build(a, snap) {
     const n = a.nums.slice(); let j = 0;
     const view = (i) => [{ t: "array", label: "nums", items: n.map((v, t) => ({ v, cls: t < j ? "c" : t === i ? "a" : t < i ? "w" : "" })), ptrs: { j, i: i < n.length ? i : null } }];
-    snap("开始", "j 指向下一个非零数该放的位置，i 从左往右扫描。", view(-1));
+    snap("开始", "j 指向下一个非零数该放的位置，i 从左往右扫描。", view(-1), { at: "init" });
     for (let i = 0; i < n.length; i++) {
       if (n[i] !== 0) {
         const same = i === j, x = n[i];
         [n[i], n[j]] = [n[j], n[i]]; j++;
-        snap("交换", same ? `nums[${i}] = ${x} 非零，i 和 j 在同一格，原地不动，j 右移。` : `nums[${i}] = ${x} 非零，和 j 位置的 0 交换，${x} 到了前面，j 右移。`, view(i));
-      } else snap("跳过", `nums[${i}] 是 0，不处理，i 继续往前。j 留在原地等下一个非零数。`, view(i), { kind: "warn" });
+        snap("交换", same ? `nums[${i}] = ${x} 非零，i 和 j 在同一格，原地不动，j 右移。` : `nums[${i}] = ${x} 非零，和 j 位置的 0 交换，${x} 到了前面，j 右移。`, view(i), { at: "swap" });
+      } else snap("跳过", `nums[${i}] 是 0，不处理，i 继续往前。j 留在原地等下一个非零数。`, view(i), { at: "scan", kind: "warn" });
     }
-    snap("完成", `扫描结束。j 左边是所有非零数，顺序没变；右边全是 0。`, view(n.length), { kind: "ok", ans: n });
+    snap("完成", `扫描结束。j 左边是所有非零数，顺序没变；右边全是 0。`, view(n.length), { at: [], kind: "ok", ans: n });
   } }
 ] };
 (function () {

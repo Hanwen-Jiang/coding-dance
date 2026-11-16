@@ -10,27 +10,30 @@ module.exports = {
   codes: [{ t: "标准解法：单调栈", code: `
 class Solution:
     def dailyTemperatures(self, temperatures: List[int]) -> List[int]:
-        ans = [0] * len(temperatures)
-        stack = []                          # 还在等待的日子（下标），温度从底到顶递减
+        ans = [0] * len(temperatures)       #@init
+        stack = []                          # 还在等待的日子（下标），温度从底到顶递减 #@init
         for i, t in enumerate(temperatures):
-            while stack and temperatures[stack[-1]] < t:
-                j = stack.pop()
-                ans[j] = i - j              # 第 j 天等到了第 i 天
-            stack.append(i)
-        return ans
-` }, { t: "简洁写法：从右往左跳", kind: "elegant", note: "不用栈。从右往左算，ans[j] 已经告诉我们 j 之后第一个更热的日子在哪，比不过就直接跳过去。", code: `
+            while stack and temperatures[stack[-1]] < t:    #@pop
+                j = stack.pop()             #@pop
+                ans[j] = i - j              # 第 j 天等到了第 i 天 #@pop
+            stack.append(i)                 #@push
+        return ans                          #@done
+` }, { t: "简洁写法：从右往左跳", key: "jump", kind: "elegant", note: "不用栈。从右往左算，ans[j] 已经告诉我们 j 之后第一个更热的日子在哪，比不过就直接跳过去。", code: `
 class Solution:
     def dailyTemperatures(self, temperatures: List[int]) -> List[int]:
-        T, n = temperatures, len(temperatures)
-        ans = [0] * n
-        for i in range(n - 2, -1, -1):
-            j = i + 1
-            while T[j] <= T[i] and ans[j]:
-                j += ans[j]                 # 跳到比 T[j] 更热的那天
-            if T[j] > T[i]:
-                ans[i] = j - i
-        return ans
+        T, n = temperatures, len(temperatures)  #@init
+        ans = [0] * n                       #@init
+        for i in range(n - 2, -1, -1):      #@start
+            j = i + 1                       #@start
+            while T[j] <= T[i] and ans[j]:  #@jump
+                j += ans[j]                 # 跳到比 T[j] 更热的那天 #@jump
+            if T[j] > T[i]:                 #@found,miss
+                ans[i] = j - i              #@found
+        return ans                          #@done
 ` }],
+  sig: { fn: "dailyTemperatures", params: ["int[]"], ret: "int[]" },
+  call: (a) => [a.t],
+  cases: [[[30, 40, 50, 60]], [[90, 80, 70]], [[70, 70, 71]], [[50]]],
   pytest: `
 s = Solution()
 assert s.dailyTemperatures([73,74,75,71,69,72,76,73]) == [1,1,4,2,1,1,0,0]
@@ -52,20 +55,21 @@ assert s.dailyTemperatures([70,70,71]) == [2,1,0]
       { t: "array", label: "answer", items: ans.map((v) => (v === null ? "" : v)), ptrs: {} },
       { t: "chips", label: "栈（存下标，右边是栈顶）", items: stack.map((k) => `${k}:${T[k]}`), empty: "空" },
     ];
-    snap("开始", "栈里放还在等更高温度的日子。", view(-1, -1));
+    snap("开始", "栈里放还在等更高温度的日子。", view(-1, -1), { at: "init" });
     for (let i = 0; i < n; i++) {
       while (stack.length && T[stack[stack.length - 1]] < T[i]) {
         const j = stack.pop(); ans[j] = i - j;
-        snap("等到了", `今天 ${T[i]} 比栈顶第 ${j} 天的 ${T[j]} 高，第 ${j} 天等了 <b>${i - j}</b> 天，弹出。`, view(i, j));
+        snap("等到了", `今天 ${T[i]} 比栈顶第 ${j} 天的 ${T[j]} 高，第 ${j} 天等了 <b>${i - j}</b> 天，弹出。`, view(i, j), { at: "pop" });
       }
       stack.push(i);
-      snap("压栈", `${stack.length > 1 ? `栈顶 ${T[stack[stack.length - 2]]} 不比今天低，停下。` : ""}把第 ${i} 天（${T[i]}）压栈，开始等待。`, view(i, -1));
+      snap("压栈", `${stack.length > 1 ? `栈顶 ${T[stack[stack.length - 2]]} 不比今天低，停下。` : ""}把第 ${i} 天（${T[i]}）压栈，开始等待。`, view(i, -1), { at: "push" });
     }
     stack.forEach((k) => (ans[k] = 0));
-    snap("完成", "栈里剩下的日子到最后也没等到更高温度，答案填 0。", view(-1, -1), { kind: "ok", ans: ans.slice() });
+    snap("完成", "栈里剩下的日子到最后也没等到更高温度，答案填 0。", view(-1, -1), { at: "done", kind: "ok", ans: ans.slice() });
   },
   alts: [{
     t: "从右往左跳",
+    code: "jump",
     note: "和简洁写法一样，不用栈：从右往左填 answer。比较第 i 天和第 j 天，第 j 天不够热时，answer[j] 直接告诉我们下一个比第 j 天热的日子，跳过去接着比。",
     legend: [["a", "第 i 天"], ["e", "正在比较的第 j 天"], ["c", "找到更热的那天"]],
     build(a, snap) {
@@ -74,20 +78,20 @@ assert s.dailyTemperatures([70,70,71]) == [2,1,0]
         { t: "bars", label: "temperatures", items: T.map((v, k) => ({ v, cls: k === i ? "a" : k === hit ? "c" : k === j ? "e" : "" })), ptrs: { i: i >= 0 ? i : null, j: j >= 0 ? j : null } },
         { t: "array", label: "answer（从右往左填）", items: ans.map((v, k) => ({ v: filled.has(k) ? v : "", cls: k === i && hit >= 0 ? "c" : "" })) },
       ];
-      snap("开始", `从右往左算。最后一天后面没有日子了，answer[${n - 1}] = 0。`, view(-1, -1, -1));
+      snap("开始", `从右往左算。最后一天后面没有日子了，answer[${n - 1}] = 0。`, view(-1, -1, -1), { at: "init" });
       for (let i = n - 2; i >= 0; i--) {
         let j = i + 1;
-        snap("看第 i 天", `第 ${i} 天 ${T[i]}°，先和第二天比：第 ${j} 天 ${T[j]}°。`, view(i, j, -1));
+        snap("看第 i 天", `第 ${i} 天 ${T[i]}°，先和第二天比：第 ${j} 天 ${T[j]}°。`, view(i, j, -1), { at: "start" });
         while (T[j] <= T[i] && ans[j]) {
           const nj = j + ans[j];
-          snap("跳", `第 ${j} 天 ${T[j]}° 不比 ${T[i]}° 热。answer[${j}] = ${ans[j]}：第 ${j} 天之后第一个比它热的是第 ${nj} 天，中间的日子都不比第 ${j} 天热，更比不过 ${T[i]}°。直接跳到第 ${nj} 天（${T[nj]}°）。`, view(i, nj, -1));
+          snap("跳", `第 ${j} 天 ${T[j]}° 不比 ${T[i]}° 热。answer[${j}] = ${ans[j]}：第 ${j} 天之后第一个比它热的是第 ${nj} 天，中间的日子都不比第 ${j} 天热，更比不过 ${T[i]}°。直接跳到第 ${nj} 天（${T[nj]}°）。`, view(i, nj, -1), { at: "jump" });
           j = nj;
         }
         filled.add(i);
-        if (T[j] > T[i]) { ans[i] = j - i; snap("找到", `第 ${j} 天 ${T[j]}° 比 ${T[i]}° 热，answer[${i}] = ${j} − ${i} = <b>${j - i}</b>。`, view(i, j, j)); }
-        else snap("等不到", `第 ${j} 天 ${T[j]}° 不比 ${T[i]}° 热，而且 answer[${j}] = 0，它后面再没有更热的日子。answer[${i}] = 0。`, view(i, j, -1), { kind: "warn" });
+        if (T[j] > T[i]) { ans[i] = j - i; snap("找到", `第 ${j} 天 ${T[j]}° 比 ${T[i]}° 热，answer[${i}] = ${j} − ${i} = <b>${j - i}</b>。`, view(i, j, j), { at: "found" }); }
+        else snap("等不到", `第 ${j} 天 ${T[j]}° 不比 ${T[i]}° 热，而且 answer[${j}] = 0，它后面再没有更热的日子。answer[${i}] = 0。`, view(i, j, -1), { at: "miss", kind: "warn" });
       }
-      snap("完成", `answer 填完了：[${ans.join(",")}]。`, view(-1, -1, -1), { kind: "ok", ans: ans.slice() });
+      snap("完成", `answer 填完了：[${ans.join(",")}]。`, view(-1, -1, -1), { at: "done", kind: "ok", ans: ans.slice() });
     },
   }],
   points: [

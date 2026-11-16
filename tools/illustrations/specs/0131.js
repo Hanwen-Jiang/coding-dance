@@ -10,21 +10,21 @@ module.exports = {
   codes: [{ t: "标准解法：回溯", code: `
 class Solution:
     def partition(self, s: str) -> List[List[str]]:
-        res, path = [], []
+        res, path = [], []                      #@init
 
         def dfs(start):
-            if start == len(s):
-                res.append(path[:])
-                return
-            for end in range(start + 1, len(s) + 1):
-                piece = s[start:end]
-                if piece == piece[::-1]:        # 这一段是回文才切
-                    path.append(piece)
-                    dfs(end)
+            if start == len(s):                 #@collect
+                res.append(path[:])             #@collect
+                return                          #@collect
+            for end in range(start + 1, len(s) + 1):    #@try
+                piece = s[start:end]            #@try
+                if piece == piece[::-1]:        # 这一段是回文才切 #@try,cut
+                    path.append(piece)          #@cut
+                    dfs(end)                    #@cut
                     path.pop()
 
-        dfs(0)
-        return res
+        dfs(0)                                  #@init
+        return res                              #@done
 ` }, { t: "简洁写法：第一段 + 剩下的所有切法", kind: "elegant", note: "s[i - 1::-1] 是 s[:i] 倒过来。第一段是回文时，把它接在剩下部分的每一种切法前面。", code: `
 class Solution:
     def partition(self, s: str) -> List[List[str]]:
@@ -41,6 +41,9 @@ assert s.partition("a") == [["a"]]
 assert s.partition("abba") == [["a","b","b","a"],["a","bb","a"],["abba"]]
 assert len(s.partition("aaaa")) == 8
 `,
+  sig: { fn: "partition", params: ["string"], ret: "List<List<string>>", cmp: "unordered" },
+  call: (a) => [a.s],
+  cases: [["a"], ["ab"], ["aaaa"], ["abcba"], ["efe"]],
   legend: [["k", "已经切好的段（颜色交替）"], ["a", "正在试的一段"], ["w", "不是回文"], ["c", "切完了"]],
   presets: [
     { label: "示例 1", args: { s: "aab" }, note: "s = \"aab\"", expect: [["a", "a", "b"], ["aa", "b"]] },
@@ -57,20 +60,20 @@ assert len(s.partition("aaaa")) == 8
         { t: "chips", label: "已收集的方案", items: res.map((r) => r.join(" | ")), empty: "还没有" },
       ];
     };
-    snap("开始", `把 "${s}" 切成若干段，每段都是回文。先决定第一段切多长。`, view(0, 0, ""));
+    snap("开始", `把 "${s}" 切成若干段，每段都是回文。先决定第一段切多长。`, view(0, 0, ""), { at: "init" });
     const dfs = (start) => {
-      if (start === s.length) { res.push(path.slice()); snap("切完了", `切到了末尾，得到一种方案：<b>${path.join(" | ")}</b>。`, view(s.length, s.length, "", true), { kind: "ok", facts: [["方案数", res.length]] }); return; }
+      if (start === s.length) { res.push(path.slice()); snap("切完了", `切到了末尾，得到一种方案：<b>${path.join(" | ")}</b>。`, view(s.length, s.length, "", true), { at: "collect", kind: "ok", facts: [["方案数", res.length]] }); return; }
       for (let end = start + 1; end <= s.length; end++) {
         const piece = s.slice(start, end), ok = piece === piece.split("").reverse().join("");
-        if (!ok) { snap("跳过", `"${piece}" 倒过来是 "${piece.split("").reverse().join("")}"，不是回文，不能这样切。`, view(start, end, "w"), { kind: "warn", facts: [["方案数", res.length]] }); continue; }
-        snap("切一刀", `"${piece}" 是回文，切下来放进 path，接着从下标 ${end} 开始切剩下的${end < s.length ? ` "${s.slice(end)}"` : ""}。`, view(start, end, "a"), { facts: [["方案数", res.length]] });
+        if (!ok) { snap("跳过", `"${piece}" 倒过来是 "${piece.split("").reverse().join("")}"，不是回文，不能这样切。`, view(start, end, "w"), { at: "try", kind: "warn", facts: [["方案数", res.length]] }); continue; }
+        snap("切一刀", `"${piece}" 是回文，切下来放进 path，接着从下标 ${end} 开始切剩下的${end < s.length ? ` "${s.slice(end)}"` : ""}。`, view(start, end, "a"), { at: "cut", facts: [["方案数", res.length]] });
         path.push(piece);
         dfs(end);
         path.pop();
       }
     };
     dfs(0);
-    snap("完成", `所有切法都试过了，一共 <b>${res.length}</b> 种方案。`, view(s.length, s.length, ""), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["方案数", res.length]] });
+    snap("完成", `所有切法都试过了，一共 <b>${res.length}</b> 种方案。`, view(s.length, s.length, ""), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["方案数", res.length]] });
   },
   points: [
     { t: "end 取到 len(s)", body: "切片右端是开的，<code>range(start + 1, len(s) + 1)</code> 才能让最后一段包含最后一个字符。" },

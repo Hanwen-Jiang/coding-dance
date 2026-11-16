@@ -10,38 +10,41 @@ module.exports = {
   codes: [{ t: "标准解法：拓扑排序（BFS）", code: `
 class Solution:
     def canFinish(self, numCourses: int, prerequisites: List[List[int]]) -> bool:
-        graph = [[] for _ in range(numCourses)]
-        indeg = [0] * numCourses            # 还有几门先修课没上
-        for a, b in prerequisites:          # 先上 b 才能上 a
-            graph[b].append(a)
-            indeg[a] += 1
-        q = deque(i for i in range(numCourses) if indeg[i] == 0)
-        done = 0
+        graph = [[] for _ in range(numCourses)]     #@init
+        indeg = [0] * numCourses            # 还有几门先修课没上 #@init
+        for a, b in prerequisites:          # 先上 b 才能上 a #@init
+            graph[b].append(a)              #@init
+            indeg[a] += 1                   #@init
+        q = deque(i for i in range(numCourses) if indeg[i] == 0)    #@init
+        done = 0                            #@init
         while q:
-            b = q.popleft()
-            done += 1
-            for a in graph[b]:
-                indeg[a] -= 1
-                if indeg[a] == 0:           # 先修课都上完了
-                    q.append(a)
-        return done == numCourses           # 环上的课永远上不了
-` }, { t: "简洁写法：DFS 三色标记", kind: "elegant", note: "1 表示这门课还在当前的递归路径上。沿着先修关系走，又碰到了路径上的课，就说明有环。", code: `
+            b = q.popleft()                 #@take
+            done += 1                       #@take
+            for a in graph[b]:              #@take
+                indeg[a] -= 1               #@take
+                if indeg[a] == 0:           # 先修课都上完了 #@take
+                    q.append(a)             #@take
+        return done == numCourses           # 环上的课永远上不了 #@done
+` }, { t: "简洁写法：DFS 三色标记", key: "dfs", kind: "elegant", note: "1 表示这门课还在当前的递归路径上。沿着先修关系走，又碰到了路径上的课，就说明有环。", code: `
 class Solution:
     def canFinish(self, numCourses: int, prerequisites: List[List[int]]) -> bool:
-        graph = defaultdict(list)
-        for a, b in prerequisites:
-            graph[a].append(b)
-        state = [0] * numCourses            # 0 没访问，1 在递归路径上，2 确认没问题
+        graph = defaultdict(list)           #@init
+        for a, b in prerequisites:          #@init
+            graph[a].append(b)              #@init
+        state = [0] * numCourses            # 0 没访问，1 在递归路径上，2 确认没问题 #@init
         def ok(u):
-            if state[u]:
-                return state[u] == 2
-            state[u] = 1
-            if not all(ok(v) for v in graph[u]):
-                return False
-            state[u] = 2
-            return True
-        return all(ok(u) for u in range(numCourses))
+            if state[u]:                    #@seen,cycle
+                return state[u] == 2        #@seen,cycle
+            state[u] = 1                    #@enter
+            if not all(ok(v) for v in graph[u]):    #@enter
+                return False                #@cycle
+            state[u] = 2                    #@confirm
+            return True                     #@confirm
+        return all(ok(u) for u in range(numCourses))    #@init,done
 ` }],
+  sig: { fn: "canFinish", params: ["int", "int[][]"], ret: "bool" },
+  call: (a) => [a.n, a.pre],
+  cases: [[1, []], [2, [[1, 0]]], [2, [[1, 0], [0, 1]]], [3, [[0, 1], [1, 2], [2, 0]]], [3, [[1, 1]]], [5, [[1, 0], [2, 1], [3, 2], [4, 3]]]],
   pytest: `
 s = Solution()
 assert s.canFinish(2, [[1,0]]) is True
@@ -66,17 +69,18 @@ assert s.canFinish(1, []) is True
       { t: "chips", label: "队列", items: q.slice(), empty: "空" },
     ];
     for (let i = 0; i < n; i++) if (!indeg[i]) q.push(i);
-    snap("开始", `入度为 0 的课 ${q.length ? q.join("、") : "没有"} 没有先修课，可以直接上，放进队列。`, view(-1), { facts: [["已上", 0], ["总数", n]] });
+    snap("开始", `入度为 0 的课 ${q.length ? q.join("、") : "没有"} 没有先修课，可以直接上，放进队列。`, view(-1), { at: "init", facts: [["已上", 0], ["总数", n]] });
     while (q.length) {
       const b = q.shift(); taken.push(b); const freed = [];
       for (const x of g[b]) { indeg[x]--; if (!indeg[x]) { q.push(x); freed.push(x); } }
-      snap(`上课 ${b}`, `上完课 ${b}。` + (g[b].length ? `它是 ${g[b].join("、")} 的先修课，这些课的入度各减一。` : "没有课依赖它。") + (freed.length ? `${freed.join("、")} 的入度变成 0，入队。` : ""), view(b), { facts: [["已上", taken.length], ["总数", n]] });
+      snap(`上课 ${b}`, `上完课 ${b}。` + (g[b].length ? `它是 ${g[b].join("、")} 的先修课，这些课的入度各减一。` : "没有课依赖它。") + (freed.length ? `${freed.join("、")} 的入度变成 0，入队。` : ""), view(b), { at: "take", facts: [["已上", taken.length], ["总数", n]] });
     }
     const ok = taken.length === n;
-    snap("完成", ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join("、")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`, view(-1, true), { kind: ok ? "ok" : "warn", ans: ok, facts: [["已上", taken.length], ["总数", n]] });
+    snap("完成", ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join("、")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`, view(-1, true), { at: "done", kind: ok ? "ok" : "warn", ans: ok, facts: [["已上", taken.length], ["总数", n]] });
   },
   alts: [{
     t: "DFS 三色标记",
+    code: "dfs",
     note: "和简洁写法一样：从一门课出发，沿着「要先上哪门」一路往下走。state 为 1 表示这门课还在当前的递归路径上，又走回了路径上的课，就说明有环。",
     legend: [["a", "当前的课 / 正在看的关系"], ["e", "1：在递归路径上"], ["c", "2：确认没问题"], ["w", "绕回来的课"]],
     build(a, snap) {
@@ -91,27 +95,27 @@ assert s.canFinish(1, []) is True
       ];
       const ok = (u) => {
         state[u] = 1; path.push(u);
-        snap("进入", `进入课 ${u}，标成 1。` + (g[u].length ? `上它之前要先上 ${g[u].join("、")}，挨个检查。` : "它没有先修课。"), view(u));
+        snap("进入", `进入课 ${u}，标成 1。` + (g[u].length ? `上它之前要先上 ${g[u].join("、")}，挨个检查。` : "它没有先修课。"), view(u), { at: "enter" });
         for (const v of g[u]) {
           edge = [u, v];
           if (state[v] === 1) {
             bad = v;
-            snap("有环", `课 ${u} 要先上课 ${v}，可是 ${v} 还在当前的递归路径上：${path.slice(path.indexOf(v)).join(" → ")} → ${v} 绕成了一个环，这些课互相等待。返回 false。`, view(u), { kind: "warn" });
+            snap("有环", `课 ${u} 要先上课 ${v}，可是 ${v} 还在当前的递归路径上：${path.slice(path.indexOf(v)).join(" → ")} → ${v} 绕成了一个环，这些课互相等待。返回 false。`, view(u), { at: "cycle", kind: "warn" });
             return false;
           }
-          if (state[v] === 2) { snap("已确认", `课 ${u} 要先上课 ${v}，${v} 之前已经确认没问题，跳过。`, view(u)); continue; }
+          if (state[v] === 2) { snap("已确认", `课 ${u} 要先上课 ${v}，${v} 之前已经确认没问题，跳过。`, view(u), { at: "seen" }); continue; }
           if (!ok(v)) return false;
         }
         edge = null; state[u] = 2; path.pop();
-        snap("确认", `课 ${u} 的先修课都没问题，标成 2，离开递归路径。`, view(u));
+        snap("确认", `课 ${u} 的先修课都没问题，标成 2，离开递归路径。`, view(u), { at: "confirm" });
         return true;
       };
-      snap("开始", "所有课的 state 都是 0。从课 0 开始，依次把每门没访问过的课当起点做 DFS。", view(-1));
+      snap("开始", "所有课的 state 都是 0。从课 0 开始，依次把每门没访问过的课当起点做 DFS。", view(-1), { at: "init" });
       for (let u = 0; u < n; u++) {
         if (state[u]) continue;
-        if (!ok(u)) { snap("完成", "找到了环，环上的课永远上不完，返回 <b>false</b>。", view(-1), { kind: "warn", ans: false }); return; }
+        if (!ok(u)) { snap("完成", "找到了环，环上的课永远上不完，返回 <b>false</b>。", view(-1), { at: "done", kind: "warn", ans: false }); return; }
       }
-      snap("完成", `所有课都标成了 2，没有环，${n} 门课都能上完，返回 <b>true</b>。`, view(-1), { kind: "ok", ans: true });
+      snap("完成", `所有课都标成了 2，没有环，${n} 门课都能上完，返回 <b>true</b>。`, view(-1), { at: "done", kind: "ok", ans: true });
     },
   }],
   points: [

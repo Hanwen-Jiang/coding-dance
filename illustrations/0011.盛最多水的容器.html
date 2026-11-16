@@ -314,15 +314,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[1,8,6,2,5,4,8,3,7]},"n
 { t: "标准解法", note: null, legend: [["a","当前的两块板"],["c","目前最大的一对"],["d","已经排除"]], build(a, snap) {
     const h = a.h; let l = 0, r = h.length - 1, best = 0, bp = [-1, -1];
     const view = (done) => [{ t: "bars", label: "height", items: h.map((v, i) => ({ v, cls: !done && (i === l || i === r) ? "a" : i === bp[0] || i === bp[1] ? "c" : i < l || i > r ? "d" : "" })), ptrs: done ? {} : { l, r } }];
-    snap("开始", "l 在最左，r 在最右，这是最宽的容器。", view(), { facts: [["最大面积", 0]] });
+    snap("开始", "l 在最左，r 在最右，这是最宽的容器。", view(), { at: "init", facts: [["最大面积", 0]] });
     while (l < r) {
       const area = Math.min(h[l], h[r]) * (r - l), up = area > best;
       if (up) { best = area; bp = [l, r]; }
       const moveL = h[l] < h[r];
-      snap("计算", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? "比之前大，更新最大面积。" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? "和左边一样高" : "是短板"}，r 左移。`), view(), { facts: [["最大面积", best], ["当前面积", area]] });
+      snap("计算", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? "比之前大，更新最大面积。" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? "和左边一样高" : "是短板"}，r 左移。`), view(), { at: ["area", "move"], facts: [["最大面积", best], ["当前面积", area]] });
       if (moveL) l++; else r--;
     }
-    snap("完成", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { kind: "ok", ans: best, facts: [["最大面积", best]] });
+    snap("完成", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { at: "done", kind: "ok", ans: best, facts: [["最大面积", best]] });
   } }
 ] };
 (function () {

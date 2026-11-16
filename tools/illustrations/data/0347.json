@@ -47,7 +47,151 @@
    "kind": null,
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        cnt = Counter(nums)\n        heap = []                           # 小顶堆，只留次数最多的 k 个\n        for x, c in cnt.items():\n            heapq.heappush(heap, (c, x))\n            if len(heap) > k:\n                heapq.heappop(heap)         # 挤掉次数最少的\n        return [x for c, x in heap]"
+   "code": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        cnt = Counter(nums)\n        heap = []                           # 小顶堆，只留次数最多的 k 个\n        for x, c in cnt.items():\n            heapq.heappush(heap, (c, x))\n            if len(heap) > k:\n                heapq.heappop(heap)         # 挤掉次数最少的\n        return [x for c, x in heap]",
+   "marks": {
+    "count": [
+     3,
+     4
+    ],
+    "push": [
+     6,
+     7
+    ],
+    "pop": [
+     6,
+     7,
+     8
+    ],
+    "done": [
+     9
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        Map<Integer, Integer> cnt = new HashMap<>();\n        for (int x : nums) cnt.merge(x, 1, Integer::sum);\n        PriorityQueue<int[]> heap = new PriorityQueue<>((p, q) -> p[0] - q[0]);   // 小顶堆，只留次数最多的 k 个\n        for (Map.Entry<Integer, Integer> e : cnt.entrySet()) {\n            heap.offer(new int[]{e.getValue(), e.getKey()});\n            if (heap.size() > k) {\n                heap.poll();                                        // 挤掉次数最少的\n            }\n        }\n        int[] res = new int[k];\n        for (int i = 0; i < k; i++) res[i] = heap.poll()[1];\n        return res;\n    }\n}",
+     "marks": {
+      "count": [
+       3,
+       4,
+       5
+      ],
+      "push": [
+       7,
+       8
+      ],
+      "pop": [
+       7,
+       8,
+       9
+      ],
+      "done": [
+       12,
+       13,
+       14
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        unordered_map<int, int> cnt;\n        for (int x : nums) cnt[x]++;\n        // 小顶堆，只留次数最多的 k 个；元素是 (次数, 数)\n        priority_queue<pair<int, int>, vector<pair<int, int>>, greater<>> heap;\n        for (auto& [x, c] : cnt) {\n            heap.push({c, x});\n            if ((int)heap.size() > k) {\n                heap.pop();                                         // 挤掉次数最少的\n            }\n        }\n        vector<int> res;\n        for (; !heap.empty(); heap.pop()) res.push_back(heap.top().second);\n        return res;\n    }\n};",
+     "marks": {
+      "count": [
+       4,
+       5,
+       7
+      ],
+      "push": [
+       9,
+       10
+      ],
+      "pop": [
+       9,
+       10,
+       11
+      ],
+      "done": [
+       14,
+       15,
+       16
+      ]
+     }
+    },
+    "go": {
+     "code": "// 小顶堆，元素是 [次数, 数]\ntype pairHeap [][2]int\n\nfunc (h pairHeap) Len() int           { return len(h) }\nfunc (h pairHeap) Less(i, j int) bool { return h[i][0] < h[j][0] }\nfunc (h pairHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }\nfunc (h *pairHeap) Push(v any)        { *h = append(*h, v.([2]int)) }\nfunc (h *pairHeap) Pop() any {\n\ta := *h\n\tv := a[len(a)-1]\n\t*h = a[:len(a)-1]\n\treturn v\n}\n\nfunc topKFrequent(nums []int, k int) []int {\n\tcnt := map[int]int{}\n\tfor _, x := range nums {\n\t\tcnt[x]++\n\t}\n\th := &pairHeap{} // 小顶堆，只留次数最多的 k 个\n\tfor x, c := range cnt {\n\t\theap.Push(h, [2]int{c, x})\n\t\tif h.Len() > k {\n\t\t\theap.Pop(h) // 挤掉次数最少的\n\t\t}\n\t}\n\tres := []int{}\n\tfor _, p := range *h {\n\t\tres = append(res, p[1])\n\t}\n\treturn res\n}",
+     "marks": {
+      "count": [
+       16,
+       17,
+       18,
+       20
+      ],
+      "push": [
+       22,
+       23
+      ],
+      "pop": [
+       22,
+       23,
+       24
+      ],
+      "done": [
+       27,
+       28,
+       29,
+       31
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var topKFrequent = function(nums, k) {\n    const cnt = new Map();\n    for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n    const heap = [];                                            // 小顶堆，只留次数最多的 k 个；元素是 [次数, 数]\n    const up = (i) => {\n        while (i > 0) {\n            const p = (i - 1) >> 1;\n            if (heap[p][0] <= heap[i][0]) break;\n            [heap[p], heap[i]] = [heap[i], heap[p]];\n            i = p;\n        }\n    };\n    const down = (i) => {\n        while (true) {\n            const l = 2 * i + 1, r = l + 1;\n            let s = i;\n            if (l < heap.length && heap[l][0] < heap[s][0]) s = l;\n            if (r < heap.length && heap[r][0] < heap[s][0]) s = r;\n            if (s === i) break;\n            [heap[s], heap[i]] = [heap[i], heap[s]];\n            i = s;\n        }\n    };\n    for (const [x, c] of cnt) {\n        heap.push([c, x]);\n        up(heap.length - 1);\n        if (heap.length > k) {\n            heap[0] = heap.pop();                               // 挤掉次数最少的：用最后一个顶替堆顶\n            down(0);\n        }\n    }\n    return heap.map(([, x]) => x);\n};",
+     "marks": {
+      "count": [
+       2,
+       3,
+       4
+      ],
+      "push": [
+       25,
+       26,
+       27
+      ],
+      "pop": [
+       25,
+       26,
+       27,
+       28,
+       29
+      ],
+      "done": [
+       32
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function topKFrequent(nums: number[], k: number): number[] {\n    const cnt = new Map<number, number>();\n    for (const x of nums) cnt.set(x, (cnt.get(x) ?? 0) + 1);\n    const heap: [number, number][] = [];                        // 小顶堆，只留次数最多的 k 个；元素是 [次数, 数]\n    const up = (i: number): void => {\n        while (i > 0) {\n            const p = (i - 1) >> 1;\n            if (heap[p][0] <= heap[i][0]) break;\n            [heap[p], heap[i]] = [heap[i], heap[p]];\n            i = p;\n        }\n    };\n    const down = (i: number): void => {\n        while (true) {\n            const l = 2 * i + 1, r = l + 1;\n            let s = i;\n            if (l < heap.length && heap[l][0] < heap[s][0]) s = l;\n            if (r < heap.length && heap[r][0] < heap[s][0]) s = r;\n            if (s === i) break;\n            [heap[s], heap[i]] = [heap[i], heap[s]];\n            i = s;\n        }\n    };\n    for (const [x, c] of cnt) {\n        heap.push([c, x]);\n        up(heap.length - 1);\n        if (heap.length > k) {\n            heap[0] = heap.pop()!;                              // 挤掉次数最少的：用最后一个顶替堆顶\n            down(0);\n        }\n    }\n    return heap.map(([, x]) => x);\n}",
+     "marks": {
+      "count": [
+       2,
+       3,
+       4
+      ],
+      "push": [
+       25,
+       26,
+       27
+      ],
+      "pop": [
+       25,
+       26,
+       27,
+       28,
+       29
+      ],
+      "done": [
+       32
+      ]
+     }
+    }
+   }
   },
   {
    "t": "简洁写法：most_common",
@@ -59,7 +203,161 @@
    "t": "O(n) 写法：桶排序",
    "kind": null,
    "note": null,
-   "code": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        buckets = [[] for _ in range(len(nums) + 1)]\n        for x, c in Counter(nums).items():\n            buckets[c].append(x)            # 第 c 个桶放出现 c 次的数\n        res = []\n        for c in range(len(nums), 0, -1):\n            res += buckets[c]\n            if len(res) >= k:\n                return res[:k]"
+   "key": "bucket",
+   "code": "class Solution:\n    def topKFrequent(self, nums: List[int], k: int) -> List[int]:\n        buckets = [[] for _ in range(len(nums) + 1)]\n        for x, c in Counter(nums).items():\n            buckets[c].append(x)            # 第 c 个桶放出现 c 次的数\n        res = []\n        for c in range(len(nums), 0, -1):\n            res += buckets[c]\n            if len(res) >= k:\n                return res[:k]",
+   "marks": {
+    "count": [
+     3,
+     4
+    ],
+    "put": [
+     4,
+     5
+    ],
+    "scan": [
+     6,
+     7
+    ],
+    "take": [
+     8,
+     9
+    ],
+    "done": [
+     10
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        List<List<Integer>> buckets = new ArrayList<>();\n        for (int i = 0; i <= nums.length; i++) buckets.add(new ArrayList<>());\n        Map<Integer, Integer> cnt = new HashMap<>();\n        for (int x : nums) cnt.merge(x, 1, Integer::sum);\n        for (Map.Entry<Integer, Integer> e : cnt.entrySet()) {\n            buckets.get(e.getValue()).add(e.getKey());              // 第 c 个桶放出现 c 次的数\n        }\n        int[] res = new int[k];\n        int got = 0;\n        for (int c = nums.length; c > 0; c--) {\n            for (int x : buckets.get(c)) {\n                res[got++] = x;\n                if (got == k) {\n                    return res;\n                }\n            }\n        }\n        return res;\n    }\n}",
+     "marks": {
+      "count": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "put": [
+       7,
+       8
+      ],
+      "scan": [
+       10,
+       11,
+       12
+      ],
+      "take": [
+       13,
+       14,
+       15
+      ],
+      "done": [
+       16
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        vector<vector<int>> buckets(nums.size() + 1);\n        unordered_map<int, int> cnt;\n        for (int x : nums) cnt[x]++;\n        for (auto& [x, c] : cnt) {\n            buckets[c].push_back(x);                                // 第 c 个桶放出现 c 次的数\n        }\n        vector<int> res;\n        for (int c = nums.size(); c > 0; c--) {\n            for (int x : buckets[c]) {\n                res.push_back(x);\n                if ((int)res.size() == k) {\n                    return res;\n                }\n            }\n        }\n        return res;\n    }\n};",
+     "marks": {
+      "count": [
+       4,
+       5,
+       6
+      ],
+      "put": [
+       7,
+       8
+      ],
+      "scan": [
+       10,
+       11
+      ],
+      "take": [
+       12,
+       13,
+       14
+      ],
+      "done": [
+       15
+      ]
+     }
+    },
+    "go": {
+     "code": "func topKFrequent(nums []int, k int) []int {\n\tbuckets := make([][]int, len(nums)+1)\n\tcnt := map[int]int{}\n\tfor _, x := range nums {\n\t\tcnt[x]++\n\t}\n\tfor x, c := range cnt {\n\t\tbuckets[c] = append(buckets[c], x) // 第 c 个桶放出现 c 次的数\n\t}\n\tres := []int{}\n\tfor c := len(nums); c > 0; c-- {\n\t\tres = append(res, buckets[c]...)\n\t\tif len(res) >= k {\n\t\t\treturn res[:k]\n\t\t}\n\t}\n\treturn res\n}",
+     "marks": {
+      "count": [
+       2,
+       3,
+       4,
+       5
+      ],
+      "put": [
+       7,
+       8
+      ],
+      "scan": [
+       10,
+       11
+      ],
+      "take": [
+       12,
+       13
+      ],
+      "done": [
+       14
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var topKFrequent = function(nums, k) {\n    const buckets = Array.from({ length: nums.length + 1 }, () => []);\n    const cnt = new Map();\n    for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n    for (const [x, c] of cnt) {\n        buckets[c].push(x);                                     // 第 c 个桶放出现 c 次的数\n    }\n    const res = [];\n    for (let c = nums.length; c > 0; c--) {\n        res.push(...buckets[c]);\n        if (res.length >= k) {\n            return res.slice(0, k);\n        }\n    }\n    return res;\n};",
+     "marks": {
+      "count": [
+       2,
+       3,
+       4
+      ],
+      "put": [
+       5,
+       6
+      ],
+      "scan": [
+       8,
+       9
+      ],
+      "take": [
+       10,
+       11
+      ],
+      "done": [
+       12
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function topKFrequent(nums: number[], k: number): number[] {\n    const buckets: number[][] = Array.from({ length: nums.length + 1 }, () => []);\n    const cnt = new Map<number, number>();\n    for (const x of nums) cnt.set(x, (cnt.get(x) ?? 0) + 1);\n    for (const [x, c] of cnt) {\n        buckets[c].push(x);                                     // 第 c 个桶放出现 c 次的数\n    }\n    const res: number[] = [];\n    for (let c = nums.length; c > 0; c--) {\n        res.push(...buckets[c]);\n        if (res.length >= k) {\n            return res.slice(0, k);\n        }\n    }\n    return res;\n}",
+     "marks": {
+      "count": [
+       2,
+       3,
+       4
+      ],
+      "put": [
+       5,
+       6
+      ],
+      "scan": [
+       8,
+       9
+      ],
+      "take": [
+       10,
+       11
+      ],
+      "done": [
+       12
+      ]
+     }
+    }
+   }
   }
  ],
  "demo": {
@@ -111,7 +409,7 @@
     "note": "nums = [4,1,-1,2,-1,2,3], k = 2"
    }
   ],
-  "build": "build(a, snap) {\n    const { nums, k } = a, cnt = new Map();\n    for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n    const ents = [...cnt], heap = [];\n    const cmp = (p, q) => p[0] - q[0] || p[1] - q[1];\n    const view = (cur, out) => [\n      { t: \"chips\", label: \"计数（数 × 次数）\", items: ents.map(([x, c]) => ({ v: `${x} × ${c}`, cls: x === cur ? \"a\" : \"\" })) },\n      { t: \"array\", label: `小顶堆（按次数从小到大排，最左边是堆顶，最多 ${k} 个）`, items: heap.length ? heap.map(([c, x], i) => ({ v: `${x}(${c}次)`, cls: i === 0 ? \"c\" : \"\" })) : [{ v: \"\", cls: \"d\" }], idx: false },\n      { t: \"chips\", label: \"挤掉的\", items: out.map(([c, x]) => ({ v: `${x}(${c}次)`, cls: \"b\" })), empty: \"还没有\" },\n    ];\n    snap(\"计数\", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join(\"，\")}。`, view(null, []));\n    const outs = [];\n    for (const [x, c] of ents) {\n      heap.push([c, x]); heap.sort(cmp);\n      if (heap.length > k) { const o = heap.shift(); outs.push(o); snap(\"挤掉\", `放入 ${x}（${c} 次）后堆里超过 ${k} 个，弹出堆顶 ${o[1]}（${o[0]} 次），它是次数最少的。`, view(x, outs), { kind: \"warn\" }); }\n      else snap(\"入堆\", `放入 ${x}（${c} 次）。堆里还不到 ${k + 1} 个，不用挤。`, view(x, outs));\n    }\n    const ans = heap.slice().reverse().map(([, x]) => x);\n    snap(\"完成\", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(\",\")}]。`, view(null, outs), { kind: \"ok\", ans });\n  }",
+  "build": "build(a, snap) {\n    const { nums, k } = a, cnt = new Map();\n    for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n    const ents = [...cnt], heap = [];\n    const cmp = (p, q) => p[0] - q[0] || p[1] - q[1];\n    const view = (cur, out) => [\n      { t: \"chips\", label: \"计数（数 × 次数）\", items: ents.map(([x, c]) => ({ v: `${x} × ${c}`, cls: x === cur ? \"a\" : \"\" })) },\n      { t: \"array\", label: `小顶堆（按次数从小到大排，最左边是堆顶，最多 ${k} 个）`, items: heap.length ? heap.map(([c, x], i) => ({ v: `${x}(${c}次)`, cls: i === 0 ? \"c\" : \"\" })) : [{ v: \"\", cls: \"d\" }], idx: false },\n      { t: \"chips\", label: \"挤掉的\", items: out.map(([c, x]) => ({ v: `${x}(${c}次)`, cls: \"b\" })), empty: \"还没有\" },\n    ];\n    snap(\"计数\", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join(\"，\")}。`, view(null, []), { at: \"count\" });\n    const outs = [];\n    for (const [x, c] of ents) {\n      heap.push([c, x]); heap.sort(cmp);\n      if (heap.length > k) { const o = heap.shift(); outs.push(o); snap(\"挤掉\", `放入 ${x}（${c} 次）后堆里超过 ${k} 个，弹出堆顶 ${o[1]}（${o[0]} 次），它是次数最少的。`, view(x, outs), { at: \"pop\", kind: \"warn\" }); }\n      else snap(\"入堆\", `放入 ${x}（${c} 次）。堆里还不到 ${k + 1} 个，不用挤。`, view(x, outs), { at: \"push\" });\n    }\n    const ans = heap.slice().reverse().map(([, x]) => x);\n    snap(\"完成\", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(\",\")}]。`, view(null, outs), { at: \"done\", kind: \"ok\", ans });\n  }",
   "methods": [
    {
     "t": "计数 + 小顶堆",
@@ -131,7 +429,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const { nums, k } = a, cnt = new Map();\n    for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n    const ents = [...cnt], heap = [];\n    const cmp = (p, q) => p[0] - q[0] || p[1] - q[1];\n    const view = (cur, out) => [\n      { t: \"chips\", label: \"计数（数 × 次数）\", items: ents.map(([x, c]) => ({ v: `${x} × ${c}`, cls: x === cur ? \"a\" : \"\" })) },\n      { t: \"array\", label: `小顶堆（按次数从小到大排，最左边是堆顶，最多 ${k} 个）`, items: heap.length ? heap.map(([c, x], i) => ({ v: `${x}(${c}次)`, cls: i === 0 ? \"c\" : \"\" })) : [{ v: \"\", cls: \"d\" }], idx: false },\n      { t: \"chips\", label: \"挤掉的\", items: out.map(([c, x]) => ({ v: `${x}(${c}次)`, cls: \"b\" })), empty: \"还没有\" },\n    ];\n    snap(\"计数\", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join(\"，\")}。`, view(null, []));\n    const outs = [];\n    for (const [x, c] of ents) {\n      heap.push([c, x]); heap.sort(cmp);\n      if (heap.length > k) { const o = heap.shift(); outs.push(o); snap(\"挤掉\", `放入 ${x}（${c} 次）后堆里超过 ${k} 个，弹出堆顶 ${o[1]}（${o[0]} 次），它是次数最少的。`, view(x, outs), { kind: \"warn\" }); }\n      else snap(\"入堆\", `放入 ${x}（${c} 次）。堆里还不到 ${k + 1} 个，不用挤。`, view(x, outs));\n    }\n    const ans = heap.slice().reverse().map(([, x]) => x);\n    snap(\"完成\", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(\",\")}]。`, view(null, outs), { kind: \"ok\", ans });\n  }"
+    "build": "build(a, snap) {\n    const { nums, k } = a, cnt = new Map();\n    for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n    const ents = [...cnt], heap = [];\n    const cmp = (p, q) => p[0] - q[0] || p[1] - q[1];\n    const view = (cur, out) => [\n      { t: \"chips\", label: \"计数（数 × 次数）\", items: ents.map(([x, c]) => ({ v: `${x} × ${c}`, cls: x === cur ? \"a\" : \"\" })) },\n      { t: \"array\", label: `小顶堆（按次数从小到大排，最左边是堆顶，最多 ${k} 个）`, items: heap.length ? heap.map(([c, x], i) => ({ v: `${x}(${c}次)`, cls: i === 0 ? \"c\" : \"\" })) : [{ v: \"\", cls: \"d\" }], idx: false },\n      { t: \"chips\", label: \"挤掉的\", items: out.map(([c, x]) => ({ v: `${x}(${c}次)`, cls: \"b\" })), empty: \"还没有\" },\n    ];\n    snap(\"计数\", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join(\"，\")}。`, view(null, []), { at: \"count\" });\n    const outs = [];\n    for (const [x, c] of ents) {\n      heap.push([c, x]); heap.sort(cmp);\n      if (heap.length > k) { const o = heap.shift(); outs.push(o); snap(\"挤掉\", `放入 ${x}（${c} 次）后堆里超过 ${k} 个，弹出堆顶 ${o[1]}（${o[0]} 次），它是次数最少的。`, view(x, outs), { at: \"pop\", kind: \"warn\" }); }\n      else snap(\"入堆\", `放入 ${x}（${c} 次）。堆里还不到 ${k + 1} 个，不用挤。`, view(x, outs), { at: \"push\" });\n    }\n    const ans = heap.slice().reverse().map(([, x]) => x);\n    snap(\"完成\", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(\",\")}]。`, view(null, outs), { at: \"done\", kind: \"ok\", ans });\n  }"
    },
    {
     "t": "桶排序",
@@ -150,7 +448,8 @@
       "第 0 个桶用不到"
      ]
     ],
-    "build": "build(a, snap) {\n      const { nums, k } = a, n = nums.length, cnt = new Map();\n      for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n      const ents = [...cnt], B = Array.from({ length: n + 1 }, () => []), res = [];\n      let cur = -1, low = n + 1;\n      const view = (x) => [\n        { t: \"chips\", label: \"计数（数 × 次数）\", items: ents.map(([v, c]) => ({ v: `${v} × ${c}`, cls: v === x ? \"a\" : \"\" })) },\n        { t: \"array\", label: \"buckets[c]：出现 c 次的数\", items: B.map((b, c) => ({ v: b.join(\",\"), cls: c === cur ? \"a\" : c >= low && b.length ? \"c\" : c === 0 ? \"d\" : \"\" })) },\n        { t: \"chips\", label: \"结果\", items: res.map((v) => ({ v, cls: \"c\" })), empty: \"还没有\" },\n      ];\n      snap(\"计数\", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join(\"，\")}。`, view(null));\n      for (const [x, c] of ents) { B[c].push(x); cur = c; snap(\"放进桶\", `${x} 出现 ${c} 次，放进第 ${c} 个桶。`, view(x)); }\n      cur = -1;\n      snap(\"从后往前取\", `次数越大越靠后。从第 ${n} 个桶往回扫，空桶直接跳过。`, view(null));\n      for (let c = n; c >= 1; c--) {\n        if (!B[c].length) continue;\n        cur = c; low = c; res.push(...B[c]);\n        const enough = res.length >= k;\n        snap(\"取出\", `第 ${c} 个桶里有 ${B[c].join(\"、\")}（各出现 ${c} 次），放进结果。` + (enough ? `已经有 ${res.length} 个，够 k = ${k} 个了。` : `还不够 ${k} 个，继续往回扫。`), view(null));\n        if (enough) break;\n      }\n      const ans = res.slice(0, k);\n      cur = -1;\n      snap(\"完成\", `前 ${k} 个高频元素是 [${ans.join(\",\")}]。`, view(null), { kind: \"ok\", ans });\n    }"
+    "code": "bucket",
+    "build": "build(a, snap) {\n      const { nums, k } = a, n = nums.length, cnt = new Map();\n      for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);\n      const ents = [...cnt], B = Array.from({ length: n + 1 }, () => []), res = [];\n      let cur = -1, low = n + 1;\n      const view = (x) => [\n        { t: \"chips\", label: \"计数（数 × 次数）\", items: ents.map(([v, c]) => ({ v: `${v} × ${c}`, cls: v === x ? \"a\" : \"\" })) },\n        { t: \"array\", label: \"buckets[c]：出现 c 次的数\", items: B.map((b, c) => ({ v: b.join(\",\"), cls: c === cur ? \"a\" : c >= low && b.length ? \"c\" : c === 0 ? \"d\" : \"\" })) },\n        { t: \"chips\", label: \"结果\", items: res.map((v) => ({ v, cls: \"c\" })), empty: \"还没有\" },\n      ];\n      snap(\"计数\", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join(\"，\")}。`, view(null), { at: \"count\" });\n      for (const [x, c] of ents) { B[c].push(x); cur = c; snap(\"放进桶\", `${x} 出现 ${c} 次，放进第 ${c} 个桶。`, view(x), { at: \"put\" }); }\n      cur = -1;\n      snap(\"从后往前取\", `次数越大越靠后。从第 ${n} 个桶往回扫，空桶直接跳过。`, view(null), { at: \"scan\" });\n      for (let c = n; c >= 1; c--) {\n        if (!B[c].length) continue;\n        cur = c; low = c; res.push(...B[c]);\n        const enough = res.length >= k;\n        snap(\"取出\", `第 ${c} 个桶里有 ${B[c].join(\"、\")}（各出现 ${c} 次），放进结果。` + (enough ? `已经有 ${res.length} 个，够 k = ${k} 个了。` : `还不够 ${k} 个，继续往回扫。`), view(null), { at: \"take\" });\n        if (enough) break;\n      }\n      const ans = res.slice(0, k);\n      cur = -1;\n      snap(\"完成\", `前 ${k} 个高频元素是 [${ans.join(\",\")}]。`, view(null), { at: \"done\", kind: \"ok\", ans });\n    }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const vals = R.distinct(R.int(3, 4), 1, 9), counts = R.shuffle([1, 2, 3, 4]).slice(0, vals.length);\n    const nums = R.shuffle(vals.flatMap((v, i) => Array(counts[i]).fill(v))), k = R.int(1, 2);\n    return { args: { nums, k }, note: `nums = ${R.fmt(nums)}, k = ${k}`, py: `Solution().topKFrequent(${R.py(nums)}, ${k})`, cmp: \"unordered\" };\n  })(R); return { args: r.args, note: r.note }; }"

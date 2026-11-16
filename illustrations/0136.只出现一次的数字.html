@@ -321,12 +321,12 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[4,1,2,1,2]},"note":
     const bin = (x) => x.toString(2).padStart(w, "0");
     let res = 0;
     const view = (i) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k < i ? "d" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", "res 从 0 开始，依次和每个数做异或。", view(-1), { facts: [["res", res], ["二进制", bin(res)]] });
+    snap("开始", "res 从 0 开始，依次和每个数做异或。", view(-1), { at: "init", facts: [["res", res], ["二进制", bin(res)]] });
     nums.forEach((x, i) => {
       const old = res; res ^= x;
-      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，也就是 ${old} ^ ${x} = ${res}。`, view(i), { facts: [["res", res], ["二进制", bin(res)]] });
+      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，也就是 ${old} ^ ${x} = ${res}。`, view(i), { at: "xor", facts: [["res", res], ["二进制", bin(res)]] });
     });
-    snap("完成", `成对的数都抵消了，剩下 <b>${res}</b>。`, view(-1), { kind: "ok", ans: res, facts: [["res", res], ["二进制", bin(res)]] });
+    snap("完成", `成对的数都抵消了，剩下 <b>${res}</b>。`, view(-1), { at: "done", kind: "ok", ans: res, facts: [["res", res], ["二进制", bin(res)]] });
   } }
 ] };
 (function () {

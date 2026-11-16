@@ -10,15 +10,15 @@ module.exports = {
   codes: [{ t: "标准解法：前缀积 × 后缀积", code: `
 class Solution:
     def productExceptSelf(self, nums: List[int]) -> List[int]:
-        n = len(nums)
-        answer = [1] * n
-        for i in range(1, n):           # answer[i] = 左边所有数的乘积
-            answer[i] = answer[i - 1] * nums[i - 1]
-        right = 1                       # 右边所有数的乘积
-        for i in range(n - 1, -1, -1):
-            answer[i] *= right
-            right *= nums[i]
-        return answer
+        n = len(nums)                   #@init
+        answer = [1] * n                #@init
+        for i in range(1, n):           # answer[i] = 左边所有数的乘积 #@left
+            answer[i] = answer[i - 1] * nums[i - 1]     #@left
+        right = 1                       # 右边所有数的乘积 #@right
+        for i in range(n - 1, -1, -1):  #@right
+            answer[i] *= right          #@right
+            right *= nums[i]            #@right
+        return answer                   #@done
 ` }, { t: "简洁写法：accumulate 算前缀积和后缀积", kind: "elegant", note: "pre[i] 是 i 左边所有数的积，suf[i] 是 i 右边所有数的积，两者相乘。", code: `
 from itertools import accumulate
 from operator import mul
@@ -35,6 +35,9 @@ assert s.productExceptSelf([1,2,3,4]) == [24,12,8,6]
 assert s.productExceptSelf([-1,1,0,-3,3]) == [0,0,9,0,0]
 assert s.productExceptSelf([2,3]) == [3,2]
 `,
+  sig: { fn: "productExceptSelf", params: ["int[]"], ret: "int[]" },
+  call: (a) => [a.nums],
+  cases: [[[2, 3]], [[0, 0]], [[0, 4, 5]]],
   legend: [["a", "当前位置"], ["e", "已有左边的乘积"], ["c", "左右都乘好了"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 2, 3, 4] }, note: "nums = [1,2,3,4]", expect: [24, 12, 8, 6] },
@@ -48,18 +51,18 @@ assert s.productExceptSelf([2,3]) == [3,2]
       { t: "array", label: "answer", items: ans.map((v, j) => ({ v: fix(v), cls: st[j] })), idx: false },
     ];
     st[0] = "e";
-    snap("第一遍：从左往右", "answer[0] = 1，因为下标 0 左边没有数。", view(0));
+    snap("第一遍：从左往右", "answer[0] = 1，因为下标 0 左边没有数。", view(0), { at: "init" });
     for (let i = 1; i < n; i++) {
       ans[i] = ans[i - 1] * nums[i - 1]; st[i] = "e";
-      snap("第一遍：从左往右", `answer[${i}] = answer[${i - 1}] × nums[${i - 1}] = ${fix(ans[i - 1])} × ${nums[i - 1]} = <b>${fix(ans[i])}</b>，这是下标 ${i} 左边所有数的乘积。`, view(i));
+      snap("第一遍：从左往右", `answer[${i}] = answer[${i - 1}] × nums[${i - 1}] = ${fix(ans[i - 1])} × ${nums[i - 1]} = <b>${fix(ans[i])}</b>，这是下标 ${i} 左边所有数的乘积。`, view(i), { at: "left" });
     }
     let right = 1;
     for (let i = n - 1; i >= 0; i--) {
       const before = ans[i]; ans[i] = fix(ans[i] * right); st[i] = "c";
-      snap("第二遍：从右往左", `right = ${fix(right)} 是下标 ${i} 右边所有数的乘积。answer[${i}] = ${fix(before)} × ${fix(right)} = <b>${ans[i]}</b>。然后 right 乘上 nums[${i}] = ${nums[i]}。`, view(i), { facts: [["right", fix(right * nums[i])]] });
+      snap("第二遍：从右往左", `right = ${fix(right)} 是下标 ${i} 右边所有数的乘积。answer[${i}] = ${fix(before)} × ${fix(right)} = <b>${ans[i]}</b>。然后 right 乘上 nums[${i}] = ${nums[i]}。`, view(i), { at: "right", facts: [["right", fix(right * nums[i])]] });
       right *= nums[i];
     }
-    snap("完成", `answer = [${ans.join(", ")}]。`, view(-1), { kind: "ok", ans });
+    snap("完成", `answer = [${ans.join(", ")}]。`, view(-1), { at: "done", kind: "ok", ans });
   },
   points: [
     { t: "为什么不用除法", body: "题目禁止。而且数组里有 0 时，总乘积除以 0 会出错。" },

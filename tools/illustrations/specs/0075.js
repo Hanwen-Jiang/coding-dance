@@ -10,30 +10,33 @@ module.exports = {
   codes: [{ t: "标准解法：三指针（荷兰国旗）", code: `
 class Solution:
     def sortColors(self, nums: List[int]) -> None:
-        lo, i, hi = 0, 0, len(nums) - 1     # [0,lo) 是 0，[lo,i) 是 1，(hi,end] 是 2
-        while i <= hi:
-            if nums[i] == 0:
-                nums[lo], nums[i] = nums[i], nums[lo]
-                lo += 1
-                i += 1
-            elif nums[i] == 2:
-                nums[i], nums[hi] = nums[hi], nums[i]
-                hi -= 1                     # 换过来的数还没看过，i 不动
-            else:
-                i += 1
-` }, { t: "简洁写法：先写 2，再覆盖成 1 和 0", kind: "elegant", note: "每个位置先写成 2；读到的是 0 或 1，就把 1 的区域往后扩一格；读到的是 0，再把 0 的区域往后扩一格。后写的覆盖先写的。", code: `
+        lo, i, hi = 0, 0, len(nums) - 1     # [0,lo) 是 0，[lo,i) 是 1，(hi,end] 是 2 #@init
+        while i <= hi:                      #@loop
+            if nums[i] == 0:                #@zero
+                nums[lo], nums[i] = nums[i], nums[lo]   #@zero
+                lo += 1                     #@zero
+                i += 1                      #@zero
+            elif nums[i] == 2:              #@two
+                nums[i], nums[hi] = nums[hi], nums[i]   #@two
+                hi -= 1                     # 换过来的数还没看过，i 不动 #@two
+            else:                           #@one
+                i += 1                      #@one
+` }, { t: "简洁写法：先写 2，再覆盖成 1 和 0", key: "paint", kind: "elegant", note: "每个位置先写成 2；读到的是 0 或 1，就把 1 的区域往后扩一格；读到的是 0，再把 0 的区域往后扩一格。后写的覆盖先写的。", code: `
 class Solution:
     def sortColors(self, nums: List[int]) -> None:
-        p0 = p1 = 0                         # 下一个 0、下一个 1 该写的位置
-        for i, x in enumerate(nums):
-            nums[i] = 2
-            if x < 2:
-                nums[p1] = 1
-                p1 += 1
-            if x == 0:
-                nums[p0] = 0
-                p0 += 1
+        p0 = p1 = 0                         # 下一个 0、下一个 1 该写的位置 #@init
+        for i, x in enumerate(nums):        #@read
+            nums[i] = 2                     #@read
+            if x < 2:                       #@one
+                nums[p1] = 1                #@one
+                p1 += 1                     #@one
+            if x == 0:                      #@zero
+                nums[p0] = 0                #@zero
+                p0 += 1                     #@zero
 ` }],
+  sig: { fn: "sortColors", params: ["int[]"], ret: "void" },
+  call: (a) => [a.nums],
+  cases: [[[0]], [[2]], [[1, 0]], [[2, 2, 0, 0, 1, 1]]],
   pytest: `
 s = Solution()
 def f(a):
@@ -55,33 +58,34 @@ for _ in range(30):
   build(a, snap) {
     const nums = a.nums.slice(); let lo = 0, i = 0, hi = nums.length - 1;
     const view = () => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k < lo ? "e" : k < i ? "g" : k > hi ? "w" : k === i ? "a" : "" })), ptrs: { lo, i, hi } }];
-    snap("开始", "一开始所有位置都还没看过。", view());
+    snap("开始", "一开始所有位置都还没看过。", view(), { at: "init" });
     while (i <= hi) {
       const x = nums[i];
-      if (x === 0) { snap("是 0", `nums[${i}] = 0，和 nums[lo=${lo}] 交换，放进 0 的区域。lo、i 都前进。`, view()); [nums[lo], nums[i]] = [nums[i], nums[lo]]; lo++; i++; }
-      else if (x === 2) { snap("是 2", `nums[${i}] = 2，和 nums[hi=${hi}] = ${nums[hi]} 交换，放进 2 的区域。hi 后退，i 不动，换过来的 ${nums[hi]} 还没看过。`, view()); [nums[i], nums[hi]] = [nums[hi], nums[i]]; hi--; }
-      else { snap("是 1", `nums[${i}] = 1，留在原地，i 前进。`, view()); i++; }
+      if (x === 0) { snap("是 0", `nums[${i}] = 0，和 nums[lo=${lo}] 交换，放进 0 的区域。lo、i 都前进。`, view(), { at: "zero" }); [nums[lo], nums[i]] = [nums[i], nums[lo]]; lo++; i++; }
+      else if (x === 2) { snap("是 2", `nums[${i}] = 2，和 nums[hi=${hi}] = ${nums[hi]} 交换，放进 2 的区域。hi 后退，i 不动，换过来的 ${nums[hi]} 还没看过。`, view(), { at: "two" }); [nums[i], nums[hi]] = [nums[hi], nums[i]]; hi--; }
+      else { snap("是 1", `nums[${i}] = 1，留在原地，i 前进。`, view(), { at: "one" }); i++; }
     }
-    snap("完成", `i 超过了 hi，中间没有没看过的数了。结果 [${nums.join(",")}]。`, view(), { kind: "ok", ans: nums.slice() });
+    snap("完成", `i 超过了 hi，中间没有没看过的数了。结果 [${nums.join(",")}]。`, view(), { at: "loop", kind: "ok", ans: nums.slice() });
   },
   alts: [{
     t: "先写 2 再覆盖",
+    code: "paint",
     note: "和简洁写法一样：读到一个数，先把这一格写成 2；是 0 或 1，就在 p1 处写 1，1 的区域往后扩；是 0，再在 p0 处写 0。后写的覆盖先写的。",
     legend: [["e", "0"], ["g", "1"], ["w", "2"], ["a", "这一步写过的格子"]],
     build(a, snap) {
       const nums = a.nums.slice(), n = nums.length; let p0 = 0, p1 = 0;
       const col = { 0: "e", 1: "g", 2: "w" };
       const view = (i, wr) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: wr.has(k) ? "a" : k <= i ? col[v] : "" })), ptrs: { p0, p1, i: i >= 0 && i < n ? i : null } }];
-      const f = () => ({ facts: [["0 的个数", p0], ["1 的个数", p1 - p0]] });
-      snap("开始", "p0 是下一个 0 该写的位置，p1 是下一个 1 该写的位置。i 左边已经排好：[0, p0) 是 0，[p0, p1) 是 1，[p1, i) 是 2。", view(-1, new Set()), f());
+      const f = (at) => ({ at, facts: [["0 的个数", p0], ["1 的个数", p1 - p0]] });
+      snap("开始", "p0 是下一个 0 该写的位置，p1 是下一个 1 该写的位置。i 左边已经排好：[0, p0) 是 0，[p0, p1) 是 1，[p1, i) 是 2。", view(-1, new Set()), f("init"));
       for (let i = 0; i < n; i++) {
         const x = nums[i], wr = new Set([i]), ops = [`nums[${i}] 写成 2`];
         nums[i] = 2;
         if (x < 2) { nums[p1] = 1; wr.add(p1); ops.push(`nums[${p1}] 写成 1，p1 前进`); p1++; }
         if (x === 0) { nums[p0] = 0; wr.add(p0); ops.push(`nums[${p0}] 写成 0，p0 前进`); p0++; }
-        snap(`读到 ${x}`, `nums[${i}] 原来是 ${x}。${ops.join("；")}。`, view(i, wr), f());
+        snap(`读到 ${x}`, `nums[${i}] 原来是 ${x}。${ops.join("；")}。`, view(i, wr), f(x === 2 ? "read" : x === 1 ? ["read", "one"] : ["read", "one", "zero"]));
       }
-      snap("完成", `全部读完，结果 [${nums.join(",")}]。`, view(n, new Set()), { kind: "ok", ans: nums.slice(), ...f() });
+      snap("完成", `全部读完，结果 [${nums.join(",")}]。`, view(n, new Set()), { kind: "ok", ans: nums.slice(), ...f([]) });
     },
   }],
   points: [

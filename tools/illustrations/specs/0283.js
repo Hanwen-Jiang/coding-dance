@@ -10,11 +10,11 @@ module.exports = {
   codes: [{ t: "标准解法：快慢指针交换", code: `
 class Solution:
     def moveZeroes(self, nums: List[int]) -> None:
-        j = 0                           # 下一个非零数放的位置
-        for i in range(len(nums)):
-            if nums[i] != 0:
-                nums[i], nums[j] = nums[j], nums[i]
-                j += 1
+        j = 0                           # 下一个非零数放的位置 #@init
+        for i in range(len(nums)):      #@scan
+            if nums[i] != 0:            #@swap
+                nums[i], nums[j] = nums[j], nums[i]     #@swap
+                j += 1                  #@swap
 ` }, { t: "简洁写法：稳定排序", kind: "elegant", note: "key 是「是不是 0」，False 排在 True 前面。Python 的排序是稳定的，非零元素的相对顺序不变。时间 O(n log n)。", code: `
 class Solution:
     def moveZeroes(self, nums: List[int]) -> None:
@@ -24,6 +24,9 @@ class Solution:
 for a, e in [([0,1,0,3,12],[1,3,12,0,0]), ([0],[0]), ([1,2,3],[1,2,3]), ([0,0,1],[1,0,0])]:
     Solution().moveZeroes(a); assert a == e
 `,
+  sig: { fn: "moveZeroes", params: ["int[]"], ret: "void" },
+  call: (a) => [a.nums],
+  cases: [[[0]], [[1]], [[0, 0, 1]]],
   legend: [["c", "已排好的非零数"], ["a", "i 正在看的数"], ["w", "j 和 i 之间的 0"]],
   presets: [
     { label: "示例 1", args: { nums: [0, 1, 0, 3, 12] }, note: "nums = [0,1,0,3,12]", expect: [1, 3, 12, 0, 0] },
@@ -32,15 +35,15 @@ for a, e in [([0,1,0,3,12],[1,3,12,0,0]), ([0],[0]), ([1,2,3],[1,2,3]), ([0,0,1]
   build(a, snap) {
     const n = a.nums.slice(); let j = 0;
     const view = (i) => [{ t: "array", label: "nums", items: n.map((v, t) => ({ v, cls: t < j ? "c" : t === i ? "a" : t < i ? "w" : "" })), ptrs: { j, i: i < n.length ? i : null } }];
-    snap("开始", "j 指向下一个非零数该放的位置，i 从左往右扫描。", view(-1));
+    snap("开始", "j 指向下一个非零数该放的位置，i 从左往右扫描。", view(-1), { at: "init" });
     for (let i = 0; i < n.length; i++) {
       if (n[i] !== 0) {
         const same = i === j, x = n[i];
         [n[i], n[j]] = [n[j], n[i]]; j++;
-        snap("交换", same ? `nums[${i}] = ${x} 非零，i 和 j 在同一格，原地不动，j 右移。` : `nums[${i}] = ${x} 非零，和 j 位置的 0 交换，${x} 到了前面，j 右移。`, view(i));
-      } else snap("跳过", `nums[${i}] 是 0，不处理，i 继续往前。j 留在原地等下一个非零数。`, view(i), { kind: "warn" });
+        snap("交换", same ? `nums[${i}] = ${x} 非零，i 和 j 在同一格，原地不动，j 右移。` : `nums[${i}] = ${x} 非零，和 j 位置的 0 交换，${x} 到了前面，j 右移。`, view(i), { at: "swap" });
+      } else snap("跳过", `nums[${i}] 是 0，不处理，i 继续往前。j 留在原地等下一个非零数。`, view(i), { at: "scan", kind: "warn" });
     }
-    snap("完成", `扫描结束。j 左边是所有非零数，顺序没变；右边全是 0。`, view(n.length), { kind: "ok", ans: n });
+    snap("完成", `扫描结束。j 左边是所有非零数，顺序没变；右边全是 0。`, view(n.length), { at: [], kind: "ok", ans: n });
   },
   points: [
     { t: "原地修改", body: "函数不返回任何东西，直接改 <code>nums</code>。不要新建数组再赋值给 <code>nums</code>。" },
