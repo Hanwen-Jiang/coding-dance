@@ -10,19 +10,19 @@ module.exports = {
   codes: [{ t: "标准解法：二维 DP", code: `
 class Solution:
     def minPathSum(self, grid: List[List[int]]) -> int:
-        m, n = len(grid), len(grid[0])
-        dp = [[0] * n for _ in range(m)]
+        m, n = len(grid), len(grid[0])  #@init
+        dp = [[0] * n for _ in range(m)]  #@init
         for i in range(m):
             for j in range(n):
-                if i == 0 and j == 0:
-                    dp[i][j] = grid[0][0]
-                elif i == 0:
-                    dp[i][j] = dp[i][j - 1] + grid[i][j]    # 第一行只能从左边来
-                elif j == 0:
-                    dp[i][j] = dp[i - 1][j] + grid[i][j]    # 第一列只能从上面来
-                else:
-                    dp[i][j] = min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j]
-        return dp[-1][-1]
+                if i == 0 and j == 0:   #@start
+                    dp[i][j] = grid[0][0]   #@start
+                elif i == 0:            #@row
+                    dp[i][j] = dp[i][j - 1] + grid[i][j]    # 第一行只能从左边来 #@row
+                elif j == 0:            #@col
+                    dp[i][j] = dp[i - 1][j] + grid[i][j]    # 第一列只能从上面来 #@col
+                else:                   #@mid
+                    dp[i][j] = min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j]  #@mid
+        return dp[-1][-1]               #@done
 ` }, { t: "简洁写法：一行滚动", kind: "elegant", note: "dp 初始化成 inf、dp[0] = 0，第一行和第一列的边界就都不用特判了。", code: `
 from math import inf
 
@@ -35,6 +35,9 @@ class Solution:
                 dp[j] = min(dp[j], dp[j - 1] if j else inf) + x
         return dp[-1]
 ` }],
+  sig: { fn: "minPathSum", params: ["int[][]"], ret: "int" },
+  call: (a) => [a.grid],
+  cases: [[[[5]]], [[[1], [2], [3]]], [[[1, 2, 3]]]],
   pytest: `
 s = Solution()
 assert s.minPathSum([[1,3,1],[1,5,1],[4,2,1]]) == 7
@@ -55,18 +58,18 @@ assert s.minPathSum([[1],[2],[3]]) == 6
       { t: "grid", label: "grid", rows: g.map((r, i) => r.map((v, j) => ({ v, cls: cls(i, j, ci, cj) }))) },
       { t: "grid", label: "dp[i][j]：走到 (i, j) 的最小路径和", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? "" : v, cls: cls(i, j, ci, cj) }))) },
     ];
-    snap("开始", `从左上角 ${g[0][0]} 出发，只能向右或向下。`, view(-1, -1));
+    snap("开始", `从左上角 ${g[0][0]} 出发，只能向右或向下。`, view(-1, -1), { at: "init" });
     for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
-      let msg;
-      if (!i && !j) { dp[i][j] = g[0][0]; msg = `起点，dp = ${g[0][0]}。`; }
-      else if (!i) { dp[i][j] = dp[i][j - 1] + g[i][j]; msg = `第一行只能从左边来：${dp[i][j - 1]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }
-      else if (!j) { dp[i][j] = dp[i - 1][j] + g[i][j]; msg = `第一列只能从上面来：${dp[i - 1][j]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }
-      else { const u = dp[i - 1][j], l = dp[i][j - 1]; dp[i][j] = Math.min(u, l) + g[i][j]; msg = `上面 ${u}，左边 ${l}，取小的 ${Math.min(u, l)}，加上自己 ${g[i][j]}，dp = <b>${dp[i][j]}</b>。`; }
-      snap(`(${i}, ${j})`, msg, view(i, j));
+      let msg, at;
+      if (!i && !j) { at = "start"; dp[i][j] = g[0][0]; msg = `起点，dp = ${g[0][0]}。`; }
+      else if (!i) { at = "row"; dp[i][j] = dp[i][j - 1] + g[i][j]; msg = `第一行只能从左边来：${dp[i][j - 1]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }
+      else if (!j) { at = "col"; dp[i][j] = dp[i - 1][j] + g[i][j]; msg = `第一列只能从上面来：${dp[i - 1][j]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }
+      else { at = "mid"; const u = dp[i - 1][j], l = dp[i][j - 1]; dp[i][j] = Math.min(u, l) + g[i][j]; msg = `上面 ${u}，左边 ${l}，取小的 ${Math.min(u, l)}，加上自己 ${g[i][j]}，dp = <b>${dp[i][j]}</b>。`; }
+      snap(`(${i}, ${j})`, msg, view(i, j), { at });
     }
     let i = m - 1, j = n - 1; path = [[i, j]];
     while (i || j) { if (!i) j--; else if (!j) i--; else if (dp[i - 1][j] <= dp[i][j - 1]) i--; else j--; path.unshift([i, j]); }
-    snap("完成", `最小路径和是 <b>${dp[m - 1][n - 1]}</b>，路径是 ${path.map(([x, y]) => g[x][y]).join(" → ")}。`, view(-1, -1), { kind: "ok", ans: dp[m - 1][n - 1] });
+    snap("完成", `最小路径和是 <b>${dp[m - 1][n - 1]}</b>，路径是 ${path.map(([x, y]) => g[x][y]).join(" → ")}。`, view(-1, -1), { at: "done", kind: "ok", ans: dp[m - 1][n - 1] });
   },
   points: [
     { t: "边界单独处理", body: "第一行和第一列只有一个来源。用 inf 填充边界也可以省掉特判。" },

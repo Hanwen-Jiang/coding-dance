@@ -10,11 +10,11 @@ module.exports = {
   codes: [{ t: "标准解法：排序后的字符串做键", code: `
 class Solution:
     def groupAnagrams(self, strs: List[str]) -> List[List[str]]:
-        groups = defaultdict(list)
+        groups = defaultdict(list)      #@init
         for s in strs:
-            key = "".join(sorted(s))    # 异位词排序后相同
-            groups[key].append(s)
-        return list(groups.values())
+            key = "".join(sorted(s))    # 异位词排序后相同 #@key
+            groups[key].append(s)       #@add
+        return list(groups.values())    #@done
 ` }, { t: "简洁写法：先排序再 groupby", kind: "elegant", note: "按「排好序的字符串」排序后，异位词会挨在一起，groupby 把相邻的同类分成一组。", code: `
 from itertools import groupby
 
@@ -29,6 +29,9 @@ assert sorted(sorted(g) for g in r) == [["ate","eat","tea"],["bat"],["nat","tan"
 assert s.groupAnagrams([""]) == [[""]]
 assert s.groupAnagrams(["a"]) == [["a"]]
 `,
+  sig: { fn: "groupAnagrams", params: ["string[]"], ret: "List<List<string>>", cmp: "unordered" },
+  call: (a) => [a.strs],
+  cases: [[[""]], [["a"]], [["ab", "ba", "abc", "cab", "bca", "x"]]],
   legend: [["a", "当前的词"], ["d", "已分组"], ["e", "刚放进去"]],
   presets: [
     { label: "示例 1", args: { strs: ["eat", "tea", "tan", "ate", "nat", "bat"] }, note: 'strs = ["eat","tea","tan","ate","nat","bat"]', expect: [["eat", "tea", "ate"], ["tan", "nat"], ["bat"]] },
@@ -40,15 +43,15 @@ assert s.groupAnagrams(["a"]) == [["a"]]
       { t: "chips", label: "strs", items: strs.map((v, j) => ({ v, cls: j === i ? "a" : j < i ? "d" : "" })) },
       ...[...groups].map(([k, g]) => ({ t: "chips", label: `键 "${k}"`, items: g.map((v, j) => ({ v, cls: k === key && j === g.length - 1 ? "e" : "" })) })),
     ];
-    snap("开始", "逐个处理每个词：把字母排序得到键，再放进键对应的那一组。", view(-1));
+    snap("开始", "逐个处理每个词：把字母排序得到键，再放进键对应的那一组。", view(-1), { at: "init" });
     strs.forEach((s, i) => {
       const key = [...s].sort().join("");
       const isNew = !groups.has(key);
       if (isNew) groups.set(key, []);
       groups.get(key).push(s);
-      snap(isNew ? "新的一组" : "放进已有的组", `"${s}" 排序后是 <b>"${key}"</b>。` + (isNew ? "哈希表里还没有这个键，新建一组。" : `这个键已经有了，说明它和 "${groups.get(key)[0]}" 是异位词，放进同一组。`), view(i, key), { facts: [["当前键", key], ["组数", groups.size]] });
+      snap(isNew ? "新的一组" : "放进已有的组", `"${s}" 排序后是 <b>"${key}"</b>。` + (isNew ? "哈希表里还没有这个键，新建一组。" : `这个键已经有了，说明它和 "${groups.get(key)[0]}" 是异位词，放进同一组。`), view(i, key), { at: ["key", "add"], facts: [["当前键", key], ["组数", groups.size]] });
     });
-    snap("完成", `所有词处理完，一共 <b>${groups.size}</b> 组。哈希表的所有值就是答案。`, view(strs.length), { kind: "ok", ans: [...groups.values()], facts: [["组数", groups.size]] });
+    snap("完成", `所有词处理完，一共 <b>${groups.size}</b> 组。哈希表的所有值就是答案。`, view(strs.length), { at: "done", kind: "ok", ans: [...groups.values()], facts: [["组数", groups.size]] });
   },
   points: [
     { t: "键必须能哈希", body: "Python 里列表不能做字典的键，所以排序后要用 <code>\"\".join(...)</code> 变回字符串，或者用元组。" },

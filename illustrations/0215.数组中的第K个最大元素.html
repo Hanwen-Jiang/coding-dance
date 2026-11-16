@@ -368,21 +368,21 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[3,2,1,5,6,4],"k":2}
     const cls = (j) => (j === done ? "c" : j < lo || j > hi ? "d" : j === hl ? "a" : pv === null ? "e" : j < lt ? "g" : j < i ? "k" : j > gt ? "w" : "e");
     const view = () => [{ t: "bars", label: `nums（目标是升序后下标 ${target} 的数）`, items: nums.map((v, j) => ({ v, cls: cls(j) })), ptrs: pv === null ? { lo, hi } : { lt, i: i <= gt ? i : null, gt } }];
     const f = () => ({ facts: [["目标下标", target], ["范围", `[${lo}, ${hi}]`], ["pivot", pv === null ? "—" : pv]] });
-    snap("开始", `第 ${k} 大，就是升序排好后下标 ${n} − ${k} = <b>${target}</b> 的数。只关心这一个位置放的是谁。`, view(), f());
+    snap("开始", `第 ${k} 大，就是升序排好后下标 ${n} − ${k} = <b>${target}</b> 的数。只关心这一个位置放的是谁。`, view(), { at: "init", ...f() });
     for (;;) {
       pv = nums[(lo + hi) >> 1]; lt = lo; i = lo; gt = hi; hl = -1;
-      snap("选 pivot", `这一轮的范围是 [${lo}, ${hi}]。演示里取中间位置的 <b>${pv}</b> 当 pivot（代码里是随机选的）。`, view(), f());
+      snap("选 pivot", `这一轮的范围是 [${lo}, ${hi}]。演示里取中间位置的 <b>${pv}</b> 当 pivot（代码里是随机选的）。`, view(), { at: "pivot", ...f() });
       while (i <= gt) {
         const x = nums[i];
-        if (x < pv) { [nums[lt], nums[i]] = [nums[i], nums[lt]]; lt++; i++; hl = lt - 1; snap("小于", `${x} &lt; ${pv}，放到左边的小于区。`, view(), f()); }
-        else if (x > pv) { [nums[i], nums[gt]] = [nums[gt], nums[i]]; gt--; hl = gt + 1; snap("大于", `${x} &gt; ${pv}，换到右边的大于区。换过来的 ${nums[i]} 还没看过，i 不动。`, view(), f()); }
-        else { i++; hl = i - 1; snap("等于", `${x} 等于 pivot，留在中间的等于区。`, view(), f()); }
+        if (x < pv) { [nums[lt], nums[i]] = [nums[i], nums[lt]]; lt++; i++; hl = lt - 1; snap("小于", `${x} &lt; ${pv}，放到左边的小于区。`, view(), { at: "less", ...f() }); }
+        else if (x > pv) { [nums[i], nums[gt]] = [nums[gt], nums[i]]; gt--; hl = gt + 1; snap("大于", `${x} &gt; ${pv}，换到右边的大于区。换过来的 ${nums[i]} 还没看过，i 不动。`, view(), { at: "more", ...f() }); }
+        else { i++; hl = i - 1; snap("等于", `${x} 等于 pivot，留在中间的等于区。`, view(), { at: "eq", ...f() }); }
       }
       hl = -1;
       const parts = `小于区 [${lo}, ${lt - 1}]，等于区 [${lt}, ${gt}]，大于区 [${gt + 1}, ${hi}]`;
-      if (target < lt) { snap("去左边", `划分完了：${parts}。目标下标 ${target} 在小于区，右边两段直接扔掉。`, view(), f()); hi = lt - 1; pv = null; }
-      else if (target > gt) { snap("去右边", `划分完了：${parts}。目标下标 ${target} 在大于区，左边两段直接扔掉。`, view(), f()); lo = gt + 1; pv = null; }
-      else { done = target; snap("找到", `划分完了：${parts}。目标下标 ${target} 落在等于区，答案就是 pivot <b>${pv}</b>。`, view(), { kind: "ok", ans: pv, ...f() }); return; }
+      if (target < lt) { snap("去左边", `划分完了：${parts}。目标下标 ${target} 在小于区，右边两段直接扔掉。`, view(), { at: "left", ...f() }); hi = lt - 1; pv = null; }
+      else if (target > gt) { snap("去右边", `划分完了：${parts}。目标下标 ${target} 在大于区，左边两段直接扔掉。`, view(), { at: "right", ...f() }); lo = gt + 1; pv = null; }
+      else { done = target; snap("找到", `划分完了：${parts}。目标下标 ${target} 落在等于区，答案就是 pivot <b>${pv}</b>。`, view(), { at: "found", kind: "ok", ans: pv, ...f() }); return; }
     }
   } },
 { t: "小顶堆", note: "堆里始终留着目前见过的最大的 k 个数，堆顶是其中最小的。新来的数比堆顶大才有资格进去，把堆顶换掉。", legend: [["a","正在看的数"],["d","已经看过"],["b","堆顶：目前的第 k 大"],["c","答案"]], build(a, snap) {
@@ -396,13 +396,13 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[3,2,1,5,6,4],"k":2}
         heap.length ? { t: "tree", label: `小顶堆（最多 ${k} 个，堆顶是其中最小的）`, nodes: nodes(), root: 0, cls: { 0: fin ? "c" : "b" } } : { t: "note", label: "小顶堆", html: "空" },
       ];
       const f = () => ({ facts: [["堆大小", `${heap.length} / ${k}`], ["堆顶", heap.length ? heap[0] : "—"]] });
-      snap("开始", `堆里只留目前见过的最大的 ${k} 个数。全部看完后，堆顶就是第 ${k} 大。`, view(-1), f());
+      snap("开始", `堆里只留目前见过的最大的 ${k} 个数。全部看完后，堆顶就是第 ${k} 大。`, view(-1), { at: "push", ...f() });
       nums.forEach((x, j) => {
-        if (heap.length < k) { heap.push(x); up(heap.length - 1); snap("入堆", `堆里还不到 ${k} 个，${x} 直接放进去，调整后堆顶是 ${heap[0]}。`, view(j), f()); }
-        else if (x > heap[0]) { const old = heap[0]; heap[0] = x; down(0); snap("替换堆顶", `${x} 比堆顶 ${old} 大，有资格进前 ${k}。换掉堆顶再往下调整，新的堆顶是 ${heap[0]}。`, view(j), f()); }
-        else snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，跳过。`, view(j), f());
+        if (heap.length < k) { heap.push(x); up(heap.length - 1); snap("入堆", `堆里还不到 ${k} 个，${x} 直接放进去，调整后堆顶是 ${heap[0]}。`, view(j), { at: "push", ...f() }); }
+        else if (x > heap[0]) { const old = heap[0]; heap[0] = x; down(0); snap("替换堆顶", `${x} 比堆顶 ${old} 大，有资格进前 ${k}。换掉堆顶再往下调整，新的堆顶是 ${heap[0]}。`, view(j), { at: "replace", ...f() }); }
+        else snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，跳过。`, view(j), { at: "skip", ...f() });
       });
-      snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, true), { kind: "ok", ans: heap[0], ...f() });
+      snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, true), { at: "done", kind: "ok", ans: heap[0], ...f() });
     } }
 ] };
 (function () {

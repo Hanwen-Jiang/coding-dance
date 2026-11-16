@@ -10,21 +10,21 @@ module.exports = {
   codes: [{ t: "标准解法：二维 DP", code: `
 class Solution:
     def minDistance(self, word1: str, word2: str) -> int:
-        m, n = len(word1), len(word2)
-        dp = [[0] * (n + 1) for _ in range(m + 1)]
-        for i in range(m + 1):
-            dp[i][0] = i                    # 全删掉
-        for j in range(n + 1):
-            dp[0][j] = j                    # 全插入
+        m, n = len(word1), len(word2)   #@init
+        dp = [[0] * (n + 1) for _ in range(m + 1)]  #@init
+        for i in range(m + 1):          #@init
+            dp[i][0] = i                    # 全删掉 #@init
+        for j in range(n + 1):          #@init
+            dp[0][j] = j                    # 全插入 #@init
         for i in range(1, m + 1):
             for j in range(1, n + 1):
-                if word1[i - 1] == word2[j - 1]:
-                    dp[i][j] = dp[i - 1][j - 1]             # 最后一个字符不用动
-                else:
-                    dp[i][j] = 1 + min(dp[i - 1][j],        # 删除
-                                       dp[i][j - 1],        # 插入
-                                       dp[i - 1][j - 1])    # 替换
-        return dp[m][n]
+                if word1[i - 1] == word2[j - 1]:    #@same,diff
+                    dp[i][j] = dp[i - 1][j - 1]             # 最后一个字符不用动 #@same
+                else:                               #@diff
+                    dp[i][j] = 1 + min(dp[i - 1][j],        # 删除 #@diff
+                                       dp[i][j - 1],        # 插入 #@diff
+                                       dp[i - 1][j - 1])    # 替换 #@diff
+        return dp[m][n]                 #@done
 ` }, { t: "简洁写法：记忆化递归", kind: "elegant", note: "有一边为空时，答案就是另一边的长度。", code: `
 from functools import cache
 
@@ -39,6 +39,9 @@ class Solution:
             return 1 + min(d(i - 1, j), d(i, j - 1), d(i - 1, j - 1))
         return d(len(word1), len(word2))
 ` }],
+  sig: { fn: "minDistance", params: ["string", "string"], ret: "int" },
+  call: (a) => [a.w1, a.w2],
+  cases: [["", ""], ["", "abc"], ["abc", ""], ["intention", "execution"]],
   pytest: `
 s = Solution()
 assert s.minDistance("horse", "ros") == 3
@@ -60,19 +63,19 @@ assert s.minDistance("abc", "yabd") == 2
       { t: "array", label: "word2（列 j 对应前 j 个字符）", idxFrom: 1, items: B.split("").map((c, k) => ({ v: c, cls: k === cj - 1 ? "a" : "" })), ptrs: {} },
       { t: "grid", label: "dp[i][j]", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m && j === n ? "c" : i === ci && j === cj ? "a" : used.some(([x, y]) => x === i && y === j) ? "e" : "" }))) },
     ];
-    snap("开始", `第 0 列：把 word1 的前 i 个字符全删掉，要 i 步。第 0 行：从空串插入 j 个字符，要 j 步。`, view(-1, -1, []));
+    snap("开始", `第 0 列：把 word1 的前 i 个字符全删掉，要 i 步。第 0 行：从空串插入 j 个字符，要 j 步。`, view(-1, -1, []), { at: "init" });
     for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
       if (A[i - 1] === B[j - 1]) {
         dp[i][j] = dp[i - 1][j - 1];
-        snap(`(${i}, ${j})`, `最后一个字符都是 '${A[i - 1]}'，不用动。dp[${i}][${j}] = dp[${i - 1}][${j - 1}] = <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j - 1]]));
+        snap(`(${i}, ${j})`, `最后一个字符都是 '${A[i - 1]}'，不用动。dp[${i}][${j}] = dp[${i - 1}][${j - 1}] = <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j - 1]]), { at: "same" });
       } else {
         const d = dp[i - 1][j], ins = dp[i][j - 1], r = dp[i - 1][j - 1];
         dp[i][j] = 1 + Math.min(d, ins, r);
         const how = r <= d && r <= ins ? `替换 '${A[i - 1]}' 为 '${B[j - 1]}'` : d <= ins ? `删除 '${A[i - 1]}'` : `插入 '${B[j - 1]}'`;
-        snap(`(${i}, ${j})`, `'${A[i - 1]}' ≠ '${B[j - 1]}'。删除 ${d} + 1，插入 ${ins} + 1，替换 ${r} + 1。最小的是${how}，dp = <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j], [i, j - 1], [i - 1, j - 1]]));
+        snap(`(${i}, ${j})`, `'${A[i - 1]}' ≠ '${B[j - 1]}'。删除 ${d} + 1，插入 ${ins} + 1，替换 ${r} + 1。最小的是${how}，dp = <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j], [i, j - 1], [i - 1, j - 1]]), { at: "diff" });
       }
     }
-    snap("完成", `"${A}" 变成 "${B}" 最少要 <b>${dp[m][n]}</b> 步。`, view(-1, -1, [], true), { kind: "ok", ans: dp[m][n] });
+    snap("完成", `"${A}" 变成 "${B}" 最少要 <b>${dp[m][n]}</b> 步。`, view(-1, -1, [], true), { at: "done", kind: "ok", ans: dp[m][n] });
   },
   points: [
     { t: "下标错一位", body: "dp 是 (m+1)×(n+1)，dp[i][j] 比较的是 word1[i-1] 和 word2[j-1]。" },

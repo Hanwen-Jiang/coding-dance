@@ -10,23 +10,26 @@ module.exports = {
   codes: [{ t: "标准解法：动态规划 O(n²)", code: `
 class Solution:
     def lengthOfLIS(self, nums: List[int]) -> int:
-        dp = [1] * len(nums)                # dp[i]：以 nums[i] 结尾的 LIS 长度
-        for i in range(len(nums)):
-            for j in range(i):
-                if nums[j] < nums[i]:
-                    dp[i] = max(dp[i], dp[j] + 1)   # 接在 nums[j] 后面
-        return max(dp)
-` }, { t: "简洁写法：贪心 + 二分 O(n log n)", kind: "elegant", note: "tails[k:k+1] = [x]：k 等于长度时相当于 append，否则替换掉更大的结尾。", code: `
+        dp = [1] * len(nums)                # dp[i]：以 nums[i] 结尾的 LIS 长度 #@init
+        for i in range(len(nums)):          #@each
+            for j in range(i):              #@each
+                if nums[j] < nums[i]:       #@each
+                    dp[i] = max(dp[i], dp[j] + 1)   # 接在 nums[j] 后面 #@each
+        return max(dp)                      #@done
+` }, { t: "简洁写法：贪心 + 二分 O(n log n)", key: "tails", kind: "elegant", note: "tails[k:k+1] = [x]：k 等于长度时相当于 append，否则替换掉更大的结尾。", code: `
 from bisect import bisect_left
 
 class Solution:
     def lengthOfLIS(self, nums: List[int]) -> int:
-        tails = []                          # tails[k]：长度 k+1 的递增子序列的最小结尾
+        tails = []                          # tails[k]：长度 k+1 的递增子序列的最小结尾 #@init
         for x in nums:
-            k = bisect_left(tails, x)
-            tails[k:k + 1] = [x]
-        return len(tails)
+            k = bisect_left(tails, x)       # 第一个 >= x 的位置 #@add,rep
+            tails[k:k + 1] = [x]            # k 等于长度时是接在最后，否则是替换 #@add,rep
+        return len(tails)                   #@done
 ` }],
+  sig: { fn: "lengthOfLIS", params: ["int[]"], ret: "int" },
+  call: (a) => [a.nums],
+  cases: [[[1]], [[7, 7, 7]], [[4, 10, 4, 3, 8, 9]], [[1, 3, 6, 7, 9, 4, 10, 5, 6]]],
   pytest: `
 s = Solution()
 assert s.lengthOfLIS([10,9,2,5,3,7,101,18]) == 4
@@ -47,18 +50,19 @@ assert s.lengthOfLIS([4,10,4,3,8,9]) == 3
       { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k === from ? "c" : cand.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
       { t: "array", label: "dp[i]：以 nums[i] 结尾的 LIS 长度", items: dp.map((v, k) => ({ v: v === null ? "" : v, cls: k === i ? "a" : k === from ? "c" : "" })), ptrs: {} },
     ];
-    snap("开始", "从左往右，算出以每个数结尾的最长递增子序列。", view(-1, [], -1));
+    snap("开始", "从左往右，算出以每个数结尾的最长递增子序列。", view(-1, [], -1), { at: "init" });
     for (let i = 0; i < n; i++) {
       const cand = []; let best = 1, from = -1;
       for (let j = 0; j < i; j++) if (nums[j] < nums[i]) { cand.push(j); if (dp[j] + 1 > best) { best = dp[j] + 1; from = j; } }
       dp[i] = best;
-      snap(`dp[${i}]`, cand.length ? `前面比 ${nums[i]} 小的有 ${cand.map((j) => nums[j]).join("、")}。接在 ${nums[from]} 后面最长（dp[${from}] = ${dp[from]}），dp[${i}] = <b>${best}</b>。` : `前面没有比 ${nums[i]} 小的数，它只能自己开头，dp[${i}] = <b>1</b>。`, view(i, cand, from), { facts: [["目前最长", Math.max(...dp.filter((v) => v !== null))]] });
+      snap(`dp[${i}]`, cand.length ? `前面比 ${nums[i]} 小的有 ${cand.map((j) => nums[j]).join("、")}。接在 ${nums[from]} 后面最长（dp[${from}] = ${dp[from]}），dp[${i}] = <b>${best}</b>。` : `前面没有比 ${nums[i]} 小的数，它只能自己开头，dp[${i}] = <b>1</b>。`, view(i, cand, from), { at: "each", facts: [["目前最长", Math.max(...dp.filter((v) => v !== null))]] });
     }
     const ans = Math.max(...dp);
-    snap("完成", `答案是 dp 里的最大值 <b>${ans}</b>，不一定是最后一个。`, view(-1, [], -1), { kind: "ok", ans, facts: [["目前最长", ans]] });
+    snap("完成", `答案是 dp 里的最大值 <b>${ans}</b>，不一定是最后一个。`, view(-1, [], -1), { at: "done", kind: "ok", ans, facts: [["目前最长", ans]] });
   },
   alts: [{
     t: "贪心 + 二分",
+    code: "tails",
     note: "和简洁写法一样：tails[k] 记「长度为 k+1 的递增子序列，结尾最小可以是多少」。新数比所有结尾都大就接在最后；否则用二分找到第一个 ≥ 它的结尾，换成它。",
     legend: [["a", "当前的数"], ["c", "接在最后，长度 +1"], ["w", "换成更小的结尾"]],
     build(a, snap) {
@@ -70,20 +74,20 @@ assert s.lengthOfLIS([4,10,4,3,8,9]) == 3
           : { t: "note", label: "tails", html: "空" },
       ];
       const f = () => ({ facts: [["最长", tails.length]] });
-      snap("开始", "tails 一开始是空的。它始终是递增的，所以可以二分。", view(-1, -1), f());
+      snap("开始", "tails 一开始是空的。它始终是递增的，所以可以二分。", view(-1, -1), { at: "init", ...f() });
       for (let i = 0; i < n; i++) {
         const x = nums[i];
         let lo = 0, hi = tails.length;
         while (lo < hi) { const mid = (lo + hi) >> 1; if (tails[mid] < x) lo = mid + 1; else hi = mid; }
         if (lo === tails.length) {
           tails.push(x);
-          snap("接到最后", `${x} 比 tails 里所有结尾都大，接在最长的那个后面。现在最长是 <b>${tails.length}</b>。`, view(i, lo, "add"), f());
+          snap("接到最后", `${x} 比 tails 里所有结尾都大，接在最长的那个后面。现在最长是 <b>${tails.length}</b>。`, view(i, lo, "add"), { at: "add", ...f() });
         } else {
           const old = tails[lo]; tails[lo] = x;
-          snap("替换", `二分找到第一个 ≥ ${x} 的位置 k = ${lo}（原来是 ${old}）。长度为 ${lo + 1} 的递增子序列，结尾可以从 ${old} 换成更小的 ${x}，后面更容易接上新数。`, view(i, lo, "rep"), f());
+          snap("替换", `二分找到第一个 ≥ ${x} 的位置 k = ${lo}（原来是 ${old}）。长度为 ${lo + 1} 的递增子序列，结尾可以从 ${old} 换成更小的 ${x}，后面更容易接上新数。`, view(i, lo, "rep"), { at: "rep", ...f() });
         }
       }
-      snap("完成", `答案是 tails 的长度 <b>${tails.length}</b>。注意 tails 本身不一定是一个真正的递增子序列，只有长度是对的。`, view(n, -1), { kind: "ok", ans: tails.length, ...f() });
+      snap("完成", `答案是 tails 的长度 <b>${tails.length}</b>。注意 tails 本身不一定是一个真正的递增子序列，只有长度是对的。`, view(n, -1), { at: "done", kind: "ok", ans: tails.length, ...f() });
     },
   }],
   points: [

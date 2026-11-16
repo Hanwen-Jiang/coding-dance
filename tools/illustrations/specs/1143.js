@@ -10,15 +10,15 @@ module.exports = {
   codes: [{ t: "标准解法：二维 DP", code: `
 class Solution:
     def longestCommonSubsequence(self, text1: str, text2: str) -> int:
-        m, n = len(text1), len(text2)
-        dp = [[0] * (n + 1) for _ in range(m + 1)]
+        m, n = len(text1), len(text2)       #@init
+        dp = [[0] * (n + 1) for _ in range(m + 1)]  #@init
         for i in range(1, m + 1):
             for j in range(1, n + 1):
-                if text1[i - 1] == text2[j - 1]:
-                    dp[i][j] = dp[i - 1][j - 1] + 1             # 一起算进去
-                else:
-                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])  # 扔掉一边的最后一个
-        return dp[m][n]
+                if text1[i - 1] == text2[j - 1]:    #@same,diff
+                    dp[i][j] = dp[i - 1][j - 1] + 1             # 一起算进去 #@same
+                else:                               #@diff
+                    dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])  # 扔掉一边的最后一个 #@diff
+        return dp[m][n]                     #@done
 ` }, { t: "简洁写法：一行滚动", kind: "elegant", note: "prev 是上一行，cur 是正在算的这一行。prev[j] 是左上，prev[j+1] 是上面，cur[j] 是左边。", code: `
 class Solution:
     def longestCommonSubsequence(self, text1: str, text2: str) -> int:
@@ -30,6 +30,9 @@ class Solution:
             prev = cur
         return prev[-1]
 ` }],
+  sig: { fn: "longestCommonSubsequence", params: ["string", "string"], ret: "int" },
+  call: (a) => [a.t1, a.t2],
+  cases: [["a", "a"], ["a", "b"], ["abc", "abc"], ["bsbininm", "jmjkbkjkv"]],
   pytest: `
 s = Solution()
 assert s.longestCommonSubsequence("abcde", "ace") == 3
@@ -51,12 +54,12 @@ assert s.longestCommonSubsequence("oxcpqrsvwf", "shmtulqrypy") == 2
       { t: "array", label: "text2（列 j 对应前 j 个字符）", idxFrom: 1, items: B.split("").map((c, k) => ({ v: c, cls: k === cj - 1 ? "a" : "" })), ptrs: {} },
       { t: "grid", label: "dp[i][j]", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m && j === n ? "c" : i === ci && j === cj ? "a" : used.some(([x, y]) => x === i && y === j) ? "e" : "" }))) },
     ];
-    snap("开始", "第 0 行和第 0 列：有一边是空串，公共子序列长度都是 0。", view(-1, -1, []));
+    snap("开始", "第 0 行和第 0 列：有一边是空串，公共子序列长度都是 0。", view(-1, -1, []), { at: "init" });
     for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
-      if (A[i - 1] === B[j - 1]) { dp[i][j] = dp[i - 1][j - 1] + 1; snap(`(${i}, ${j})`, `最后一个字符都是 '${A[i - 1]}'，一起算进去：dp[${i - 1}][${j - 1}] + 1 = <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j - 1]])); }
-      else { dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]); snap(`(${i}, ${j})`, `'${A[i - 1]}' ≠ '${B[j - 1]}'，扔掉一边：上面 ${dp[i - 1][j]}，左边 ${dp[i][j - 1]}，取大的 <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j], [i, j - 1]])); }
+      if (A[i - 1] === B[j - 1]) { dp[i][j] = dp[i - 1][j - 1] + 1; snap(`(${i}, ${j})`, `最后一个字符都是 '${A[i - 1]}'，一起算进去：dp[${i - 1}][${j - 1}] + 1 = <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j - 1]]), { at: "same" }); }
+      else { dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]); snap(`(${i}, ${j})`, `'${A[i - 1]}' ≠ '${B[j - 1]}'，扔掉一边：上面 ${dp[i - 1][j]}，左边 ${dp[i][j - 1]}，取大的 <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j], [i, j - 1]]), { at: "diff" }); }
     }
-    snap("完成", `最长公共子序列的长度是 <b>${dp[m][n]}</b>。`, view(-1, -1, [], true), { kind: "ok", ans: dp[m][n] });
+    snap("完成", `最长公共子序列的长度是 <b>${dp[m][n]}</b>。`, view(-1, -1, [], true), { at: "done", kind: "ok", ans: dp[m][n] });
   },
   points: [
     { t: "子序列不是子串", body: "可以不连续，所以字符不同时不是归零，而是从上面或左边继承。" },

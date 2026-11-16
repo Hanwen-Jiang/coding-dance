@@ -10,26 +10,29 @@ module.exports = {
   codes: [{ t: "标准解法：滑动窗口 + 集合", code: `
 class Solution:
     def lengthOfLongestSubstring(self, s: str) -> int:
-        seen = set()                    # 窗口里的字符
-        l = best = 0
+        seen = set()                    # 窗口里的字符 #@init
+        l = best = 0                    #@init
         for r, ch in enumerate(s):
-            while ch in seen:           # 有重复，左端收缩
-                seen.remove(s[l])
-                l += 1
-            seen.add(ch)
-            best = max(best, r - l + 1)
-        return best
-` }, { t: "简洁写法：记住每个字符上次出现的位置", kind: "elegant", note: "重复字符在窗口里时，左边界直接跳到它上次出现位置的下一格，不用一步一步收缩。", code: `
+            while ch in seen:           # 有重复，左端收缩 #@shrink
+                seen.remove(s[l])       #@shrink
+                l += 1                  #@shrink
+            seen.add(ch)                #@grow
+            best = max(best, r - l + 1) #@grow
+        return best                     #@done
+` }, { t: "简洁写法：记住每个字符上次出现的位置", key: "jump", kind: "elegant", note: "重复字符在窗口里时，左边界直接跳到它上次出现位置的下一格，不用一步一步收缩。", code: `
 class Solution:
     def lengthOfLongestSubstring(self, s: str) -> int:
-        last, left, best = {}, 0, 0
+        last, left, best = {}, 0, 0     #@init
         for i, c in enumerate(s):
-            if last.get(c, -1) >= left:     # c 在窗口里出现过
-                left = last[c] + 1
-            last[c] = i
-            best = max(best, i - left + 1)
-        return best
+            if last.get(c, -1) >= left:     # c 在窗口里出现过 #@jump,grow
+                left = last[c] + 1      #@jump
+            last[c] = i                 #@jump,grow
+            best = max(best, i - left + 1)  #@jump,grow
+        return best                     #@done
 ` }],
+  sig: { fn: "lengthOfLongestSubstring", params: ["string"], ret: "int" },
+  call: (a) => [a.s],
+  cases: [[""], ["bbbbb"], ["dvdf"], [" "], ["tmmzuxt"]],
   pytest: `
 s = Solution()
 assert s.lengthOfLongestSubstring("abcabcbb") == 3
@@ -52,21 +55,22 @@ assert s.lengthOfLongestSubstring("abba") == 2
       { t: "chips", label: "集合 seen", items: [...seen] },
     ];
     const facts = (r) => [["最长", best], ["窗口长度", Math.max(0, r - l + 1)]];
-    snap("开始", "窗口一开始是空的，l 和 r 都在最左边。", view(-1), { facts: [["最长", 0]] });
+    snap("开始", "窗口一开始是空的，l 和 r 都在最左边。", view(-1), { at: "init", facts: [["最长", 0]] });
     for (let r = 0; r < s.length; r++) {
       const ch = s[r];
       while (seen.has(ch)) {
         seen.delete(s[l]);
-        snap("收缩", `新字符 '${ch}' 已经在窗口里。把最左边的 '${s[l]}' 移出去，l 右移。`, view(r, l), { kind: "warn", facts: facts(r - 1) });
+        snap("收缩", `新字符 '${ch}' 已经在窗口里。把最左边的 '${s[l]}' 移出去，l 右移。`, view(r, l), { at: "shrink", kind: "warn", facts: facts(r - 1) });
         l++;
       }
       seen.add(ch); best = Math.max(best, r - l + 1);
-      snap("扩张", `'${ch}' 不在窗口里，放进来。窗口是 "${s.slice(l, r + 1)}"，长度 ${r - l + 1}。`, view(r), { facts: facts(r) });
+      snap("扩张", `'${ch}' 不在窗口里，放进来。窗口是 "${s.slice(l, r + 1)}"，长度 ${r - l + 1}。`, view(r), { at: "grow", facts: facts(r) });
     }
-    snap("完成", `r 走到头了。最长的无重复子串长度是 <b>${best}</b>。`, view(s.length), { kind: "ok", ans: best, facts: [["最长", best]] });
+    snap("完成", `r 走到头了。最长的无重复子串长度是 <b>${best}</b>。`, view(s.length), { at: "done", kind: "ok", ans: best, facts: [["最长", best]] });
   },
   alts: [{
     t: "字典 + 跳转",
+    code: "jump",
     note: "用字典记每个字符上次出现的下标。新字符在窗口里出现过时，左边界一步跳到它上次出现位置的右边，不用一格一格收缩。",
     legend: [["e", "窗口里的字符"], ["a", "刚进来的字符"], ["b", "它上次出现的位置"], ["d", "窗口左边"]],
     build(a, snap) {
@@ -76,19 +80,19 @@ assert s.lengthOfLongestSubstring("abba") == 2
         { t: "chips", label: "last：每个字符上次出现的下标", items: Object.keys(last).map((c) => `${c} → ${last[c]}`), empty: "空" },
       ];
       const facts = (i) => ({ facts: [["最长", best], ["窗口长度", Math.max(0, i - left + 1)]] });
-      snap("开始", "字典 last 是空的，左边界 left = 0。", view(-1, -1), { facts: [["最长", 0]] });
+      snap("开始", "字典 last 是空的，左边界 left = 0。", view(-1, -1), { at: "init", facts: [["最长", 0]] });
       for (let i = 0; i < s.length; i++) {
         const c = s[i], p = c in last ? last[c] : -1;
         if (p >= left) {
           const old = left;
           left = p + 1; last[c] = i; best = Math.max(best, i - left + 1);
-          snap("跳", `'${c}' 上次出现在下标 ${p}，还在窗口 [${old}, ${i - 1}] 里。left 直接从 ${old} 跳到 ${p} + 1 = <b>${left}</b>，窗口变成 "${s.slice(left, i + 1)}"。`, view(i, p), { kind: "warn", ...facts(i) });
+          snap("跳", `'${c}' 上次出现在下标 ${p}，还在窗口 [${old}, ${i - 1}] 里。left 直接从 ${old} 跳到 ${p} + 1 = <b>${left}</b>，窗口变成 "${s.slice(left, i + 1)}"。`, view(i, p), { at: "jump", kind: "warn", ...facts(i) });
         } else {
           last[c] = i; best = Math.max(best, i - left + 1);
-          snap("扩张", (p >= 0 ? `'${c}' 上次出现在下标 ${p}，已经在窗口左边了，不算重复。` : `'${c}' 第一次出现。`) + `记下 last['${c}'] = ${i}。窗口是 "${s.slice(left, i + 1)}"，长度 ${i - left + 1}。`, view(i, -1), facts(i));
+          snap("扩张", (p >= 0 ? `'${c}' 上次出现在下标 ${p}，已经在窗口左边了，不算重复。` : `'${c}' 第一次出现。`) + `记下 last['${c}'] = ${i}。窗口是 "${s.slice(left, i + 1)}"，长度 ${i - left + 1}。`, view(i, -1), { at: "grow", ...facts(i) });
         }
       }
-      snap("完成", `走到头了。最长的无重复子串长度是 <b>${best}</b>。`, view(s.length, -1), { kind: "ok", ans: best, facts: [["最长", best]] });
+      snap("完成", `走到头了。最长的无重复子串长度是 <b>${best}</b>。`, view(s.length, -1), { at: "done", kind: "ok", ans: best, facts: [["最长", best]] });
     },
   }],
   points: [

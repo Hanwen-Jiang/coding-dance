@@ -324,15 +324,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"strs":["eat","tea","tan","
       { t: "chips", label: "strs", items: strs.map((v, j) => ({ v, cls: j === i ? "a" : j < i ? "d" : "" })) },
       ...[...groups].map(([k, g]) => ({ t: "chips", label: `键 "${k}"`, items: g.map((v, j) => ({ v, cls: k === key && j === g.length - 1 ? "e" : "" })) })),
     ];
-    snap("开始", "逐个处理每个词：把字母排序得到键，再放进键对应的那一组。", view(-1));
+    snap("开始", "逐个处理每个词：把字母排序得到键，再放进键对应的那一组。", view(-1), { at: "init" });
     strs.forEach((s, i) => {
       const key = [...s].sort().join("");
       const isNew = !groups.has(key);
       if (isNew) groups.set(key, []);
       groups.get(key).push(s);
-      snap(isNew ? "新的一组" : "放进已有的组", `"${s}" 排序后是 <b>"${key}"</b>。` + (isNew ? "哈希表里还没有这个键，新建一组。" : `这个键已经有了，说明它和 "${groups.get(key)[0]}" 是异位词，放进同一组。`), view(i, key), { facts: [["当前键", key], ["组数", groups.size]] });
+      snap(isNew ? "新的一组" : "放进已有的组", `"${s}" 排序后是 <b>"${key}"</b>。` + (isNew ? "哈希表里还没有这个键，新建一组。" : `这个键已经有了，说明它和 "${groups.get(key)[0]}" 是异位词，放进同一组。`), view(i, key), { at: ["key", "add"], facts: [["当前键", key], ["组数", groups.size]] });
     });
-    snap("完成", `所有词处理完，一共 <b>${groups.size}</b> 组。哈希表的所有值就是答案。`, view(strs.length), { kind: "ok", ans: [...groups.values()], facts: [["组数", groups.size]] });
+    snap("完成", `所有词处理完，一共 <b>${groups.size}</b> 组。哈希表的所有值就是答案。`, view(strs.length), { at: "done", kind: "ok", ans: [...groups.values()], facts: [["组数", groups.size]] });
   } }
 ] };
 (function () {
