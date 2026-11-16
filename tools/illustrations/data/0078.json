@@ -48,13 +48,224 @@
    "kind": null,
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        res, path = [], []\n\n        def dfs(start):\n            res.append(path[:])             # 每个节点都是一个子集\n            for i in range(start, len(nums)):\n                path.append(nums[i])\n                dfs(i + 1)                  # 下一个只能从后面选\n                path.pop()\n\n        dfs(0)\n        return res"
+   "code": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        res, path = [], []\n\n        def dfs(start):\n            res.append(path[:])             # 每个节点都是一个子集\n            for i in range(start, len(nums)):\n                path.append(nums[i])\n                dfs(i + 1)                  # 下一个只能从后面选\n                path.pop()\n\n        dfs(0)\n        return res",
+   "marks": {
+    "init": [
+     3,
+     12
+    ],
+    "collect": [
+     6
+    ],
+    "pick": [
+     8,
+     9
+    ],
+    "done": [
+     13
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    private List<List<Integer>> res = new ArrayList<>();\n    private List<Integer> path = new ArrayList<>();\n    private int[] nums;\n\n    public List<List<Integer>> subsets(int[] nums) {\n        this.nums = nums;\n        dfs(0);\n        return res;\n    }\n\n    private void dfs(int start) {\n        res.add(new ArrayList<>(path));                     // 每个节点都是一个子集\n        for (int i = start; i < nums.length; i++) {\n            path.add(nums[i]);\n            dfs(i + 1);                                     // 下一个只能从后面选\n            path.remove(path.size() - 1);\n        }\n    }\n}",
+     "marks": {
+      "init": [
+       2,
+       3,
+       8
+      ],
+      "done": [
+       9
+      ],
+      "collect": [
+       13
+      ],
+      "pick": [
+       15,
+       16
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    vector<vector<int>> subsets(vector<int>& nums) {\n        vector<vector<int>> res;\n        vector<int> path;\n        function<void(int)> dfs = [&](int start) {\n            res.push_back(path);                            // 每个节点都是一个子集\n            for (int i = start; i < (int)nums.size(); i++) {\n                path.push_back(nums[i]);\n                dfs(i + 1);                                 // 下一个只能从后面选\n                path.pop_back();\n            }\n        };\n        dfs(0);\n        return res;\n    }\n};",
+     "marks": {
+      "init": [
+       4,
+       5,
+       14
+      ],
+      "collect": [
+       7
+      ],
+      "pick": [
+       9,
+       10
+      ],
+      "done": [
+       15
+      ]
+     }
+    },
+    "go": {
+     "code": "func subsets(nums []int) [][]int {\n\tres, path := [][]int{}, []int{}\n\tvar dfs func(start int)\n\tdfs = func(start int) {\n\t\tres = append(res, append([]int{}, path...)) // 每个节点都是一个子集\n\t\tfor i := start; i < len(nums); i++ {\n\t\t\tpath = append(path, nums[i])\n\t\t\tdfs(i + 1)                   // 下一个只能从后面选\n\t\t\tpath = path[:len(path)-1]\n\t\t}\n\t}\n\tdfs(0)\n\treturn res\n}",
+     "marks": {
+      "init": [
+       2,
+       12
+      ],
+      "collect": [
+       5
+      ],
+      "pick": [
+       7,
+       8
+      ],
+      "done": [
+       13
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var subsets = function(nums) {\n    const res = [], path = [];\n    const dfs = (start) => {\n        res.push([...path]);                        // 每个节点都是一个子集\n        for (let i = start; i < nums.length; i++) {\n            path.push(nums[i]);\n            dfs(i + 1);                             // 下一个只能从后面选\n            path.pop();\n        }\n    };\n    dfs(0);\n    return res;\n};",
+     "marks": {
+      "init": [
+       2,
+       11
+      ],
+      "collect": [
+       4
+      ],
+      "pick": [
+       6,
+       7
+      ],
+      "done": [
+       12
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function subsets(nums: number[]): number[][] {\n    const res: number[][] = [], path: number[] = [];\n    const dfs = (start: number): void => {\n        res.push([...path]);                        // 每个节点都是一个子集\n        for (let i = start; i < nums.length; i++) {\n            path.push(nums[i]);\n            dfs(i + 1);                             // 下一个只能从后面选\n            path.pop();\n        }\n    };\n    dfs(0);\n    return res;\n}",
+     "marks": {
+      "init": [
+       2,
+       11
+      ],
+      "collect": [
+       4
+      ],
+      "pick": [
+       6,
+       7
+      ],
+      "done": [
+       12
+      ]
+     }
+    }
+   }
   },
   {
    "t": "简洁写法：逐个加入",
    "kind": "elegant",
    "note": "已有的每个子集都可以选择再加上 x，于是每处理一个数，子集个数翻一倍。",
-   "code": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        res = [[]]\n        for x in nums:\n            res += [s + [x] for s in res]\n        return res"
+   "key": "iter",
+   "code": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        res = [[]]\n        for x in nums:\n            res += [s + [x] for s in res]\n        return res",
+   "marks": {
+    "init": [
+     3
+    ],
+    "add": [
+     5
+    ],
+    "done": [
+     6
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public List<List<Integer>> subsets(int[] nums) {\n        List<List<Integer>> res = new ArrayList<>();\n        res.add(new ArrayList<>());\n        for (int x : nums) {\n            int size = res.size();                          // 只复制已有的子集\n            for (int k = 0; k < size; k++) {\n                List<Integer> s = new ArrayList<>(res.get(k));\n                s.add(x);\n                res.add(s);\n            }\n        }\n        return res;\n    }\n}",
+     "marks": {
+      "init": [
+       3,
+       4
+      ],
+      "add": [
+       6,
+       7,
+       8,
+       9,
+       10
+      ],
+      "done": [
+       13
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    vector<vector<int>> subsets(vector<int>& nums) {\n        vector<vector<int>> res = {{}};\n        for (int x : nums) {\n            int size = res.size();                          // 只复制已有的子集\n            for (int k = 0; k < size; k++) {\n                vector<int> s = res[k];\n                s.push_back(x);\n                res.push_back(s);\n            }\n        }\n        return res;\n    }\n};",
+     "marks": {
+      "init": [
+       4
+      ],
+      "add": [
+       6,
+       7,
+       8,
+       9,
+       10
+      ],
+      "done": [
+       13
+      ]
+     }
+    },
+    "go": {
+     "code": "func subsets(nums []int) [][]int {\n\tres := [][]int{{}}\n\tfor _, x := range nums {\n\t\tsize := len(res)           // 只复制已有的子集\n\t\tfor k := 0; k < size; k++ {\n\t\t\ts := append(append([]int{}, res[k]...), x)\n\t\t\tres = append(res, s)\n\t\t}\n\t}\n\treturn res\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "add": [
+       4,
+       5,
+       6,
+       7
+      ],
+      "done": [
+       10
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var subsets = function(nums) {\n    let res = [[]];\n    for (const x of nums) {\n        res = res.concat(res.map((s) => [...s, x]));    // 已有的每个子集都加上 x\n    }\n    return res;\n};",
+     "marks": {
+      "init": [
+       2
+      ],
+      "add": [
+       4
+      ],
+      "done": [
+       6
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function subsets(nums: number[]): number[][] {\n    let res: number[][] = [[]];\n    for (const x of nums) {\n        res = res.concat(res.map((s) => [...s, x]));    // 已有的每个子集都加上 x\n    }\n    return res;\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "add": [
+       4
+      ],
+      "done": [
+       6
+      ]
+     }
+    }
+   }
   }
  ],
  "demo": {
@@ -95,7 +306,7 @@
     "note": "nums = [0]"
    }
   ],
-  "build": "build(a, snap) {\n    const nums = a.nums, res = [], path = [];\n    const view = (start, pick) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, i) => ({ v, cls: i === pick ? \"a\" : start >= 0 && i >= start ? \"e\" : \"\" })), ptrs: { start: start >= 0 && start < nums.length ? start : null } },\n      { t: \"chips\", label: \"path\", items: path.slice(), empty: \"空\" },\n      { t: \"chips\", label: \"已收集的子集\", items: res.map((r, k) => ({ v: `[${r.join(\",\")}]`, cls: k === res.length - 1 && pick < 0 ? \"c\" : \"\" })), empty: \"还没有\" },\n    ];\n    snap(\"开始\", \"从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。\", view(-1, -1));\n    const dfs = (start) => {\n      res.push(path.slice());\n      snap(\"收集\", `进入 dfs(${start})，先收集 <b>[${path.join(\",\")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : \"后面没有数可挑了，返回。\"), view(start, -1), { facts: [[\"已收集\", res.length]] });\n      for (let i = start; i < nums.length; i++) {\n        path.push(nums[i]);\n        snap(\"放入\", `把 ${nums[i]} 放进 path，变成 [${path.join(\",\")}]，然后进入 dfs(${i + 1})。`, view(start, i), { facts: [[\"已收集\", res.length]] });\n        dfs(i + 1);\n        path.pop();\n      }\n    };\n    dfs(0);\n    snap(\"完成\", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"已收集\", res.length]] });\n  }",
+  "build": "build(a, snap) {\n    const nums = a.nums, res = [], path = [];\n    const view = (start, pick) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, i) => ({ v, cls: i === pick ? \"a\" : start >= 0 && i >= start ? \"e\" : \"\" })), ptrs: { start: start >= 0 && start < nums.length ? start : null } },\n      { t: \"chips\", label: \"path\", items: path.slice(), empty: \"空\" },\n      { t: \"chips\", label: \"已收集的子集\", items: res.map((r, k) => ({ v: `[${r.join(\",\")}]`, cls: k === res.length - 1 && pick < 0 ? \"c\" : \"\" })), empty: \"还没有\" },\n    ];\n    snap(\"开始\", \"从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。\", view(-1, -1), { at: \"init\" });\n    const dfs = (start) => {\n      res.push(path.slice());\n      snap(\"收集\", `进入 dfs(${start})，先收集 <b>[${path.join(\",\")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : \"后面没有数可挑了，返回。\"), view(start, -1), { at: \"collect\", facts: [[\"已收集\", res.length]] });\n      for (let i = start; i < nums.length; i++) {\n        path.push(nums[i]);\n        snap(\"放入\", `把 ${nums[i]} 放进 path，变成 [${path.join(\",\")}]，然后进入 dfs(${i + 1})。`, view(start, i), { at: \"pick\", facts: [[\"已收集\", res.length]] });\n        dfs(i + 1);\n        path.pop();\n      }\n    };\n    dfs(0);\n    snap(\"完成\", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { at: \"done\", kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"已收集\", res.length]] });\n  }",
   "methods": [
    {
     "t": "回溯",
@@ -115,7 +326,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const nums = a.nums, res = [], path = [];\n    const view = (start, pick) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, i) => ({ v, cls: i === pick ? \"a\" : start >= 0 && i >= start ? \"e\" : \"\" })), ptrs: { start: start >= 0 && start < nums.length ? start : null } },\n      { t: \"chips\", label: \"path\", items: path.slice(), empty: \"空\" },\n      { t: \"chips\", label: \"已收集的子集\", items: res.map((r, k) => ({ v: `[${r.join(\",\")}]`, cls: k === res.length - 1 && pick < 0 ? \"c\" : \"\" })), empty: \"还没有\" },\n    ];\n    snap(\"开始\", \"从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。\", view(-1, -1));\n    const dfs = (start) => {\n      res.push(path.slice());\n      snap(\"收集\", `进入 dfs(${start})，先收集 <b>[${path.join(\",\")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : \"后面没有数可挑了，返回。\"), view(start, -1), { facts: [[\"已收集\", res.length]] });\n      for (let i = start; i < nums.length; i++) {\n        path.push(nums[i]);\n        snap(\"放入\", `把 ${nums[i]} 放进 path，变成 [${path.join(\",\")}]，然后进入 dfs(${i + 1})。`, view(start, i), { facts: [[\"已收集\", res.length]] });\n        dfs(i + 1);\n        path.pop();\n      }\n    };\n    dfs(0);\n    snap(\"完成\", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"已收集\", res.length]] });\n  }"
+    "build": "build(a, snap) {\n    const nums = a.nums, res = [], path = [];\n    const view = (start, pick) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, i) => ({ v, cls: i === pick ? \"a\" : start >= 0 && i >= start ? \"e\" : \"\" })), ptrs: { start: start >= 0 && start < nums.length ? start : null } },\n      { t: \"chips\", label: \"path\", items: path.slice(), empty: \"空\" },\n      { t: \"chips\", label: \"已收集的子集\", items: res.map((r, k) => ({ v: `[${r.join(\",\")}]`, cls: k === res.length - 1 && pick < 0 ? \"c\" : \"\" })), empty: \"还没有\" },\n    ];\n    snap(\"开始\", \"从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。\", view(-1, -1), { at: \"init\" });\n    const dfs = (start) => {\n      res.push(path.slice());\n      snap(\"收集\", `进入 dfs(${start})，先收集 <b>[${path.join(\",\")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : \"后面没有数可挑了，返回。\"), view(start, -1), { at: \"collect\", facts: [[\"已收集\", res.length]] });\n      for (let i = start; i < nums.length; i++) {\n        path.push(nums[i]);\n        snap(\"放入\", `把 ${nums[i]} 放进 path，变成 [${path.join(\",\")}]，然后进入 dfs(${i + 1})。`, view(start, i), { at: \"pick\", facts: [[\"已收集\", res.length]] });\n        dfs(i + 1);\n        path.pop();\n      }\n    };\n    dfs(0);\n    snap(\"完成\", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { at: \"done\", kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"已收集\", res.length]] });\n  }"
    },
    {
     "t": "逐个加入",
@@ -130,7 +341,8 @@
       "这一轮新生成的子集"
      ]
     ],
-    "build": "build(a, snap) {\n      const nums = a.nums; let res = [[]], fresh = 0;\n      const view = (k) => [\n        { t: \"array\", label: \"nums\", items: nums.map((v, i) => ({ v, cls: i === k ? \"a\" : i < k ? \"d\" : \"\" })) },\n        { t: \"chips\", label: \"res\", items: res.map((r, i) => ({ v: `[${r.join(\",\")}]`, cls: i >= res.length - fresh ? \"c\" : \"\" })) },\n      ];\n      snap(\"开始\", \"res 里只有一个空集。\", view(-1), { facts: [[\"子集个数\", 1]] });\n      nums.forEach((x, k) => {\n        const add = res.map((s) => [...s, x]);\n        res = res.concat(add); fresh = add.length;\n        snap(`加入 ${x}`, `已有的 ${add.length} 个子集每个都加上 ${x}，得到 ${add.map((s) => `[${s.join(\",\")}]`).join(\"、\")}，接在 res 后面。子集个数翻倍成 ${res.length}。`, view(k), { facts: [[\"子集个数\", res.length]] });\n      });\n      fresh = 0;\n      snap(\"完成\", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(nums.length), { kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"子集个数\", res.length]] });\n    }"
+    "code": "iter",
+    "build": "build(a, snap) {\n      const nums = a.nums; let res = [[]], fresh = 0;\n      const view = (k) => [\n        { t: \"array\", label: \"nums\", items: nums.map((v, i) => ({ v, cls: i === k ? \"a\" : i < k ? \"d\" : \"\" })) },\n        { t: \"chips\", label: \"res\", items: res.map((r, i) => ({ v: `[${r.join(\",\")}]`, cls: i >= res.length - fresh ? \"c\" : \"\" })) },\n      ];\n      snap(\"开始\", \"res 里只有一个空集。\", view(-1), { at: \"init\", facts: [[\"子集个数\", 1]] });\n      nums.forEach((x, k) => {\n        const add = res.map((s) => [...s, x]);\n        res = res.concat(add); fresh = add.length;\n        snap(`加入 ${x}`, `已有的 ${add.length} 个子集每个都加上 ${x}，得到 ${add.map((s) => `[${s.join(\",\")}]`).join(\"、\")}，接在 res 后面。子集个数翻倍成 ${res.length}。`, view(k), { at: \"add\", facts: [[\"子集个数\", res.length]] });\n      });\n      fresh = 0;\n      snap(\"完成\", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(nums.length), { at: \"done\", kind: \"ok\", ans: res.map((r) => r.slice()), facts: [[\"子集个数\", res.length]] });\n    }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const nums = R.distinct(R.int(2, 4), 0, 9);\n    return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().subsets(${R.py(nums)})`, cmp: \"unordered\" };\n  })(R); return { args: r.args, note: r.note }; }"

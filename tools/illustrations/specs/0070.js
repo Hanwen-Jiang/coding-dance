@@ -10,11 +10,11 @@ module.exports = {
   codes: [{ t: "标准解法：动态规划", code: `
 class Solution:
     def climbStairs(self, n: int) -> int:
-        dp = [0] * (n + 1)
-        dp[0] = dp[1] = 1
+        dp = [0] * (n + 1)              #@init
+        dp[0] = dp[1] = 1               #@init
         for i in range(2, n + 1):
-            dp[i] = dp[i - 1] + dp[i - 2]   # 最后一步跨 1 阶或 2 阶
-        return dp[n]
+            dp[i] = dp[i - 1] + dp[i - 2]   # 最后一步跨 1 阶或 2 阶 #@step
+        return dp[n]                    #@done
 ` }, { t: "简洁写法：两个变量滚动", kind: "elegant", code: `
 class Solution:
     def climbStairs(self, n: int) -> int:
@@ -31,6 +31,9 @@ assert s.climbStairs(3) == 3
 assert s.climbStairs(5) == 8
 assert s.climbStairs(45) == 1836311903
 `,
+  sig: { fn: "climbStairs", params: ["int"], ret: "int" },
+  call: (a) => [a.n],
+  cases: [[1], [2], [45]],
   legend: [["a", "正在算的"], ["e", "用到的两项"], ["c", "答案"]],
   presets: [
     { label: "n = 5", args: { n: 5 }, note: "n = 5", expect: 8 },
@@ -40,12 +43,12 @@ assert s.climbStairs(45) == 1836311903
     const n = a.n, dp = Array(n + 1).fill(null);
     dp[0] = 1; dp[1] = 1;
     const view = (i, fin) => [{ t: "array", label: "dp[i]：爬到第 i 阶的方法数", items: dp.map((v, k) => ({ v, cls: fin && k === n ? "c" : k === i ? "a" : i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", "dp[0] = 1（站在地面不动算一种），dp[1] = 1（只能跨 1 步）。", view(-1));
+    snap("开始", "dp[0] = 1（站在地面不动算一种），dp[1] = 1（只能跨 1 步）。", view(-1), { at: "init" });
     for (let i = 2; i <= n; i++) {
       dp[i] = dp[i - 1] + dp[i - 2];
-      snap(`第 ${i} 阶`, `最后一步从第 ${i - 1} 阶跨 1 步（${dp[i - 1]} 种），或从第 ${i - 2} 阶跨 2 步（${dp[i - 2]} 种）。dp[${i}] = ${dp[i - 1]} + ${dp[i - 2]} = <b>${dp[i]}</b>。`, view(i), { facts: [["dp[" + i + "]", dp[i]]] });
+      snap(`第 ${i} 阶`, `最后一步从第 ${i - 1} 阶跨 1 步（${dp[i - 1]} 种），或从第 ${i - 2} 阶跨 2 步（${dp[i - 2]} 种）。dp[${i}] = ${dp[i - 1]} + ${dp[i - 2]} = <b>${dp[i]}</b>。`, view(i), { at: "step", facts: [["dp[" + i + "]", dp[i]]] });
     }
-    snap("完成", `爬到第 ${n} 阶一共有 <b>${dp[n]}</b> 种方法。`, view(-1, true), { kind: "ok", ans: dp[n] });
+    snap("完成", `爬到第 ${n} 阶一共有 <b>${dp[n]}</b> 种方法。`, view(-1, true), { at: "done", kind: "ok", ans: dp[n] });
   },
   points: [
     { t: "dp[0] = 1 的含义", body: "不是「0 阶有 1 种爬法」这么生硬，而是让 dp[2] = dp[1] + dp[0] = 2 成立。也可以直接从 dp[1]=1, dp[2]=2 开始。" },

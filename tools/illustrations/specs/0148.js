@@ -10,22 +10,22 @@ module.exports = {
   codes: [{ t: "标准解法：自顶向下归并排序", code: `
 class Solution:
     def sortList(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        if not head or not head.next:
-            return head
-        slow, fast = head, head.next    # fast 先走一步，slow 停在前半段末尾
-        while fast and fast.next:
-            slow, fast = slow.next, fast.next.next
-        mid, slow.next = slow.next, None    # 从中间断开
-        left, right = self.sortList(head), self.sortList(mid)
-        dummy = cur = ListNode()
-        while left and right:           # 合并两个有序链表
-            if left.val <= right.val:
-                cur.next, left = left, left.next
+        if not head or not head.next:   #@base
+            return head                 #@base
+        slow, fast = head, head.next    # fast 先走一步，slow 停在前半段末尾 #@mid
+        while fast and fast.next:       #@mid
+            slow, fast = slow.next, fast.next.next  #@mid
+        mid, slow.next = slow.next, None    # 从中间断开 #@cut
+        left, right = self.sortList(head), self.sortList(mid)   #@rec
+        dummy = cur = ListNode()        #@merge
+        while left and right:           # 合并两个有序链表 #@merge
+            if left.val <= right.val:   #@merge
+                cur.next, left = left, left.next    #@merge
             else:
-                cur.next, right = right, right.next
-            cur = cur.next
-        cur.next = left or right
-        return dummy.next
+                cur.next, right = right, right.next #@merge
+            cur = cur.next              #@merge
+        cur.next = left or right        #@merge
+        return dummy.next               #@merge,done
 ` }, { t: "简洁写法：取出值排序再写回", kind: "elegant", note: "实际运行最快，但用了 O(n) 额外空间，也没有考到链表操作，面试时只能当作开场。", code: `
 class Solution:
     def sortList(self, head: Optional[ListNode]) -> Optional[ListNode]:
@@ -48,6 +48,9 @@ for _ in range(200):
     a = [random.randint(-9, 9) for _ in range(random.randint(0, 20))]
     assert toL(s.sortList(L(a))) == sorted(a)
 `,
+  sig: { fn: "sortList", params: ["ListNode"], ret: "ListNode" },
+  call: (a) => [a.v],
+  cases: [[[]], [[1]], [[2, 1]], [[5, -3, 5, 0, -100000, 100000, 7, 7, 1]]],
   legend: [["a", "正在拆开的一段"], ["e", "刚拆出的两半"], ["k", "刚合并好的一段"]],
   presets: [
     { label: "示例 1", args: { v: [4, 2, 1, 3] }, note: "head = [4,2,1,3]", expect: [1, 2, 3, 4] },
@@ -57,26 +60,26 @@ for _ in range(200):
     const segs = [a.v.slice()]; let mark = {};
     const f = (s) => `[${s.join(", ")}]`;
     const view = () => [{ t: "chips", label: "当前的各段（从左到右是它们在链表里的顺序）", items: segs.map((s, i) => ({ v: f(s), cls: mark[i] || "" })) }];
-    snap("开始", "整个链表是一段。超过一个节点的段都要继续拆。", view());
+    snap("开始", "整个链表是一段。超过一个节点的段都要继续拆。", view(), { at: "base" });
     const sort = (i) => {
       const s = segs[i];
       if (s.length <= 1) return;
       const h = Math.ceil(s.length / 2), L = s.slice(0, h), R = s.slice(h);
       mark = { [i]: "a" };
-      snap("找中点", `${f(s)} 有 ${s.length} 个节点。快慢指针找到中点，准备从中间断开。`, view());
+      snap("找中点", `${f(s)} 有 ${s.length} 个节点。快慢指针找到中点，准备从中间断开。`, view(), { at: "mid" });
       segs.splice(i, 1, L, R); mark = { [i]: "e", [i + 1]: "e" };
-      snap("断开", `断成 ${f(L)} 和 ${f(R)}，两半分别去排序。`, view());
+      snap("断开", `断成 ${f(L)} 和 ${f(R)}，两半分别去排序。`, view(), { at: ["cut", "rec"] });
       sort(i); sort(i + 1);
       const x = segs[i], y = segs[i + 1], m = []; let p = 0, q = 0;
       while (p < x.length && q < y.length) m.push(x[p] <= y[q] ? x[p++] : y[q++]);
       m.push(...x.slice(p), ...y.slice(q));
       mark = { [i]: "a", [i + 1]: "a" };
-      snap("准备合并", `${f(x)} 和 ${f(y)} 都已经有序，用合并两个有序链表的方法合起来。`, view());
+      snap("准备合并", `${f(x)} 和 ${f(y)} 都已经有序，用合并两个有序链表的方法合起来。`, view(), { at: "rec" });
       segs.splice(i, 2, m); mark = { [i]: "k" };
-      snap("合并", `每次取两个头里较小的那个，得到 ${f(m)}。`, view());
+      snap("合并", `每次取两个头里较小的那个，得到 ${f(m)}。`, view(), { at: "merge" });
     };
     sort(0); mark = { 0: "k" };
-    snap("完成", `所有段都合并回一条链表：${f(segs[0])}。`, view(), { kind: "ok", ans: segs[0] });
+    snap("完成", `所有段都合并回一条链表：${f(segs[0])}。`, view(), { at: "done", kind: "ok", ans: segs[0] });
   },
   points: [
     { t: "fast 从 head.next 出发", body: "这样两个节点的链表能断成 1 + 1。如果 fast 从 head 出发，会断成 2 + 0，递归永远不结束。" },

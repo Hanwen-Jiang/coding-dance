@@ -10,18 +10,18 @@ module.exports = {
   codes: [{ t: "标准解法：两遍扫描 + 反转", code: `
 class Solution:
     def nextPermutation(self, nums: List[int]) -> None:
-        i = len(nums) - 2
-        while i >= 0 and nums[i] >= nums[i + 1]:    # 从右往左找第一个下降
-            i -= 1
-        if i >= 0:
-            j = len(nums) - 1
-            while nums[j] <= nums[i]:               # 右边第一个比 nums[i] 大的
-                j -= 1
-            nums[i], nums[j] = nums[j], nums[i]
-        l, r = i + 1, len(nums) - 1                 # 右段反转成升序
-        while l < r:
-            nums[l], nums[r] = nums[r], nums[l]
-            l, r = l + 1, r - 1
+        i = len(nums) - 2                           #@init
+        while i >= 0 and nums[i] >= nums[i + 1]:    # 从右往左找第一个下降 #@findi
+            i -= 1                                  #@findi
+        if i >= 0:                                  #@found
+            j = len(nums) - 1                       #@findj
+            while nums[j] <= nums[i]:               # 右边第一个比 nums[i] 大的 #@findj
+                j -= 1                              #@findj
+            nums[i], nums[j] = nums[j], nums[i]     #@swap
+        l, r = i + 1, len(nums) - 1                 # 右段反转成升序 #@rev
+        while l < r:                                #@rev
+            nums[l], nums[r] = nums[r], nums[l]     #@rev
+            l, r = l + 1, r - 1                     #@rev
 ` }, { t: "简洁写法：next + 切片反转", kind: "elegant", note: "找不到 i 时 next 返回默认值 -1，切片 nums[0:] 正好是整个数组。", code: `
 class Solution:
     def nextPermutation(self, nums: List[int]) -> None:
@@ -43,6 +43,9 @@ assert f([2,3,1]) == [3,1,2]
 assert f([1]) == [1]
 assert f([1,5,8,4,7,6,5,3,1]) == [1,5,8,5,1,3,4,6,7]
 `,
+  sig: { fn: "nextPermutation", params: ["int[]"], ret: "void" },
+  call: (a) => [a.nums],
+  cases: [[[1]], [[1, 1, 5]], [[5, 1, 1]], [[2, 2, 2]], [[1, 3, 2]]],
   legend: [["a", "第 i 位"], ["b", "要换上来的 j"], ["e", "右边的降序段"], ["c", "改好的部分"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 2, 3] }, note: "nums = [1,2,3]", expect: [1, 3, 2] },
@@ -52,25 +55,25 @@ assert f([1,5,8,4,7,6,5,3,1]) == [1,5,8,5,1,3,4,6,7]
   build(a, snap) {
     const nums = a.nums.slice(), n = nums.length;
     const view = (cls, ptrs) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: cls(k) })), ptrs: ptrs || {} }];
-    snap("开始", `要找比 [${nums.join(",")}] 大的排列里最小的那个。先从右往左找第一个比右边小的数。`, view(() => ""));
+    snap("开始", `要找比 [${nums.join(",")}] 大的排列里最小的那个。先从右往左找第一个比右边小的数。`, view(() => ""), { at: "init" });
     let i = n - 2;
     while (i >= 0 && nums[i] >= nums[i + 1]) {
-      snap("找下降", `nums[${i}] = ${nums[i]} ≥ nums[${i + 1}] = ${nums[i + 1]}，还在降序段里，继续往左。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }));
+      snap("找下降", `nums[${i}] = ${nums[i]} ≥ nums[${i + 1}] = ${nums[i + 1]}，还在降序段里，继续往左。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }), { at: "findi" });
       i--;
     }
     if (i >= 0) {
-      snap("找到 i", `nums[${i}] = ${nums[i]} &lt; nums[${i + 1}] = ${nums[i + 1]}。右边 [${nums.slice(i + 1).join(",")}] 是降序，已经最大了，要动的是第 <b>${i}</b> 位。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }));
+      snap("找到 i", `nums[${i}] = ${nums[i]} &lt; nums[${i + 1}] = ${nums[i + 1]}。右边 [${nums.slice(i + 1).join(",")}] 是降序，已经最大了，要动的是第 <b>${i}</b> 位。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }), { at: "found" });
       let j = n - 1;
       while (nums[j] <= nums[i]) j--;
-      snap("找 j", `在右段里从右往左找，第一个比 ${nums[i]} 大的是 nums[${j}] = <b>${nums[j]}</b>，它是右段里比 ${nums[i]} 大的最小的数。`, view((k) => (k === i ? "a" : k === j ? "b" : k > i ? "e" : ""), { i, j }));
+      snap("找 j", `在右段里从右往左找，第一个比 ${nums[i]} 大的是 nums[${j}] = <b>${nums[j]}</b>，它是右段里比 ${nums[i]} 大的最小的数。`, view((k) => (k === i ? "a" : k === j ? "b" : k > i ? "e" : ""), { i, j }), { at: "findj" });
       [nums[i], nums[j]] = [nums[j], nums[i]];
-      snap("交换", `交换后第 ${i} 位变成 ${nums[i]}，排列变大了。右段 [${nums.slice(i + 1).join(",")}] 仍然是降序。`, view((k) => (k === i ? "c" : k > i ? "e" : ""), { i }));
+      snap("交换", `交换后第 ${i} 位变成 ${nums[i]}，排列变大了。右段 [${nums.slice(i + 1).join(",")}] 仍然是降序。`, view((k) => (k === i ? "c" : k > i ? "e" : ""), { i }), { at: "swap" });
     } else {
-      snap("整体降序", "一直找到最左边都没有下降的位置，说明已经是最大的排列。把整个数组反转，回到最小的排列。", view(() => "e"));
+      snap("整体降序", "一直找到最左边都没有下降的位置，说明已经是最大的排列。把整个数组反转，回到最小的排列。", view(() => "e"), { at: "found" });
     }
     let l = i + 1, r = n - 1;
     while (l < r) { [nums[l], nums[r]] = [nums[r], nums[l]]; l++; r--; }
-    snap("反转右段", `把第 ${i + 1} 位之后反转成升序，让右边尽量小。结果是 <b>[${nums.join(",")}]</b>。`, view((k) => (k > i ? "c" : "")), { kind: "ok", ans: nums.slice() });
+    snap("反转右段", `把第 ${i + 1} 位之后反转成升序，让右边尽量小。结果是 <b>[${nums.join(",")}]</b>。`, view((k) => (k > i ? "c" : "")), { at: "rev", kind: "ok", ans: nums.slice() });
   },
   points: [
     { t: "比较要带等号", body: "找 i 用 <code>nums[i] &gt;= nums[i+1]</code> 继续走，找 j 用 <code>nums[j] &lt;= nums[i]</code> 继续走。有重复元素时少了等号会出错。" },
