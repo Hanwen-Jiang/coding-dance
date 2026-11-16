@@ -92,7 +92,7 @@ function exportCases({ name, label, sig, call, presets, extra, gen, seed, code, 
     Math.random = mulberry32(seed);
     try { const R = makeR(); for (let k = 0; k < 10; k++) add(call(gen(R).args, H)); } finally { Math.random = orig; }
   }
-  const outs = pyJudge.runSync({ name, sig: normSig(sig), cases: inputs, code }, path.join(os.tmpdir(), "lc-judge", "build"));
+  const outs = pyJudge.runSync({ name, sig: normSig(sig), cases: inputs, code }, path.join(os.tmpdir(), "lc-judge", String(process.pid), "build"));
   outs.forEach((o, i) => { if (o && typeof o === "object" && !Array.isArray(o) && "__error" in o) throw new Error(`${label}: 标准解法跑判题用例出错：${JSON.stringify(inputs[i])} → ${o.__error}`); });
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, `{\n "sig": ${JSON.stringify(sig)},\n "cases": [\n${inputs.map((x, i) => "  " + JSON.stringify({ in: x, out: outs[i] })).join(",\n")}\n ]\n}\n`);
@@ -144,6 +144,8 @@ const only = process.argv.slice(2).filter((a) => !a.startsWith("--")).map(Number
 let n = 0;
 for (const f of fs.readdirSync(path.join(dir, "specs")).sort()) {
   if (!f.endsWith(".js")) continue;
+  // 带题号运行时只加载这几题的 spec：别的题正改到一半、暂时有语法错误时不受影响
+  if (only.length && !only.includes(Number(f.slice(0, 4)))) continue;
   const S = require(path.join(dir, "specs", f));
   if (only.length && !only.includes(S.id)) continue;
   if (dataOnly) { exportData(S); n++; continue; }

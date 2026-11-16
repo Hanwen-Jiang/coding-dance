@@ -64,9 +64,11 @@ async function main() {
       }
     }
     if (!jobs.length) { console.log(`- ${lang}：没有代码`); continue; }
-    const dir = path.join(os.tmpdir(), "lc-judge", lang);
+    // 每个进程用自己的临时目录：几个会话同时判题时不会互相覆盖文件
+    const dir = path.join(os.tmpdir(), "lc-judge", String(process.pid), lang);
     const t0 = Date.now();
     const res = await mod.runAll(jobs, dir, { require: require_ });
+    fs.rmSync(dir, { recursive: true, force: true });
     let fail = 0;
     jobs.forEach((job, i) => {
       const r = res[i];

@@ -30,6 +30,18 @@ function conv(t, expr) {
 }
 const cap = (s) => s[0].toUpperCase() + s.slice(1);
 
+// 力扣的 Go 环境会自动导入常用的包，题解里不写 import；这里照样按用到的包补上
+const PKGS = [
+  ["sort", "sort"], ["strings", "strings"], ["strconv", "strconv"], ["math", "math"], ["heap", "container/heap"],
+  ["list", "container/list"], ["bits", "math/bits"], ["rand", "math/rand"], ["slices", "slices"], ["maps", "maps"],
+  ["bytes", "bytes"], ["unicode", "unicode"], ["fmt", "fmt"],
+];
+function withImports(code) {
+  const body = code.replace(/\/\/.*$/gm, "").replace(/"(?:[^"\\]|\\.)*"/g, '""'); // 注释和字符串里的不算
+  const used = PKGS.filter(([name]) => new RegExp(`\\b${name}\\.[A-Za-z]`).test(body)).map(([, p]) => `\t"${p}"`);
+  return used.length ? `import (\n${used.join("\n")}\n)\n\n${code}` : code;
+}
+
 function caseBody(sig, c) {
   if (sig.kind === "design") {
     const [ops, argv] = c, L = ["out := []any{nil}", `obj := Constructor(${argv[0].map((v, i) => lit(sig.ctor[i], v)).join(", ")})`, "_ = obj"];
@@ -82,7 +94,7 @@ module.exports = {
       fs.rmSync(pkg, { recursive: true, force: true });
       fs.mkdirSync(pkg, { recursive: true });
       fs.writeFileSync(path.join(pkg, "prelude.go"), prelude);
-      fs.writeFileSync(path.join(pkg, "sol.go"), "package main\n\n" + job.code + "\n");
+      fs.writeFileSync(path.join(pkg, "sol.go"), "package main\n\n" + withImports(job.code) + "\n");
       fs.writeFileSync(path.join(pkg, "main.go"), mainGo(job));
       const bin = path.join(dir, "bin", job.name + exe);
       const b = await run("go", ["build", "-o", bin, "./j" + job.name], { cwd: dir, timeout: 180000 });
