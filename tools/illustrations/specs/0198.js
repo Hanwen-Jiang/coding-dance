@@ -10,13 +10,13 @@ module.exports = {
   codes: [{ t: "标准解法：动态规划", code: `
 class Solution:
     def rob(self, nums: List[int]) -> int:
-        n = len(nums)
-        dp = [0] * (n + 1)              # dp[i]：前 i 间房最多偷多少
-        dp[1] = nums[0]
+        n = len(nums)                   #@init
+        dp = [0] * (n + 1)              # dp[i]：前 i 间房最多偷多少 #@init
+        dp[1] = nums[0]                 #@init
         for i in range(2, n + 1):
-            dp[i] = max(dp[i - 1],                  # 不偷第 i 间
-                        dp[i - 2] + nums[i - 1])    # 偷第 i 间
-        return dp[n]
+            dp[i] = max(dp[i - 1],                  # 不偷第 i 间 #@step
+                        dp[i - 2] + nums[i - 1])    # 偷第 i 间 #@step
+        return dp[n]                    #@done
 ` }, { t: "简洁写法：两个变量滚动", kind: "elegant", note: "prev 是 dp[i-2]，cur 是 dp[i-1]。", code: `
 class Solution:
     def rob(self, nums: List[int]) -> int:
@@ -32,6 +32,9 @@ assert s.rob([2,7,9,3,1]) == 12
 assert s.rob([5]) == 5
 assert s.rob([2,1,1,2]) == 4
 `,
+  sig: { fn: "rob", params: ["int[]"], ret: "int" },
+  call: (a) => [a.nums],
+  cases: [[[5]], [[0]], [[2, 1]], [[2, 1, 1, 2]]],
   legend: [["a", "正在算的"], ["e", "用到的两项"], ["b", "第 i 间房"], ["c", "答案"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 2, 3, 1] }, note: "nums = [1,2,3,1]", expect: 4 },
@@ -44,13 +47,13 @@ assert s.rob([2,1,1,2]) == 4
       { t: "array", label: "nums（第 1 间到第 n 间）", idxFrom: 1, items: nums.map((v, k) => ({ v, cls: k === i - 1 ? "b" : "" })), ptrs: {} },
       { t: "array", label: "dp[i]：前 i 间最多偷多少", items: dp.map((v, k) => ({ v, cls: fin && k === n ? "c" : k === i ? "a" : i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
     ];
-    snap("开始", `dp[0] = 0（没有房子），dp[1] = ${nums[0]}（只有第 1 间，偷了）。`, view(-1));
+    snap("开始", `dp[0] = 0（没有房子），dp[1] = ${nums[0]}（只有第 1 间，偷了）。`, view(-1), { at: "init" });
     for (let i = 2; i <= n; i++) {
       const no = dp[i - 1], yes = dp[i - 2] + nums[i - 1];
       dp[i] = Math.max(no, yes);
-      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? "，偷" : "，不偷"}。`, view(i), { facts: [["不偷", no], ["偷", yes]] });
+      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? "，偷" : "，不偷"}。`, view(i), { at: "step", facts: [["不偷", no], ["偷", yes]] });
     }
-    snap("完成", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { kind: "ok", ans: dp[n] });
+    snap("完成", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: dp[n] });
   },
   points: [
     { t: "dp 多开一位", body: "dp 长度 n + 1，dp[i] 对应前 i 间房，dp[0] = 0 可以省掉边界判断。" },

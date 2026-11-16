@@ -48,7 +48,167 @@
    "kind": null,
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def findAnagrams(self, s: str, p: str) -> List[int]:\n        m, res = len(p), []\n        need, win = Counter(p), Counter()\n        for r, ch in enumerate(s):\n            win[ch] += 1                # 右边进\n            if r >= m:\n                left = s[r - m]\n                win[left] -= 1          # 左边出\n                if win[left] == 0:\n                    del win[left]\n            if win == need:\n                res.append(r - m + 1)\n        return res"
+   "code": "class Solution:\n    def findAnagrams(self, s: str, p: str) -> List[int]:\n        m, res = len(p), []\n        need, win = Counter(p), Counter()\n        for r, ch in enumerate(s):\n            win[ch] += 1                # 右边进\n            if r >= m:\n                left = s[r - m]\n                win[left] -= 1          # 左边出\n                if win[left] == 0:\n                    del win[left]\n            if win == need:\n                res.append(r - m + 1)\n        return res",
+   "marks": {
+    "init": [
+     3,
+     4
+    ],
+    "in": [
+     6
+    ],
+    "out": [
+     8,
+     9,
+     10,
+     11
+    ],
+    "cmp": [
+     12
+    ],
+    "hit": [
+     13
+    ],
+    "done": [
+     14
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public List<Integer> findAnagrams(String s, String p) {\n        int m = p.length();\n        List<Integer> res = new ArrayList<>();\n        int[] need = new int[26], win = new int[26];        // 每个字母出现的次数\n        for (char c : p.toCharArray()) {\n            need[c - 'a']++;\n        }\n        for (int r = 0; r < s.length(); r++) {\n            win[s.charAt(r) - 'a']++;                       // 右边进\n            if (r >= m) {\n                win[s.charAt(r - m) - 'a']--;               // 左边出\n            }\n            if (Arrays.equals(win, need)) {\n                res.add(r - m + 1);\n            }\n        }\n        return res;\n    }\n}",
+     "marks": {
+      "init": [
+       3,
+       4,
+       5,
+       6,
+       7
+      ],
+      "in": [
+       10
+      ],
+      "out": [
+       12
+      ],
+      "cmp": [
+       14
+      ],
+      "hit": [
+       15
+      ],
+      "done": [
+       18
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    vector<int> findAnagrams(string s, string p) {\n        int m = p.size();\n        vector<int> res;\n        array<int, 26> need{}, win{};                       // 每个字母出现的次数\n        for (char c : p) {\n            need[c - 'a']++;\n        }\n        for (int r = 0; r < s.size(); r++) {\n            win[s[r] - 'a']++;                              // 右边进\n            if (r >= m) {\n                win[s[r - m] - 'a']--;                      // 左边出\n            }\n            if (win == need) {\n                res.push_back(r - m + 1);\n            }\n        }\n        return res;\n    }\n};",
+     "marks": {
+      "init": [
+       4,
+       5,
+       6,
+       7,
+       8
+      ],
+      "in": [
+       11
+      ],
+      "out": [
+       13
+      ],
+      "cmp": [
+       15
+      ],
+      "hit": [
+       16
+      ],
+      "done": [
+       19
+      ]
+     }
+    },
+    "go": {
+     "code": "func findAnagrams(s string, p string) []int {\n\tm, res := len(p), []int{}\n\tvar need, win [26]int     // 每个字母出现的次数\n\tfor _, c := range p {\n\t\tneed[c-'a']++\n\t}\n\tfor r := 0; r < len(s); r++ {\n\t\twin[s[r]-'a']++ // 右边进\n\t\tif r >= m {\n\t\t\twin[s[r-m]-'a']-- // 左边出\n\t\t}\n\t\tif win == need { // 数组可以直接比较\n\t\t\tres = append(res, r-m+1)\n\t\t}\n\t}\n\treturn res\n}",
+     "marks": {
+      "init": [
+       2,
+       3,
+       4,
+       5
+      ],
+      "in": [
+       8
+      ],
+      "out": [
+       10
+      ],
+      "cmp": [
+       12
+      ],
+      "hit": [
+       13
+      ],
+      "done": [
+       16
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var findAnagrams = function(s, p) {\n    const m = p.length, res = [];\n    const need = new Array(26).fill(0), win = new Array(26).fill(0);   // 每个字母出现的次数\n    const idx = (c) => c.charCodeAt(0) - 97;\n    for (const c of p) {\n        need[idx(c)]++;\n    }\n    for (let r = 0; r < s.length; r++) {\n        win[idx(s[r])]++;                               // 右边进\n        if (r >= m) {\n            win[idx(s[r - m])]--;                       // 左边出\n        }\n        if (win.every((x, i) => x === need[i])) {\n            res.push(r - m + 1);\n        }\n    }\n    return res;\n};",
+     "marks": {
+      "init": [
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "in": [
+       9
+      ],
+      "out": [
+       11
+      ],
+      "cmp": [
+       13
+      ],
+      "hit": [
+       14
+      ],
+      "done": [
+       17
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function findAnagrams(s: string, p: string): number[] {\n    const m = p.length, res: number[] = [];\n    const need: number[] = new Array(26).fill(0), win: number[] = new Array(26).fill(0);   // 每个字母出现的次数\n    const idx = (c: string): number => c.charCodeAt(0) - 97;\n    for (const c of p) {\n        need[idx(c)]++;\n    }\n    for (let r = 0; r < s.length; r++) {\n        win[idx(s[r])]++;                               // 右边进\n        if (r >= m) {\n            win[idx(s[r - m])]--;                       // 左边出\n        }\n        if (win.every((x, i) => x === need[i])) {\n            res.push(r - m + 1);\n        }\n    }\n    return res;\n}",
+     "marks": {
+      "init": [
+       2,
+       3,
+       4,
+       5,
+       6
+      ],
+      "in": [
+       9
+      ],
+      "out": [
+       11
+      ],
+      "cmp": [
+       13
+      ],
+      "hit": [
+       14
+      ],
+      "done": [
+       17
+      ]
+     }
+    }
+   }
   },
   {
    "t": "简洁写法：两个 Counter 直接比较",
@@ -91,7 +251,7 @@
     "note": "s = \"abab\", p = \"ab\""
    }
   ],
-  "build": "build(a, snap) {\n    const { s, p } = a, m = p.length, res = [], win = {}, need = {};\n    for (const c of p) need[c] = (need[c] || 0) + 1;\n    const fmt = (o) => Object.keys(o).sort().map((k) => `${k}: ${o[k]}`);\n    const same = () => Object.keys(need).length === Object.keys(win).length && Object.keys(need).every((k) => win[k] === need[k]);\n    const view = (r, hit) => [\n      { t: \"array\", label: \"s\", items: [...s].map((v, i) => ({ v, cls: i <= r && i > r - m ? (hit ? \"c\" : \"e\") : i <= r - m ? \"d\" : \"\" })), ptrs: r >= 0 && r < s.length ? { \"起点\": Math.max(0, r - m + 1), r } : {} },\n      { t: \"chips\", label: \"p 的计数 need\", items: fmt(need) },\n      { t: \"chips\", label: \"窗口的计数 win\", items: fmt(win).map((v) => ({ v, cls: hit ? \"k\" : \"\" })) },\n      { t: \"chips\", label: \"结果（起始下标）\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `p = \"${p}\"，长度 ${m}。窗口长度固定为 ${m}，从左往右滑。`, view(-1));\n    for (let r = 0; r < s.length; r++) {\n      win[s[r]] = (win[s[r]] || 0) + 1;\n      let msg = `'${s[r]}' 从右边进入窗口。`;\n      if (r >= m) { const c = s[r - m]; win[c]--; if (!win[c]) delete win[c]; msg += `'${c}' 从左边离开。`; }\n      if (r < m - 1) { snap(\"填充窗口\", msg + `窗口还没满 ${m} 个字符。`, view(r)); continue; }\n      const hit = same();\n      if (hit) res.push(r - m + 1);\n      snap(hit ? \"找到\" : \"比较\", msg + `窗口是 \"${s.slice(r - m + 1, r + 1)}\"，` + (hit ? `计数和 need 完全相同，记下起点 <b>${r - m + 1}</b>。` : \"计数和 need 不同。\"), view(r, hit), hit ? { kind: \"ok\" } : {});\n    }\n    snap(\"完成\", `窗口滑到头了，一共找到 <b>${res.length}</b> 个起点：[${res.join(\", \")}]。`, view(s.length + m), { kind: \"ok\", ans: res });\n  }",
+  "build": "build(a, snap) {\n    const { s, p } = a, m = p.length, res = [], win = {}, need = {};\n    for (const c of p) need[c] = (need[c] || 0) + 1;\n    const fmt = (o) => Object.keys(o).sort().map((k) => `${k}: ${o[k]}`);\n    const same = () => Object.keys(need).length === Object.keys(win).length && Object.keys(need).every((k) => win[k] === need[k]);\n    const view = (r, hit) => [\n      { t: \"array\", label: \"s\", items: [...s].map((v, i) => ({ v, cls: i <= r && i > r - m ? (hit ? \"c\" : \"e\") : i <= r - m ? \"d\" : \"\" })), ptrs: r >= 0 && r < s.length ? { \"起点\": Math.max(0, r - m + 1), r } : {} },\n      { t: \"chips\", label: \"p 的计数 need\", items: fmt(need) },\n      { t: \"chips\", label: \"窗口的计数 win\", items: fmt(win).map((v) => ({ v, cls: hit ? \"k\" : \"\" })) },\n      { t: \"chips\", label: \"结果（起始下标）\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `p = \"${p}\"，长度 ${m}。窗口长度固定为 ${m}，从左往右滑。`, view(-1), { at: \"init\" });\n    for (let r = 0; r < s.length; r++) {\n      win[s[r]] = (win[s[r]] || 0) + 1;\n      let msg = `'${s[r]}' 从右边进入窗口。`;\n      const at = [\"in\"];\n      if (r >= m) { const c = s[r - m]; win[c]--; if (!win[c]) delete win[c]; msg += `'${c}' 从左边离开。`; at.push(\"out\"); }\n      if (r < m - 1) { snap(\"填充窗口\", msg + `窗口还没满 ${m} 个字符。`, view(r), { at }); continue; }\n      const hit = same();\n      if (hit) res.push(r - m + 1);\n      snap(hit ? \"找到\" : \"比较\", msg + `窗口是 \"${s.slice(r - m + 1, r + 1)}\"，` + (hit ? `计数和 need 完全相同，记下起点 <b>${r - m + 1}</b>。` : \"计数和 need 不同。\"), view(r, hit), hit ? { at: [...at, \"cmp\", \"hit\"], kind: \"ok\" } : { at: [...at, \"cmp\"] });\n    }\n    snap(\"完成\", `窗口滑到头了，一共找到 <b>${res.length}</b> 个起点：[${res.join(\", \")}]。`, view(s.length + m), { at: \"done\", kind: \"ok\", ans: res });\n  }",
   "methods": [
    {
     "t": "标准解法",
@@ -111,7 +271,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const { s, p } = a, m = p.length, res = [], win = {}, need = {};\n    for (const c of p) need[c] = (need[c] || 0) + 1;\n    const fmt = (o) => Object.keys(o).sort().map((k) => `${k}: ${o[k]}`);\n    const same = () => Object.keys(need).length === Object.keys(win).length && Object.keys(need).every((k) => win[k] === need[k]);\n    const view = (r, hit) => [\n      { t: \"array\", label: \"s\", items: [...s].map((v, i) => ({ v, cls: i <= r && i > r - m ? (hit ? \"c\" : \"e\") : i <= r - m ? \"d\" : \"\" })), ptrs: r >= 0 && r < s.length ? { \"起点\": Math.max(0, r - m + 1), r } : {} },\n      { t: \"chips\", label: \"p 的计数 need\", items: fmt(need) },\n      { t: \"chips\", label: \"窗口的计数 win\", items: fmt(win).map((v) => ({ v, cls: hit ? \"k\" : \"\" })) },\n      { t: \"chips\", label: \"结果（起始下标）\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `p = \"${p}\"，长度 ${m}。窗口长度固定为 ${m}，从左往右滑。`, view(-1));\n    for (let r = 0; r < s.length; r++) {\n      win[s[r]] = (win[s[r]] || 0) + 1;\n      let msg = `'${s[r]}' 从右边进入窗口。`;\n      if (r >= m) { const c = s[r - m]; win[c]--; if (!win[c]) delete win[c]; msg += `'${c}' 从左边离开。`; }\n      if (r < m - 1) { snap(\"填充窗口\", msg + `窗口还没满 ${m} 个字符。`, view(r)); continue; }\n      const hit = same();\n      if (hit) res.push(r - m + 1);\n      snap(hit ? \"找到\" : \"比较\", msg + `窗口是 \"${s.slice(r - m + 1, r + 1)}\"，` + (hit ? `计数和 need 完全相同，记下起点 <b>${r - m + 1}</b>。` : \"计数和 need 不同。\"), view(r, hit), hit ? { kind: \"ok\" } : {});\n    }\n    snap(\"完成\", `窗口滑到头了，一共找到 <b>${res.length}</b> 个起点：[${res.join(\", \")}]。`, view(s.length + m), { kind: \"ok\", ans: res });\n  }"
+    "build": "build(a, snap) {\n    const { s, p } = a, m = p.length, res = [], win = {}, need = {};\n    for (const c of p) need[c] = (need[c] || 0) + 1;\n    const fmt = (o) => Object.keys(o).sort().map((k) => `${k}: ${o[k]}`);\n    const same = () => Object.keys(need).length === Object.keys(win).length && Object.keys(need).every((k) => win[k] === need[k]);\n    const view = (r, hit) => [\n      { t: \"array\", label: \"s\", items: [...s].map((v, i) => ({ v, cls: i <= r && i > r - m ? (hit ? \"c\" : \"e\") : i <= r - m ? \"d\" : \"\" })), ptrs: r >= 0 && r < s.length ? { \"起点\": Math.max(0, r - m + 1), r } : {} },\n      { t: \"chips\", label: \"p 的计数 need\", items: fmt(need) },\n      { t: \"chips\", label: \"窗口的计数 win\", items: fmt(win).map((v) => ({ v, cls: hit ? \"k\" : \"\" })) },\n      { t: \"chips\", label: \"结果（起始下标）\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `p = \"${p}\"，长度 ${m}。窗口长度固定为 ${m}，从左往右滑。`, view(-1), { at: \"init\" });\n    for (let r = 0; r < s.length; r++) {\n      win[s[r]] = (win[s[r]] || 0) + 1;\n      let msg = `'${s[r]}' 从右边进入窗口。`;\n      const at = [\"in\"];\n      if (r >= m) { const c = s[r - m]; win[c]--; if (!win[c]) delete win[c]; msg += `'${c}' 从左边离开。`; at.push(\"out\"); }\n      if (r < m - 1) { snap(\"填充窗口\", msg + `窗口还没满 ${m} 个字符。`, view(r), { at }); continue; }\n      const hit = same();\n      if (hit) res.push(r - m + 1);\n      snap(hit ? \"找到\" : \"比较\", msg + `窗口是 \"${s.slice(r - m + 1, r + 1)}\"，` + (hit ? `计数和 need 完全相同，记下起点 <b>${r - m + 1}</b>。` : \"计数和 need 不同。\"), view(r, hit), hit ? { at: [...at, \"cmp\", \"hit\"], kind: \"ok\" } : { at: [...at, \"cmp\"] });\n    }\n    snap(\"完成\", `窗口滑到头了，一共找到 <b>${res.length}</b> 个起点：[${res.join(\", \")}]。`, view(s.length + m), { at: \"done\", kind: \"ok\", ans: res });\n  }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const s = R.word(R.int(8, 12), \"abc\"), p = R.word(R.int(2, 3), \"abc\");\n    return { args: { s, p }, note: `s = \"${s}\", p = \"${p}\"`, py: `Solution().findAnagrams(\"${s}\", \"${p}\")` };\n  })(R); return { args: r.args, note: r.note }; }"

@@ -328,13 +328,13 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,1]},"note":"n
       { t: "array", label: "nums（第 1 间到第 n 间）", idxFrom: 1, items: nums.map((v, k) => ({ v, cls: k === i - 1 ? "b" : "" })), ptrs: {} },
       { t: "array", label: "dp[i]：前 i 间最多偷多少", items: dp.map((v, k) => ({ v, cls: fin && k === n ? "c" : k === i ? "a" : i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
     ];
-    snap("开始", `dp[0] = 0（没有房子），dp[1] = ${nums[0]}（只有第 1 间，偷了）。`, view(-1));
+    snap("开始", `dp[0] = 0（没有房子），dp[1] = ${nums[0]}（只有第 1 间，偷了）。`, view(-1), { at: "init" });
     for (let i = 2; i <= n; i++) {
       const no = dp[i - 1], yes = dp[i - 2] + nums[i - 1];
       dp[i] = Math.max(no, yes);
-      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? "，偷" : "，不偷"}。`, view(i), { facts: [["不偷", no], ["偷", yes]] });
+      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? "，偷" : "，不偷"}。`, view(i), { at: "step", facts: [["不偷", no], ["偷", yes]] });
     }
-    snap("完成", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { kind: "ok", ans: dp[n] });
+    snap("完成", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: dp[n] });
   } }
 ] };
 (function () {

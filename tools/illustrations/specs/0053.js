@@ -10,11 +10,11 @@ module.exports = {
   codes: [{ t: "标准解法：动态规划（Kadane）", code: `
 class Solution:
     def maxSubArray(self, nums: List[int]) -> int:
-        cur = best = nums[0]
+        cur = best = nums[0]            #@init
         for x in nums[1:]:
-            cur = max(x, cur + x)       # 接上前面，或者重新开始
-            best = max(best, cur)
-        return best
+            cur = max(x, cur + x)       # 接上前面，或者重新开始 #@step
+            best = max(best, cur)       #@step
+        return best                     #@done
 ` }, { t: "简洁写法：原地累加", kind: "elegant", note: "nums[i] 变成「以 i 结尾的最大子数组和」：前面的和是负数就不要了。会改掉输入数组。", code: `
 class Solution:
     def maxSubArray(self, nums: List[int]) -> int:
@@ -29,6 +29,9 @@ assert s.maxSubArray([1]) == 1
 assert s.maxSubArray([5,4,-1,7,8]) == 23
 assert s.maxSubArray([-3,-1,-2]) == -1
 `,
+  sig: { fn: "maxSubArray", params: ["int[]"], ret: "int" },
+  call: (a) => [a.nums],
+  cases: [[[1]], [[-1]], [[5, 4, -1, 7, 8]], [[-2, -3, -1, -5]]],
   legend: [["e", "当前这一段"], ["a", "当前的数"], ["c", "和最大的一段"]],
   presets: [
     { label: "示例 1", args: { nums: [-2, 1, -3, 4, -1, 2, 1, -5, 4] }, note: "nums = [-2,1,-3,4,-1,2,1,-5,4]", expect: 6 },
@@ -38,14 +41,14 @@ assert s.maxSubArray([-3,-1,-2]) == -1
     const n = a.nums; let cur = n[0], best = n[0], s = 0, bs = 0, be = 0;
     const view = (i, final) => [{ t: "array", label: "nums", items: n.map((v, j) => ({ v, cls: final ? (j >= bs && j <= be ? "c" : "") : j === i ? "a" : j >= s && j < i ? "e" : "" })), ptrs: final ? {} : { i } }];
     const facts = () => [["cur", cur], ["best", best]];
-    snap("开始", `从第一个数开始，cur = best = ${n[0]}。`, view(0), { facts: facts() });
+    snap("开始", `从第一个数开始，cur = best = ${n[0]}。`, view(0), { at: "init", facts: facts() });
     for (let i = 1; i < n.length; i++) {
       const x = n[i], ext = cur + x;
-      if (ext >= x) { snap("接上", `前面这段的和是 ${cur}，接上 ${x} 得到 ${ext}，比单独的 ${x} 大，<b>接上</b>。`, view(i), { facts: [["cur", ext], ["best", Math.max(best, ext)]] }); cur = ext; }
-      else { snap("重新开始", `前面这段的和是 ${cur}，是负担。接上只有 ${ext}，不如从 ${x} <b>重新开始</b>。`, view(i), { kind: "warn", facts: [["cur", x], ["best", Math.max(best, x)]] }); cur = x; s = i; }
+      if (ext >= x) { snap("接上", `前面这段的和是 ${cur}，接上 ${x} 得到 ${ext}，比单独的 ${x} 大，<b>接上</b>。`, view(i), { at: "step", facts: [["cur", ext], ["best", Math.max(best, ext)]] }); cur = ext; }
+      else { snap("重新开始", `前面这段的和是 ${cur}，是负担。接上只有 ${ext}，不如从 ${x} <b>重新开始</b>。`, view(i), { at: "step", kind: "warn", facts: [["cur", x], ["best", Math.max(best, x)]] }); cur = x; s = i; }
       if (cur > best) { best = cur; bs = s; be = i; }
     }
-    snap("完成", `最大子数组和是 <b>${best}</b>，对应 [${n.slice(bs, be + 1).join(", ")}]。`, view(-1, true), { kind: "ok", ans: best, facts: facts() });
+    snap("完成", `最大子数组和是 <b>${best}</b>，对应 [${n.slice(bs, be + 1).join(", ")}]。`, view(-1, true), { at: "done", kind: "ok", ans: best, facts: facts() });
   },
   points: [
     { t: "初始值用 nums[0]", body: "不能用 0。数组全是负数时，答案是最大的那个负数，用 0 会出错。" },

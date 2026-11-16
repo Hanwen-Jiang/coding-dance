@@ -325,20 +325,20 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,4,5,6,7],"k":
 { t: "标准解法", note: null, legend: [["e","正在翻转的范围"],["a","正在交换的两个数"],["c","已经到位"]], build(a, snap) {
     const n = a.nums.slice(), len = n.length, k = a.k % len; let doneTo = -1;
     const view = (lo, hi, i, j) => [{ t: "array", label: "nums", items: n.map((v, t) => ({ v, cls: t === i || t === j ? "a" : t >= lo && t <= hi ? "e" : t <= doneTo ? "c" : "" })), ptrs: i === undefined ? {} : { i, j } }];
-    snap("开始", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : "。") + `目标是把最后 ${k} 个数搬到最前面。`, view(-1, -1), { facts: [["k % n", k]] });
-    const rev = (lo, hi, name) => {
-      snap(name, `${name}：翻转下标 ${lo} 到 ${hi} 这一段。`, view(lo, hi), { facts: [["k % n", k]] });
+    snap("开始", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : "。") + `目标是把最后 ${k} 个数搬到最前面。`, view(-1, -1), { at: "init", facts: [["k % n", k]] });
+    const rev = (lo, hi, name, tag) => {
+      snap(name, `${name}：翻转下标 ${lo} 到 ${hi} 这一段。`, view(lo, hi), { at: tag, facts: [["k % n", k]] });
       for (let i = lo, j = hi; i < j; i++, j--) {
         [n[i], n[j]] = [n[j], n[i]];
-        snap(name, `交换下标 ${i} 和 ${j}，两边往中间靠。`, view(lo, hi, i, j), { facts: [["k % n", k]] });
+        snap(name, `交换下标 ${i} 和 ${j}，两边往中间靠。`, view(lo, hi, i, j), { at: [tag, "swap"], facts: [["k % n", k]] });
       }
     };
-    rev(0, len - 1, "整体翻转");
-    if (k > 1) rev(0, k - 1, "翻转前 k 个");
+    rev(0, len - 1, "整体翻转", "all");
+    if (k > 1) rev(0, k - 1, "翻转前 k 个", "front");
     doneTo = k - 1;
-    if (len - k > 1) rev(k, len - 1, "翻转剩下的");
+    if (len - k > 1) rev(k, len - 1, "翻转剩下的", "back");
     doneTo = len - 1;
-    snap("完成", `三次翻转后得到 [${n.join(", ")}]。`, view(-1, -1), { kind: "ok", ans: n, facts: [["k % n", k]] });
+    snap("完成", `三次翻转后得到 [${n.join(", ")}]。`, view(-1, -1), { at: [], kind: "ok", ans: n, facts: [["k % n", k]] });
   } }
 ] };
 (function () {

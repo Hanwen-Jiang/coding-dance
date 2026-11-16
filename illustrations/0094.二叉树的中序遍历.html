@@ -341,18 +341,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,null,2,null,null,3]}
     const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
     const res = [], st = {}, stack = [], order = {};
     const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : st[id] === "done" ? "c" : stack.includes(+id) ? "e" : ""; return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: order }, { t: "chips", label: "结果", items: res.slice(), empty: "还没有" }]; };
-    snap("开始", "从根节点开始。每个节点都按「左 → 自己 → 右」的顺序处理。", view(-1));
+    snap("开始", "从根节点开始。每个节点都按「左 → 自己 → 右」的顺序处理。", view(-1), { at: "init" });
     const dfs = (id) => {
       const nd = N[id]; stack.push(id);
-      snap("进入", `进入 ${nd.v}。` + (nd.l !== null ? "先去左子树。" : "它没有左孩子，左边算走完了。"), view(id));
+      snap("进入", `进入 ${nd.v}。` + (nd.l !== null ? "先去左子树。" : "它没有左孩子，左边算走完了。"), view(id), { at: "enter" });
       if (nd.l !== null) dfs(nd.l);
       res.push(nd.v); st[id] = "done"; order[id] = "第 " + res.length;
-      snap("记下自己", `${nd.v} 的左子树走完了，把 <b>${nd.v}</b> 记进结果。` + (nd.r !== null ? "接着去右子树。" : "它没有右孩子，返回上一层。"), view(id));
+      snap("记下自己", `${nd.v} 的左子树走完了，把 <b>${nd.v}</b> 记进结果。` + (nd.r !== null ? "接着去右子树。" : "它没有右孩子，返回上一层。"), view(id), { at: "visit" });
       if (nd.r !== null) dfs(nd.r);
       stack.pop();
     };
     dfs(0);
-    snap("完成", `中序遍历的结果是 [${res.join(", ")}]。`, view(-1), { kind: "ok", ans: res });
+    snap("完成", `中序遍历的结果是 [${res.join(", ")}]。`, view(-1), { at: "done", kind: "ok", ans: res });
   } },
 { t: "用栈模拟", note: "和迭代写法一样：cur 一路向左，沿途的节点入栈；走到空就弹出栈顶记下来，再转向它的右子树。栈做的就是递归时调用栈的事。", legend: [["e","在栈里，还没记"],["a","cur"],["c","已经记进结果"]], build(a, snap) {
       const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
@@ -363,21 +363,21 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,null,2,null,null,3]}
         for (const id in N) cls[id] = +id === hl ? "a" : done.has(+id) ? "c" : stack.includes(+id) ? "e" : "";
         return [{ t: "tree", nodes: N, root: 0, cls, badges: { ...order } }, { t: "chips", label: "栈（右边是栈顶）", items: stack.map((id) => N[id].v), empty: "空" }, { t: "chips", label: "结果", items: res.slice(), empty: "还没有" }];
       };
-      snap("开始", "cur 指着根节点，栈是空的。", view(cur));
+      snap("开始", "cur 指着根节点，栈是空的。", view(cur), { at: "init" });
       while (cur !== null || stack.length) {
         while (cur !== null) {
           stack.push(cur);
           const nd = N[cur];
-          snap("一路向左", `${nd.v} 入栈。` + (nd.l !== null ? `cur 走到它的左孩子 ${N[nd.l].v}。` : "它没有左孩子，cur 变成空。"), view(cur));
+          snap("一路向左", `${nd.v} 入栈。` + (nd.l !== null ? `cur 走到它的左孩子 ${N[nd.l].v}。` : "它没有左孩子，cur 变成空。"), view(cur), { at: "left" });
           cur = nd.l;
         }
         cur = stack.pop();
         const nd = N[cur];
         res.push(nd.v); done.add(cur); order[cur] = "第 " + res.length;
-        snap("出栈记下", `cur 是空的，弹出栈顶 ${nd.v}：它的左子树已经走完了，把 <b>${nd.v}</b> 记进结果。` + (nd.r !== null ? `cur 转向它的右孩子 ${N[nd.r].v}。` : "它没有右孩子，cur 变成空，下一轮接着弹栈。"), view(cur));
+        snap("出栈记下", `cur 是空的，弹出栈顶 ${nd.v}：它的左子树已经走完了，把 <b>${nd.v}</b> 记进结果。` + (nd.r !== null ? `cur 转向它的右孩子 ${N[nd.r].v}。` : "它没有右孩子，cur 变成空，下一轮接着弹栈。"), view(cur), { at: "pop" });
         cur = nd.r;
       }
-      snap("完成", `cur 是空的，栈也空了。中序遍历的结果是 [${res.join(", ")}]。`, view(-1), { kind: "ok", ans: res });
+      snap("完成", `cur 是空的，栈也空了。中序遍历的结果是 [${res.join(", ")}]。`, view(-1), { at: "done", kind: "ok", ans: res });
     } }
 ] };
 (function () {
