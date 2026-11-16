@@ -10,9 +10,9 @@ module.exports = {
   codes: [{ t: "标准解法：递归", code: `
 class Solution:
     def maxDepth(self, root: Optional[TreeNode]) -> int:
-        if not root:
-            return 0
-        return max(self.maxDepth(root.left), self.maxDepth(root.right)) + 1
+        if not root:                    #@base
+            return 0                    #@base
+        return max(self.maxDepth(root.left), self.maxDepth(root.right)) + 1   #@down,depth
 ` }, { t: "简洁写法：一行", kind: "elegant", code: `
 class Solution:
     def maxDepth(self, root: Optional[TreeNode]) -> int:
@@ -24,6 +24,9 @@ assert s.maxDepth(T([3,9,20,None,None,15,7])) == 3
 assert s.maxDepth(T([1,None,2])) == 2
 assert s.maxDepth(T([])) == 0
 `,
+  sig: { fn: "maxDepth", params: ["TreeNode"], ret: "int" },
+  call: (a, H) => [H.toLc(a.t)],
+  cases: [[[]], [[1, null, 2]], [[0]], [[1, 2, null, 3, null, 4, null, 5]]],
   legend: [["e", "在调用栈上"], ["a", "当前节点"], ["c", "已经算出深度"]],
   presets: [
     { label: "示例 1", args: { t: [3, 9, 20, null, null, 15, 7] }, note: "root = [3,9,20,null,null,15,7]", expect: 3 },
@@ -33,18 +36,18 @@ assert s.maxDepth(T([])) == 0
     const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
     const dep = {}, stack = [];
     const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : id in dep ? "c" : stack.includes(+id) ? "e" : ""; const b = {}; for (const id in dep) b[id] = "深度 " + dep[id]; return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: b }]; };
-    snap("开始", "每个节点下方会标出它这棵子树的深度。空节点的深度是 0。", view(-1));
+    snap("开始", "每个节点下方会标出它这棵子树的深度。空节点的深度是 0。", view(-1), { at: "base" });
     const dfs = (id) => {
       const nd = N[id]; stack.push(id);
-      if (nd.l !== null || nd.r !== null) snap("进入", `进入 ${nd.v}，先分别问左右子树的深度。`, view(id));
+      if (nd.l !== null || nd.r !== null) snap("进入", `进入 ${nd.v}，先分别问左右子树的深度。`, view(id), { at: "down" });
       const L = nd.l !== null ? dfs(nd.l) : 0, R = nd.r !== null ? dfs(nd.r) : 0;
       dep[id] = Math.max(L, R) + 1;
-      snap("算出深度", nd.l === null && nd.r === null ? `${nd.v} 是叶子，左右都是空（深度 0），所以它的深度是 0 + 1 = <b>1</b>。` : `${nd.v}：左子树深度 ${L}，右子树深度 ${R}。取较大的再加 1，得到 <b>${dep[id]}</b>。`, view(id));
+      snap("算出深度", nd.l === null && nd.r === null ? `${nd.v} 是叶子，左右都是空（深度 0），所以它的深度是 0 + 1 = <b>1</b>。` : `${nd.v}：左子树深度 ${L}，右子树深度 ${R}。取较大的再加 1，得到 <b>${dep[id]}</b>。`, view(id), { at: "depth" });
       stack.pop();
       return dep[id];
     };
     const ans = dfs(0);
-    snap("完成", `根节点的深度是 <b>${ans}</b>，这就是整棵树的最大深度。`, view(-1), { kind: "ok", ans });
+    snap("完成", `根节点的深度是 <b>${ans}</b>，这就是整棵树的最大深度。`, view(-1), { at: "depth", kind: "ok", ans });
   },
   points: [
     { t: "空树返回 0", body: "根节点为空时深度是 0，这也是递归的终止条件。" },

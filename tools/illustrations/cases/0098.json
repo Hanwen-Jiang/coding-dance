@@ -1,0 +1,24 @@
+{
+ "sig": {"fn":"isValidBST","params":["TreeNode"],"ret":"bool"},
+ "cases": [
+  {"in":[[2,1,3]],"out":true},
+  {"in":[[5,4,6,null,null,3,7]],"out":false},
+  {"in":[[8,4,12,2,6,10,14]],"out":true},
+  {"in":[[2147483647]],"out":true},
+  {"in":[[1,1]],"out":false},
+  {"in":[[2147483647,2147483647]],"out":false},
+  {"in":[[-2147483647,null,2147483647]],"out":true},
+  {"in":[[5,1,4,null,null,3,6]],"out":false},
+  {"in":[[0,-1]],"out":true},
+  {"in":[[12,1,13,null,8,null,16,null,null,null,19,18]],"out":true},
+  {"in":[[12,5,8,null,null,null,6,null,3]],"out":false},
+  {"in":[[17,4,15,null,null,9]],"out":false},
+  {"in":[[11,10,13,1,null,null,19,null,8,null,null,4]],"out":true},
+  {"in":[[11,7,14,1,19,6,null,3]],"out":false},
+  {"in":[[2,15,12,null,7,null,null,4,11,null,null,null,20]],"out":false},
+  {"in":[[17,7,19,null,8,18,null,null,9]],"out":true},
+  {"in":[[8,5,12,null,7]],"out":true},
+  {"in":[[14,7,null,null,12,9]],"out":true},
+  {"in":[[5,20,12,null,null,null,6,18]],"out":false}
+ ]
+}
