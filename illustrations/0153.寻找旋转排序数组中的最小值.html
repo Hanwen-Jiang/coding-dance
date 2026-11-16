@@ -323,13 +323,13 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[4,5,6,7,0,1,2]},"no
 { t: "标准解法", note: null, legend: [["e","还在搜索范围里"],["a","mid"],["b","nums[hi]"],["d","已排除"],["c","最小值"]], build(a, snap) {
     const nums = a.nums; let lo = 0, hi = nums.length - 1;
     const view = (mid, fin) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: fin && k === lo ? "c" : k === mid ? "a" : k === hi && mid >= 0 ? "b" : k < lo || k > hi ? "d" : "e" })), ptrs: { lo, mid: mid >= 0 ? mid : null, hi } }];
-    snap("开始", "搜索范围是整个数组。每次拿 nums[mid] 和 nums[hi] 比。", view(-1));
+    snap("开始", "搜索范围是整个数组。每次拿 nums[mid] 和 nums[hi] 比。", view(-1), { at: "init" });
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (nums[mid] > nums[hi]) { snap("在前一段", `nums[mid] = ${nums[mid]} &gt; nums[hi] = ${nums[hi]}，mid 在前一段，最小值在它右边，lo = ${mid + 1}。`, view(mid)); lo = mid + 1; }
-      else { snap("在后一段", `nums[mid] = ${nums[mid]} ≤ nums[hi] = ${nums[hi]}，mid 在后一段，最小值在 mid 或它左边，hi = ${mid}。`, view(mid)); hi = mid; }
+      if (nums[mid] > nums[hi]) { snap("在前一段", `nums[mid] = ${nums[mid]} &gt; nums[hi] = ${nums[hi]}，mid 在前一段，最小值在它右边，lo = ${mid + 1}。`, view(mid), { at: "front" }); lo = mid + 1; }
+      else { snap("在后一段", `nums[mid] = ${nums[mid]} ≤ nums[hi] = ${nums[hi]}，mid 在后一段，最小值在 mid 或它左边，hi = ${mid}。`, view(mid), { at: "back" }); hi = mid; }
     }
-    snap("完成", `lo = hi = ${lo}，最小值是 <b>${nums[lo]}</b>。`, view(-1, true), { kind: "ok", ans: nums[lo] });
+    snap("完成", `lo = hi = ${lo}，最小值是 <b>${nums[lo]}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: nums[lo] });
   } }
 ] };
 (function () {

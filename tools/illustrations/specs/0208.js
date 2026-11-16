@@ -15,31 +15,31 @@ class TrieNode:
 
 class Trie:
     def __init__(self):
-        self.root = TrieNode()
+        self.root = TrieNode()                  #@init
 
     def insert(self, word: str) -> None:
-        node = self.root
-        for c in word:
-            i = ord(c) - ord("a")
-            if not node.children[i]:
-                node.children[i] = TrieNode()   # 没有路就新建
-            node = node.children[i]
-        node.is_end = True                      # 标记单词结尾
+        node = self.root                        #@insert
+        for c in word:                          #@insert
+            i = ord(c) - ord("a")               #@insert
+            if not node.children[i]:            #@insert
+                node.children[i] = TrieNode()   # 没有路就新建 #@insert
+            node = node.children[i]             #@insert
+        node.is_end = True                      # 标记单词结尾 #@insert
 
     def _find(self, s: str):
-        node = self.root
-        for c in s:
-            node = node.children[ord(c) - ord("a")]
-            if not node:
-                return None
-        return node
+        node = self.root                        #@find
+        for c in s:                             #@find
+            node = node.children[ord(c) - ord("a")]   #@find
+            if not node:                        #@find
+                return None                     #@find
+        return node                             #@find
 
     def search(self, word: str) -> bool:
-        node = self._find(word)
-        return node is not None and node.is_end
+        node = self._find(word)                 #@search
+        return node is not None and node.is_end #@search
 
     def startsWith(self, prefix: str) -> bool:
-        return self._find(prefix) is not None
+        return self._find(prefix) is not None   #@starts
 ` }, { t: "简洁写法：嵌套字典", kind: "elegant", note: "每个节点就是一个 dict，键 \"#\" 表示有单词在这里结束。", code: `
 class Trie:
     def __init__(self):
@@ -65,6 +65,9 @@ class Trie:
     def startsWith(self, prefix: str) -> bool:
         return self._walk(prefix) is not None
 ` }],
+  sig: { cls: "Trie", ctor: [], methods: { insert: [["string"], "void"], search: [["string"], "bool"], startsWith: [["string"], "bool"] } },
+  call: (a) => [["Trie", ...a.ops.map((o) => o[0])], [[], ...a.ops.map((o) => [o[1]])]],
+  cases: [[["Trie", "insert", "search", "startsWith", "search"], [[], ["a"], ["a"], ["b"], ["aa"]]], [["Trie", "search", "startsWith", "insert", "startsWith"], [[], ["z"], ["z"], ["zz"], ["z"]]]],
   pytest: `
 t = Trie()
 t.insert("apple")
@@ -105,7 +108,7 @@ assert t.startsWith("ban") is True and t.search("ban") is False
       { t: "note", label: "前缀树（● 表示有单词在这里结束，蓝色是这次走过的路径）", html: render(hl) },
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : String(v))), empty: "还没有" },
     ];
-    snap("开始", "只有一个空的根节点。", view(-1, ""));
+    snap("开始", "只有一个空的根节点。", view(-1, ""), { at: "init" });
     a.ops.forEach((o, i) => {
       const [op, w] = o; let node = root, msg;
       if (op === "insert") {
@@ -118,9 +121,9 @@ assert t.startsWith("ban") is True and t.search("ban") is False
         const found = !!node, res = op === "search" ? found && node.end : found; out.push(res);
         msg = !found ? `走到第 ${k} 个字母 '${w[k - 1]}' 时没有路了，返回 <b>false</b>。` : op === "search" ? `能走到 "${w}" 的节点，${node.end ? "它有结尾标记" : "但它没有结尾标记，只是别的单词的前缀"}，返回 <b>${res}</b>。` : `能走到 "${w}" 的节点，说明有单词以它开头，返回 <b>true</b>。`;
       }
-      snap(name(o), msg, view(i, w));
+      snap(name(o), msg, view(i, w), { at: op === "insert" ? "insert" : op === "search" ? ["search", "find"] : ["starts", "find"] });
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(a.ops.length, ""), { kind: "ok", ans: out.slice() });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(a.ops.length, ""), { at: [], kind: "ok", ans: out.slice() });
   },
   points: [
     { t: "结尾标记不能省", body: "没有 is_end，就分不清 app 是插入过的单词，还是 apple 的前缀。" },

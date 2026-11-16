@@ -10,13 +10,13 @@ module.exports = {
   codes: [{ t: "标准解法：逐行递推", code: `
 class Solution:
     def generate(self, numRows: int) -> List[List[int]]:
-        res = []
-        for i in range(numRows):
-            row = [1] * (i + 1)             # 首尾是 1
-            for j in range(1, i):
-                row[j] = res[i - 1][j - 1] + res[i - 1][j]
-            res.append(row)
-        return res
+        res = []                        #@init
+        for i in range(numRows):        #@row
+            row = [1] * (i + 1)             # 首尾是 1 #@row
+            for j in range(1, i):       #@mid
+                row[j] = res[i - 1][j - 1] + res[i - 1][j]  #@mid
+            res.append(row)             #@row
+        return res                      #@done
 ` }, { t: "简洁写法：错位相加", kind: "elegant", note: "[0] + prev 和 prev + [0] 错开一位，对应位置相加就是左上 + 正上。", code: `
 class Solution:
     def generate(self, numRows: int) -> List[List[int]]:
@@ -25,6 +25,9 @@ class Solution:
             res.append([a + b for a, b in zip([0] + res[-1], res[-1] + [0])])
         return res
 ` }],
+  sig: { fn: "generate", params: ["int"], ret: "List<List<int>>" },
+  call: (a) => [a.n],
+  cases: [[1], [2], [10]],
   pytest: `
 s = Solution()
 assert s.generate(5) == [[1],[1,1],[1,2,1],[1,3,3,1],[1,4,6,4,1]]
@@ -39,16 +42,16 @@ assert s.generate(2) == [[1],[1,1]]
   build(a, snap) {
     const n = a.n, res = [];
     const view = (ci, cj) => res.map((row, i) => ({ t: "array", label: `第 ${i} 行`, idx: false, items: row.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : ci >= 0 && i === ci - 1 && (j === cj - 1 || j === cj) ? "e" : (j === 0 || j === row.length - 1) ? "c" : "" })) }));
-    snap("开始", "从第 0 行 [1] 开始，一行一行往下生成。", [{ t: "note", label: "三角", html: "还没有" }]);
+    snap("开始", "从第 0 行 [1] 开始，一行一行往下生成。", [{ t: "note", label: "三角", html: "还没有" }], { at: "init" });
     for (let i = 0; i < n; i++) {
       const row = Array(i + 1).fill(null); row[0] = 1; row[i] = 1; res.push(row);
-      snap(`第 ${i} 行`, `第 ${i} 行有 ${i + 1} 个数，先把首尾填成 1。`, view(-1, -1));
+      snap(`第 ${i} 行`, `第 ${i} 行有 ${i + 1} 个数，先把首尾填成 1。`, view(-1, -1), { at: "row" });
       for (let j = 1; j < i; j++) {
         row[j] = res[i - 1][j - 1] + res[i - 1][j];
-        snap(`第 ${i} 行`, `row[${j}] = 上一行的 ${res[i - 1][j - 1]} + ${res[i - 1][j]} = <b>${row[j]}</b>。`, view(i, j));
+        snap(`第 ${i} 行`, `row[${j}] = 上一行的 ${res[i - 1][j - 1]} + ${res[i - 1][j]} = <b>${row[j]}</b>。`, view(i, j), { at: "mid" });
       }
     }
-    snap("完成", `生成了 ${n} 行。`, view(-1, -1), { kind: "ok", ans: res.map((r) => r.slice()) });
+    snap("完成", `生成了 ${n} 行。`, view(-1, -1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()) });
   },
   points: [
     { t: "j 的范围", body: "<code>range(1, i)</code>，第 0 行和第 1 行没有中间的数，循环自然不执行。" },

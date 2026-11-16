@@ -332,14 +332,14 @@ const SPEC = { presets: [{"label":"示例 1","args":{"M":[[1,3,5,7],[10,11,16,20
     let lo = 0, hi = m * n - 1;
     const view = (mid, hit) => [{ t: "grid", label: "matrix（第 i 行第 j 列的一维下标是 i·n + j）", rows: M.map((r, i) => r.map((v, j) => { const k = i * n + j; return { v, cls: k === hit ? "c" : k === mid ? "a" : k < lo || k > hi ? "d" : "e" }; })) }];
     const f = (mid) => ({ facts: [["lo", lo], ["hi", hi], ["mid", mid >= 0 ? `${mid} → (${(mid / n) | 0}, ${mid % n})` : "—"]] });
-    snap("开始", `把 ${m}×${n} 的矩阵看成长度 ${m * n} 的有序数组，下标 0 到 ${m * n - 1}。找 <b>${target}</b>。`, view(-1), f(-1));
+    snap("开始", `把 ${m}×${n} 的矩阵看成长度 ${m * n} 的有序数组，下标 0 到 ${m * n - 1}。找 <b>${target}</b>。`, view(-1), { at: "init", ...f(-1) });
     while (lo <= hi) {
       const mid = (lo + hi) >> 1, x = M[(mid / n) | 0][mid % n];
-      if (x === target) { snap("找到", `下标 ${mid} 对应第 ${(mid / n) | 0} 行第 ${mid % n} 列，值是 ${x}，找到了，返回 <b>true</b>。`, view(-1, mid), { kind: "ok", ans: true, ...f(mid) }); return; }
-      snap(x < target ? "太小" : "太大", `mid = ${mid}，换成行列是 (${(mid / n) | 0}, ${mid % n})，值是 ${x}，比 ${target} ${x < target ? "小，去右半边" : "大，去左半边"}。`, view(mid), f(mid));
+      if (x === target) { snap("找到", `下标 ${mid} 对应第 ${(mid / n) | 0} 行第 ${mid % n} 列，值是 ${x}，找到了，返回 <b>true</b>。`, view(-1, mid), { at: ["loop", "found"], kind: "ok", ans: true, ...f(mid) }); return; }
+      snap(x < target ? "太小" : "太大", `mid = ${mid}，换成行列是 (${(mid / n) | 0}, ${mid % n})，值是 ${x}，比 ${target} ${x < target ? "小，去右半边" : "大，去左半边"}。`, view(mid), { at: ["loop", x < target ? "small" : "big"], ...f(mid) });
       if (x < target) lo = mid + 1; else hi = mid - 1;
     }
-    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，矩阵里没有 ${target}，返回 <b>false</b>。`, view(-1), { kind: "warn", ans: false, ...f(-1) });
+    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，矩阵里没有 ${target}，返回 <b>false</b>。`, view(-1), { at: "none", kind: "warn", ans: false, ...f(-1) });
   } }
 ] };
 (function () {

@@ -10,14 +10,14 @@ module.exports = {
   codes: [{ t: "标准解法：贪心", code: `
 class Solution:
     def partitionLabels(self, s: str) -> List[int]:
-        last = {c: i for i, c in enumerate(s)}  # 每个字母最后出现的位置
-        res, start, end = [], 0, 0
-        for i, c in enumerate(s):
-            end = max(end, last[c])             # 这一段至少要到 end
-            if i == end:                        # 走到边界，切一刀
-                res.append(end - start + 1)
-                start = i + 1
-        return res
+        last = {c: i for i, c in enumerate(s)}  # 每个字母最后出现的位置 #@init
+        res, start, end = [], 0, 0          #@init
+        for i, c in enumerate(s):           #@grow
+            end = max(end, last[c])             # 这一段至少要到 end #@grow
+            if i == end:                        # 走到边界，切一刀 #@cut
+                res.append(end - start + 1)     #@cut
+                start = i + 1                   #@cut
+        return res                          #@done
 ` }, { t: "简洁写法：记下切点再相减", kind: "elegant", note: "切点从 -1 开始，相邻切点的差就是每段长度。", code: `
 class Solution:
     def partitionLabels(self, s: str) -> List[int]:
@@ -29,6 +29,9 @@ class Solution:
                 cuts.append(i)
         return [b - a for a, b in zip(cuts, cuts[1:])]
 ` }],
+  sig: { fn: "partitionLabels", params: ["string"], ret: "List<int>" },
+  call: (a) => [a.s],
+  cases: [["a"], ["abc"], ["eccbbbbdec"], ["aaaa"]],
   pytest: `
 s = Solution()
 assert s.partitionLabels("ababcbacadefegdehijhklij") == [9,7,8]
@@ -50,15 +53,15 @@ assert s.partitionLabels("abc") == [1,1,1]
       { t: "array", label: "s", items: s.split("").map((c, k) => { const g = segOf(k); return { v: c, cls: g >= 0 ? (g % 2 ? "g" : "k") : k === i ? "a" : i >= 0 && k === last[s[i]] ? "b" : k >= start && k <= end && i >= 0 ? "e" : "" }; }), ptrs: { i: i >= 0 ? i : null, end: i >= 0 ? end : null } },
       { t: "chips", label: "片段长度", items: res.slice(), empty: "还没有" },
     ];
-    snap("开始", `先记下每个字母最后出现的位置，比如 '${s[0]}' 最后在 ${last[s[0]]}。然后从左往右走。`, view(-1));
+    snap("开始", `先记下每个字母最后出现的位置，比如 '${s[0]}' 最后在 ${last[s[0]]}。然后从左往右走。`, view(-1), { at: "init" });
     for (let i = 0; i < s.length; i++) {
       const old = end; end = Math.max(end, last[s[i]]);
       if (i === end) {
-        snap("切一刀", `'${s[i]}' 最后出现在 ${last[s[i]]}。走到了 end = ${end}，这一段 [${start}, ${end}] 里的字母都不会再出现了，切下来，长度 <b>${end - start + 1}</b>。`, view(i), { kind: "ok", facts: [["start", start], ["end", end]] });
+        snap("切一刀", `'${s[i]}' 最后出现在 ${last[s[i]]}。走到了 end = ${end}，这一段 [${start}, ${end}] 里的字母都不会再出现了，切下来，长度 <b>${end - start + 1}</b>。`, view(i), { at: ["grow", "cut"], kind: "ok", facts: [["start", start], ["end", end]] });
         res.push(end - start + 1); segs.push([start, end]); start = i + 1;
-      } else snap(end > old ? "撑大边界" : "继续", `'${s[i]}' 最后出现在 ${last[s[i]]}。` + (end > old ? `片段至少要到 ${end}，end 从 ${old} 变成 <b>${end}</b>。` : `没有超过 end = ${end}。`), view(i), { facts: [["start", start], ["end", end]] });
+      } else snap(end > old ? "撑大边界" : "继续", `'${s[i]}' 最后出现在 ${last[s[i]]}。` + (end > old ? `片段至少要到 ${end}，end 从 ${old} 变成 <b>${end}</b>。` : `没有超过 end = ${end}。`), view(i), { at: "grow", facts: [["start", start], ["end", end]] });
     }
-    snap("完成", `一共切成 ${res.length} 段，长度是 [${res.join(",")}]。`, view(-1), { kind: "ok", ans: res.slice() });
+    snap("完成", `一共切成 ${res.length} 段，长度是 [${res.join(",")}]。`, view(-1), { at: "done", kind: "ok", ans: res.slice() });
   },
   points: [
     { t: "end 只增不减", body: "用 max 更新。片段里出现过的字母，边界只会越撑越大。" },

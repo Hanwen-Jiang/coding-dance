@@ -351,22 +351,24 @@ const SPEC = { presets: [{"label":"示例","args":{"ops":[["add",1],["add",2],["
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : v)), empty: "还没有" },
     ];
     const ins = (arr, x) => { arr.push(x); arr.sort((p, q) => p - q); };
-    snap("开始", "两个堆都是空的。", view(-1), { facts: [["lo", 0], ["hi", 0]] });
+    snap("开始", "两个堆都是空的。", view(-1), { at: "init", facts: [["lo", 0], ["hi", 0]] });
     ops.forEach((o, i) => {
-      let msg;
+      let msg, at;
       if (o[0] === "add") {
+        at = "add";
         const x = o[1]; ins(lo, x); const m1 = lo.pop(); ins(hi, m1);
         msg = `先把 ${x} 放进 lo，再把 lo 里最大的 ${m1} 挪到 hi。`;
-        if (hi.length > lo.length) { const m2 = hi.shift(); ins(lo, m2); msg += `hi 比 lo 多了，把 hi 里最小的 ${m2} 挪回 lo。`; }
+        if (hi.length > lo.length) { const m2 = hi.shift(); ins(lo, m2); msg += `hi 比 lo 多了，把 hi 里最小的 ${m2} 挪回 lo。`; at = ["add", "rebal"]; }
         out.push(null);
       } else {
         const med = lo.length > hi.length ? lo[lo.length - 1] : (lo[lo.length - 1] + hi[0]) / 2;
         out.push(med);
+        at = lo.length > hi.length ? "odd" : "even";
         msg = lo.length > hi.length ? `一共 ${lo.length + hi.length} 个数，是奇数，中位数是 lo 的堆顶 <b>${med}</b>。` : `一共 ${lo.length + hi.length} 个数，是偶数，中位数是两个堆顶的平均 (${lo[lo.length - 1]} + ${hi[0]}) / 2 = <b>${med}</b>。`;
       }
-      snap(name(o), msg, view(i), { facts: [["lo", lo.length], ["hi", hi.length]] });
+      snap(name(o), msg, view(i), { at, facts: [["lo", lo.length], ["hi", hi.length]] });
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { kind: "ok", ans: out.slice(), facts: [["lo", lo.length], ["hi", hi.length]] });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { at: [], kind: "ok", ans: out.slice(), facts: [["lo", lo.length], ["hi", hi.length]] });
   } }
 ] };
 (function () {

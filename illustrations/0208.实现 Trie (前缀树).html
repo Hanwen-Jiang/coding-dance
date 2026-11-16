@@ -389,7 +389,7 @@ const SPEC = { presets: [{"label":"示例","args":{"ops":[["insert","apple"],["s
       { t: "note", label: "前缀树（● 表示有单词在这里结束，蓝色是这次走过的路径）", html: render(hl) },
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : String(v))), empty: "还没有" },
     ];
-    snap("开始", "只有一个空的根节点。", view(-1, ""));
+    snap("开始", "只有一个空的根节点。", view(-1, ""), { at: "init" });
     a.ops.forEach((o, i) => {
       const [op, w] = o; let node = root, msg;
       if (op === "insert") {
@@ -402,9 +402,9 @@ const SPEC = { presets: [{"label":"示例","args":{"ops":[["insert","apple"],["s
         const found = !!node, res = op === "search" ? found && node.end : found; out.push(res);
         msg = !found ? `走到第 ${k} 个字母 '${w[k - 1]}' 时没有路了，返回 <b>false</b>。` : op === "search" ? `能走到 "${w}" 的节点，${node.end ? "它有结尾标记" : "但它没有结尾标记，只是别的单词的前缀"}，返回 <b>${res}</b>。` : `能走到 "${w}" 的节点，说明有单词以它开头，返回 <b>true</b>。`;
       }
-      snap(name(o), msg, view(i, w));
+      snap(name(o), msg, view(i, w), { at: op === "insert" ? "insert" : op === "search" ? ["search", "find"] : ["starts", "find"] });
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(a.ops.length, ""), { kind: "ok", ans: out.slice() });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(a.ops.length, ""), { at: [], kind: "ok", ans: out.slice() });
   } }
 ] };
 (function () {
