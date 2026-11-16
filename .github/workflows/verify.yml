@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: 生成数据和图解页面
-        run: node tools/illustrations/build.js
+        run: node tools/illustrations/build.js --strict
       - name: 生成的文件要和提交的一致
         run: git diff --exit-code -- tools/illustrations/data tools/illustrations/cases illustrations
       - name: 同步逻辑的测试
