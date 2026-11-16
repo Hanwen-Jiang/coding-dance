@@ -4,5 +4,8 @@ export const TOPIC_SLUGS = [
   "prefix-sum",
   "hash-table",
   "linked-list",
+  "stack-queue",
+  "heap",
+  "binary-tree",
   "binary-search",
 ];
