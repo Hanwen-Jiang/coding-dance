@@ -1,7 +1,13 @@
+const F = require("../fig");
+
 module.exports = {
   id: 437, name: "路径总和 III", title: "路径总和 III图解", level: "中等", topic: "二叉树",
   h1: "路径总和 III，树上的前缀和",
   lede: "从根往下走到某个节点，路上的和叫做前缀和。一条向下的路径的和，等于两个前缀和之差。所以走到一个节点时，只要问：从根到这里的路上，有几个前缀和等于「当前前缀和 − targetSum」？和第 560 题和为 K 的子数组是同一个思路，只是要在离开节点时撤销。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "pathsum3-1-tree.jpg": [F.tree([10, 5, -3, 3, 2, null, 11, 3, -2, null, 1], { label: "和为 8 的三条路径：5 → 3、5 → 2 → 1（蓝色）、-3 → 11（紫色）", cls: (v, i) => ([1, 3, 4, 10].includes(i) ? "e" : i === 2 || i === 6 ? "g" : "") })],
+  },
   hints: [
     { t: "路径和 = 前缀和之差", body: ["记 <code>cur</code> 为从根到当前节点的和。如果从根到某个祖先的和是 <code>cur - targetSum</code>，那么从这个祖先的下一个节点到当前节点，和正好是 <code>targetSum</code>。"] },
     { t: "用哈希表计数", body: ["<code>cnt[s]</code>：从根到当前节点的路径上，前缀和 <code>s</code> 出现了几次。", "初始化 <code>cnt[0] = 1</code>，表示从根开始的路径。"] },

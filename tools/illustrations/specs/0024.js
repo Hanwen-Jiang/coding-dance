@@ -1,7 +1,13 @@
+const F = require("../fig");
+
 module.exports = {
   id: 24, name: "两两交换链表中的节点", title: "两两交换链表节点图解", level: "中等", topic: "链表",
   h1: "两两交换链表中的节点，每次改三根指针",
   lede: "每次处理一对相邻的节点。站在这一对的前一个节点上，改三根指针就能把它们换过来，然后跳到下一对前面。用哑节点让第一对也有「前一个节点」。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "swap_ex1.jpg": [F.row([F.list([1, 2, 3, 4], { cls: (v, i) => (i < 2 ? "e" : "g") }), F.list([2, 1, 4, 3], { cls: (v, i) => (i < 2 ? "e" : "g") })], { label: "相邻的两个节点一组，组内交换" })],
+  },
   hints: [
     { t: "交换一对需要知道什么", body: ["要交换 <code>a</code> 和 <code>b</code>，光有它们俩不够，还要知道 <code>a</code> 前面的节点 <code>prev</code>，因为 <code>prev.next</code> 要从 <code>a</code> 改成 <code>b</code>。"] },
     { t: "三根指针", body: ["原来：<code>prev → a → b → 后面</code>。目标：<code>prev → b → a → 后面</code>。", "<code>prev.next = b</code>；<code>a.next = b.next</code>；<code>b.next = a</code>。"] },

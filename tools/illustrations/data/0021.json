@@ -41,6 +41,97 @@
    "body": "时间 O(m + n)，空间 O(1)，没有新建节点，只是改指针。"
   }
  ],
+ "figures": {
+  "merge_ex1.jpg": [
+   {
+    "t": "list",
+    "label": "l1",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": "e"
+     },
+     {
+      "v": 2,
+      "cls": "e"
+     },
+     {
+      "v": 4,
+      "cls": "e"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     null
+    ],
+    "showNil": true
+   },
+   {
+    "t": "list",
+    "label": "l2",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": "g"
+     },
+     {
+      "v": 3,
+      "cls": "g"
+     },
+     {
+      "v": 4,
+      "cls": "g"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     null
+    ],
+    "showNil": true
+   },
+   {
+    "t": "list",
+    "label": "合并后（颜色表示来自哪条链表）",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": "e"
+     },
+     {
+      "v": 1,
+      "cls": "g"
+     },
+     {
+      "v": 2,
+      "cls": "e"
+     },
+     {
+      "v": 3,
+      "cls": "g"
+     },
+     {
+      "v": 4,
+      "cls": "e"
+     },
+     {
+      "v": 4,
+      "cls": "g"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     null
+    ],
+    "showNil": true
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：迭代 + 哑节点",

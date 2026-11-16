@@ -42,6 +42,128 @@
    "body": "迭代：时间 O(n)，空间 O(1)。递归：空间 O(n)，是调用栈的深度。"
   }
  ],
+ "figures": {
+  "rev1ex1.jpg": [
+   {
+    "t": "row",
+    "label": "反转",
+    "sep": "→",
+    "items": [
+     {
+      "t": "list",
+      "nodes": [
+       {
+        "v": 1,
+        "cls": ""
+       },
+       {
+        "v": 2,
+        "cls": ""
+       },
+       {
+        "v": 3,
+        "cls": ""
+       },
+       {
+        "v": 4,
+        "cls": ""
+       },
+       {
+        "v": 5,
+        "cls": ""
+       }
+      ],
+      "next": [
+       1,
+       2,
+       3,
+       4,
+       null
+      ],
+      "showNil": true
+     },
+     {
+      "t": "list",
+      "nodes": [
+       {
+        "v": 5,
+        "cls": "k"
+       },
+       {
+        "v": 4,
+        "cls": "k"
+       },
+       {
+        "v": 3,
+        "cls": "k"
+       },
+       {
+        "v": 2,
+        "cls": "k"
+       },
+       {
+        "v": 1,
+        "cls": "k"
+       }
+      ],
+      "next": [
+       1,
+       2,
+       3,
+       4,
+       null
+      ],
+      "showNil": true
+     }
+    ]
+   }
+  ],
+  "rev1ex2.jpg": [
+   {
+    "t": "row",
+    "label": "反转",
+    "sep": "→",
+    "items": [
+     {
+      "t": "list",
+      "nodes": [
+       {
+        "v": 1,
+        "cls": ""
+       },
+       {
+        "v": 2,
+        "cls": ""
+       }
+      ],
+      "next": [
+       1,
+       null
+      ],
+      "showNil": true
+     },
+     {
+      "t": "list",
+      "nodes": [
+       {
+        "v": 2,
+        "cls": "k"
+       },
+       {
+        "v": 1,
+        "cls": "k"
+       }
+      ],
+      "next": [
+       1,
+       null
+      ],
+      "showNil": true
+     }
+    ]
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：迭代",

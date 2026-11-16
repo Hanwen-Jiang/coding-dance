@@ -89,7 +89,10 @@ html {
 .demo svg.dm-g2 text.nil { font-size: 12px; fill: var(--muted); font-weight: 400; }
 .demo svg.dm-g2 rect.bd { fill: var(--surface); stroke: var(--muted); stroke-width: 1.2; }
 .demo svg.dm-g2 text.bt { font-size: 10.5px; fill: var(--foreground); }
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / w 警示 / k 浅绿 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / w 警示 / k 浅绿
+   x 越界或边界：虚线框。写在最前面，和别的角色叠加时（比如 "x a"）颜色听后面那个的，虚线保留 */
+.demo .r-x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+.demo svg.dm-g2 .n.r-x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .demo .r-a { background: var(--dm-accent); color: var(--dm-on); border-color: var(--dm-accent); }
 .demo .r-b { background: var(--dm-warm); color: var(--dm-on); border-color: var(--dm-warm); }
 .demo .r-c { background: var(--dm-ok); color: var(--dm-on); border-color: var(--dm-ok); }
@@ -104,6 +107,17 @@ html {
 .demo .dm-msg { animation: dm-fade 0.3s ease both; }
 .demo .dm-range { accent-color: var(--accent); }
 .demo:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 1.5rem; }
+/* 并排的几张图（题面配图里「变换前 → 变换后」） */
+.demo .dm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.demo .dm-row > .dm-ri { min-width: 0; }
+.demo .dm-sep { font-size: 20px; color: var(--muted); }
+/* 题面里的配图：原来是力扣的图片，换成和演示同一套画法，深浅色都跟着站点走 */
+.statement .lc-fig { margin: 0.75rem 0 1rem; display: flex; flex-direction: column; gap: 4px; }
+.statement .lc-fig .dm-v { animation: none; }
+/* 并排的树、链表缩小一点，两张图能放在一行里（演示里它们是按原尺寸画的，不能缩） */
+.statement .lc-fig .dm-row svg.dm-g2 { max-width: min(100%, 300px) !important; }
+.statement .lc-fig .lc-orig { align-self: flex-start; font-size: 11px; color: var(--muted); text-decoration: none; }
+.statement .lc-fig .lc-orig:hover { color: var(--accent); }
 @keyframes dm-fade {
   from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: none; }

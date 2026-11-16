@@ -43,6 +43,82 @@
    "body": "时间 O(max(m, n))，结果链表最多比长的那个多一位。"
   }
  ],
+ "figures": {
+  "addtwonumber1.jpg": [
+   {
+    "t": "list",
+    "label": "l1：342 的各位倒着存",
+    "nodes": [
+     {
+      "v": 2,
+      "cls": "e"
+     },
+     {
+      "v": 4,
+      "cls": "e"
+     },
+     {
+      "v": 3,
+      "cls": "e"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     null
+    ],
+    "showNil": true
+   },
+   {
+    "t": "list",
+    "label": "l2：465 的各位倒着存",
+    "nodes": [
+     {
+      "v": 5,
+      "cls": "g"
+     },
+     {
+      "v": 6,
+      "cls": "g"
+     },
+     {
+      "v": 4,
+      "cls": "g"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     null
+    ],
+    "showNil": true
+   },
+   {
+    "t": "list",
+    "label": "结果：342 + 465 = 807，同样倒着存",
+    "nodes": [
+     {
+      "v": 7,
+      "cls": "k"
+     },
+     {
+      "v": 0,
+      "cls": "k"
+     },
+     {
+      "v": 8,
+      "cls": "k"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     null
+    ],
+    "showNil": true
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：模拟竖式加法",

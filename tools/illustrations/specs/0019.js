@@ -1,7 +1,13 @@
+const F = require("../fig");
+
 module.exports = {
   id: 19, name: "删除链表的倒数第 N 个结点", title: "删除倒数第 N 个结点图解", level: "中等", topic: "链表",
   h1: "删除倒数第 N 个结点，让两个指针保持固定的距离",
   lede: "链表不知道长度，也不能倒着走。让 fast 先走 n 步，然后 fast 和 slow 一起走。fast 走到最后一个节点时，slow 正好停在要删除的节点前面。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "remove_ex1.jpg": [F.row([F.list([1, 2, 3, 4, 5], { cls: (v, i) => (i === 3 ? "w" : "") }), F.list([1, 2, 3, 5])], { label: "删掉倒数第 2 个节点（4）" })],
+  },
   hints: [
     { t: "最直接的做法", body: ["先走一遍数出长度 <code>L</code>，倒数第 n 个就是正数第 <code>L − n + 1</code> 个，再走一遍去删。需要走两遍。"] },
     { t: "一遍怎么做", body: ["让 <code>fast</code> 比 <code>slow</code> 领先 n 步，然后同时走。", "<code>fast</code> 到最后一个节点时，<code>slow</code> 后面正好还有 n 个节点，也就是 <code>slow.next</code> 是倒数第 n 个。"] },

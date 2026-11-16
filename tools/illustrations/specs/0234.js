@@ -1,7 +1,14 @@
+const F = require("../fig");
+
 module.exports = {
   id: 234, name: "回文链表", title: "回文链表图解", level: "简单", topic: "链表",
   h1: "回文链表，把后半段反转过来再比",
   lede: "链表不能从后往前走。先用快慢指针找到中点，把后半段原地反转，然后一头一尾同时往中间走，逐个比较。这样只用常数的额外空间。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "pal1linked-list.jpg": [F.list([1, 2, 2, 1], { label: "正着读、倒着读都是 1 2 2 1", cls: (v, i) => (i === 0 || i === 3 ? "e" : "g") })],
+    "pal2linked-list.jpg": [F.list([1, 2], { label: "倒着读是 2 1，不是回文" })],
+  },
   hints: [
     { t: "最直接的做法", body: ["把所有值复制到一个数组里，再用两个下标从两端往中间比。时间 <code>O(n)</code>，空间 <code>O(n)</code>。", "进阶要求空间 <code>O(1)</code>，就不能用数组。"] },
     { t: "找中点", body: ["<code>slow</code> 一次走一步，<code>fast</code> 一次走两步。<code>fast</code> 走到头时，<code>slow</code> 正好在中间。"] },

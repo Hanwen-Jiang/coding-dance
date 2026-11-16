@@ -1,7 +1,19 @@
+const F = require("../fig");
+
 module.exports = {
   id: 118, name: "杨辉三角", title: "杨辉三角图解", level: "简单", topic: "动态规划",
   h1: "杨辉三角，每个数是肩上两个数的和",
   lede: "每一行的首尾都是 1，中间的每个数等于上一行左上方和正上方两个数的和。一行一行往下生成即可。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "1626927345-DZmfxB-PascalTriangleAnimated2.gif": [
+      F.array([1], { idx: false, label: "每个数是它左上方和右上方两个数的和" }),
+      F.array([1, 1], { idx: false }),
+      F.array([1, 2, 1], { idx: false, cls: (v, i) => (i === 1 ? "e" : "") }),
+      F.array([1, 3, 3, 1], { idx: false }),
+      F.array([1, 4, 6, 4, 1], { idx: false }),
+    ],
+  },
   hints: [
     { t: "每行长什么样", body: ["第 <code>i</code> 行（从 0 开始）有 <code>i + 1</code> 个数，首尾都是 1。"] },
     { t: "中间的数怎么来", body: ["<code>row[j] = prev[j - 1] + prev[j]</code>，<code>prev</code> 是上一行，<code>1 &lt;= j &lt;= i - 1</code>。"] },
