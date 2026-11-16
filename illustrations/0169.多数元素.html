@@ -320,14 +320,14 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[2,2,1,1,1,2,2]},"no
 { t: "标准解法", note: null, legend: [["a","当前的数"],["k","看过的、和当前候选人相同的数"],["d","看过的其他数"]], build(a, snap) {
     const nums = a.nums; let cand = null, count = 0;
     const view = (i) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k < i ? (v === cand ? "k" : "d") : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    const f = () => ({ facts: [["候选人", cand === null ? "—" : cand], ["票数", count]] });
-    snap("开始", "还没有候选人，票数 0。", view(-1), f());
+    const f = (at) => ({ at, facts: [["候选人", cand === null ? "—" : cand], ["票数", count]] });
+    snap("开始", "还没有候选人，票数 0。", view(-1), f("init"));
     nums.forEach((x, i) => {
-      if (count === 0) { cand = x; count = 1; snap("新候选人", `票数是 0，${x} 成为新的候选人，票数 1。`, view(i), f()); }
-      else if (x === cand) { count++; snap("+1", `${x} 和候选人相同，票数 +1，变成 ${count}。`, view(i), f()); }
-      else { count--; snap("抵消", `${x} 和候选人 ${cand} 不同，两者抵消，票数 −1，变成 ${count}。`, view(i), { kind: count === 0 ? "warn" : "", ...f() }); }
+      if (count === 0) { cand = x; count = 1; snap("新候选人", `票数是 0，${x} 成为新的候选人，票数 1。`, view(i), f("new")); }
+      else if (x === cand) { count++; snap("+1", `${x} 和候选人相同，票数 +1，变成 ${count}。`, view(i), f("vote")); }
+      else { count--; snap("抵消", `${x} 和候选人 ${cand} 不同，两者抵消，票数 −1，变成 ${count}。`, view(i), { kind: count === 0 ? "warn" : "", ...f("vote") }); }
     });
-    snap("完成", `最后的候选人是 <b>${cand}</b>，它就是多数元素。`, view(-1), { kind: "ok", ans: cand, ...f() });
+    snap("完成", `最后的候选人是 <b>${cand}</b>，它就是多数元素。`, view(-1), { kind: "ok", ans: cand, ...f("done") });
   } }
 ] };
 (function () {

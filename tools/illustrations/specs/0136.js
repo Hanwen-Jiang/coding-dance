@@ -10,10 +10,10 @@ module.exports = {
   codes: [{ t: "标准解法：异或", code: `
 class Solution:
     def singleNumber(self, nums: List[int]) -> int:
-        res = 0
-        for x in nums:
-            res ^= x                        # 成对的数会互相抵消
-        return res
+        res = 0                             #@init
+        for x in nums:                      #@xor
+            res ^= x                        # 成对的数会互相抵消 #@xor
+        return res                          #@done
 ` }, { t: "简洁写法：reduce", kind: "elegant", code: `
 from functools import reduce
 from operator import xor
@@ -29,6 +29,9 @@ assert s.singleNumber([4,1,2,1,2]) == 4
 assert s.singleNumber([1]) == 1
 assert s.singleNumber([-3,7,-3]) == 7
 `,
+  sig: { fn: "singleNumber", params: ["int[]"], ret: "int" },
+  call: (a) => [a.nums],
+  cases: [[[1]], [[-3, 7, -3]], [[-1, 5, 5]]],
   legend: [["a", "当前的数"], ["d", "已经异或过"]],
   presets: [
     { label: "示例 2", args: { nums: [4, 1, 2, 1, 2] }, note: "nums = [4,1,2,1,2]", expect: 4 },
@@ -39,12 +42,12 @@ assert s.singleNumber([-3,7,-3]) == 7
     const bin = (x) => x.toString(2).padStart(w, "0");
     let res = 0;
     const view = (i) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k < i ? "d" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", "res 从 0 开始，依次和每个数做异或。", view(-1), { facts: [["res", res], ["二进制", bin(res)]] });
+    snap("开始", "res 从 0 开始，依次和每个数做异或。", view(-1), { at: "init", facts: [["res", res], ["二进制", bin(res)]] });
     nums.forEach((x, i) => {
       const old = res; res ^= x;
-      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，也就是 ${old} ^ ${x} = ${res}。`, view(i), { facts: [["res", res], ["二进制", bin(res)]] });
+      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，也就是 ${old} ^ ${x} = ${res}。`, view(i), { at: "xor", facts: [["res", res], ["二进制", bin(res)]] });
     });
-    snap("完成", `成对的数都抵消了，剩下 <b>${res}</b>。`, view(-1), { kind: "ok", ans: res, facts: [["res", res], ["二进制", bin(res)]] });
+    snap("完成", `成对的数都抵消了，剩下 <b>${res}</b>。`, view(-1), { at: "done", kind: "ok", ans: res, facts: [["res", res], ["二进制", bin(res)]] });
   },
   points: [
     { t: "初始值是 0", body: "0 是异或的单位元，x ^ 0 = x。" },

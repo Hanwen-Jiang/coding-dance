@@ -10,33 +10,36 @@ module.exports = {
   codes: [{ t: "标准解法：第一行、第一列做标记", code: `
 class Solution:
     def setZeroes(self, matrix: List[List[int]]) -> None:
-        m, n = len(matrix), len(matrix[0])
-        row0 = any(matrix[0][j] == 0 for j in range(n))   # 第一行原来有没有 0
-        col0 = any(matrix[i][0] == 0 for i in range(m))   # 第一列原来有没有 0
+        m, n = len(matrix), len(matrix[0])                #@first
+        row0 = any(matrix[0][j] == 0 for j in range(n))   # 第一行原来有没有 0 #@first
+        col0 = any(matrix[i][0] == 0 for i in range(m))   # 第一列原来有没有 0 #@first
         for i in range(1, m):
             for j in range(1, n):
-                if matrix[i][j] == 0:
-                    matrix[i][0] = matrix[0][j] = 0       # 做记号
-        for i in range(1, m):
-            for j in range(1, n):
-                if matrix[i][0] == 0 or matrix[0][j] == 0:
-                    matrix[i][j] = 0
-        if row0:
-            for j in range(n):
-                matrix[0][j] = 0
-        if col0:
-            for i in range(m):
-                matrix[i][0] = 0
-` }, { t: "简洁写法：记下要清零的行和列（O(m+n) 空间）", kind: "elegant", note: "先找出所有含 0 的行和列，再统一清零。好写，但用了额外空间，题目进阶要求 O(1)。", code: `
+                if matrix[i][j] == 0:                     #@mark
+                    matrix[i][0] = matrix[0][j] = 0       # 做记号 #@mark
+        for i in range(1, m):                             #@clear
+            for j in range(1, n):                         #@clear
+                if matrix[i][0] == 0 or matrix[0][j] == 0:    #@clear
+                    matrix[i][j] = 0                      #@clear
+        if row0:                                          #@edge
+            for j in range(n):                            #@edge
+                matrix[0][j] = 0                          #@edge
+        if col0:                                          #@edge
+            for i in range(m):                            #@edge
+                matrix[i][0] = 0                          #@edge
+` }, { t: "简洁写法：记下要清零的行和列（O(m+n) 空间）", key: "sets", kind: "elegant", note: "先找出所有含 0 的行和列，再统一清零。好写，但用了额外空间，题目进阶要求 O(1)。", code: `
 class Solution:
     def setZeroes(self, matrix: List[List[int]]) -> None:
-        rows = {i for i, r in enumerate(matrix) if 0 in r}
-        cols = {j for j, c in enumerate(zip(*matrix)) if 0 in c}
-        for i, r in enumerate(matrix):
-            for j in range(len(r)):
-                if i in rows or j in cols:
-                    r[j] = 0
+        rows = {i for i, r in enumerate(matrix) if 0 in r}         #@find
+        cols = {j for j, c in enumerate(zip(*matrix)) if 0 in c}   #@find
+        for i, r in enumerate(matrix):          #@clear
+            for j in range(len(r)):             #@clear
+                if i in rows or j in cols:      #@clear
+                    r[j] = 0                    #@clear
 ` }],
+  sig: { fn: "setZeroes", params: ["int[][]"], ret: "void" },
+  call: (a) => [a.m],
+  cases: [[[[0]]], [[[1]]], [[[1, 0]]], [[[1], [0]]], [[[0, 1], [1, 1]]]],
   pytest: `
 for a, e in [([[1,1,1],[1,0,1],[1,1,1]], [[1,0,1],[0,0,0],[1,0,1]]), ([[0,1,2,0],[3,4,5,2],[1,3,1,5]], [[0,0,0,0],[0,4,5,0],[0,3,1,0]]), ([[1,0]], [[0,0]]), ([[1],[0]], [[0],[0]])]:
     Solution().setZeroes(a); assert a == e
@@ -53,21 +56,22 @@ for a, e in [([[1,1,1],[1,0,1],[1,1,1]], [[1,0,1],[0,0,0],[1,0,1]]), ([[0,1,2,0]
     const view = (ci, cj) => [{ t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : cls[i][j] || (i === 0 || j === 0 ? "e" : "") }))) }];
     const row0 = M[0].includes(0), col0 = M.some((r) => r[0] === 0);
     const facts = () => [["row0", row0 ? "有 0" : "没有"], ["col0", col0 ? "有 0" : "没有"]];
-    snap("先记住第一行和第一列", `第一行和第一列马上要用来写记号，先看它们原来有没有 0：第一行${row0 ? "有" : "没有"}，第一列${col0 ? "有" : "没有"}。`, view(), { facts: facts() });
+    snap("先记住第一行和第一列", `第一行和第一列马上要用来写记号，先看它们原来有没有 0：第一行${row0 ? "有" : "没有"}，第一列${col0 ? "有" : "没有"}。`, view(), { at: "first", facts: facts() });
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) if (M[i][j] === 0) {
       M[i][0] = 0; M[0][j] = 0; cls[i][0] = "w"; cls[0][j] = "w";
-      snap("做记号", `matrix[${i}][${j}] 是 0。在这一行的开头 matrix[${i}][0] 和这一列的开头 matrix[0][${j}] 各写一个 0 作为记号。`, view(i, j), { facts: facts() });
+      snap("做记号", `matrix[${i}][${j}] 是 0。在这一行的开头 matrix[${i}][0] 和这一列的开头 matrix[0][${j}] 各写一个 0 作为记号。`, view(i, j), { at: "mark", facts: facts() });
     }
     let changed = 0;
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) if (M[i][0] === 0 || M[0][j] === 0) { if (M[i][j] !== 0) changed++; M[i][j] = 0; cls[i][j] = "c"; }
-    snap("按记号清零", `再扫一遍里面的格子：所在行的开头或所在列的开头是 0，就清零。`, view(), { facts: facts() });
+    snap("按记号清零", `再扫一遍里面的格子：所在行的开头或所在列的开头是 0，就清零。`, view(), { at: "clear", facts: facts() });
     if (row0) for (let j = 0; j < n; j++) { M[0][j] = 0; cls[0][j] = "c"; }
     if (col0) for (let i = 0; i < m; i++) { M[i][0] = 0; cls[i][0] = "c"; }
-    snap("最后处理第一行和第一列", (row0 ? "第一行原来有 0，整行清零。" : "第一行原来没有 0，保持不动。") + (col0 ? "第一列原来有 0，整列清零。" : "第一列原来没有 0，保持不动。"), view(), { facts: facts() });
-    snap("完成", "所有该清零的行和列都处理完了。", view(), { kind: "ok", ans: M, facts: facts() });
+    snap("最后处理第一行和第一列", (row0 ? "第一行原来有 0，整行清零。" : "第一行原来没有 0，保持不动。") + (col0 ? "第一列原来有 0，整列清零。" : "第一列原来没有 0，保持不动。"), view(), { at: "edge", facts: facts() });
+    snap("完成", "所有该清零的行和列都处理完了。", view(), { at: [], kind: "ok", ans: M, facts: facts() });
   },
   alts: [{
     t: "记下行和列",
+    code: "sets",
     note: "和简洁写法一样：先扫一遍，把含 0 的行号和列号分别放进两个集合，再统一清零。好写，但要 O(m + n) 额外空间。",
     legend: [["a", "找到的 0"], ["e", "要清零的行和列"], ["c", "被清零的格子"]],
     build(a, snap) {
@@ -78,14 +82,14 @@ for a, e in [([[1,1,1],[1,0,1],[1,1,1]], [[1,0,1],[0,0,0],[1,0,1]]), ([[0,1,2,0]
         { t: "chips", label: "rows：要清零的行", items: sorted(rows), empty: "空" },
         { t: "chips", label: "cols：要清零的列", items: sorted(cols), empty: "空" },
       ];
-      snap("开始", "先只看不改：找出所有 0，记下它们所在的行和列。", view(-1, -1));
+      snap("开始", "先只看不改：找出所有 0，记下它们所在的行和列。", view(-1, -1), { at: [] });
       for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (M[i][j] === 0) {
         rows.add(i); cols.add(j);
-        snap("记下", `matrix[${i}][${j}] 是 0，记下第 ${i} 行和第 ${j} 列。`, view(i, j));
+        snap("记下", `matrix[${i}][${j}] 是 0，记下第 ${i} 行和第 ${j} 列。`, view(i, j), { at: "find" });
       }
       for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (rows.has(i) || cols.has(j)) { M[i][j] = 0; cls[i][j] = "c"; }
-      snap("统一清零", `再扫一遍：行号在 rows 里，或者列号在 cols 里，就清零。`, view(-1, -1));
-      snap("完成", "所有该清零的行和列都处理完了。", view(-1, -1), { kind: "ok", ans: M });
+      snap("统一清零", `再扫一遍：行号在 rows 里，或者列号在 cols 里，就清零。`, view(-1, -1), { at: "clear" });
+      snap("完成", "所有该清零的行和列都处理完了。", view(-1, -1), { at: [], kind: "ok", ans: M });
     },
   }],
   points: [

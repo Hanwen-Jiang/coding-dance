@@ -333,18 +333,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,4]},"note":"n
       { t: "array", label: "answer", items: ans.map((v, j) => ({ v: fix(v), cls: st[j] })), idx: false },
     ];
     st[0] = "e";
-    snap("第一遍：从左往右", "answer[0] = 1，因为下标 0 左边没有数。", view(0));
+    snap("第一遍：从左往右", "answer[0] = 1，因为下标 0 左边没有数。", view(0), { at: "init" });
     for (let i = 1; i < n; i++) {
       ans[i] = ans[i - 1] * nums[i - 1]; st[i] = "e";
-      snap("第一遍：从左往右", `answer[${i}] = answer[${i - 1}] × nums[${i - 1}] = ${fix(ans[i - 1])} × ${nums[i - 1]} = <b>${fix(ans[i])}</b>，这是下标 ${i} 左边所有数的乘积。`, view(i));
+      snap("第一遍：从左往右", `answer[${i}] = answer[${i - 1}] × nums[${i - 1}] = ${fix(ans[i - 1])} × ${nums[i - 1]} = <b>${fix(ans[i])}</b>，这是下标 ${i} 左边所有数的乘积。`, view(i), { at: "left" });
     }
     let right = 1;
     for (let i = n - 1; i >= 0; i--) {
       const before = ans[i]; ans[i] = fix(ans[i] * right); st[i] = "c";
-      snap("第二遍：从右往左", `right = ${fix(right)} 是下标 ${i} 右边所有数的乘积。answer[${i}] = ${fix(before)} × ${fix(right)} = <b>${ans[i]}</b>。然后 right 乘上 nums[${i}] = ${nums[i]}。`, view(i), { facts: [["right", fix(right * nums[i])]] });
+      snap("第二遍：从右往左", `right = ${fix(right)} 是下标 ${i} 右边所有数的乘积。answer[${i}] = ${fix(before)} × ${fix(right)} = <b>${ans[i]}</b>。然后 right 乘上 nums[${i}] = ${nums[i]}。`, view(i), { at: "right", facts: [["right", fix(right * nums[i])]] });
       right *= nums[i];
     }
-    snap("完成", `answer = [${ans.join(", ")}]。`, view(-1), { kind: "ok", ans });
+    snap("完成", `answer = [${ans.join(", ")}]。`, view(-1), { at: "done", kind: "ok", ans });
   } }
 ] };
 (function () {

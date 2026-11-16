@@ -49,7 +49,132 @@
    "kind": "elegant",
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def maxArea(self, height: List[int]) -> int:\n        l, r = 0, len(height) - 1\n        best = 0\n        while l < r:\n            best = max(best, min(height[l], height[r]) * (r - l))\n            if height[l] < height[r]:   # 移动短板\n                l += 1\n            else:\n                r -= 1\n        return best"
+   "code": "class Solution:\n    def maxArea(self, height: List[int]) -> int:\n        l, r = 0, len(height) - 1\n        best = 0\n        while l < r:\n            best = max(best, min(height[l], height[r]) * (r - l))\n            if height[l] < height[r]:   # 移动短板\n                l += 1\n            else:\n                r -= 1\n        return best",
+   "marks": {
+    "init": [
+     3,
+     4
+    ],
+    "area": [
+     6
+    ],
+    "move": [
+     7,
+     8,
+     9,
+     10
+    ],
+    "done": [
+     11
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public int maxArea(int[] height) {\n        int l = 0, r = height.length - 1;\n        int best = 0;\n        while (l < r) {\n            best = Math.max(best, Math.min(height[l], height[r]) * (r - l));\n            if (height[l] < height[r]) {            // 移动短板\n                l++;\n            } else {\n                r--;\n            }\n        }\n        return best;\n    }\n}",
+     "marks": {
+      "init": [
+       3,
+       4
+      ],
+      "area": [
+       6
+      ],
+      "move": [
+       7,
+       8,
+       9,
+       10
+      ],
+      "done": [
+       13
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    int maxArea(vector<int>& height) {\n        int l = 0, r = height.size() - 1;\n        int best = 0;\n        while (l < r) {\n            best = max(best, min(height[l], height[r]) * (r - l));\n            if (height[l] < height[r]) {            // 移动短板\n                l++;\n            } else {\n                r--;\n            }\n        }\n        return best;\n    }\n};",
+     "marks": {
+      "init": [
+       4,
+       5
+      ],
+      "area": [
+       7
+      ],
+      "move": [
+       8,
+       9,
+       10,
+       11
+      ],
+      "done": [
+       14
+      ]
+     }
+    },
+    "go": {
+     "code": "func maxArea(height []int) int {\n\tl, r := 0, len(height)-1\n\tbest := 0\n\tfor l < r {\n\t\tbest = max(best, min(height[l], height[r])*(r-l))\n\t\tif height[l] < height[r] { // 移动短板\n\t\t\tl++\n\t\t} else {\n\t\t\tr--\n\t\t}\n\t}\n\treturn best\n}",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "area": [
+       5
+      ],
+      "move": [
+       6,
+       7,
+       8,
+       9
+      ],
+      "done": [
+       12
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var maxArea = function(height) {\n    let l = 0, r = height.length - 1;\n    let best = 0;\n    while (l < r) {\n        best = Math.max(best, Math.min(height[l], height[r]) * (r - l));\n        if (height[l] < height[r]) {            // 移动短板\n            l++;\n        } else {\n            r--;\n        }\n    }\n    return best;\n};",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "area": [
+       5
+      ],
+      "move": [
+       6,
+       7,
+       8,
+       9
+      ],
+      "done": [
+       12
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function maxArea(height: number[]): number {\n    let l = 0, r = height.length - 1;\n    let best = 0;\n    while (l < r) {\n        best = Math.max(best, Math.min(height[l], height[r]) * (r - l));\n        if (height[l] < height[r]) {            // 移动短板\n            l++;\n        } else {\n            r--;\n        }\n    }\n    return best;\n}",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "area": [
+       5
+      ],
+      "move": [
+       6,
+       7,
+       8,
+       9
+      ],
+      "done": [
+       12
+      ]
+     }
+    }
+   }
   }
  ],
  "demo": {
@@ -100,7 +225,7 @@
     "note": "height = [4,3,2,1,4]"
    }
   ],
-  "build": "build(a, snap) {\n    const h = a.h; let l = 0, r = h.length - 1, best = 0, bp = [-1, -1];\n    const view = (done) => [{ t: \"bars\", label: \"height\", items: h.map((v, i) => ({ v, cls: !done && (i === l || i === r) ? \"a\" : i === bp[0] || i === bp[1] ? \"c\" : i < l || i > r ? \"d\" : \"\" })), ptrs: done ? {} : { l, r } }];\n    snap(\"开始\", \"l 在最左，r 在最右，这是最宽的容器。\", view(), { facts: [[\"最大面积\", 0]] });\n    while (l < r) {\n      const area = Math.min(h[l], h[r]) * (r - l), up = area > best;\n      if (up) { best = area; bp = [l, r]; }\n      const moveL = h[l] < h[r];\n      snap(\"计算\", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? \"比之前大，更新最大面积。\" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? \"和左边一样高\" : \"是短板\"}，r 左移。`), view(), { facts: [[\"最大面积\", best], [\"当前面积\", area]] });\n      if (moveL) l++; else r--;\n    }\n    snap(\"完成\", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { kind: \"ok\", ans: best, facts: [[\"最大面积\", best]] });\n  }",
+  "build": "build(a, snap) {\n    const h = a.h; let l = 0, r = h.length - 1, best = 0, bp = [-1, -1];\n    const view = (done) => [{ t: \"bars\", label: \"height\", items: h.map((v, i) => ({ v, cls: !done && (i === l || i === r) ? \"a\" : i === bp[0] || i === bp[1] ? \"c\" : i < l || i > r ? \"d\" : \"\" })), ptrs: done ? {} : { l, r } }];\n    snap(\"开始\", \"l 在最左，r 在最右，这是最宽的容器。\", view(), { at: \"init\", facts: [[\"最大面积\", 0]] });\n    while (l < r) {\n      const area = Math.min(h[l], h[r]) * (r - l), up = area > best;\n      if (up) { best = area; bp = [l, r]; }\n      const moveL = h[l] < h[r];\n      snap(\"计算\", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? \"比之前大，更新最大面积。\" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? \"和左边一样高\" : \"是短板\"}，r 左移。`), view(), { at: [\"area\", \"move\"], facts: [[\"最大面积\", best], [\"当前面积\", area]] });\n      if (moveL) l++; else r--;\n    }\n    snap(\"完成\", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { at: \"done\", kind: \"ok\", ans: best, facts: [[\"最大面积\", best]] });\n  }",
   "methods": [
    {
     "t": "标准解法",
@@ -120,7 +245,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const h = a.h; let l = 0, r = h.length - 1, best = 0, bp = [-1, -1];\n    const view = (done) => [{ t: \"bars\", label: \"height\", items: h.map((v, i) => ({ v, cls: !done && (i === l || i === r) ? \"a\" : i === bp[0] || i === bp[1] ? \"c\" : i < l || i > r ? \"d\" : \"\" })), ptrs: done ? {} : { l, r } }];\n    snap(\"开始\", \"l 在最左，r 在最右，这是最宽的容器。\", view(), { facts: [[\"最大面积\", 0]] });\n    while (l < r) {\n      const area = Math.min(h[l], h[r]) * (r - l), up = area > best;\n      if (up) { best = area; bp = [l, r]; }\n      const moveL = h[l] < h[r];\n      snap(\"计算\", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? \"比之前大，更新最大面积。\" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? \"和左边一样高\" : \"是短板\"}，r 左移。`), view(), { facts: [[\"最大面积\", best], [\"当前面积\", area]] });\n      if (moveL) l++; else r--;\n    }\n    snap(\"完成\", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { kind: \"ok\", ans: best, facts: [[\"最大面积\", best]] });\n  }"
+    "build": "build(a, snap) {\n    const h = a.h; let l = 0, r = h.length - 1, best = 0, bp = [-1, -1];\n    const view = (done) => [{ t: \"bars\", label: \"height\", items: h.map((v, i) => ({ v, cls: !done && (i === l || i === r) ? \"a\" : i === bp[0] || i === bp[1] ? \"c\" : i < l || i > r ? \"d\" : \"\" })), ptrs: done ? {} : { l, r } }];\n    snap(\"开始\", \"l 在最左，r 在最右，这是最宽的容器。\", view(), { at: \"init\", facts: [[\"最大面积\", 0]] });\n    while (l < r) {\n      const area = Math.min(h[l], h[r]) * (r - l), up = area > best;\n      if (up) { best = area; bp = [l, r]; }\n      const moveL = h[l] < h[r];\n      snap(\"计算\", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? \"比之前大，更新最大面积。\" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? \"和左边一样高\" : \"是短板\"}，r 左移。`), view(), { at: [\"area\", \"move\"], facts: [[\"最大面积\", best], [\"当前面积\", area]] });\n      if (moveL) l++; else r--;\n    }\n    snap(\"完成\", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { at: \"done\", kind: \"ok\", ans: best, facts: [[\"最大面积\", best]] });\n  }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const h = R.arr(R.int(6, 10), 1, 9);\n    return { args: { h }, note: `height = ${R.fmt(h)}`, py: `Solution().maxArea(${R.py(h)})` };\n  })(R); return { args: r.args, note: r.note }; }"
