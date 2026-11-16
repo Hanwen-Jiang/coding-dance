@@ -18,11 +18,35 @@ class TreeNode {
   }
 }
 const __judge = {
+  // 本用例建出的节点：要按「是不是同一个节点」判的题用（见 judge/util.js 里的类型说明）
+  ctx: { nodes: [] as ListNode[], tree: null as TreeNode | null, made: [] as any[] },
+  mkNode: null as any, // 138 的 _Node，用到 RandomList 时由附加的前置代码填上
+  reset(): void { this.ctx = { nodes: [], tree: null, made: [] }; },
   list(vals: number[]): ListNode | null {
     const d = new ListNode();
     let cur = d;
-    for (const v of vals) { cur.next = new ListNode(v); cur = cur.next; }
+    for (const v of vals) { cur.next = new ListNode(v); cur = cur.next; this.ctx.nodes.push(cur); }
     return d.next;
+  },
+  find(root: TreeNode | null, v: number): TreeNode | null {
+    const st: (TreeNode | null)[] = [root];
+    while (st.length) { const n = st.pop(); if (!n) continue; if (n.val === v) return n; st.push(n.left, n.right); }
+    return null;
+  },
+  randomList(data: [number, number | null][]): any {
+    const made: any[] = data.map(([v]) => this.mkNode(v));
+    data.forEach(([, r], i) => { made[i].next = made[i + 1] || null; made[i].random = r === null ? null : made[r]; });
+    this.ctx.made = made;
+    return made.length ? made[0] : null;
+  },
+  randomVals(head: any): any {
+    const idx = new Map<any, number>(), out: any[] = [], old = new Set(this.ctx.made);
+    for (let p = head; p && idx.size < 100000; p = p.next) idx.set(p, idx.size);
+    for (let p = head; p && out.length < 100000; p = p.next) {
+      if (old.has(p)) return "没有复制：返回了原链表的节点";
+      out.push([p.val, p.random == null ? null : idx.has(p.random) ? idx.get(p.random) : "?"]);
+    }
+    return out;
   },
   listVals(head: ListNode | null): number[] {
     const out: number[] = [];
@@ -53,14 +77,31 @@ const __judge = {
     return out;
   },
   in(t: string, v: any): any {
+    const ns = this.ctx.nodes;
     if (t === "ListNode") return this.list(v);
-    if (t === "TreeNode") return this.tree(v);
+    if (t === "CycleList") {
+      const s = ns.length, h = this.list(v[0]);
+      if (v[1] !== null && v[1] >= 0 && v[0].length) ns[s + v[0].length - 1].next = ns[s + v[1]];
+      return h;
+    }
+    if (t === "JoinList") {
+      const tail = v[1] !== null && v[1] >= 0 ? ns[v[1]] : null, s = ns.length, h = this.list(v[0]);
+      if (!v[0].length) return tail;
+      ns[s + v[0].length - 1].next = tail;
+      return h;
+    }
+    if (t === "TreeNode") return (this.ctx.tree = this.tree(v));
+    if (t === "TreeRef") return this.find(this.ctx.tree, v);
+    if (t === "RandomList") return this.randomList(v);
     if (t === "ListNode[]") return v.map((x: number[]) => this.list(x));
     return v;
   },
   out(t: string, v: any): any {
     if (t === "ListNode") return this.listVals(v);
     if (t === "TreeNode") return this.treeVals(v);
+    if (t === "NodeIndex") { if (v == null) return null; const i = this.ctx.nodes.indexOf(v); return i >= 0 ? i : "不是输入里的节点"; }
+    if (t === "TreeVal") return v == null ? null : v.val;
+    if (t === "RandomList") return this.randomVals(v);
     return v === undefined ? null : v;
   },
 };

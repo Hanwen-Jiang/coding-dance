@@ -1,9 +1,70 @@
 // Go：每段代码一个 main 包（前置代码 + 题解 + 生成的 main.go），输入直接写成 Go 的字面量。
 const fs = require("fs"), path = require("path");
-const { run, pool, hasTool, parseLines, cores } = require("../util");
+const { run, pool, hasTool, parseLines, usesType, cores } = require("../util");
 
 const prelude = fs.readFileSync(path.join(__dirname, "../prelude/prelude.go"), "utf8");
-const BASE = { int: "int", long: "int64", double: "float64", bool: "bool", string: "string", char: "byte", ListNode: "*ListNode", TreeNode: "*TreeNode" };
+const BASE = {
+  int: "int", long: "int64", double: "float64", bool: "bool", string: "string", char: "byte", ListNode: "*ListNode", TreeNode: "*TreeNode",
+  CycleList: "*ListNode", JoinList: "*ListNode", NodeIndex: "*ListNode", TreeRef: "*TreeNode", TreeVal: "*TreeNode", RandomList: "*Node",
+};
+
+// 138 的节点类型（和力扣的定义一样）和它的构造、输出。只在用到 RandomList 时带上，免得和题解自己写的 Node 冲突
+const NODE = `package main
+
+type Node struct {
+	Val    int
+	Next   *Node
+	Random *Node
+}
+
+var judgeMade []*Node
+
+func judgeRandom(d [][]any) *Node {
+	judgeMade = nil
+	for _, x := range d {
+		judgeMade = append(judgeMade, &Node{Val: x[0].(int)})
+	}
+	for i, x := range d {
+		if i+1 < len(d) {
+			judgeMade[i].Next = judgeMade[i+1]
+		}
+		if x[1] != nil {
+			judgeMade[i].Random = judgeMade[x[1].(int)]
+		}
+	}
+	if len(judgeMade) == 0 {
+		return nil
+	}
+	return judgeMade[0]
+}
+
+func judgeRandomVals(head *Node) any {
+	idx := map[*Node]int{}
+	for p := head; p != nil && len(idx) < 100000; p = p.Next {
+		idx[p] = len(idx)
+	}
+	old := map[*Node]bool{}
+	for _, n := range judgeMade {
+		old[n] = true
+	}
+	out := [][]any{}
+	for p := head; p != nil && len(out) < 100000; p = p.Next {
+		if old[p] {
+			return "没有复制：返回了原链表的节点"
+		}
+		var r any
+		if p.Random != nil {
+			if k, ok := idx[p.Random]; ok {
+				r = k
+			} else {
+				r = "?"
+			}
+		}
+		out = append(out, []any{p.Val, r})
+	}
+	return out
+}
+`;
 const gt = (t) => (t.base ? BASE[t.base] : `[]${gt(t.arr)}`);
 const ch = (c) => (c === "'" ? "'\\''" : c === "\\" ? "'\\\\'" : `'${c}'`);
 
@@ -16,6 +77,10 @@ function lit(t, v) {
     case "char": return `byte(${ch(v)})`;
     case "ListNode": return `judgeList([]int{${v.join(", ")}})`;
     case "TreeNode": return `judgeTree([]any{${v.map((x) => (x === null ? "nil" : x)).join(", ")}})`;
+    case "CycleList": return `judgeCycle([]int{${v[0].join(", ")}}, ${v[1] === null ? -1 : v[1]})`;
+    case "JoinList": return `judgeJoin([]int{${v[0].join(", ")}}, ${v[1] === null ? -1 : v[1]})`;
+    case "TreeRef": return `judgeFind(${v})`;
+    case "RandomList": return `judgeRandom([][]any{${v.map(([x, r]) => `{${x}, ${r === null ? "nil" : r}}`).join(", ")}})`;
     default: return String(v);
   }
 }
@@ -23,6 +88,9 @@ function lit(t, v) {
 function conv(t, expr) {
   if (t.base === "ListNode") return `judgeListVals(${expr})`;
   if (t.base === "TreeNode") return `judgeTreeVals(${expr})`;
+  if (t.base === "NodeIndex") return `judgeIndex(${expr})`;
+  if (t.base === "TreeVal") return `judgeVal(${expr})`;
+  if (t.base === "RandomList") return `judgeRandomVals(${expr})`;
   if (t.base === "char") return `string(rune(${expr}))`;
   if (t.arr && t.arr.base === "char") return `judgeBytes(${expr})`;
   if (t.arr && t.arr.arr && t.arr.arr.base === "char") return `judgeBytes2(${expr})`;
@@ -78,7 +146,7 @@ func judgeRun(f func() any) {
 }
 
 func main() {
-${job.cases.map((c) => `\tjudgeRun(func() any {\n\t\t${caseBody(job.sig, c).join("\n\t\t")}\n\t})`).join("\n")}
+${job.cases.map((c) => `\tjudgeRun(func() any {\n\t\tjudgeReset()\n\t\t${caseBody(job.sig, c).join("\n\t\t")}\n\t})`).join("\n")}
 }
 `;
 
@@ -96,6 +164,7 @@ module.exports = {
       fs.writeFileSync(path.join(pkg, "prelude.go"), prelude);
       fs.writeFileSync(path.join(pkg, "sol.go"), "package main\n\n" + withImports(job.code) + "\n");
       fs.writeFileSync(path.join(pkg, "main.go"), mainGo(job));
+      if (usesType(job.sig, "RandomList")) fs.writeFileSync(path.join(pkg, "random.go"), NODE);
       const bin = path.join(dir, "bin", job.name + exe);
       const b = await run("go", ["build", "-o", bin, "./j" + job.name], { cwd: dir, timeout: 180000 });
       if (b.code !== 0) return { error: "编译没过：" + b.stderr.split("\n").filter((l) => l && !l.startsWith("#")).slice(0, 6).join(" | ") };

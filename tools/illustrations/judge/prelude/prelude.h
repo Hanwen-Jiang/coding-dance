@@ -22,13 +22,50 @@ struct TreeNode {
 // 层序数组里表示空位的值
 const int JNUL = INT_MIN;
 
+// 本用例建出的节点：要按「是不是同一个节点」判的题用（见 judge/util.js 里的类型说明）
+inline vector<ListNode*> jNodes;
+inline TreeNode* jLastTree = nullptr;
+inline void jReset() { jNodes.clear(); jLastTree = nullptr; }
+
 inline ListNode* jList(const vector<int>& v) {
     ListNode dummy, *cur = &dummy;
-    for (int x : v) { cur->next = new ListNode(x); cur = cur->next; }
+    for (int x : v) { cur->next = new ListNode(x); cur = cur->next; jNodes.push_back(cur); }
     return dummy.next;
 }
 
-inline TreeNode* jTree(const vector<int>& v) {
+// 最后一个节点接回下标 pos 的节点（-1 不成环）
+inline ListNode* jCycle(const vector<int>& v, int pos) {
+    size_t s = jNodes.size();
+    ListNode* head = jList(v);
+    if (pos >= 0 && !v.empty()) jNodes[s + v.size() - 1]->next = jNodes[s + pos];
+    return head;
+}
+
+// 独有部分后面接上本用例建出的第 k 个节点（-1 不接）
+inline ListNode* jJoinList(const vector<int>& v, int k) {
+    ListNode* tail = k >= 0 ? jNodes[k] : nullptr;
+    size_t s = jNodes.size();
+    ListNode* head = jList(v);
+    if (v.empty()) return tail;
+    jNodes[s + v.size() - 1]->next = tail;
+    return head;
+}
+
+inline TreeNode* jTreeOf(const vector<int>& v);
+inline TreeNode* jTree(const vector<int>& v) { return jLastTree = jTreeOf(v); }
+
+inline TreeNode* jFind(int val) {
+    vector<TreeNode*> st{jLastTree};
+    while (!st.empty()) {
+        TreeNode* t = st.back(); st.pop_back();
+        if (!t) continue;
+        if (t->val == val) return t;
+        st.push_back(t->left); st.push_back(t->right);
+    }
+    return nullptr;
+}
+
+inline TreeNode* jTreeOf(const vector<int>& v) {
     if (v.empty() || v[0] == JNUL) return nullptr;
     TreeNode* root = new TreeNode(v[0]);
     vector<TreeNode*> q{root};
@@ -85,6 +122,12 @@ template <class T> string js(const vector<T>& v) {
     for (size_t i = 0; i < v.size(); i++) { if (i) o += ","; o += js(v[i]); }
     return o + "]";
 }
+inline string jIndex(ListNode* n) {
+    if (!n) return "null";
+    for (size_t i = 0; i < jNodes.size(); i++) if (jNodes[i] == n) return to_string(i);
+    return js(string("不是输入里的节点"));
+}
+inline string jVal(TreeNode* n) { return n ? to_string(n->val) : "null"; }
 inline string jJoin(const vector<string>& parts) {
     string o = "[";
     for (size_t i = 0; i < parts.size(); i++) { if (i) o += ","; o += parts[i]; }

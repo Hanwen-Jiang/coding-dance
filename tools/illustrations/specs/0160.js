@@ -10,22 +10,26 @@ module.exports = {
   codes: [{ t: "标准解法：双指针换路", code: `
 class Solution:
     def getIntersectionNode(self, headA: ListNode, headB: ListNode) -> Optional[ListNode]:
-        pa, pb = headA, headB
-        while pa is not pb:
-            pa = pa.next if pa else headB   # 走到空就换到 B 的头
-            pb = pb.next if pb else headA
-        return pa                       # 交点，或者都是空
-` }, { t: "简洁写法：集合（O(m+n) 空间）", kind: "elegant", note: "把 A 的节点都放进集合，B 上第一个在集合里的节点就是交点。比较的是节点本身，不是值。", code: `
+        pa, pb = headA, headB           #@init
+        while pa is not pb:             #@step
+            pa = pa.next if pa else headB   # 走到空就换到 B 的头 #@step
+            pb = pb.next if pb else headA   #@step
+        return pa                       # 交点，或者都是空 #@done
+` }, { t: "简洁写法：集合（O(m+n) 空间）", key: "set", kind: "elegant", note: "把 A 的节点都放进集合，B 上第一个在集合里的节点就是交点。比较的是节点本身，不是值。", code: `
 class Solution:
     def getIntersectionNode(self, headA: ListNode, headB: ListNode) -> Optional[ListNode]:
-        seen = set()
-        while headA:
-            seen.add(headA)
-            headA = headA.next
-        while headB and headB not in seen:
-            headB = headB.next
-        return headB
+        seen = set()                    #@init
+        while headA:                    #@addA
+            seen.add(headA)             #@addA
+            headA = headA.next          #@addA
+        while headB and headB not in seen:  #@walkB,found,none
+            headB = headB.next          #@walkB
+        return headB                    #@found,none
 ` }],
+  // 力扣的输入是 listA、listB 和交点位置；这里传 A 整条，B 写成「独有部分 + 接在 A 的第几个节点」，返回值判成交点是 A 的第几个节点
+  sig: { fn: "getIntersectionNode", params: ["ListNode", "JoinList"], ret: "NodeIndex" },
+  call: (a) => [[...a.xa, ...a.cm], [a.xb, a.cm.length ? a.xa.length : -1]],
+  cases: [[[1], [[], 0]], [[1, 2], [[3], -1]], [[2, 3], [[1], 1]], [[], [[1, 2], -1]], [[1, 9, 1, 2, 4], [[3], 3]]],
   pytest: `
 def mk(xa, xb, common):
     c = L(common)
@@ -57,20 +61,21 @@ for xa, xb, cm in [([4,1],[5,6,1],[8,4,5]), ([1,9,1],[3],[2,4]), ([2,6,4],[1,5],
     const row = (label, arr, w) => ({ t: "list", label, nodes: arr.length ? arr.map((v, i) => ({ v, cls: met && at(pa, w) === i ? "c" : at(pa, w) === i ? "a" : at(pb, w) === i ? "b" : w === "C" ? "g" : "" })) : [{ v: "无", cls: "d" }], showNil: w === "C" || !C, ptrs: { pa: at(pa, w), pb: at(pb, w) } });
     const view = () => [row("A 独有的部分（后面接公共部分）", xa, "A"), row("B 独有的部分（后面接公共部分）", xb, "B"), row("公共部分", cm, "C")];
     const facts = () => [["pa 走在", onB ? "B 的路上" : "A 的路上"], ["pb 走在", onA ? "A 的路上" : "B 的路上"]];
-    snap("开始", "pa 从 A 的头出发，pb 从 B 的头出发，每次各走一步。", view(), { facts: facts() });
+    snap("开始", "pa 从 A 的头出发，pb 从 B 的头出发，每次各走一步。", view(), { at: "init", facts: facts() });
     let guard = 0;
     while (!same() && guard++ < 100) {
       let msg = "";
       if (pa === null) { pa = headOf("B"); onB = true; msg += "pa 走完了 A，换到 <b>B 的头</b>继续走。"; } else { pa = step(pa); msg += pa === null ? "pa 走到了空。" : "pa 往前一步。"; }
       if (pb === null) { pb = headOf("A"); onA = true; msg += "pb 走完了 B，换到 <b>A 的头</b>继续走。"; } else { pb = step(pb); msg += pb === null ? "pb 走到了空。" : "pb 往前一步。"; }
-      if (!same()) snap("各走一步", msg, view(), { facts: facts() });
+      if (!same()) snap("各走一步", msg, view(), { at: "step", facts: facts() });
     }
     met = true;
-    if (pa === null) snap("没有交点", "两个指针同时走到了空。它们走过的总长度相同，却一直没碰到同一个节点，说明两个链表不相交。", view(), { kind: "warn", ans: null, facts: facts() });
-    else snap("相遇", `pa 和 pb 同时到了 <b>${cm[pa[1]]}</b>。两个指针都走了「A 独有 + B 独有 + 若干公共」这么长，这里就是交点。`, view(), { kind: "ok", ans: cm[pa[1]], facts: facts() });
+    if (pa === null) snap("没有交点", "两个指针同时走到了空。它们走过的总长度相同，却一直没碰到同一个节点，说明两个链表不相交。", view(), { at: ["step", "done"], kind: "warn", ans: null, facts: facts() });
+    else snap("相遇", `pa 和 pb 同时到了 <b>${cm[pa[1]]}</b>。两个指针都走了「A 独有 + B 独有 + 若干公共」这么长，这里就是交点。`, view(), { at: ["step", "done"], kind: "ok", ans: cm[pa[1]], facts: facts() });
   },
   alts: [{
     t: "集合",
+    code: "set",
     note: "和简洁写法一样：先把 A 上的节点全部放进集合，再从 B 的头往后走，第一个已经在集合里的节点就是交点。要 O(m) 额外空间。",
     legend: [["a", "当前节点"], ["e", "在集合里（A 上的节点）"], ["c", "交点"]],
     build(a, snap) {
@@ -79,25 +84,25 @@ for xa, xb, cm in [([4,1],[5,6,1],[8,4,5]), ([1,9,1],[3],[2,4]), ([2,6,4],[1,5],
       const row = (label, arr, w) => ({ t: "list", label, nodes: arr.length ? arr.map((v, i) => ({ v, cls: hit !== null && w === "C" && i === hit ? "c" : cur && cur[0] === w && cur[1] === i ? "a" : (w === "A" && seenA.has(i)) || (w === "C" && seenC.has(i)) ? "e" : "" })) : [{ v: "无", cls: "d" }], showNil: w === "C" || !cm.length, ptrs: { [name]: cur && cur[0] === w ? cur[1] : null } });
       const view = () => [row("A 独有的部分（后面接公共部分）", xa, "A"), row("B 独有的部分（后面接公共部分）", xb, "B"), row("公共部分", cm, "C")];
       const f = () => ({ facts: [["集合大小", seenA.size + seenC.size]] });
-      snap("开始", "第一步：从 A 的头走到尾，把每个节点都放进集合。比较的是节点本身，不是值。", view(), f());
+      snap("开始", "第一步：从 A 的头走到尾，把每个节点都放进集合。比较的是节点本身，不是值。", view(), { at: "init", ...f() });
       const pathA = [...xa.map((_, i) => ["A", i]), ...cm.map((_, i) => ["C", i])];
       for (const p of pathA) {
         cur = p; (p[0] === "A" ? seenA : seenC).add(p[1]);
-        snap("放进集合", `A 上的节点 ${p[0] === "A" ? xa[p[1]] : cm[p[1]]} 放进集合。`, view(), f());
+        snap("放进集合", `A 上的节点 ${p[0] === "A" ? xa[p[1]] : cm[p[1]]} 放进集合。`, view(), { at: "addA", ...f() });
       }
       cur = null; name = "headB";
-      snap("换到 B", "A 走完了。第二步：从 B 的头往后走，看每个节点在不在集合里。", view(), f());
+      snap("换到 B", "A 走完了。第二步：从 B 的头往后走，看每个节点在不在集合里。", view(), { at: "walkB", ...f() });
       for (let i = 0; i < xb.length; i++) {
         cur = ["B", i];
-        snap("不在集合里", `B 上的节点 ${xb[i]} 不在集合里，不是 A 上的节点，继续往后走。`, view(), f());
+        snap("不在集合里", `B 上的节点 ${xb[i]} 不在集合里，不是 A 上的节点，继续往后走。`, view(), { at: "walkB", ...f() });
       }
       if (!cm.length) {
         cur = null;
-        snap("没有交点", "B 走到了空，一直没碰到 A 上的节点，两个链表不相交。", view(), { kind: "warn", ans: null, ...f() });
+        snap("没有交点", "B 走到了空，一直没碰到 A 上的节点，两个链表不相交。", view(), { at: "none", kind: "warn", ans: null, ...f() });
         return;
       }
       cur = ["C", 0]; hit = 0;
-      snap("找到交点", `节点 <b>${cm[0]}</b> 已经在集合里了：它同时在 A 和 B 上，是 B 碰到的第一个这样的节点，就是交点。`, view(), { kind: "ok", ans: cm[0], ...f() });
+      snap("找到交点", `节点 <b>${cm[0]}</b> 已经在集合里了：它同时在 A 和 B 上，是 B 碰到的第一个这样的节点，就是交点。`, view(), { at: "found", kind: "ok", ans: cm[0], ...f() });
     },
   }],
   points: [
