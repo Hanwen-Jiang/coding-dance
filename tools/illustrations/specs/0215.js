@@ -12,27 +12,27 @@ import random
 
 class Solution:
     def findKthLargest(self, nums: List[int], k: int) -> int:
-        target = len(nums) - k          # 第 k 大 = 升序下标 n-k
-        lo, hi = 0, len(nums) - 1
-        while True:
-            pivot = nums[random.randint(lo, hi)]
-            lt, i, gt = lo, lo, hi      # [lo,lt) 小于  [lt,i) 等于  (gt,hi] 大于
-            while i <= gt:
-                if nums[i] < pivot:
-                    nums[lt], nums[i] = nums[i], nums[lt]
-                    lt += 1
-                    i += 1
-                elif nums[i] > pivot:
-                    nums[i], nums[gt] = nums[gt], nums[i]
-                    gt -= 1             # 换过来的数还没看过，i 不动
-                else:
-                    i += 1
-            if target < lt:
-                hi = lt - 1             # 答案在小于区
-            elif target > gt:
-                lo = gt + 1             # 答案在大于区
-            else:
-                return pivot            # 落在等于区，就是 pivot
+        target = len(nums) - k          # 第 k 大 = 升序下标 n-k #@init
+        lo, hi = 0, len(nums) - 1       #@init
+        while True:                     #@pivot
+            pivot = nums[random.randint(lo, hi)]  #@pivot
+            lt, i, gt = lo, lo, hi      # [lo,lt) 小于  [lt,i) 等于  (gt,hi] 大于 #@pivot
+            while i <= gt:              #@less,more,eq
+                if nums[i] < pivot:     #@less
+                    nums[lt], nums[i] = nums[i], nums[lt]  #@less
+                    lt += 1             #@less
+                    i += 1              #@less
+                elif nums[i] > pivot:   #@more
+                    nums[i], nums[gt] = nums[gt], nums[i]  #@more
+                    gt -= 1             # 换过来的数还没看过，i 不动 #@more
+                else:                   #@eq
+                    i += 1              #@eq
+            if target < lt:             #@left
+                hi = lt - 1             # 答案在小于区 #@left
+            elif target > gt:           #@right
+                lo = gt + 1             # 答案在大于区 #@right
+            else:                       #@found
+                return pivot            # 落在等于区，就是 pivot #@found
 ` }, { t: "简洁写法：列表推导式三路划分", kind: "elegant", note: "思路和标准解法一样，只是每轮新建「大于」「小于」两个列表，直接按第 k 大来分，不用换算下标。代价是额外空间平均 O(n)。", code: `
 import random
 
@@ -46,18 +46,21 @@ class Solution:
         elif len(right) > len(nums) - k:          # 答案在小于区
             return self.findKthLargest(right, k + len(right) - len(nums))
         return pivot                              # 落在等于区
-` }, { t: "另一种常考写法：大小为 k 的小顶堆", note: "堆里始终保留目前见过的最大的 k 个数，堆顶是其中最小的，也就是第 k 大。复杂度 O(n log k)，写起来短、不改原数组。", code: `
+` }, { t: "另一种常考写法：大小为 k 的小顶堆", key: "heap", note: "堆里始终保留目前见过的最大的 k 个数，堆顶是其中最小的，也就是第 k 大。复杂度 O(n log k)，写起来短、不改原数组。", code: `
 import heapq
 
 class Solution:
     def findKthLargest(self, nums: List[int], k: int) -> int:
-        heap = nums[:k]
-        heapq.heapify(heap)             # 先放前 k 个，建小顶堆
+        heap = nums[:k]                 #@push
+        heapq.heapify(heap)             # 先放前 k 个，建小顶堆 #@push
         for x in nums[k:]:
-            if x > heap[0]:             # 比堆顶大，才有资格进前 k
-                heapq.heapreplace(heap, x)
-        return heap[0]
+            if x > heap[0]:             # 比堆顶大，才有资格进前 k #@replace,skip
+                heapq.heapreplace(heap, x)  #@replace
+        return heap[0]                  #@done
 ` }],
+  sig: { fn: "findKthLargest", params: ["int[]", "int"], ret: "int" },
+  call: (a) => [a.nums, a.k],
+  cases: [[[1], 1], [[2, 2, 2, 2], 3], [[-1, -1], 2], [[5, 4, 3, 2, 1], 5], [[1, 2, 3, 4, 5], 1]],
   pytest: `
 s = Solution()
 assert s.findKthLargest([3,2,1,5,6,4], 2) == 5
@@ -79,6 +82,7 @@ for _ in range(30):
   ],
   alts: [{
     t: "小顶堆",
+    code: "heap",
     note: "堆里始终留着目前见过的最大的 k 个数，堆顶是其中最小的。新来的数比堆顶大才有资格进去，把堆顶换掉。",
     legend: [["a", "正在看的数"], ["d", "已经看过"], ["b", "堆顶：目前的第 k 大"], ["c", "答案"]],
     build(a, snap) {
@@ -92,13 +96,13 @@ for _ in range(30):
         heap.length ? { t: "tree", label: `小顶堆（最多 ${k} 个，堆顶是其中最小的）`, nodes: nodes(), root: 0, cls: { 0: fin ? "c" : "b" } } : { t: "note", label: "小顶堆", html: "空" },
       ];
       const f = () => ({ facts: [["堆大小", `${heap.length} / ${k}`], ["堆顶", heap.length ? heap[0] : "—"]] });
-      snap("开始", `堆里只留目前见过的最大的 ${k} 个数。全部看完后，堆顶就是第 ${k} 大。`, view(-1), f());
+      snap("开始", `堆里只留目前见过的最大的 ${k} 个数。全部看完后，堆顶就是第 ${k} 大。`, view(-1), { at: "push", ...f() });
       nums.forEach((x, j) => {
-        if (heap.length < k) { heap.push(x); up(heap.length - 1); snap("入堆", `堆里还不到 ${k} 个，${x} 直接放进去，调整后堆顶是 ${heap[0]}。`, view(j), f()); }
-        else if (x > heap[0]) { const old = heap[0]; heap[0] = x; down(0); snap("替换堆顶", `${x} 比堆顶 ${old} 大，有资格进前 ${k}。换掉堆顶再往下调整，新的堆顶是 ${heap[0]}。`, view(j), f()); }
-        else snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，跳过。`, view(j), f());
+        if (heap.length < k) { heap.push(x); up(heap.length - 1); snap("入堆", `堆里还不到 ${k} 个，${x} 直接放进去，调整后堆顶是 ${heap[0]}。`, view(j), { at: "push", ...f() }); }
+        else if (x > heap[0]) { const old = heap[0]; heap[0] = x; down(0); snap("替换堆顶", `${x} 比堆顶 ${old} 大，有资格进前 ${k}。换掉堆顶再往下调整，新的堆顶是 ${heap[0]}。`, view(j), { at: "replace", ...f() }); }
+        else snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，跳过。`, view(j), { at: "skip", ...f() });
       });
-      snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, true), { kind: "ok", ans: heap[0], ...f() });
+      snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, true), { at: "done", kind: "ok", ans: heap[0], ...f() });
     },
   }],
   build(a, snap) {
@@ -108,21 +112,21 @@ for _ in range(30):
     const cls = (j) => (j === done ? "c" : j < lo || j > hi ? "d" : j === hl ? "a" : pv === null ? "e" : j < lt ? "g" : j < i ? "k" : j > gt ? "w" : "e");
     const view = () => [{ t: "bars", label: `nums（目标是升序后下标 ${target} 的数）`, items: nums.map((v, j) => ({ v, cls: cls(j) })), ptrs: pv === null ? { lo, hi } : { lt, i: i <= gt ? i : null, gt } }];
     const f = () => ({ facts: [["目标下标", target], ["范围", `[${lo}, ${hi}]`], ["pivot", pv === null ? "—" : pv]] });
-    snap("开始", `第 ${k} 大，就是升序排好后下标 ${n} − ${k} = <b>${target}</b> 的数。只关心这一个位置放的是谁。`, view(), f());
+    snap("开始", `第 ${k} 大，就是升序排好后下标 ${n} − ${k} = <b>${target}</b> 的数。只关心这一个位置放的是谁。`, view(), { at: "init", ...f() });
     for (;;) {
       pv = nums[(lo + hi) >> 1]; lt = lo; i = lo; gt = hi; hl = -1;
-      snap("选 pivot", `这一轮的范围是 [${lo}, ${hi}]。演示里取中间位置的 <b>${pv}</b> 当 pivot（代码里是随机选的）。`, view(), f());
+      snap("选 pivot", `这一轮的范围是 [${lo}, ${hi}]。演示里取中间位置的 <b>${pv}</b> 当 pivot（代码里是随机选的）。`, view(), { at: "pivot", ...f() });
       while (i <= gt) {
         const x = nums[i];
-        if (x < pv) { [nums[lt], nums[i]] = [nums[i], nums[lt]]; lt++; i++; hl = lt - 1; snap("小于", `${x} &lt; ${pv}，放到左边的小于区。`, view(), f()); }
-        else if (x > pv) { [nums[i], nums[gt]] = [nums[gt], nums[i]]; gt--; hl = gt + 1; snap("大于", `${x} &gt; ${pv}，换到右边的大于区。换过来的 ${nums[i]} 还没看过，i 不动。`, view(), f()); }
-        else { i++; hl = i - 1; snap("等于", `${x} 等于 pivot，留在中间的等于区。`, view(), f()); }
+        if (x < pv) { [nums[lt], nums[i]] = [nums[i], nums[lt]]; lt++; i++; hl = lt - 1; snap("小于", `${x} &lt; ${pv}，放到左边的小于区。`, view(), { at: "less", ...f() }); }
+        else if (x > pv) { [nums[i], nums[gt]] = [nums[gt], nums[i]]; gt--; hl = gt + 1; snap("大于", `${x} &gt; ${pv}，换到右边的大于区。换过来的 ${nums[i]} 还没看过，i 不动。`, view(), { at: "more", ...f() }); }
+        else { i++; hl = i - 1; snap("等于", `${x} 等于 pivot，留在中间的等于区。`, view(), { at: "eq", ...f() }); }
       }
       hl = -1;
       const parts = `小于区 [${lo}, ${lt - 1}]，等于区 [${lt}, ${gt}]，大于区 [${gt + 1}, ${hi}]`;
-      if (target < lt) { snap("去左边", `划分完了：${parts}。目标下标 ${target} 在小于区，右边两段直接扔掉。`, view(), f()); hi = lt - 1; pv = null; }
-      else if (target > gt) { snap("去右边", `划分完了：${parts}。目标下标 ${target} 在大于区，左边两段直接扔掉。`, view(), f()); lo = gt + 1; pv = null; }
-      else { done = target; snap("找到", `划分完了：${parts}。目标下标 ${target} 落在等于区，答案就是 pivot <b>${pv}</b>。`, view(), { kind: "ok", ans: pv, ...f() }); return; }
+      if (target < lt) { snap("去左边", `划分完了：${parts}。目标下标 ${target} 在小于区，右边两段直接扔掉。`, view(), { at: "left", ...f() }); hi = lt - 1; pv = null; }
+      else if (target > gt) { snap("去右边", `划分完了：${parts}。目标下标 ${target} 在大于区，左边两段直接扔掉。`, view(), { at: "right", ...f() }); lo = gt + 1; pv = null; }
+      else { done = target; snap("找到", `划分完了：${parts}。目标下标 ${target} 落在等于区，答案就是 pivot <b>${pv}</b>。`, view(), { at: "found", kind: "ok", ans: pv, ...f() }); return; }
     }
   },
   points: [

@@ -1,0 +1,25 @@
+{
+ "sig": {"fn":"isValid","params":["string"],"ret":"bool"},
+ "cases": [
+  {"in":["{[()]}"],"out":true},
+  {"in":["([)]"],"out":false},
+  {"in":["()(("],"out":false},
+  {"in":["())"],"out":false},
+  {"in":["("],"out":false},
+  {"in":[")"],"out":false},
+  {"in":["]"],"out":false},
+  {"in":["()"],"out":true},
+  {"in":["(]"],"out":false},
+  {"in":["{[]}"],"out":true},
+  {"in":["(([]){})"],"out":true},
+  {"in":["{){}))({"],"out":false},
+  {"in":["(){}[]"],"out":true},
+  {"in":["(([]))"],"out":true},
+  {"in":["{}"],"out":true},
+  {"in":["]{"],"out":false},
+  {"in":["){]}{()]"],"out":false},
+  {"in":["}([)}[)"],"out":false},
+  {"in":["([])"],"out":true},
+  {"in":["({}{[]})"],"out":true}
+ ]
+}

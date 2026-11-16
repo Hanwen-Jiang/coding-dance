@@ -10,14 +10,14 @@ module.exports = {
   codes: [{ t: "标准解法：动态规划", code: `
 class Solution:
     def wordBreak(self, s: str, wordDict: List[str]) -> bool:
-        words = set(wordDict)
-        dp = [True] + [False] * len(s)      # dp[i]：前 i 个字符能不能拆
-        for i in range(1, len(s) + 1):
-            for j in range(i):
-                if dp[j] and s[j:i] in words:   # 前 j 个能拆，s[j:i] 又是一个词
-                    dp[i] = True
-                    break
-        return dp[-1]
+        words = set(wordDict)               #@init
+        dp = [True] + [False] * len(s)      # dp[i]：前 i 个字符能不能拆 #@init
+        for i in range(1, len(s) + 1):      #@try
+            for j in range(i):              #@try
+                if dp[j] and s[j:i] in words:   # 前 j 个能拆，s[j:i] 又是一个词 #@try
+                    dp[i] = True            #@hit
+                    break                   #@hit
+        return dp[-1]                       #@done
 ` }, { t: "简洁写法：记忆化递归", kind: "elegant", note: "ok(i) 表示 s[i:] 能不能拆：试每个以位置 i 开头的词，剩下的部分递归。", code: `
 from functools import cache
 
@@ -28,6 +28,9 @@ class Solution:
             return i == len(s) or any(s.startswith(w, i) and ok(i + len(w)) for w in wordDict)
         return ok(0)
 ` }],
+  sig: { fn: "wordBreak", params: ["string", "List<string>"], ret: "bool" },
+  call: (a) => [a.s, a.words],
+  cases: [["a", ["b"]], ["a", ["a"]], ["aaaaaaab", ["a", "aa", "aaa"]], ["cars", ["car", "ca", "rs"]]],
   pytest: `
 s = Solution()
 assert s.wordBreak("leetcode", ["leet","code"]) is True
@@ -47,15 +50,15 @@ assert s.wordBreak("aaaaaaaaaaaaaaaaaaaaaaaaaaaaab", ["a","aa","aaa","aaaa"]) is
       { t: "array", label: "s", items: s.split("").map((c, k) => ({ v: c, cls: j >= 0 && k >= j && k < i ? "a" : j >= 0 && k < j ? "e" : "" })), ptrs: {} },
       { t: "array", label: "dp[i]：前 i 个字符能不能拆", items: dp.map((v, k) => ({ v: v ? "✓" : "✗", cls: k === i ? (v ? "c" : "w") : v ? "k" : "d" })), ptrs: { i: i >= 0 ? i : null } },
     ];
-    snap("开始", `字典是 {${a.words.join(", ")}}。dp[0] = ✓：空串不用拆。`, view(-1, -1));
+    snap("开始", `字典是 {${a.words.join(", ")}}。dp[0] = ✓：空串不用拆。`, view(-1, -1), { at: "init" });
     for (let i = 1; i <= n; i++) {
       let hit = -1;
       for (let j = 0; j < i; j++) if (dp[j] && W.has(s.slice(j, i))) { hit = j; break; }
       dp[i] = hit >= 0;
-      if (hit >= 0) snap(`dp[${i}]`, `前 ${hit} 个字符能拆（dp[${hit}] = ✓），"${s.slice(hit, i)}" 又在字典里。所以 "${s.slice(0, i)}" 能拆，dp[${i}] = <b>✓</b>。`, view(i, hit));
-      else snap(`dp[${i}]`, `"${s.slice(0, i)}" 找不到能拆的切法：所有 dp[j] = ✓ 的 j，s[j:${i}] 都不在字典里。dp[${i}] = ✗。`, view(i, -1));
+      if (hit >= 0) snap(`dp[${i}]`, `前 ${hit} 个字符能拆（dp[${hit}] = ✓），"${s.slice(hit, i)}" 又在字典里。所以 "${s.slice(0, i)}" 能拆，dp[${i}] = <b>✓</b>。`, view(i, hit), { at: ["try", "hit"] });
+      else snap(`dp[${i}]`, `"${s.slice(0, i)}" 找不到能拆的切法：所有 dp[j] = ✓ 的 j，s[j:${i}] 都不在字典里。dp[${i}] = ✗。`, view(i, -1), { at: "try" });
     }
-    snap("完成", `dp[${n}] = ${dp[n] ? "✓" : "✗"}，返回 <b>${dp[n]}</b>。`, view(n, -1), { kind: dp[n] ? "ok" : "warn", ans: dp[n] });
+    snap("完成", `dp[${n}] = ${dp[n] ? "✓" : "✗"}，返回 <b>${dp[n]}</b>。`, view(n, -1), { at: "done", kind: dp[n] ? "ok" : "warn", ans: dp[n] });
   },
   points: [
     { t: "dp 多开一位", body: "dp 长度是 len(s) + 1，dp[i] 对应前 i 个字符，dp[0] 是空串。" },

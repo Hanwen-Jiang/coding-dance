@@ -10,22 +10,22 @@ module.exports = {
   codes: [{ t: "标准解法：滑动窗口 + 欠缺计数", code: `
 class Solution:
     def minWindow(self, s: str, t: str) -> str:
-        need = Counter(t)               # 每种字符还差几个
-        missing = len(t)                # 一共还差几个
-        l = start = 0
-        size = float("inf")
-        for r, ch in enumerate(s):
-            if need[ch] > 0:
-                missing -= 1
-            need[ch] -= 1
-            while missing == 0:         # 窗口合格，尝试收缩
-                if r - l + 1 < size:
-                    start, size = l, r - l + 1
-                need[s[l]] += 1
-                if need[s[l]] > 0:
-                    missing += 1
-                l += 1
-        return "" if size == float("inf") else s[start:start + size]
+        need = Counter(t)               # 每种字符还差几个 #@init
+        missing = len(t)                # 一共还差几个 #@init
+        l = start = 0                   #@init
+        size = float("inf")             #@init
+        for r, ch in enumerate(s):      #@grow
+            if need[ch] > 0:            #@grow
+                missing -= 1            #@grow
+            need[ch] -= 1               #@grow
+            while missing == 0:         # 窗口合格，尝试收缩 #@shrink
+                if r - l + 1 < size:    #@shrink
+                    start, size = l, r - l + 1  #@shrink
+                need[s[l]] += 1         #@shrink
+                if need[s[l]] > 0:      #@shrink
+                    missing += 1        #@broke
+                l += 1                  #@shrink
+        return "" if size == float("inf") else s[start:start + size]  #@done
 ` }, { t: "简洁写法：Counter 记欠账", kind: "elegant", note: "need[c] 是窗口还欠多少个 c，可以是负数（多了）。窗口合法后，先把左边多余的扔掉得到最短，再扔掉一个必需的，让窗口重新变得不合法。", code: `
 class Solution:
     def minWindow(self, s: str, t: str) -> str:
@@ -45,6 +45,9 @@ class Solution:
                 left += 1
         return "" if best[1] == float("inf") else s[best[0]:best[1]]
 ` }],
+  sig: { fn: "minWindow", params: ["string", "string"], ret: "string" },
+  call: (a) => [a.s, a.t],
+  cases: [["a", "a"], ["a", "aa"], ["aa", "aa"], ["ab", "b"], ["bba", "ab"], ["cabwefgewcwaefgcf", "cae"]],
   pytest: `
 s = Solution()
 assert s.minWindow("ADOBECODEBANC", "ABC") == "BANC"
@@ -66,23 +69,23 @@ assert s.minWindow("aaflslflsldkalskaaa", "aaa") == "aaa"
       { t: "chips", label: "need（t 里的字符还差几个，负数是多出来的）", items: keys.map((c) => ({ v: `${c}: ${need[c]}`, cls: need[c] > 0 ? "w" : "k" })) },
     ];
     const facts = () => [["还差", missing], ["最短", size === Infinity ? "无" : s.slice(start, start + size)]];
-    snap("开始", `t = "${t}"，一共需要 ${missing} 个字符。r 向右扩张，直到一个都不差。`, view(-1), { facts: facts() });
+    snap("开始", `t = "${t}"，一共需要 ${missing} 个字符。r 向右扩张，直到一个都不差。`, view(-1), { at: "init", facts: facts() });
     for (let r = 0; r < s.length; r++) {
       const ch = s[r], useful = (need[ch] || 0) > 0;
       if (useful) missing--;
       need[ch] = (need[ch] || 0) - 1;
-      snap("扩张", `'${ch}' 进入窗口。` + (useful ? `它正是需要的，还差 ${missing} 个。` : keys.includes(ch) ? "这种字符已经够了，算多出来的。" : "t 里没有它，不影响。") + (missing === 0 ? "窗口<b>合格</b>了，开始收缩左边。" : ""), view(r), { facts: facts() });
+      snap("扩张", `'${ch}' 进入窗口。` + (useful ? `它正是需要的，还差 ${missing} 个。` : keys.includes(ch) ? "这种字符已经够了，算多出来的。" : "t 里没有它，不影响。") + (missing === 0 ? "窗口<b>合格</b>了，开始收缩左边。" : ""), view(r), { at: "grow", facts: facts() });
       while (missing === 0) {
         if (r - l + 1 < size) { start = l; size = r - l + 1; }
         const c = s[l]; need[c]++;
         const broke = need[c] > 0;
         if (broke) missing++;
-        snap(broke ? "收缩到头" : "收缩", `当前窗口 "${s.slice(l, r + 1)}" 合格，长度 ${r - l + 1}` + (start === l ? "，是目前最短的" : "") + `。移出左边的 '${c}'，` + (broke ? `这下 '${c}' 不够了，窗口不再合格，继续扩张右边。` : "窗口仍然合格，继续收缩。"), view(r, l), { kind: broke ? "warn" : "", facts: facts() });
+        snap(broke ? "收缩到头" : "收缩", `当前窗口 "${s.slice(l, r + 1)}" 合格，长度 ${r - l + 1}` + (start === l ? "，是目前最短的" : "") + `。移出左边的 '${c}'，` + (broke ? `这下 '${c}' 不够了，窗口不再合格，继续扩张右边。` : "窗口仍然合格，继续收缩。"), view(r, l), { at: broke ? ["shrink", "broke"] : "shrink", kind: broke ? "warn" : "", facts: facts() });
         l++;
       }
     }
     const ans = size === Infinity ? "" : s.slice(start, start + size);
-    snap("完成", `r 走到头了。最短的覆盖子串是 <b>"${ans}"</b>。`, view(-1, -1, true), { kind: "ok", ans, facts: facts() });
+    snap("完成", `r 走到头了。最短的覆盖子串是 <b>"${ans}"</b>。`, view(-1, -1, true), { at: "done", kind: "ok", ans, facts: facts() });
   },
   points: [
     { t: "need 可以是负数", body: "负数表示窗口里这种字符比需要的多。只有从 0 变成正数时，窗口才真的缺了。" },

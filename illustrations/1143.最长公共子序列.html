@@ -331,12 +331,12 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t1":"abcde","t2":"ace"},"n
       { t: "array", label: "text2（列 j 对应前 j 个字符）", idxFrom: 1, items: B.split("").map((c, k) => ({ v: c, cls: k === cj - 1 ? "a" : "" })), ptrs: {} },
       { t: "grid", label: "dp[i][j]", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m && j === n ? "c" : i === ci && j === cj ? "a" : used.some(([x, y]) => x === i && y === j) ? "e" : "" }))) },
     ];
-    snap("开始", "第 0 行和第 0 列：有一边是空串，公共子序列长度都是 0。", view(-1, -1, []));
+    snap("开始", "第 0 行和第 0 列：有一边是空串，公共子序列长度都是 0。", view(-1, -1, []), { at: "init" });
     for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
-      if (A[i - 1] === B[j - 1]) { dp[i][j] = dp[i - 1][j - 1] + 1; snap(`(${i}, ${j})`, `最后一个字符都是 '${A[i - 1]}'，一起算进去：dp[${i - 1}][${j - 1}] + 1 = <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j - 1]])); }
-      else { dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]); snap(`(${i}, ${j})`, `'${A[i - 1]}' ≠ '${B[j - 1]}'，扔掉一边：上面 ${dp[i - 1][j]}，左边 ${dp[i][j - 1]}，取大的 <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j], [i, j - 1]])); }
+      if (A[i - 1] === B[j - 1]) { dp[i][j] = dp[i - 1][j - 1] + 1; snap(`(${i}, ${j})`, `最后一个字符都是 '${A[i - 1]}'，一起算进去：dp[${i - 1}][${j - 1}] + 1 = <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j - 1]]), { at: "same" }); }
+      else { dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]); snap(`(${i}, ${j})`, `'${A[i - 1]}' ≠ '${B[j - 1]}'，扔掉一边：上面 ${dp[i - 1][j]}，左边 ${dp[i][j - 1]}，取大的 <b>${dp[i][j]}</b>。`, view(i, j, [[i - 1, j], [i, j - 1]]), { at: "diff" }); }
     }
-    snap("完成", `最长公共子序列的长度是 <b>${dp[m][n]}</b>。`, view(-1, -1, [], true), { kind: "ok", ans: dp[m][n] });
+    snap("完成", `最长公共子序列的长度是 <b>${dp[m][n]}</b>。`, view(-1, -1, [], true), { at: "done", kind: "ok", ans: dp[m][n] });
   } }
 ] };
 (function () {

@@ -342,18 +342,18 @@ const SPEC = { presets: [{"label":"n = 2","args":{"n":2},"note":"n = 2"},{"label
       { t: "chips", label: "已收集的组合", items: res.map((s, i) => ({ v: s, cls: hl === "c" && i === res.length - 1 ? "c" : "" })), empty: "还没有" },
     ];
     const facts = (o, c) => ({ facts: [["左括号", `${o} / ${n}`], ["右括号", `${c} / ${n}`]] });
-    snap("开始", `要放 ${n} 对括号，一共 ${2 * n} 个字符。左括号不能超过 ${n} 个，右括号不能比左括号多。`, view(""), facts(0, 0));
+    snap("开始", `要放 ${n} 对括号，一共 ${2 * n} 个字符。左括号不能超过 ${n} 个，右括号不能比左括号多。`, view(""), { at: "init", ...facts(0, 0) });
     const dfs = (o, c) => {
       if (path.length === 2 * n) {
         res.push(path.join(""));
-        snap("收集", `放满 ${2 * n} 个了，得到 <b>${res[res.length - 1]}</b>。回到上一层，试另一种选择。`, view("c"), facts(o, c));
+        snap("收集", `放满 ${2 * n} 个了，得到 <b>${res[res.length - 1]}</b>。回到上一层，试另一种选择。`, view("c"), { at: "collect", ...facts(o, c) });
         return;
       }
-      if (o < n) { path.push("("); snap("放 (", `左括号才用了 ${o} 个，还没到 ${n}，放一个 <b>(</b>。`, view("a"), facts(o + 1, c)); dfs(o + 1, c); path.pop(); }
-      if (c < o) { path.push(")"); snap("放 )", `右括号 ${c} 个，比左括号 ${o} 个少，可以放一个 <b>)</b>。`, view("a"), facts(o, c + 1)); dfs(o, c + 1); path.pop(); }
+      if (o < n) { path.push("("); snap("放 (", `左括号才用了 ${o} 个，还没到 ${n}，放一个 <b>(</b>。`, view("a"), { at: "open", ...facts(o + 1, c) }); dfs(o + 1, c); path.pop(); }
+      if (c < o) { path.push(")"); snap("放 )", `右括号 ${c} 个，比左括号 ${o} 个少，可以放一个 <b>)</b>。`, view("a"), { at: "close", ...facts(o, c + 1) }); dfs(o, c + 1); path.pop(); }
     };
     dfs(0, 0);
-    snap("完成", `所有分支都试完了，一共 <b>${res.length}</b> 种合法组合。`, view(""), { kind: "ok", ans: res.slice(), facts: [["组合数", res.length]] });
+    snap("完成", `所有分支都试完了，一共 <b>${res.length}</b> 种合法组合。`, view(""), { at: "done", kind: "ok", ans: res.slice(), facts: [["组合数", res.length]] });
   } }
 ] };
 (function () {

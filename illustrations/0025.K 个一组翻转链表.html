@@ -338,22 +338,22 @@ const SPEC = { presets: [{"label":"示例 1：k = 2","args":{"v":[1,2,3,4,5],"k"
 { t: "标准解法", note: null, legend: [["g","group_prev"],["e","当前这一组"],["k","已经翻转好"],["w","不够 k 个，不动"]], build(a, snap) {
     const o = ["D", ...a.v], k = a.k; let p = 0, tail = false;
     const view = (lo, hi) => [{ t: "list", label: "链表（D 是哑节点）", nodes: o.map((v, i) => ({ v, cls: i === p ? "g" : i >= lo && i <= hi ? (tail ? "w" : "e") : i < p ? "k" : "" })), ptrs: { group_prev: p, kth: tail ? null : hi } }];
-    snap("开始", `k = ${k}。group_prev 从哑节点 D 出发。`, view(-1, -1), { facts: [["k", k]] });
+    snap("开始", `k = ${k}。group_prev 从哑节点 D 出发。`, view(-1, -1), { at: "init", facts: [["k", k]] });
     for (;;) {
       if (p + k >= o.length) {
         tail = true;
-        snap("不够 k 个", p + 1 < o.length ? `从 group_prev 往后数，只剩 ${o.length - 1 - p} 个节点，不够 ${k} 个。这几个保持原样，结束。` : "后面没有节点了，结束。", view(p + 1, o.length - 1), { kind: "warn", facts: [["k", k]] });
+        snap("不够 k 个", p + 1 < o.length ? `从 group_prev 往后数，只剩 ${o.length - 1 - p} 个节点，不够 ${k} 个。这几个保持原样，结束。` : "后面没有节点了，结束。", view(p + 1, o.length - 1), { at: ["count", "done"], kind: "warn", facts: [["k", k]] });
         break;
       }
       const lo = p + 1, hi = p + k;
-      snap("数出一组", `从 group_prev 往后走 ${k} 步，kth 停在 ${o[hi]}。这一组是 [${o.slice(lo, hi + 1).join(", ")}]。`, view(lo, hi), { facts: [["k", k]] });
+      snap("数出一组", `从 group_prev 往后走 ${k} 步，kth 停在 ${o[hi]}。这一组是 [${o.slice(lo, hi + 1).join(", ")}]。`, view(lo, hi), { at: "count", facts: [["k", k]] });
       const first = o[lo], seg = o.slice(lo, hi + 1).reverse();
       for (let i = 0; i < k; i++) o[lo + i] = seg[i];
-      snap("组内反转并接好", `把这一组反转成 [${seg.join(", ")}]。group_prev 接上新的头 ${seg[0]}，新的尾巴 ${first} 接着后面的节点。`, view(lo, hi), { facts: [["k", k]] });
+      snap("组内反转并接好", `把这一组反转成 [${seg.join(", ")}]。group_prev 接上新的头 ${seg[0]}，新的尾巴 ${first} 接着后面的节点。`, view(lo, hi), { at: "rev", facts: [["k", k]] });
       p = hi;
-      snap("下一组", `group_prev 移到这一组的尾巴 ${o[p]}。`, view(-1, -1), { facts: [["k", k]] });
+      snap("下一组", `group_prev 移到这一组的尾巴 ${o[p]}。`, view(-1, -1), { at: "next", facts: [["k", k]] });
     }
-    snap("完成", `结果是 [${o.slice(1).join(", ")}]。`, view(-1, -1), { kind: "ok", ans: o.slice(1), facts: [["k", k]] });
+    snap("完成", `结果是 [${o.slice(1).join(", ")}]。`, view(-1, -1), { at: "done", kind: "ok", ans: o.slice(1), facts: [["k", k]] });
   } }
 ] };
 (function () {

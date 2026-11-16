@@ -10,21 +10,21 @@ module.exports = {
   codes: [{ t: "标准解法：分组 + 组内反转", code: `
 class Solution:
     def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:
-        dummy = ListNode(0, head)
-        group_prev = dummy
-        while True:
-            kth = group_prev
-            for _ in range(k):          # 往前数 k 个
-                kth = kth.next
-                if not kth:
-                    return dummy.next   # 不够 k 个，剩下的不动
-            group_next = kth.next
-            prev, cur = group_next, group_prev.next
-            while cur is not group_next:    # 组内反转
-                cur.next, prev, cur = prev, cur, cur.next
-            first = group_prev.next     # 这组原来的头，现在是尾
-            group_prev.next = kth       # 前面接上新的头
-            group_prev = first
+        dummy = ListNode(0, head)       #@init
+        group_prev = dummy              #@init
+        while True:                     #@count
+            kth = group_prev            #@count
+            for _ in range(k):          # 往前数 k 个 #@count
+                kth = kth.next          #@count
+                if not kth:             #@count
+                    return dummy.next   # 不够 k 个，剩下的不动 #@done
+            group_next = kth.next       #@rev
+            prev, cur = group_next, group_prev.next  #@rev
+            while cur is not group_next:    # 组内反转 #@rev
+                cur.next, prev, cur = prev, cur, cur.next  #@rev
+            first = group_prev.next     # 这组原来的头，现在是尾 #@rev
+            group_prev.next = kth       # 前面接上新的头 #@rev
+            group_prev = first          #@next
 ` }, { t: "简洁写法：递归", kind: "elegant", note: "先数够 k 个，不够就原样返回。够的话，后面的部分先递归翻好，作为这一组翻转后的尾巴。", code: `
 class Solution:
     def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:
@@ -38,6 +38,9 @@ class Solution:
             cur.next, prev, cur = prev, cur, cur.next
         return prev
 ` }],
+  sig: { fn: "reverseKGroup", params: ["ListNode", "int"], ret: "ListNode" },
+  call: (a) => [a.v, a.k],
+  cases: [[[1], 1], [[1, 2], 2], [[1, 2, 3], 1], [[1, 2, 3, 4], 4], [[1, 2, 3, 4, 5, 6, 7], 3]],
   pytest: `
 s = Solution()
 assert toL(s.reverseKGroup(L([1,2,3,4,5]), 2)) == [2,1,4,3,5]
@@ -55,22 +58,22 @@ assert toL(s.reverseKGroup(L([1]), 1)) == [1]
   build(a, snap) {
     const o = ["D", ...a.v], k = a.k; let p = 0, tail = false;
     const view = (lo, hi) => [{ t: "list", label: "链表（D 是哑节点）", nodes: o.map((v, i) => ({ v, cls: i === p ? "g" : i >= lo && i <= hi ? (tail ? "w" : "e") : i < p ? "k" : "" })), ptrs: { group_prev: p, kth: tail ? null : hi } }];
-    snap("开始", `k = ${k}。group_prev 从哑节点 D 出发。`, view(-1, -1), { facts: [["k", k]] });
+    snap("开始", `k = ${k}。group_prev 从哑节点 D 出发。`, view(-1, -1), { at: "init", facts: [["k", k]] });
     for (;;) {
       if (p + k >= o.length) {
         tail = true;
-        snap("不够 k 个", p + 1 < o.length ? `从 group_prev 往后数，只剩 ${o.length - 1 - p} 个节点，不够 ${k} 个。这几个保持原样，结束。` : "后面没有节点了，结束。", view(p + 1, o.length - 1), { kind: "warn", facts: [["k", k]] });
+        snap("不够 k 个", p + 1 < o.length ? `从 group_prev 往后数，只剩 ${o.length - 1 - p} 个节点，不够 ${k} 个。这几个保持原样，结束。` : "后面没有节点了，结束。", view(p + 1, o.length - 1), { at: ["count", "done"], kind: "warn", facts: [["k", k]] });
         break;
       }
       const lo = p + 1, hi = p + k;
-      snap("数出一组", `从 group_prev 往后走 ${k} 步，kth 停在 ${o[hi]}。这一组是 [${o.slice(lo, hi + 1).join(", ")}]。`, view(lo, hi), { facts: [["k", k]] });
+      snap("数出一组", `从 group_prev 往后走 ${k} 步，kth 停在 ${o[hi]}。这一组是 [${o.slice(lo, hi + 1).join(", ")}]。`, view(lo, hi), { at: "count", facts: [["k", k]] });
       const first = o[lo], seg = o.slice(lo, hi + 1).reverse();
       for (let i = 0; i < k; i++) o[lo + i] = seg[i];
-      snap("组内反转并接好", `把这一组反转成 [${seg.join(", ")}]。group_prev 接上新的头 ${seg[0]}，新的尾巴 ${first} 接着后面的节点。`, view(lo, hi), { facts: [["k", k]] });
+      snap("组内反转并接好", `把这一组反转成 [${seg.join(", ")}]。group_prev 接上新的头 ${seg[0]}，新的尾巴 ${first} 接着后面的节点。`, view(lo, hi), { at: "rev", facts: [["k", k]] });
       p = hi;
-      snap("下一组", `group_prev 移到这一组的尾巴 ${o[p]}。`, view(-1, -1), { facts: [["k", k]] });
+      snap("下一组", `group_prev 移到这一组的尾巴 ${o[p]}。`, view(-1, -1), { at: "next", facts: [["k", k]] });
     }
-    snap("完成", `结果是 [${o.slice(1).join(", ")}]。`, view(-1, -1), { kind: "ok", ans: o.slice(1), facts: [["k", k]] });
+    snap("完成", `结果是 [${o.slice(1).join(", ")}]。`, view(-1, -1), { at: "done", kind: "ok", ans: o.slice(1), facts: [["k", k]] });
   },
   points: [
     { t: "先数够再反转", body: "一定要先确认有 k 个节点。边反转边数的话，最后一组不够时还得再反转回来。" },
