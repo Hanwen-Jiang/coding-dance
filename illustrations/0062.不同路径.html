@@ -208,6 +208,19 @@ class Solution:
         return comb(m + n - 2, m - 1)       <span class="cmt"># m+n-2 步里挑 m-1 步向下</span></pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>进阶：空间压缩成一行<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>算第 i 行只用到上面一行和这一行左边的格子，留一行 dp 就够了。更新前的 dp[j] 是上面，dp[j-1] 已经是这一行的左边。空间 O(n)。</p>
+<pre class="code">class Solution:
+    def uniquePaths(self, m: int, n: int) -&gt; int:
+        dp = [1] * n                        <span class="cmt"># 第 0 行：全是 1</span>
+        for i in range(1, m):               <span class="cmt"># dp[0] 是第 0 列，永远是 1，不用改</span>
+            for j in range(1, n):
+                dp[j] += dp[j - 1]          <span class="cmt"># 原来的 dp[j] 是上面，dp[j-1] 是刚算好的左边</span>
+        return dp[-1]</pre>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -215,7 +228,7 @@ class Solution:
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
-        <div class="toolbar" hidden><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
         <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
@@ -319,14 +332,41 @@ const SPEC = { presets: [{"label":"3 × 7","args":{"m":3,"n":7},"note":"m = 3, n
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "标准解法", note: null, legend: [["a","正在算的格子"],["e","上面和左边"],["c","终点"]], build(a, snap) {
     const { m, n } = a, dp = Array.from({ length: m }, (_, i) => Array.from({ length: n }, (_, j) => (i === 0 || j === 0 ? 1 : null)));
-    const view = (ci, cj, fin) => [{ t: "grid", label: "dp[i][j]：从左上走到 (i, j) 的路径数", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m - 1 && j === n - 1 ? "c" : i === ci && j === cj ? "a" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? "e" : "" }))) }];
-    snap("开始", "第一行只能一直向右走，第一列只能一直向下走，路径数都是 1。", view(-1, -1), { at: "init" });
+    // 表外面多画一圈虚线：第 -1 行、第 -1 列是越界的位置，没有路能从那里来，视作 0
+    const view = (ci, cj, fin, edge) => [{
+      t: "grid", label: "dp[i][j]：从左上走到 (i, j) 的路径数（虚线是越界的位置，视作 0）",
+      rowLabels: [-1, ...dp.map((_, i) => i)], colLabels: [-1, ...dp[0].map((_, j) => j)],
+      rows: [
+        [{ v: "", cls: "x" }, ...dp[0].map(() => ({ v: 0, cls: edge ? "x e" : "x" }))],
+        ...dp.map((r, i) => [{ v: 0, cls: edge ? "x e" : "x" }, ...r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m - 1 && j === n - 1 ? "c" : i === ci && j === cj ? "a" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? "e" : edge && (i === 0 || j === 0) ? "k" : "" }))]),
+      ],
+    }];
+    snap("边界", "第一行的格子，上面是越界的第 -1 行：那里不存在，没有路能从那里来，算 <b>0</b> 条。所以第一行只能从左边一路走过来，路径数是 0 + 1 = 1。第一列同理（左边越界，算 0）。代码里直接把第一行、第一列填成 1，就不用再判断越界了。", view(-1, -1, false, true), { at: "init" });
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) {
       dp[i][j] = dp[i - 1][j] + dp[i][j - 1];
       snap(`(${i}, ${j})`, `从上面 (${i - 1}, ${j}) 来有 ${dp[i - 1][j]} 种，从左边 (${i}, ${j - 1}) 来有 ${dp[i][j - 1]} 种。dp = <b>${dp[i][j]}</b>。`, view(i, j), { at: "cell" });
     }
     snap("完成", `到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), { at: "done", kind: "ok", ans: dp[m - 1][n - 1] });
-  } }
+  } },
+{ t: "空间压缩成一行", note: "二维表里算第 i 行只用到第 i − 1 行（上面）和第 i 行左边的格子，所以只留一行 dp：dp[j] += dp[j − 1]。更新 dp[j] 之前，它存的还是上一行的值（上面）；dp[j − 1] 已经先更新过，是这一行的值（左边）。", legend: [["a","正在更新的 dp[j]"],["k","已经是这一行的值"],["g","还是上一行的值"],["d","二维表里已经丢掉的行"]], build(a, snap) {
+      const { m, n } = a, full = Array.from({ length: m }, () => Array(n).fill(null)), dp = Array(n).fill(1);
+      full[0] = dp.slice();
+      const view = (i, j) => [
+        { t: "grid", label: "对照：二维表（灰的行已经用完、丢掉了，一维 dp 里只有当前这一行）", rows: full.map((r, x) => r.map((v, y) => ({ v: v === null ? "" : v, cls: x === i && y === j ? "a" : x < i - 1 ? "d" : x === i - 1 ? "g" : x === i && v !== null ? "k" : "" }))) },
+        { t: "array", label: i === 0 || j >= n ? `dp（一行）：现在整行都是第 ${i} 行` : `dp（一行）：左边已经是第 ${i} 行，右边还是第 ${i - 1} 行`, items: dp.map((v, y) => ({ v, cls: y === j ? "a" : i === 0 || y < j || y === 0 ? "k" : "g" })), ptrs: { j: j >= 0 && j < n ? j : null } },
+      ];
+      snap("开始", "只用一行 dp。一开始它就是第 0 行：全是 1。", view(0, -1), { at: "init" });
+      for (let i = 1; i < m; i++) {
+        full[i][0] = 1;
+        snap(`第 ${i} 行`, `开始算第 ${i} 行。dp 里现在存的整行都是第 ${i - 1} 行的值；dp[0] 是第 0 列，永远是 1，不用改。`, view(i, -1), { at: "row" });
+        for (let j = 1; j < n; j++) {
+          const up = dp[j], left = dp[j - 1];
+          dp[j] = up + left; full[i][j] = dp[j];
+          snap(`(${i}, ${j})`, `dp[${j}] 更新前是 ${up}，这是第 ${i - 1} 行的值，也就是<b>上面</b>；dp[${j - 1}] = ${left} 刚更新过，是第 ${i} 行的值，也就是<b>左边</b>。dp[${j}] = ${up} + ${left} = <b>${dp[j]}</b>。`, view(i, j), { at: "cell" });
+        }
+      }
+      snap("完成", `最后一行算完，dp[${n - 1}] = <b>${dp[n - 1]}</b>。只用了长度 ${n} 的一行，空间从 O(m·n) 降到 O(n)。`, view(m - 1, n), { at: "done", kind: "ok", ans: dp[n - 1] });
+    } }
 ] };
 (function () {
   const $ = (id) => document.getElementById(id);
