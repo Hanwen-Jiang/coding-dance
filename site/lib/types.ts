@@ -33,11 +33,20 @@ export interface IndexData {
   topics: string[];
 }
 
-export interface SpecCode {
+/** 一种语言的代码：干净的源码，加上步骤标记 tag → 行号（从 1 开始；没有标记时不出现） */
+export interface CodeText {
+  code: string;
+  marks?: Record<string, number[]>;
+}
+
+export interface SpecCode extends CodeText {
   t: string;
   kind: "elegant" | null;
   note: string | null;
-  code: string;
+  /** 演示的解法用它指到这段代码（demo.methods[].code）；第一段是 std */
+  key?: string;
+  /** code / marks 是 Python 的；其他语言在这里，没有的语言不出现 */
+  langs?: Record<string, CodeText>;
 }
 
 export interface Demo {
@@ -60,6 +69,8 @@ export interface DemoMethod {
   note: string | null;
   legend: [string, string][];
   build: string;
+  /** 这种解法对应哪段代码（SpecCode.key）：播放器显示它，并高亮每一步的 at 指到的行 */
+  code?: string;
 }
 
 export interface Spec {
@@ -134,8 +145,12 @@ export interface SessionInfo {
     url: string;
     /** 仓库建好了没有 */
     exists: boolean;
-    /** GitHub App 有没有装到这个仓库上（装了网站才能写） */
+    /** 授权范围里有没有这个仓库（有了网站才能读写） */
     accessible: boolean;
+    /** 用户有没有把 App 授权到自己账号上（不管范围里有没有进度仓） */
+    installed: boolean;
+    /** 网站能不能直接替用户建进度仓（已经授权，并且授权里带建仓库的权限） */
+    canCreate: boolean;
     /** 已经装过 App 但没选这个仓库时，去这里把它加上 */
     manageUrl: string | null;
   } | null;
@@ -152,10 +167,17 @@ export interface StarResult {
   status: number;
 }
 
+/** 进度仓里的 settings.json：用户的设置。langs 是常用语言，第一个是默认语言 */
+export interface Settings {
+  langs: string[];
+}
+
 /** /api/progress */
 export interface ProgressData {
   status: Record<string, Status>;
   langs: Record<string, string[]>;
+  /** 进度仓里还没有 settings.json 时是 null */
+  settings?: Settings | null;
 }
 
 export const TIER_ORDER: Tier[] = ["Hot 20", "P0", "P1", "P2", "P3"];

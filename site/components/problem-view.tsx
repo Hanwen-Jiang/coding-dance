@@ -11,10 +11,13 @@ import { CodePanel } from "@/components/code-panel";
 import { DemoPlayer } from "@/components/demo/demo-player";
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
+import { LangTabs } from "@/components/lang-picker";
 import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel, StatusPixel } from "@/components/pixel";
 import { TierChip, TopicChip } from "@/components/tags";
+import { codeIn, langLabel, langsFor } from "@/lib/langs";
+import { usePrefs } from "@/lib/prefs";
 import { useProgress } from "@/lib/progress";
-import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec } from "@/lib/types";
+import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec, SpecCode } from "@/lib/types";
 import { TIER_INFO } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
@@ -74,11 +77,33 @@ function Hints({ spec }: { spec: Spec }) {
   );
 }
 
+/** 一种写法的代码：按用户的常用语言显示，可以切换；这种写法没有用户选的语言时显示 Python */
+function SolutionCode({ code }: { code: SpecCode }) {
+  const { langs: prefs } = usePrefs();
+  const { langs, fallback } = langsFor(code, prefs);
+  const [picked, setPicked] = useState<string | null>(null);
+  const lang = picked && langs.includes(picked) ? picked : langs[0];
+  const text = codeIn(code, lang) ?? code;
+  return (
+    <div className="flex flex-col gap-2">
+      {(langs.length > 1 || fallback) && (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <LangTabs label="题解的语言" langs={langs} value={lang} onChange={setPicked} />
+          {fallback && <span className="text-xs text-muted">这种写法是 Python 特有的，没有 {prefs.map(langLabel).join(" / ")} 版本。</span>}
+        </div>
+      )}
+      <CodePanel code={text.code} label={lang === "python" ? "Python 3" : langLabel(lang)} lang={lang} />
+    </div>
+  );
+}
+
 function Solutions({ spec }: { spec: Spec }) {
   const [revealed, setRevealed] = useState(false);
+  const { langs: prefs } = usePrefs();
+  const [tab, setTab] = useState<string | null>(null);
   const elegantIdx = spec.codes.findIndex((c) => c.kind === "elegant");
   const same = elegantIdx === 0;
-  const tabs = [
+  const all = [
     ...(elegantIdx >= 0 ? [{ id: "elegant", label: same ? "简洁 · 标准" : "优雅简洁", code: spec.codes[elegantIdx] }] : []),
     ...(!same ? [{ id: "standard", label: "标准题解", code: spec.codes[0] }] : []),
     ...spec.codes
@@ -86,6 +111,10 @@ function Solutions({ spec }: { spec: Spec }) {
       .filter(({ i }) => i !== 0 && i !== elegantIdx)
       .map(({ c, i }) => ({ id: `alt-${i}`, label: c.t.split("：")[0] || "其他写法", code: c })),
   ];
+  // 有用户默认语言的写法排在前面：比如默认 Java 时，先显示有 Java 版本的标准题解，而不是只有 Python 的简洁写法
+  const mine = (t: (typeof all)[number]) => (codeIn(t.code, prefs[0]) ? 0 : 1);
+  const tabs = all.slice().sort((a, b) => mine(a) - mine(b));
+  const current = tab && tabs.some((t) => t.id === tab) ? tab : tabs[0]?.id;
 
   if (!revealed) {
     return (
@@ -111,7 +140,7 @@ function Solutions({ spec }: { spec: Spec }) {
         <div className="text-base font-semibold">{spec.h1}</div>
         <p className="text-[15px] leading-7 text-muted">{spec.lede}</p>
       </Card>
-      <Tabs className="w-full" defaultSelectedKey={tabs[0]?.id}>
+      <Tabs className="w-full" selectedKey={current} onSelectionChange={(k) => setTab(String(k))}>
         <Tabs.ListContainer>
           <Tabs.List aria-label="题解写法">
             {tabs.map((t) => (
@@ -129,7 +158,7 @@ function Solutions({ spec }: { spec: Spec }) {
               {same && t.id === "elegant" && <p className="text-sm text-muted">标准解法本身已经足够简洁，两者是同一份代码。</p>}
               {t.code.note && <p className="hint-text text-sm leading-6 text-muted" dangerouslySetInnerHTML={{ __html: t.code.note }} />}
             </div>
-            <CodePanel code={t.code.code} label="Python 3" lang="python" />
+            <SolutionCode code={t.code} />
           </Tabs.Panel>
         ))}
       </Tabs>
@@ -205,7 +234,7 @@ function MineGate({ mine, what }: { mine: Mine; what: string }) {
     );
   }
   if (!session.repo?.exists || !session.repo.accessible) {
-    return <HistoryEmpty desc={`先在首页按两步开通你的进度仓（创建仓库、安装 App），之后存进去的${what}会出现在这里。`} title="还没开通进度仓" />;
+    return <HistoryEmpty desc={`先在首页按两步开通你的进度仓（创建仓库、授权），之后存进去的${what}会出现在这里。`} title="还没开通进度仓" />;
   }
   if (!ready) return <Skel className="h-24 w-full rounded-3xl" />;
   if (state.error) return <HistoryEmpty desc={state.error} title={`没能读到你的${what}`} />;
@@ -416,7 +445,7 @@ function HandwrittenDemo({ src }: { src: string }) {
 }
 
 function DemoSection({ d }: { d: ProblemDetail }) {
-  if (d.spec?.demo) return <DemoPlayer demo={d.spec.demo} />;
+  if (d.spec?.demo) return <DemoPlayer codes={d.spec.codes} demo={d.spec.demo} />;
   if (d.illustrationUrl) return <HandwrittenDemo src={d.illustrationUrl} />;
   return <p className="text-sm text-muted">这道题还没有动画演示。</p>;
 }

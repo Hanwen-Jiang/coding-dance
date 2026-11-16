@@ -1,9 +1,10 @@
 // 读写用户自己的进度仓（<用户>/hot100-progress）。文件规则和模板仓 README、scripts/check.mjs 是同一套：
 //   progress.json：{ version: 1, problems: { "<题号>": { status, updatedAt? } } }
+//   settings.json（可以没有）：{ version: 1, langs: ["java", "python"] }，常用语言，第一个是默认语言
 //   solutions/<语言>/<四位题号>.<题名>[.<写法>].<后缀>
 //   attempts/<四位题号>.<题名>/<YYYY-MM-DD>.<序号>.<结果>.md
 
-import type { Attempt, AttemptResult, HistoryFile, Status } from "../../lib/types";
+import type { Attempt, AttemptResult, HistoryFile, Settings, Status } from "../../lib/types";
 import { HttpError } from "./github";
 
 export const LANGS: Record<string, string[]> = {
@@ -125,9 +126,46 @@ async function readProgress(token: string, repo: string): Promise<{ data: Progre
   }
 }
 
-/** 每道题的状态 + 有哪些语言的题解 */
+/** 设置里的常用语言：只留认识的语言目录名，去掉重复；一个都不剩返回 null */
+export function cleanLangs(x: unknown): string[] | null {
+  if (!Array.isArray(x)) return null;
+  const out: string[] = [];
+  for (const l of x) if (typeof l === "string" && LANGS[l] && !out.includes(l)) out.push(l);
+  return out.length ? out : null;
+}
+
+/** settings.json：没有这个文件、或者内容看不懂，都当作还没设置 */
+async function readSettings(token: string, repo: string): Promise<{ data: Settings | null; sha: string | null }> {
+  const r = await gh(token, "GET", `/repos/${repo}/contents/settings.json`);
+  if (!r.ok) return { data: null, sha: null };
+  const j = (await r.json()) as { content: string; sha: string };
+  try {
+    const langs = cleanLangs((JSON.parse(fromB64(j.content).replace(/^﻿/, "")) as { langs?: unknown }).langs);
+    return { data: langs ? { langs } : null, sha: j.sha };
+  } catch {
+    return { data: null, sha: j.sha };
+  }
+}
+
+/** 把常用语言写进用户进度仓的 settings.json */
+export async function saveSettings(token: string, repo: string, langs: string[]): Promise<Settings> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { sha } = await readSettings(token, repo);
+    const r = await gh(token, "PUT", `/repos/${repo}/contents/settings.json`, {
+      message: `设置：常用语言 → ${langs.map((l) => LANG_LABEL[l] ?? l).join("、")}`,
+      content: toB64(JSON.stringify({ version: 1, langs }, null, 2) + "\n"),
+      ...(sha ? { sha } : {}),
+    });
+    if (r.ok) return { langs };
+    if (r.status === 403 || r.status === 404) throw new HttpError(403, "网站还没有这个仓库的写权限：先在首页完成授权");
+    if (r.status !== 409 && r.status !== 422) throw new HttpError(502, `保存设置失败（GitHub ${r.status}）`);
+  }
+  throw new HttpError(409, "进度仓刚被别的地方改过，刷新一下再试");
+}
+
+/** 每道题的状态 + 有哪些语言的题解 + 用户的设置 */
 export async function loadProgress(token: string, repo: string) {
-  const [files, { data }] = await Promise.all([listFiles(token, repo), readProgress(token, repo)]);
+  const [files, { data }, settings] = await Promise.all([listFiles(token, repo), readProgress(token, repo), readSettings(token, repo)]);
   const status: Record<string, Status> = {};
   for (const [k, v] of Object.entries(data.problems)) if (STATUSES.includes(v?.status)) status[k] = v.status;
   const langs: Record<string, string[]> = {};
@@ -137,7 +175,7 @@ export async function loadProgress(token: string, repo: string) {
     const k = String(s.id);
     if (!(langs[k] ||= []).includes(s.lang)) langs[k].push(s.lang);
   }
-  return { status, langs };
+  return { status, langs, settings: settings.data };
 }
 
 /** 改一道题的状态，提交到用户的进度仓。并发改动时 sha 会对不上，重试一次 */
@@ -156,7 +194,7 @@ export async function saveStatus(token: string, repo: string, id: number, status
       ...(sha ? { sha } : {}),
     });
     if (r.ok) return;
-    if (r.status === 403 || r.status === 404) throw new HttpError(403, "网站还没有这个仓库的写权限：先把 GitHub App 装到你的进度仓上");
+    if (r.status === 403 || r.status === 404) throw new HttpError(403, "网站还没有这个仓库的写权限：先在首页完成授权");
     if (r.status !== 409 && r.status !== 422) throw new HttpError(502, `保存进度失败（GitHub ${r.status}）`);
   }
   throw new HttpError(409, "进度仓刚被别的地方改过，刷新一下再试");

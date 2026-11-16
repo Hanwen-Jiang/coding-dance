@@ -6,11 +6,18 @@ import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { renderViews } from "@/components/demo/render";
+import { StepCode } from "@/components/demo/step-code";
 import { ChevronLeft, ChevronRight, PlayIcon } from "@/components/icons";
+import { LangTabs } from "@/components/lang-picker";
 import { PixelIcon } from "@/components/pixel";
-import type { Demo, DemoMethod } from "@/lib/types";
+import { codeIn, langLabel } from "@/lib/langs";
+import { usePrefs } from "@/lib/prefs";
+import type { Demo, DemoMethod, SpecCode } from "@/lib/types";
 
-type Step = { phase: string; msg: string; views: Record<string, unknown>[]; kind?: string; facts?: [string, unknown][] };
+/** at：这一步对应代码里的哪些标记（tag），播放器按它高亮代码行 */
+type Step = { phase: string; msg: string; views: Record<string, unknown>[]; kind?: string; facts?: [string, unknown][]; at?: string | string[] };
+const hasMarks = (m?: Record<string, number[]>) => !!m && Object.keys(m).length > 0;
+const SHOW_CODE_KEY = "hot100:demo-code";
 type BuildFn = (args: unknown, snap: (phase: string, msg: string, views: Step["views"], o?: Partial<Step>) => void) => void;
 
 /** 把 spec 里的 build 方法（形如 "build(a, snap) { ... }"）变回函数。来源是自己仓库里的数据。 */
@@ -53,11 +60,34 @@ const PauseIcon = () => (
   </svg>
 );
 
-export function DemoPlayer({ demo }: { demo: Demo }) {
+/** codes：这道题（或专题这一节）的所有代码；演示的每种解法用 method.code 指到其中一段 */
+export function DemoPlayer({ demo, codes = [] }: { demo: Demo; codes?: SpecCode[] }) {
   // 多种解法共用同一组输入，切换解法时输入不变、从第 0 步重新播放
   const methods: DemoMethod[] = demo.methods?.length ? demo.methods : [{ t: "", note: null, legend: demo.legend, build: demo.build }];
   const [mi, setMi] = useState(0);
   const method = methods[Math.min(mi, methods.length - 1)];
+
+  // 这种解法对应的代码：只在代码带步骤标记时显示。语言按用户的常用语言来，只列带标记的那些
+  const { langs: prefLangs } = usePrefs();
+  const entry = method.code ? codes.find((c) => c.key === method.code) : undefined;
+  const codeLangs = useMemo(() => {
+    if (!entry || !hasMarks(entry.marks)) return [];
+    const mine = prefLangs.filter((l) => hasMarks(codeIn(entry, l)?.marks));
+    return mine.length ? mine : ["python"];
+  }, [entry, prefLangs]);
+  const [picked, setPicked] = useState<string | null>(null);
+  const lang = picked && codeLangs.includes(picked) ? picked : codeLangs[0];
+  const text = entry && lang ? codeIn(entry, lang) : null;
+  const [showCode, setShowCode] = useState(true);
+  useEffect(() => {
+    try { if (localStorage.getItem(SHOW_CODE_KEY) === "0") setShowCode(false); } catch { /* 读不了就默认显示 */ }
+  }, []);
+  const toggleCode = () => {
+    setShowCode((v) => {
+      try { localStorage.setItem(SHOW_CODE_KEY, v ? "0" : "1"); } catch { /* 存不了就只在这次访问里生效 */ }
+      return !v;
+    });
+  };
   const build = useMemo(() => compile(method.build), [method.build]);
   const random = useMemo(() => compileRandom(demo.random), [demo.random]);
   // sel 是预设的下标，或者 "random"
@@ -112,6 +142,8 @@ export function DemoPlayer({ demo }: { demo: Demo }) {
   if (!build || !steps.length) return <p className="text-sm text-muted">这道题的演示加载失败了。</p>;
   const s = steps[Math.min(idx, last)];
   const html = renderViews(s.views);
+  // 这一步对应的代码行：at 里的每个标记在当前语言里标了哪些行
+  const active = text ? (s.at == null ? [] : [s.at].flat()).flatMap((t) => text.marks?.[t] ?? []) : [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -133,7 +165,7 @@ export function DemoPlayer({ demo }: { demo: Demo }) {
         </div>
       )}
       <div
-        className="demo grid gap-5 outline-none lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]"
+        className={clsx("demo grid gap-5 outline-none", text && showCode ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]" : "lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]")}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "ArrowRight") {
@@ -256,6 +288,23 @@ export function DemoPlayer({ demo }: { demo: Demo }) {
             {s.phase}
           </span>
           <p key={`${sel}-${mi}-${idx}`} className="dm-msg min-h-[5.5em] text-base leading-7" dangerouslySetInnerHTML={{ __html: s.msg }} />
+          {text && (
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <button
+                  aria-expanded={showCode}
+                  className="font-pixel inline-flex items-center gap-1.5 rounded-md text-[11px] tracking-wider text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+                  type="button"
+                  onClick={toggleCode}
+                >
+                  <span aria-hidden className={clsx("inline-block transition-transform", showCode ? "rotate-90" : "")}>▸</span>
+                  这一步的代码{codeLangs.length < 2 && ` · ${langLabel(lang)}`}
+                </button>
+                {showCode && <LangTabs label="代码的语言" langs={codeLangs} value={lang} onChange={setPicked} />}
+              </div>
+              {showCode && <StepCode active={active} code={text.code} lang={lang} />}
+            </div>
+          )}
           {method.legend.length > 0 && (
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
               {method.legend.map(([cls, t]) => (

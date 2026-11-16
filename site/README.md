@@ -15,7 +15,8 @@
 | 每道题的状态 | 登录用户自己的进度仓里的 `progress.json` |
 | 重要程度（Hot 20 / P0 / P1 / P2 / P3） | `studyplan/优先级清单.md` |
 | 原题 | `problems/<编号>.<题名>.md` 的「题目描述」一节，图片在 `problems/images/` |
-| 分层提示、简洁写法、标准题解、注意点、动画演示（有几种解法就有几个演示，可以切换） | `tools/illustrations/data/<编号>.json`（由 `tools/illustrations/build.js` 从 spec 导出） |
+| 分层提示、简洁写法、标准题解（六种语言）、注意点、动画演示（有几种解法就有几个演示，可以切换；每一步高亮对应的代码行） | `tools/illustrations/data/<编号>.json`（由 `tools/illustrations/build.js` 从 spec 和 `code/` 导出） |
+| 用户的常用语言（题解和演示里的代码按它显示） | 登录用户自己的进度仓里的 `settings.json`；没登录时存在浏览器里 |
 | 我的历史题解 | 登录用户自己的进度仓里的 `solutions/<语言>/<编号>.*`（Java 文件只取 submit region 里的代码） |
 | 尝试记录（每次提交的原样代码、结果和分析，按时间排） | 登录用户自己的进度仓里的 `attempts/<编号>.<题名>/<日期>.<序号>.<结果>.md` |
 | 手写图解（spec 标了 `handwritten` 的题，目前没有） | `illustrations/<编号>.<题名>.html`，内嵌在题目页里 |
@@ -25,8 +26,10 @@
 ## 登录和每个人自己的进度
 
 - 题目资源（资源仓）对所有人都一样；进度和题解来自登录用户自己账号下的 `hot100-progress` 仓库。没登录时显示 0 进度。
-- 登录走 **GitHub App**：权限只有用户选中的仓库的 Contents 读写，外加 Starring。用户的令牌 8 小时过期，服务端用 refresh token 自动续。
-- 开通分两步：① 在 GitHub 上用模板仓 `Hanwen-Jiang/hot100-progress-template`（wrangler.toml 里的 `TEMPLATE_REPO`）创建公开的 `hot100-progress`；② 把 App 装到这个仓库上（Only select repositories）。装完 GitHub 会带着授权码回到网站，顺便完成登录。引导卡片上有一个默认开着的「给模板仓点个 Star」开关，用户可以关掉。
+- 登录走 **GitHub App**：权限是授权范围内仓库的 Contents 读写、建仓库（Repository creation），外加 Starring。授权范围（全部仓库，或者只选几个）由用户在 GitHub 的授权页面上选。用户的令牌 8 小时过期，服务端用 refresh token 自动续。
+- 界面上统一叫「授权」（GitHub 那边叫安装 App）。新用户点登录后，回调（`functions/api/auth/callback.ts`）发现他还没授权，会接着跳到授权页，在 GitHub 上一口气走完。
+- 回到网站后，首页的开通卡片（`components/account.tsx` 的 `SetupCard`）让用户选私有 / 公开、勾选要 Star 的仓库，点一下就由 `POST /api/progress/create` 用模板仓 `Hanwen-Jiang/hot100-progress-template`（wrangler.toml 里的 `TEMPLATE_REPO`）在他账号下建好 `hot100-progress`，不用去 GitHub。GitHub 会把 App 建的仓库自动放进授权范围。
+- 手动的路还留着：老的授权没有建仓库的权限、账号下已经有同名仓库、或者用户想只授权一个仓库时，自己去 GitHub 用模板建仓库，再把它放进授权范围。私有仓库在授权之前网站看不到，所以这条路上「仓库建好了没有」靠用户点「我建好了」。
 - 用户的令牌用 `SESSION_SECRET` 加密后放在 HttpOnly Cookie 里，浏览器脚本读不到；写操作只接受本站页面发起的请求。
 - 进度仓的文件规则见模板仓 README；`functions/_lib/progress.ts` 按同一套规则读写。
 
@@ -39,7 +42,7 @@ GitHub App 的配置（GitHub → Settings → Developer settings → GitHub App
 | Expire user authorization tokens | 勾上 |
 | Request user authorization (OAuth) during installation | 勾上 |
 | Webhook → Active | 不勾 |
-| Repository permissions | Contents: Read and write；Metadata: Read-only |
+| Repository permissions | Contents: Read and write；Metadata: Read-only；Repository creation: Read and write |
 | Account permissions | Starring: Read and write |
 | Where can this GitHub App be installed? | Any account |
 

@@ -1,5 +1,5 @@
-// 安装：跳到 GitHub App 的安装页，让用户选中自己的 hot100-progress 仓库。
-// App 开了「安装时请求用户授权」，装完 GitHub 会带着授权码回到 /api/auth/callback，顺便完成登录。
+// 授权：跳到 GitHub App 的授权页（GitHub 管它叫「安装」），让用户选授权范围。
+// App 开了「安装时请求用户授权」，授权完 GitHub 会带着授权码回到 /api/auth/callback，顺便完成登录。
 import { type AuthEnv, authConfigured, privateJson, startState } from "../../_lib/session";
 
 export const onRequestGet = async ({ request, env }: { request: Request; env: AuthEnv }) => {

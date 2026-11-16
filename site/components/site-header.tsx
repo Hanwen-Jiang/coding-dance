@@ -6,6 +6,7 @@ import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 import { AccountButton } from "@/components/account";
+import { LangPicker } from "@/components/lang-picker";
 import { PixelIcon, PixelLogo, PixelTitle } from "@/components/pixel";
 
 /** 旧的按钮只会存「浅色 / 深色」，存了就再也不跟随系统。换成新按钮后把旧的选择清掉一次，回到默认的跟随系统 */
@@ -60,6 +61,7 @@ export function SiteHeader() {
             <PixelTitle cell={1.5} px={12} text="力扣题单" weight={500} />
             <PixelIcon cell={1.5} name="arrow" />
           </a>
+          <LangPicker />
           <ThemeSwitch />
           <AccountButton />
         </div>

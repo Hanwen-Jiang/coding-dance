@@ -20,6 +20,8 @@ interface Ctx {
   star: (repos: string[]) => Promise<StarResult[]>;
   /** 登录前记下用户勾选的仓库，登录回来后自动点 Star（只点一次） */
   starAfterLogin: (repos: string[]) => void;
+  /** 在网页里直接建进度仓（要先授权）。成功返回 null；失败返回原因，code 是 exists / forbidden / failed */
+  createRepo: (isPrivate: boolean) => Promise<{ code: string; error: string } | null>;
   /** 重新确认登录状态（建完仓库后点「刷新」用） */
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
@@ -120,6 +122,26 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     if (todo.length) star(todo);
   }, [login]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const createRepo = useCallback(async (isPrivate: boolean) => {
+    try {
+      const r = await fetch("/api/progress/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ private: isPrivate }) });
+      const j = (await r.json().catch(() => ({}))) as { error?: string; code?: string };
+      if (!r.ok) return { code: j.code || "failed", error: j.error || `请求失败（${r.status}）` };
+    } catch (e) {
+      return { code: "failed", error: (e as Error).message };
+    }
+    // GitHub 建仓库、把它放进授权范围要一小会儿：等到网站能读写它为止（最多十几秒）
+    for (let k = 0; k < 12; k++) {
+      await new Promise((r) => setTimeout(r, k < 3 ? 800 : 1500));
+      try {
+        const s = await getJson<SessionInfo>("/api/session");
+        if (s.repo?.exists && s.repo.accessible) break;
+      } catch { /* 这一次没问到，接着等 */ }
+    }
+    await load();
+    return null;
+  }, [load]);
+
   const logout = useCallback(async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     setProgress(null);
@@ -132,8 +154,8 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const ready = !!(session?.user && session.repo?.exists && session.repo.accessible && progress);
 
   const value = useMemo(
-    () => ({ loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, starAfterLogin, refresh: load, logout, loginHref, installHref, ready }),
-    [loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, starAfterLogin, load, logout, loginHref, installHref, ready],
+    () => ({ loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, starAfterLogin, createRepo, refresh: load, logout, loginHref, installHref, ready }),
+    [loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, starAfterLogin, createRepo, load, logout, loginHref, installHref, ready],
   );
   return <ProgressCtx.Provider value={value}>{children}</ProgressCtx.Provider>;
 }

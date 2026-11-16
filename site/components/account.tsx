@@ -5,7 +5,7 @@ import { Button, Card, Checkbox, Dropdown } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { ExternalIcon } from "@/components/icons";
 import { PixelBullet, PixelIcon, PixelTitle } from "@/components/pixel";
@@ -173,65 +173,162 @@ function Step({ n, title, active, done, last, children }: { n: number; title: st
   );
 }
 
+/** 用户说过「仓库建好了」。私有仓库在授权之前网站是看不到的，没法自己判断，只能记下用户点过 */
+const CREATED_KEY = "hot100:repo-created";
+const linkBtn = "rounded-md px-1 text-xs text-muted underline-offset-2 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-accent";
+
+function Visibility({ isPrivate, set }: { isPrivate: boolean; set: (v: boolean) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <Segment aria-label="仓库可见性" selectedKey={isPrivate ? "private" : "public"} size="sm" onSelectionChange={(k) => set(String(k) === "private")}>
+        <Segment.Item id="private">私有</Segment.Item>
+        <Segment.Item id="public">公开</Segment.Item>
+      </Segment>
+      <span className="text-xs text-muted">{isPrivate ? "只有你自己看得到进度和题解。" : "别人也能看到你的进度和题解。"}</span>
+    </div>
+  );
+}
+
 /**
- * 登录了但还不能读写进度仓时的两步引导：
- * ① 在 GitHub 上用模板创建 hot100-progress；② 把 GitHub App 装到这个仓库上（只选这一个仓库）。
- * 下面列出请用户顺手 Star 的仓库（默认勾着，可以取消），在用户点开通按钮时一起点。
+ * 登录了但还不能读写进度仓时的开通卡片。正常只有一步：
+ *   已经授权（登录时 GitHub 会接着让用户授权）→ 选私有 / 公开、勾选要 Star 的仓库 → 网站直接建好进度仓。
+ * 其他情况：
+ *   还没授权（登录时在授权页上点了取消）→ 先去授权；
+ *   这次授权不能建仓库（老的授权还没同意新权限）或者用户想自己建 → 手动两步：去 GitHub 建仓库，再把它放进授权范围。
  */
 export function SetupCard() {
-  const { session, ready, loading, refresh, installHref } = useProgress();
+  const { session, ready, loading, refresh, installHref, createRepo } = useProgress();
   const c = useStarChoice();
   const [checking, setChecking] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [isPrivate, setPrivate] = useState(true);
+  const [creating, setCreating] = useState(false);
+  const [problem, setProblem] = useState<{ code: string; error: string } | null>(null);
+  const [manual, setManual] = useState(false);
+  const [created, setCreated] = useState(false);
+  useEffect(() => {
+    try { setCreated(localStorage.getItem(CREATED_KEY) === "1"); } catch { /* 读不了就从第一步开始 */ }
+  }, []);
   if (loading || ready || !session?.user || !session.repo) return null;
   const { repo } = session;
-  const step = !repo.exists ? 1 : 2;
+  const markCreated = (v: boolean) => {
+    setCreated(v);
+    try { if (v) localStorage.setItem(CREATED_KEY, "1"); else localStorage.removeItem(CREATED_KEY); } catch { /* 存不了就只在这次访问里生效 */ }
+  };
   const recheck = async () => { setChecking(true); await refresh(); setChecking(false); };
-  // 「安装 App」会让当前页面跳走：先把 Star 点完（最多等 3 秒）再跳
-  const install = async () => {
+  // 去授权会让当前页面跳走：先把 Star 点完（最多等 3 秒）再跳
+  const authorize = async () => {
     setLeaving(true);
     await Promise.race([c.run(), new Promise((r) => setTimeout(r, 3000))]);
     window.location.href = installHref();
   };
+  const create = async () => {
+    setCreating(true);
+    setProblem(null);
+    c.run(); // Star 和建仓库同时进行
+    const err = await createRepo(isPrivate);
+    setCreating(false);
+    if (err) setProblem(err);
+  };
+  const head = (title: string, desc: React.ReactNode, extra?: React.ReactNode) => (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-3">
+        <PixelBullet />
+        <span className="text-base font-semibold">{title}</span>
+        {extra}
+      </div>
+      <p className="text-sm leading-6 text-muted">{desc}</p>
+    </div>
+  );
+  const where = <>进度和题解存在你自己账号下的仓库 <span className="font-mono text-foreground">{repo.name}</span> 里，私有还是公开由你定。</>;
+  // 网站不能替用户建仓库的两种情况：这次授权里没有建仓库的权限，或者 GitHub 拒绝了
+  const cannotCreate = repo.installed && (!repo.canCreate || problem?.code === "forbidden");
+
+  // —— 手动两步：去 GitHub 建仓库，再授权（或者把仓库加进已有的授权范围） ——
+  if (manual || cannotCreate) {
+    const step = repo.exists || created ? 2 : 1;
+    const createUrl = session.createUrl.replace(/visibility=\w+/, `visibility=${isPrivate ? "private" : "public"}`);
+    return (
+      <Card className="reveal gap-5 p-5 sm:p-6">
+        {head("两步开通你自己的进度", <>{where}{cannotCreate ? "现在的授权不能让网站替你建仓库，所以要你自己去 GitHub 上建一下。" : "自己建仓库的话，授权时可以只选这一个仓库。"}</>, <span className="font-pixel text-[10px] tracking-widest text-muted">{step} / 2</span>)}
+        <div className="flex flex-col">
+          <Step active={step === 1} done={step > 1} n={1} title="创建你的进度仓">
+            <Visibility isPrivate={isPrivate} set={setPrivate} />
+            <p className="text-[13px] leading-6 text-muted">
+              GitHub 会打开「新建仓库」页面，名字 <span className="font-mono text-foreground">{session.repoName}</span> 和{isPrivate ? "私有" : "公开"}都已经选好，直接点 <b className="text-foreground">Create repository</b> 就行。
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {/* 在 Button 自己的 onPress 里点 Star 再打开：Button 不让点击冒泡到外面，包一层 <a onClick> 是收不到的 */}
+              <Button size="sm" onPress={() => { c.run(); window.open(createUrl, "_blank", "noopener,noreferrer"); }}>去 GitHub 创建<ExternalIcon /></Button>
+              <Button isPending={checking} size="sm" variant="outline" onPress={async () => { markCreated(true); await recheck(); }}>我建好了</Button>
+            </div>
+          </Step>
+          <Step last active={step === 2} done={false} n={2} title="授权网站读写这个仓库">
+            <p className="text-[13px] leading-6 text-muted">
+              {repo.manageUrl
+                ? <>在 GitHub 的授权设置里，把 <span className="font-mono text-foreground">{session.repoName}</span> 加进「Repository access」，再点 Save。</>
+                : <>在 GitHub 的授权页面选 <b className="text-foreground">Only select repositories</b>，只勾 <span className="font-mono text-foreground">{session.repoName}</span>，再点绿色的确认按钮。完成后会自动回到这里。</>}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              {repo.manageUrl ? (
+                <>
+                  <Button size="sm" onPress={() => { c.run(); window.open(repo.manageUrl!, "_blank", "noopener,noreferrer"); }}>把这个仓库加进授权范围<ExternalIcon /></Button>
+                  <Button isPending={checking} size="sm" variant="outline" onPress={recheck}>我加好了</Button>
+                </>
+              ) : (
+                <Button isPending={leaving} size="sm" onPress={authorize}>去 GitHub 授权</Button>
+              )}
+              {!repo.exists && <button className={linkBtn} type="button" onClick={() => markCreated(false)}>还没建仓库？回到上一步</button>}
+            </div>
+          </Step>
+        </div>
+        {!cannotCreate && <div><button className={linkBtn} type="button" onClick={() => setManual(false)}>← 还是让网站帮我建</button></div>}
+        <StarPicker c={c} when="setup" />
+      </Card>
+    );
+  }
+
+  // —— 还没授权：登录时在 GitHub 的授权页上没点确认 ——
+  if (!repo.installed) {
+    return (
+      <Card className="reveal gap-5 p-5 sm:p-6">
+        {head("还差一步：授权", <>{where}授权之后，网站就能在这里直接帮你建好它。</>)}
+        <p className="text-[13px] leading-6 text-muted">
+          GitHub 的授权页面会让你选范围：选 <b className="text-foreground">All repositories</b> 最省事；只想让网站碰进度仓，就选 <b className="text-foreground">Only select repositories</b>。选好后点绿色的确认按钮，会自动回到这里。
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button isPending={leaving} onPress={authorize}>去 GitHub 授权</Button>
+          <button className={linkBtn} type="button" onClick={() => setManual(true)}>想先自己建仓库、只授权这一个？</button>
+        </div>
+        <StarPicker c={c} when="setup" />
+      </Card>
+    );
+  }
+
+  // —— 已经授权：在这里直接建进度仓 ——
   return (
     <Card className="reveal gap-5 p-5 sm:p-6">
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center gap-3">
-          <PixelBullet />
-          <span className="text-base font-semibold">两步开通你自己的进度</span>
-          <span className="font-pixel text-[10px] tracking-widest text-muted">{step} / 2</span>
+      {head("创建你的进度仓", <>{where}点一下，网站就在这里帮你建好，不用去 GitHub。</>)}
+      <Visibility isPrivate={isPrivate} set={setPrivate} />
+      {problem?.code === "exists" ? (
+        <div className="flex flex-col gap-3 rounded-2xl bg-warning/10 px-4 py-3">
+          <p className="text-sm leading-6 text-warning">
+            你的账号下已经有 <span className="font-mono">{session.repoName}</span> 了，但授权范围里没有它。把它加进去就能用，不用重新建。
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {repo.manageUrl && <Button size="sm" onPress={() => window.open(repo.manageUrl!, "_blank", "noopener,noreferrer")}>把这个仓库加进授权范围<ExternalIcon /></Button>}
+            <Button isPending={checking} size="sm" variant="outline" onPress={recheck}>我加好了</Button>
+          </div>
         </div>
-        <p className="text-sm leading-6 text-muted">
-          进度和题解存在你账号下的公开仓库 <span className="font-mono text-foreground">{repo.name}</span> 里。网站只申请这一个仓库的读写权限，不碰你的其他仓库。
-        </p>
-      </div>
-      <div className="flex flex-col">
-        <Step active={step === 1} done={step > 1} n={1} title="用模板创建进度仓">
-          <p className="text-[13px] leading-6 text-muted">
-            GitHub 会打开「新建仓库」页面，名字已经填好 <span className="font-mono text-foreground">{session.repoName}</span>，可见性选 Public，点 Create repository 就行。
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {/* 在 Button 自己的 onPress 里点 Star 再打开：Button 不让点击冒泡到外面，包一层 <a onClick> 是收不到的 */}
-            <Button size="sm" onPress={() => { c.run(); window.open(session.createUrl, "_blank", "noopener,noreferrer"); }}>在 GitHub 上创建<ExternalIcon /></Button>
-            <Button isPending={checking} size="sm" variant="outline" onPress={recheck}>我建好了</Button>
-          </div>
-        </Step>
-        <Step last active={step === 2} done={false} n={2} title="把网站的 GitHub App 装到这个仓库上">
-          <p className="text-[13px] leading-6 text-muted">
-            安装时选 <b className="text-foreground">Only select repositories</b>，只勾 <span className="font-mono text-foreground">{session.repoName}</span>。装完会自动回到这里。
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {repo.manageUrl ? (
-              <>
-                <Button size="sm" onPress={() => { c.run(); window.open(repo.manageUrl!, "_blank", "noopener,noreferrer"); }}>把仓库加进已装的 App<ExternalIcon /></Button>
-                <Button isPending={checking} size="sm" variant="outline" onPress={recheck}>我加好了</Button>
-              </>
-            ) : (
-              <Button isPending={leaving} size="sm" onPress={install}>安装 GitHub App</Button>
-            )}
-          </div>
-        </Step>
-      </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button isPending={creating} onPress={create}>
+            {creating ? "正在创建…" : c.chosen.length ? `创建进度仓，并 Star ${c.chosen.length} 个仓库` : "创建进度仓"}
+          </Button>
+          <button className={linkBtn} type="button" onClick={() => setManual(true)}>想自己去 GitHub 上建？</button>
+        </div>
+      )}
+      {problem && problem.code === "failed" && <p className="text-sm text-danger">{problem.error}，可以再试一次。</p>}
       <StarPicker c={c} when="setup" />
     </Card>
   );
@@ -264,7 +361,7 @@ export function LoginHint() {
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-base font-semibold">登录后，这里显示你自己的进度</span>
             <span className="text-sm leading-6 text-muted">
-              现在看到的是 0 进度。用 GitHub 登录后，进度、题解和尝试记录都存在你账号下的 <span className="font-mono">{session.repoName}</span> 仓库里，网站只申请这一个仓库的权限。
+              现在看到的是 0 进度。用 GitHub 登录并授权后，网站会在你的账号下建一个 <span className="font-mono">{session.repoName}</span> 仓库（私有或公开由你定），进度、题解和尝试记录都存在里面。网站能读写哪些仓库，由你在 GitHub 的授权页面上选。
             </span>
           </div>
         </div>

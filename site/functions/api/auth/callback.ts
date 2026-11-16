@@ -1,6 +1,9 @@
-// GitHub 回调（登录和安装都回到这里）：核对 state，用授权码换用户令牌，加密后写进 Cookie，再跳回原来的页面。
+// GitHub 回调（登录和授权都回到这里）：核对 state，用授权码换用户令牌，加密后写进 Cookie，再跳回原来的页面。
+// 第一次登录的用户还没有把 App 授权到自己账号上（GitHub 叫「安装」）：登录完直接接着去授权页，
+// 这样在 GitHub 上一口气走完，回到网站时就可以直接建进度仓了。
+import { userInstallation } from "../../_lib/install";
 import {
-  type AuthEnv, OAUTH_COOKIE, SESSION_COOKIE, SESSION_DAYS, authConfigured, exchangeToken, readCookie, safeReturn, seal, setCookie,
+  type AuthEnv, OAUTH_COOKIE, SESSION_COOKIE, SESSION_DAYS, authConfigured, b64u, exchangeToken, readCookie, safeReturn, seal, setCookie,
 } from "../../_lib/session";
 
 const back = (to: string, extra: string[] = []) => {
@@ -30,5 +33,16 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
   if (!u.login) return back(withFlag(to, "failed"));
 
   const value = await seal(env.SESSION_SECRET!, { ...tok, l: u.login, a: u.avatar_url || "", exp: Date.now() + SESSION_DAYS * 864e5 });
-  return back(to, [setCookie(SESSION_COOKIE, value, SESSION_DAYS * 86400)]);
+  const session = setCookie(SESSION_COOKIE, value, SESSION_DAYS * 86400);
+  // 刚从授权页回来（带 setup_action）就不再跳了；否则没授权过的用户接着去授权页，回来还是到这里
+  if (!url.searchParams.get("setup_action") && !(await userInstallation(tok.t, u.login))) {
+    const next = b64u(crypto.getRandomValues(new Uint8Array(18)));
+    const gh = new URL(`https://github.com/apps/${env.GITHUB_APP_SLUG}/installations/new`);
+    gh.searchParams.set("state", next);
+    const h = new Headers({ Location: gh.toString(), "Cache-Control": "no-store" });
+    h.append("Set-Cookie", session);
+    h.append("Set-Cookie", setCookie(OAUTH_COOKIE, `${next}|${to}`, 900));
+    return new Response(null, { status: 302, headers: h });
+  }
+  return back(to, [session]);
 };

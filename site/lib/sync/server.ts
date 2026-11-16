@@ -14,7 +14,7 @@ const enc = encodeURIComponent;
 /** 默认分支当前的 commit、tree 和所有文件 */
 export async function readRepo(api: Api, repo: string) {
   const info = await api("GET", `/repos/${repo}`);
-  if (info.status === 404) throw new SyncError("找不到你的进度仓，或者网站的 GitHub App 还没装在它上面", 404);
+  if (info.status === 404) throw new SyncError("找不到你的进度仓，或者还没有授权网站读写它", 404);
   if (info.status >= 400) throw new SyncError(`GitHub 返回 ${info.status}`, 502);
   const branch: string = info.json.default_branch;
   const ref = await api("GET", `/repos/${repo}/git/ref/heads/${enc(branch)}`);

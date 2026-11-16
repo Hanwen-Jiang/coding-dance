@@ -644,7 +644,7 @@ function LoginCard({ repoName }: { repoName: string }) {
   const c = useStarChoice();
   return (
     <div className="flex flex-col items-center gap-5 py-2">
-      <Title center sub={<>同步时由本站用你的 GitHub 登录，把记录写进你账号下的 <span className="font-mono">{repoName}</span>。网站只申请这一个仓库的权限。</>}>先用 GitHub 登录</Title>
+      <Title center sub={<>同步时由本站用你的 GitHub 登录，把记录写进你账号下的 <span className="font-mono">{repoName}</span>。网站能读写哪些仓库，由你在 GitHub 的授权页面上选。</>}>先用 GitHub 登录</Title>
       <LoginButton c={c} size="lg" />
       <div className="w-full max-w-lg text-left"><StarPicker c={c} when="login" /></div>
     </div>
