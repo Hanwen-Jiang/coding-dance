@@ -85,6 +85,8 @@ export interface Spec {
   hints: { t: string; body: string[] }[];
   points: { t: string; body: string }[];
   codes: SpecCode[];
+  /** 题面配图：图片文件名 → 演示同款的视图，网站用它替换题面里力扣的图片 */
+  figures?: Record<string, Record<string, unknown>[]>;
 }
 
 export interface HistoryFile {

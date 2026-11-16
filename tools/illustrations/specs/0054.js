@@ -1,7 +1,20 @@
+const F = require("../fig");
+
 module.exports = {
   id: 54, name: "螺旋矩阵", title: "螺旋矩阵图解", level: "中等", topic: "矩阵",
   h1: "螺旋矩阵，四条边界一圈圈往里收",
   lede: "用上、下、左、右四个边界框住还没走过的部分。沿着上边走完，上边界就往下收一行；沿着右边走完，右边界就往左收一列。这样一圈圈收下去，直到边界交错。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "spiral1.jpg": [
+      F.grid([[1, 2, 3], [4, 5, 6], [7, 8, 9]], { label: "从左上角开始顺时针一圈一圈往里走（蓝色外圈，紫色里圈）", cls: (v, i, j) => (Math.min(i, j, 2 - i, 2 - j) ? "g" : "e") }),
+      F.array([1, 2, 3, 6, 9, 8, 7, 4, 5], { label: "输出", cls: (v) => (v === 5 ? "g" : "e") }),
+    ],
+    "spiral.jpg": [
+      F.grid([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]], { label: "从左上角开始顺时针一圈一圈往里走（蓝色外圈，紫色里圈）", cls: (v, i, j) => (Math.min(i, j, 2 - i, 3 - j) ? "g" : "e") }),
+      F.array([1, 2, 3, 4, 8, 12, 11, 10, 9, 5, 6, 7], { label: "输出", cls: (v) => (v === 6 || v === 7 ? "g" : "e") }),
+    ],
+  },
   hints: [
     { t: "用边界代替方向判断", body: ["不用记「走过哪些格子」。维护 <code>top</code>、<code>bottom</code>、<code>left</code>、<code>right</code> 四个边界，它们围住的是还没走的区域。"] },
     { t: "一圈分四段", body: ["上边：从左到右，走完 <code>top += 1</code>。", "右边：从上到下，走完 <code>right -= 1</code>。", "下边：从右到左，走完 <code>bottom -= 1</code>。左边：从下到上，走完 <code>left += 1</code>。"] },

@@ -1,7 +1,13 @@
+const F = require("../fig");
+
 module.exports = {
   id: 51, name: "N 皇后", title: "N 皇后图解", level: "困难", topic: "回溯",
   h1: "N 皇后，一行放一个，三个集合查冲突",
   lede: "每行恰好放一个皇后，所以按行往下放，每行只需要决定放在哪一列。冲突只可能来自三个方向：同一列、同一条主对角线、同一条副对角线，各用一个集合记下来，O(1) 就能判断。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "queens.jpg": [F.row([".Q..|...Q|Q...|..Q.", "..Q.|Q...|...Q|.Q.."].map((b) => F.grid(b.split("|").map((r) => [...r].map((c) => (c === "Q" ? "Q" : ""))), { cls: (v) => (v ? "a" : "") })), { sep: "", label: "4 皇后的两种摆法：任意两个皇后不同行、不同列、不在同一条斜线上" })],
+  },
   hints: [
     { t: "按行放", body: ["n 个皇后放在 n 行里，不能同行，所以每行正好一个。", "递归 <code>dfs(r)</code> 负责给第 <code>r</code> 行挑一列，挑好就去下一行。"] },
     { t: "怎么判断冲突", body: ["同一列：列号 <code>c</code> 相同。", "同一条「\\」斜线：<code>r - c</code> 相同；同一条「/」斜线：<code>r + c</code> 相同。", "用三个集合 <code>cols</code>、<code>diag1</code>、<code>diag2</code> 记下已经被占的值。"] },

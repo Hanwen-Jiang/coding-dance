@@ -40,7 +40,7 @@ assert s.coinChange([186,419,83,408], 6249) == 20
   call: (a) => [a.coins, a.amount],
   cases: [[[1], 0], [[2], 3], [[1, 3, 4], 6], [[186, 419, 83, 408], 6249], [[2147483647], 2], [[5, 3], 7]],
   method: "按金额递推",
-  legend: [["a", "正在算的金额"], ["e", "候选 dp[i − c]"], ["c", "取到最小的那个"]],
+  legend: [["a", "正在算的金额"], ["e", "候选 dp[i − c]"], ["c", "取到最小的那个"], ["x", "边界 / 越界"]],
   presets: [
     { label: "示例 1", args: { coins: [1, 2, 5], amount: 11 }, note: "coins = [1,2,5], amount = 11", expect: 3 },
     { label: "凑不出", args: { coins: [2], amount: 3 }, note: "coins = [2], amount = 3", expect: -1 },
@@ -49,13 +49,19 @@ assert s.coinChange([186,419,83,408], 6249) == 20
   build(a, snap) {
     const { coins, amount } = a, dp = Array(amount + 1).fill(null); dp[0] = 0;
     const show = (v) => (v === Infinity ? "∞" : v);
-    const view = (i, cands, best, fin) => [{ t: "array", label: "dp[i]：凑出 i 最少几枚", items: dp.map((v, k) => ({ v: v === null ? "" : show(v), cls: fin && k === amount ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", `面值有 [${coins.join(",")}]。dp[0] = 0：金额 0 不需要硬币。`, view(-1, [], -1), { at: "init" });
+    // 最左边多画一格「下标 < 0」：面值比金额大时 i − c 是负数，越界，当成 ∞（这枚用不了）。dp[0] 是边界
+    const view = (i, cands, best, fin, ghost) => [{
+      t: "array", label: "dp[i]：凑出 i 最少几枚（虚线：dp[0] 是边界；最左边是越界的负下标，当成 ∞）", labels: ["<0", ...dp.map((_, k) => k)],
+      items: [{ v: "∞", cls: ghost ? "x e" : "x" }, ...dp.map((v, k) => ({ v: v === null ? "" : show(v), cls: fin && k === amount ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? (k === 0 ? "x e" : "e") : k === 0 ? "x" : "" }))],
+      ptrs: { i: i >= 0 ? i + 1 : null },
+    }];
+    snap("边界", `面值有 [${coins.join(",")}]。dp[0] = 0：金额 0 不需要硬币，这是边界。其他金额先当成 ∞（还没凑出来）。<br>如果面值 c 比金额 i 大，dp[i − c] 的下标是负数，越界了：把它当成 ∞，这枚硬币就自然用不上。代码里用 c ≤ i 把它挡掉。`, view(-1, [], -1), { at: "init" });
     for (let i = 1; i <= amount; i++) {
-      let best = Infinity, bk = -1; const cs = [], parts = [];
-      for (const c of coins) if (c <= i) { cs.push(i - c); parts.push(`用 ${c}：dp[${i - c}] + 1 = ${show(dp[i - c] + 1)}`); if (dp[i - c] + 1 < best) { best = dp[i - c] + 1; bk = i - c; } }
+      let best = Infinity, bk = -1; const cs = [], parts = [], over = [];
+      for (const c of coins) if (c <= i) { cs.push(i - c); parts.push(`用 ${c}：dp[${i - c}] + 1 = ${show(dp[i - c] + 1)}`); if (dp[i - c] + 1 < best) { best = dp[i - c] + 1; bk = i - c; } } else over.push(c);
       dp[i] = best;
-      snap(`金额 ${i}`, parts.length ? `最后一枚可以${parts.join("；")}。dp[${i}] = <b>${show(best)}</b>。` : `所有面值都比 ${i} 大，凑不出来，dp[${i}] = ∞。`, view(i, cs, best === Infinity ? -1 : bk), { at: "try", facts: [["dp[" + i + "]", show(best)]] });
+      const ov = over.length ? `面值 ${over.join("、")} 比 ${i} 大，i − c 越界，当成 ∞，用不了。` : "";
+      snap(`金额 ${i}`, parts.length ? `最后一枚可以${parts.join("；")}。${ov}dp[${i}] = <b>${show(best)}</b>。` : `${ov}所有面值都用不了，凑不出来，dp[${i}] = ∞。`, view(i, cs, best === Infinity ? -1 : bk, false, over.length > 0), { at: "try", facts: [["dp[" + i + "]", show(best)]] });
     }
     const ans = dp[amount] === Infinity ? -1 : dp[amount];
     snap("完成", ans < 0 ? `dp[${amount}] 是 ∞，凑不出来，返回 <b>-1</b>。` : `凑出 ${amount} 最少要 <b>${ans}</b> 枚硬币。`, view(-1, [], -1, true), { at: "done", kind: ans < 0 ? "warn" : "ok", ans });

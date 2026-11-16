@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -226,6 +228,26 @@ class Solution:
         return d(len(word1), len(word2))</pre>
         </div>
       </details>
+      <details>
+        <summary><span class="lvl">代码</span>进阶：空间压缩成一行<span class="peek">点开</span></summary>
+        <div class="hint-body">
+          <p>只留一行 dp。更新前的 dp[j] 是上面，dp[j-1] 是左边；左上角在更新 dp[j-1] 时被覆盖了，所以用一个变量 leftup 提前存下来。空间 O(n)。</p>
+<pre class="code">class Solution:
+    def minDistance(self, word1: str, word2: str) -&gt; int:
+        m, n = len(word1), len(word2)
+        dp = list(range(n + 1))             <span class="cmt"># 第 0 行：空串变成 word2[:j] 要插入 j 次</span>
+        for i in range(1, m + 1):
+            leftup, dp[0] = dp[0], i        <span class="cmt"># 先存下左上角；第 0 列是 i（删光）</span>
+            for j in range(1, n + 1):
+                up = dp[j]                  <span class="cmt"># 还没更新，是上一行的值</span>
+                if word1[i - 1] == word2[j - 1]:
+                    dp[j] = leftup          <span class="cmt"># 最后一个字符相同，不用动</span>
+                else:
+                    dp[j] = 1 + min(up, dp[j - 1], leftup)  <span class="cmt"># 删除、插入、替换</span>
+                leftup = up                 <span class="cmt"># 下一格的左上角，就是这一格的上面</span>
+        return dp[n]</pre>
+        </div>
+      </details>
     </div>
   </section>
 
@@ -233,7 +255,7 @@ class Solution:
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
-        <div class="toolbar" hidden><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
         <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
@@ -253,7 +275,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>正在算的格子</span><span><i class="sw e"></i>用到的格子</span><span><i class="sw c"></i>结果</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在算的格子</span><span><i class="sw e"></i>用到的格子</span><span><i class="sw x"></i>边界：有一边是空串</span><span><i class="sw c"></i>结果</span></div>
       </div>
     </div>
   </section>
@@ -335,15 +357,19 @@ const SPEC = { presets: [{"label":"示例 1","args":{"w1":"horse","w2":"ros"},"n
     const w1 = R.word(R.int(2, 5), "abcde"), w2 = R.word(R.int(2, 5), "abcde");
     return { args: { w1, w2 }, note: `word1 = "${w1}", word2 = "${w2}"`, py: `Solution().minDistance("${w1}", "${w2}")` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "标准解法", note: null, legend: [["a","正在算的格子"],["e","用到的格子"],["c","结果"]], build(a, snap) {
+{ t: "标准解法", note: null, legend: [["a","正在算的格子"],["e","用到的格子"],["x","边界：有一边是空串"],["c","结果"]], build(a, snap) {
     const A = a.w1, B = a.w2, m = A.length, n = B.length;
     const dp = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : null)));
     const view = (ci, cj, used, fin) => [
       { t: "array", label: "word1（行 i 对应前 i 个字符）", idxFrom: 1, items: A.split("").map((c, k) => ({ v: c, cls: k === ci - 1 ? "a" : "" })), ptrs: {} },
       { t: "array", label: "word2（列 j 对应前 j 个字符）", idxFrom: 1, items: B.split("").map((c, k) => ({ v: c, cls: k === cj - 1 ? "a" : "" })), ptrs: {} },
-      { t: "grid", label: "dp[i][j]", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m && j === n ? "c" : i === ci && j === cj ? "a" : used.some(([x, y]) => x === i && y === j) ? "e" : "" }))) },
+      // 第 0 行、第 0 列是边界（虚线）：有一边是空串。多开这一圈，i = 1 或 j = 1 时 dp[i-1][j-1] 才不会越界
+      { t: "grid", label: "dp[i][j]（虚线是边界：有一边是空串）", rows: dp.map((r, i) => r.map((v, j) => {
+        const u = used.some(([x, y]) => x === i && y === j), edge = i === 0 || j === 0;
+        return { v: v === null ? "" : v, cls: fin && i === m && j === n ? "c" : i === ci && j === cj ? "a" : edge ? (u ? "x e" : "x") : u ? "e" : "" };
+      })) },
     ];
-    snap("开始", `第 0 列：把 word1 的前 i 个字符全删掉，要 i 步。第 0 行：从空串插入 j 个字符，要 j 步。`, view(-1, -1, []), { at: "init" });
+    snap("边界", `dp 比两个单词各多开一行一列，这一圈是边界：<br>第 0 列 dp[i][0] = i：word2 取空串，把 word1 的前 i 个字符全删掉，要 i 步。<br>第 0 行 dp[0][j] = j：word1 取空串，插入 j 个字符，要 j 步。<br>注意边界不是 0：空串变成长度 j 的串一定要 j 步。如果不多开这一圈，算 dp[1][j] 时 dp[0][j−1] 的下标就越界了。`, view(-1, -1, []), { at: "init" });
     for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
       if (A[i - 1] === B[j - 1]) {
         dp[i][j] = dp[i - 1][j - 1];
@@ -356,7 +382,37 @@ const SPEC = { presets: [{"label":"示例 1","args":{"w1":"horse","w2":"ros"},"n
       }
     }
     snap("完成", `"${A}" 变成 "${B}" 最少要 <b>${dp[m][n]}</b> 步。`, view(-1, -1, [], true), { at: "done", kind: "ok", ans: dp[m][n] });
-  } }
+  } },
+{ t: "空间压缩成一行", note: "只留一行 dp：更新前的 dp[j] 是上面（删除），dp[j − 1] 已经是这一行的左边（插入）。麻烦的是左上角（替换 / 相同）：它是上一行的 dp[j − 1]，在更新左边那格时已经被覆盖了，所以要用 leftup 提前存一份。", legend: [["a","正在算的 dp[j]"],["k","已经是这一行的值"],["g","还是上一行的值"],["e","这一步用到的"],["x","边界：有一边是空串"]], build(a, snap) {
+      const A = a.w1, B = a.w2, m = A.length, n = B.length, dp = Array.from({ length: n + 1 }, (_, j) => j);
+      let leftup = null, row = 0;
+      const view = (j, used, up) => [
+        { t: "array", label: "word1", idxFrom: 1, items: [...A].map((c, k) => ({ v: c, cls: k === row - 1 ? "a" : "" })) },
+        { t: "array", label: "word2", idxFrom: 1, items: [...B].map((c, k) => ({ v: c, cls: k === j - 1 ? "a" : "" })) },
+        {
+          t: "array", label: row === 0 ? "dp（一行）：第 0 行，word1 取空串，插入 j 次（边界）" : j > n ? `dp（一行）：现在整行都是第 ${row} 行` : `dp（一行）：左边已经是第 ${row} 行，右边还是第 ${row - 1} 行`,
+          items: dp.map((v, k) => ({ v, cls: k === j ? "a" : used.includes(k) ? (row === 0 || k === 0 ? "x e" : "e") : row === 0 || k === 0 ? "x" : k < j ? "k" : "g" })),
+        },
+        { t: "chips", label: "临时变量", items: [{ v: `leftup = ${leftup === null ? "—" : leftup}（左上角）`, cls: used.includes("lu") ? "e" : "" }, ...(up === undefined ? [] : [{ v: `up = ${up}（上面）`, cls: used.includes("up") ? "e" : "" }])] },
+      ];
+      snap("开始", "只留一行 dp。一开始它是第 0 行：word1 取空串，变成 word2 的前 j 个字符要插入 j 次（边界）。", view(-1, []), { at: "init" });
+      for (let i = 1; i <= m; i++) {
+        leftup = dp[0]; dp[0] = i; row = i;
+        snap(`第 ${i} 行`, `开始算第 ${i} 行（word1 的第 ${i} 个字符 '${A[i - 1]}'）。dp[0] 要改成 ${i}（word2 取空串，删光要 ${i} 步，边界），改之前先把旧值 ${leftup} 存进 leftup：它是 dp[1] 的左上角。`, view(0, []), { at: "row" });
+        for (let j = 1; j <= n; j++) {
+          const up = dp[j], lu = leftup;
+          if (A[i - 1] === B[j - 1]) {
+            dp[j] = lu;
+            snap(`(${i}, ${j})`, `'${A[i - 1]}' = '${B[j - 1]}'，最后一个字符不用动，取左上角 leftup = ${lu}，dp[${j}] = <b>${dp[j]}</b>。然后 leftup 改成这一格原来的值 up = ${up}，给下一格当左上角。`, view(j, ["lu"], up), { at: "same" });
+          } else {
+            dp[j] = 1 + Math.min(up, dp[j - 1], lu);
+            snap(`(${i}, ${j})`, `'${A[i - 1]}' ≠ '${B[j - 1]}'：删除看上面 up = ${up}，插入看左边 dp[${j - 1}] = ${dp[j - 1]}，替换看左上角 leftup = ${lu}。最小的加 1，dp[${j}] = <b>${dp[j]}</b>。然后 leftup 改成 up = ${up}。`, view(j, ["up", "lu", j - 1], up), { at: "diff" });
+          }
+          leftup = up;
+        }
+      }
+      snap("完成", `dp[${n}] = <b>${dp[n]}</b>。一行加一个变量，空间 O(n)。`, view(n + 1, []), { at: "done", kind: "ok", ans: dp[n] });
+    } }
 ] };
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -375,7 +431,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"w1":"horse","w2":"ros"},"n
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -390,13 +446,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"w1":"horse","w2":"ros"},"n
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

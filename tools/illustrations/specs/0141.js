@@ -1,7 +1,15 @@
+const F = require("../fig");
+
 module.exports = {
   id: 141, name: "环形链表", title: "环形链表图解", level: "简单", topic: "链表",
   h1: "环形链表，跑得快的会追上跑得慢的",
   lede: "两个人在操场上跑步，一个快一个慢。如果跑道是直的，快的先到终点；如果跑道是环形的，快的迟早会从后面追上慢的。用快慢两个指针走链表，是同一个道理。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "circularlinkedlist.png": [F.list([3, 2, 0, -4], { label: "pos = 1：尾巴接回下标 1 的节点", cycle: 1 })],
+    "circularlinkedlist_test2.png": [F.list([1, 2], { label: "pos = 0：尾巴接回头节点", cycle: 0 })],
+    "circularlinkedlist_test3.png": [F.list([1], { label: "pos = -1：没有环" })],
+  },
   hints: [
     { t: "最直接的做法", body: ["用一个集合记录走过的节点，再次遇到同一个节点就说明有环。空间 <code>O(n)</code>。"] },
     { t: "不用额外空间", body: ["<code>slow</code> 每次走一步，<code>fast</code> 每次走两步。", "没有环：<code>fast</code> 会先走到空。有环：两个指针都会进到环里，<code>fast</code> 每一步比 <code>slow</code> 多走一格，距离每次缩小 1，一定会相遇。"] },

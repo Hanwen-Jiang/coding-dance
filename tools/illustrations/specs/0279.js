@@ -54,15 +54,19 @@ assert s.numSquares(7) == 4
 assert s.numSquares(43) == 3
 assert [s.numSquares(i) for i in range(1, 30)] == [1,2,3,1,2,3,4,2,1,2,3,3,2,3,4,1,2,2,3,2,3,3,4,3,1,2,3,4,2]
 `,
-  legend: [["a", "正在算的"], ["e", "候选 dp[i − j²]"], ["c", "取到最小的那个"]],
+  legend: [["a", "正在算的"], ["e", "候选 dp[i − j²]"], ["c", "取到最小的那个"], ["x", "边界"]],
   presets: [
     { label: "n = 12", args: { n: 12 }, note: "n = 12", expect: 3 },
     { label: "n = 13", args: { n: 13 }, note: "n = 13", expect: 2 },
   ],
   build(a, snap) {
     const n = a.n, dp = Array(n + 1).fill(null); dp[0] = 0;
-    const view = (i, cands, best, fin) => [{ t: "array", label: "dp[i]：和为 i 最少几个平方数", items: dp.map((v, k) => ({ v, cls: fin && k === n ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", "dp[0] = 0：和为 0 不需要任何数。", view(-1, [], -1), { at: "init" });
+    // dp[0] 是边界（虚线）：直接给定。j² ≤ i 保证了 i − j² 不会是负数，不会越界
+    const view = (i, cands, best, fin) => [{ t: "array", label: "dp[i]：和为 i 最少几个平方数（虚线 dp[0] 是边界）", items: dp.map((v, k) => {
+      const c = fin && k === n ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? "e" : "";
+      return { v, cls: k === 0 ? (c ? "x " + c : "x") : c };
+    }), ptrs: { i: i >= 0 ? i : null } }];
+    snap("边界", "dp[0] = 0：和为 0 不需要任何数，这是边界。i 本身是平方数时，最后一个数取 i 自己，剩下 dp[0] = 0，答案是 1。<br>循环条件 j² ≤ i 保证 i − j² 不会是负数，不会越界。", view(-1, [], -1), { at: "init" });
     for (let i = 1; i <= n; i++) {
       const cs = []; let best = Infinity, bk = -1, parts = [];
       for (let j = 1; j * j <= i; j++) { const k = i - j * j; cs.push(k); parts.push(`${j * j}：dp[${k}] + 1 = ${dp[k] + 1}`); if (dp[k] + 1 < best) { best = dp[k] + 1; bk = k; } }

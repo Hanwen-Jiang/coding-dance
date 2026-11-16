@@ -1,7 +1,13 @@
+const F = require("../fig");
+
 module.exports = {
   id: 105, name: "从前序与中序遍历序列构造二叉树", title: "从前序与中序遍历序列构造二叉树图解", level: "中等", topic: "二叉树",
   h1: "前序 + 中序建树，前序定根，中序分左右",
   lede: "前序遍历的第一个数一定是根。在中序遍历里找到这个根，它左边的都属于左子树，右边的都属于右子树，于是也知道了左子树有几个节点，前序里对应的两段也就切出来了。两边递归。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "tree.jpg": [F.tree([3, 9, 20, null, null, 15, 7])],
+  },
   hints: [
     { t: "谁是根", body: ["前序遍历是 根 → 左 → 右，所以 <code>preorder[0]</code> 是根。"] },
     { t: "怎么分左右", body: ["在中序遍历（左 → 根 → 右）里找到根的位置 <code>k</code>。", "<code>inorder[:k]</code> 是左子树，<code>inorder[k+1:]</code> 是右子树。左子树有 <code>k</code> 个节点。", "前序里根后面紧跟着的 <code>k</code> 个数是左子树，剩下的是右子树。"] },

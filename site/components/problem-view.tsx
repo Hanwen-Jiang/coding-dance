@@ -9,6 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CodePanel } from "@/components/code-panel";
 import { DemoPlayer } from "@/components/demo/demo-player";
+import { withFigures } from "@/components/demo/figures";
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
 import { LangTabs } from "@/components/lang-picker";
@@ -532,7 +533,7 @@ export function ProblemView({ id }: { id: number }) {
           <section className="flex flex-col gap-4">
             <SectionTitle id="statement">题目描述</SectionTitle>
             <Card className="p-5 sm:p-7">
-              {d.statementHtml ? <div className="statement" dangerouslySetInnerHTML={{ __html: d.statementHtml }} /> : <p className="text-muted">仓库里还没有这道题的题面。</p>}
+              {d.statementHtml ? <div className="statement" dangerouslySetInnerHTML={{ __html: withFigures(d.statementHtml, d.spec?.figures) }} /> : <p className="text-muted">仓库里还没有这道题的题面。</p>}
             </Card>
           </section>
 

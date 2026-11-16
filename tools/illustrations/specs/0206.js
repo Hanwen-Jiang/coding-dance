@@ -1,7 +1,14 @@
+const F = require("../fig");
+
 module.exports = {
   id: 206, name: "反转链表", title: "反转链表图解", level: "简单", topic: "链表",
   h1: "反转链表，一个个把箭头掉头",
   lede: "不用新建节点，也不用移动节点。从头走到尾，把每个节点的 next 指针改成指向它的前一个节点。难点只有一个：改之前要先记住下一个节点，否则后半段就找不到了。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "rev1ex1.jpg": [F.row([F.list([1, 2, 3, 4, 5]), F.list([5, 4, 3, 2, 1], { cls: () => "k" })], { label: "反转" })],
+    "rev1ex2.jpg": [F.row([F.list([1, 2]), F.list([2, 1], { cls: () => "k" })], { label: "反转" })],
+  },
   hints: [
     { t: "反转的其实是指针", body: ["<code>1 → 2 → 3</code> 变成 <code>1 ← 2 ← 3</code>，节点本身不动，只是每个箭头掉了头。"] },
     { t: "需要哪几个变量", body: ["<code>cur</code>：正在处理的节点。", "<code>prev</code>：它的前一个节点，也就是 <code>cur.next</code> 要改成的目标。一开始是 <code>None</code>，因为原来的头节点反转后是尾巴。"] },

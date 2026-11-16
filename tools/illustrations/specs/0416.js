@@ -40,7 +40,7 @@ assert s.canPartition([1]) is False
 assert s.canPartition([100]*200) is True
 `,
   method: "0-1 背包",
-  legend: [["k", "能凑出"], ["c", "这一轮新能凑出的"], ["e", "目标 target"]],
+  legend: [["k", "能凑出"], ["c", "这一轮新能凑出的"], ["e", "目标 target"], ["x", "边界"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 5, 11, 5] }, note: "nums = [1,5,11,5]", expect: true },
     { label: "凑不出", args: { nums: [1, 2, 5] }, note: "nums = [1,2,5]", expect: false },
@@ -52,9 +52,10 @@ assert s.canPartition([100]*200) is True
     const T = total / 2; let dp = Array(T + 1).fill(false); dp[0] = true;
     const view = (xi, fresh) => [
       { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === xi ? "a" : k < xi ? "d" : "" })), ptrs: {} },
-      { t: "array", label: `dp[j]：能不能凑出和 j（target = ${T}）`, items: dp.map((v, j) => ({ v: v ? "✓" : "", cls: fresh.includes(j) ? "c" : v ? "k" : j === T ? "e" : "" })), ptrs: { target: T } },
+      // dp[0] 是边界（虚线）：什么都不选，和为 0。j < x 时 dp[j - x] 的下标是负数，越界，所以内层循环只到 x 为止
+      { t: "array", label: `dp[j]：能不能凑出和 j（target = ${T}，虚线 dp[0] 是边界）`, items: dp.map((v, j) => ({ v: v ? "✓" : "", cls: fresh.includes(j) ? "c" : j === 0 ? "x k" : v ? "k" : j === T ? "e" : "" })), ptrs: { target: T } },
     ];
-    snap("开始", `总和 ${total}，目标是挑出和为 <b>${T}</b> 的一些数。dp[0] = ✓：什么都不选，和为 0。`, view(-1, []), { at: "init", facts: [["总和", total], ["target", T]] });
+    snap("边界", `总和 ${total}，目标是挑出和为 <b>${T}</b> 的一些数。dp[0] = ✓ 是边界：什么都不选，和就是 0。<br>加入数 x 时，j < x 的 dp[j − x] 下标是负数，越界了，这些 j 本来也凑不进 x，所以内层循环只走到 j = x 为止。`, view(-1, []), { at: "init", facts: [["总和", total], ["target", T]] });
     for (let k = 0; k < nums.length; k++) {
       const x = nums[k], nd = dp.slice(), fresh = [];
       for (let j = T; j >= x; j--) if (!dp[j] && dp[j - x]) { nd[j] = true; fresh.push(j); }

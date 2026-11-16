@@ -40,6 +40,101 @@
    "body": "一共约 n²/2 个数，时间 O(n²)。"
   }
  ],
+ "figures": {
+  "1626927345-DZmfxB-PascalTriangleAnimated2.gif": [
+   {
+    "t": "array",
+    "label": "每个数是它左上方和右上方两个数的和",
+    "idx": false,
+    "items": [
+     {
+      "v": 1,
+      "cls": ""
+     }
+    ]
+   },
+   {
+    "t": "array",
+    "idx": false,
+    "items": [
+     {
+      "v": 1,
+      "cls": ""
+     },
+     {
+      "v": 1,
+      "cls": ""
+     }
+    ]
+   },
+   {
+    "t": "array",
+    "idx": false,
+    "items": [
+     {
+      "v": 1,
+      "cls": ""
+     },
+     {
+      "v": 2,
+      "cls": "e"
+     },
+     {
+      "v": 1,
+      "cls": ""
+     }
+    ]
+   },
+   {
+    "t": "array",
+    "idx": false,
+    "items": [
+     {
+      "v": 1,
+      "cls": ""
+     },
+     {
+      "v": 3,
+      "cls": ""
+     },
+     {
+      "v": 3,
+      "cls": ""
+     },
+     {
+      "v": 1,
+      "cls": ""
+     }
+    ]
+   },
+   {
+    "t": "array",
+    "idx": false,
+    "items": [
+     {
+      "v": 1,
+      "cls": ""
+     },
+     {
+      "v": 4,
+      "cls": ""
+     },
+     {
+      "v": 6,
+      "cls": ""
+     },
+     {
+      "v": 4,
+      "cls": ""
+     },
+     {
+      "v": 1,
+      "cls": ""
+     }
+    ]
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：逐行递推",

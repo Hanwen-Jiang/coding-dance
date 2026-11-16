@@ -1,7 +1,13 @@
+const F = require("../fig");
+
 module.exports = {
   id: 94, name: "二叉树的中序遍历", title: "二叉树的中序遍历图解", level: "简单", topic: "二叉树",
   h1: "二叉树的中序遍历，先左、再自己、最后右",
   lede: "中序遍历的规则对每个节点都一样：先把左子树整个走完，再记下自己，最后走右子树。递归写法只有三行，迭代写法是用一个栈把递归的过程手动模拟出来。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "inorder_1.jpg": [F.tree([1, null, 2, 3])],
+  },
   hints: [
     { t: "三种遍历只差一行", body: ["前序：自己 → 左 → 右。中序：左 → 自己 → 右。后序：左 → 右 → 自己。", "区别只在「记下自己」这一行放在两次递归的前面、中间还是后面。"] },
     { t: "递归怎么写", body: ["函数 <code>dfs(node)</code>：节点为空就返回；否则先 <code>dfs(node.left)</code>，再把 <code>node.val</code> 放进结果，再 <code>dfs(node.right)</code>。"] },

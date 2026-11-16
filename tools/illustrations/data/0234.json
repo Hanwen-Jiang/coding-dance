@@ -42,6 +42,60 @@
    "body": "这个做法修改了原链表。面试时可以提一句：需要的话，比较完再把后半段反转回去。"
   }
  ],
+ "figures": {
+  "pal1linked-list.jpg": [
+   {
+    "t": "list",
+    "label": "正着读、倒着读都是 1 2 2 1",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": "e"
+     },
+     {
+      "v": 2,
+      "cls": "g"
+     },
+     {
+      "v": 2,
+      "cls": "g"
+     },
+     {
+      "v": 1,
+      "cls": "e"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     3,
+     null
+    ],
+    "showNil": true
+   }
+  ],
+  "pal2linked-list.jpg": [
+   {
+    "t": "list",
+    "label": "倒着读是 2 1，不是回文",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": ""
+     },
+     {
+      "v": 2,
+      "cls": ""
+     }
+    ],
+    "next": [
+     1,
+     null
+    ],
+    "showNil": true
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：快慢指针 + 反转后半段",

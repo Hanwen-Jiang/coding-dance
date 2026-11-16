@@ -1,7 +1,14 @@
+const F = require("../fig");
+
 module.exports = {
   id: 148, name: "排序链表", title: "排序链表图解", level: "中等", topic: "链表",
   h1: "排序链表，对半拆到底再两两合并",
   lede: "链表不能按下标随机访问，快排和堆排都不好用，归并排序最合适：用快慢指针从中间断开，两半各自排好，再用「合并两个有序链表」把它们合起来。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "sort_list_1.jpg": [F.row([F.list([4, 2, 1, 3]), F.list([1, 2, 3, 4], { cls: () => "k" })], { label: "升序排列" })],
+    "sort_list_2.jpg": [F.row([F.list([-1, 5, 3, 4, 0]), F.list([-1, 0, 3, 4, 5], { cls: () => "k" })], { label: "升序排列" })],
+  },
   hints: [
     { t: "为什么选归并", body: ["题目要求 <code>O(n log n)</code>。归并排序只需要顺序访问，而且合并两个有序链表不需要额外数组，很适合链表。"] },
     { t: "怎么从中间断开", body: ["快慢指针找中点：<code>slow</code> 走一步，<code>fast</code> 走两步。", "<code>fast</code> 到头时 <code>slow</code> 在前半段的最后一个节点，把 <code>slow.next</code> 置空，链表就断成了两半。"] },

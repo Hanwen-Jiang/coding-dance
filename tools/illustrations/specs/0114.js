@@ -1,7 +1,13 @@
+const F = require("../fig");
+
 module.exports = {
   id: 114, name: "二叉树展开为链表", title: "二叉树展开为链表图解", level: "中等", topic: "二叉树",
   h1: "二叉树展开为链表，把左子树插到右边",
   lede: "展开后的顺序是前序遍历。对当前节点：如果有左子树，就把原来的右子树接到左子树最右边的节点后面，再把整个左子树挪到右边。然后沿右指针往下走，重复这个过程。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "flaten.jpg": [F.row([F.tree([1, 2, 5, 3, 4, null, 6]), F.tree([1, null, 2, null, 3, null, 4, null, 5, null, 6])], { label: "按先序遍历的顺序，展开成只有右孩子的「链表」" })],
+  },
   hints: [
     { t: "目标顺序", body: ["展开后的链表按前序（根 → 左 → 右）排列，全部用 <code>right</code> 指针串起来，<code>left</code> 都是空。"] },
     { t: "一个节点怎么处理", body: ["节点 <code>cur</code> 有左子树时：左子树里前序最后一个节点，就是左子树最右边的节点 <code>pre</code>。", "原来的右子树应该接在 <code>pre</code> 后面：<code>pre.right = cur.right</code>。然后 <code>cur.right = cur.left</code>，<code>cur.left = None</code>。"] },

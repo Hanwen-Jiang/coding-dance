@@ -1,7 +1,14 @@
+const F = require("../fig");
+
 module.exports = {
   id: 230, name: "二叉搜索树中第 K 小的元素", title: "二叉搜索树中第 K 小的元素图解", level: "中等", topic: "二叉树",
   h1: "BST 第 K 小，中序遍历数到第 k 个",
   lede: "二叉搜索树的中序遍历（左 → 根 → 右）正好是从小到大的顺序。所以做中序遍历，数到第 k 个就停下，不用把整棵树都走完。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "kthtree1.jpg": [F.tree([3, 1, 4, null, 2], { label: "k = 1：最小的是 1", cls: { 1: "c" } })],
+    "kthtree2.jpg": [F.tree([5, 3, 6, 2, 4, null, null, 1], { label: "k = 3：从小到大 1、2、3，第 3 个是 3", cls: { 1: "e", 2: "e", 3: "c" } })],
+  },
   hints: [
     { t: "BST 的中序是有序的", body: ["对 BST 做中序遍历，访问到的值是严格递增的。", "第 k 小就是中序遍历访问到的第 k 个节点。"] },
     { t: "数到第 k 个就停", body: ["每访问一个节点，<code>k -= 1</code>。<code>k</code> 变成 0 时，当前节点就是答案。", "用迭代写法（栈）可以直接 return，不用设全局变量。"] },
