@@ -10,34 +10,37 @@ module.exports = {
   codes: [{ t: "标准解法：栈", code: `
 class Solution:
     def longestValidParentheses(self, s: str) -> int:
-        stack, best = [-1], 0               # 栈底：最后一个没匹配上的位置
+        stack, best = [-1], 0               # 栈底：最后一个没匹配上的位置 #@init
         for i, c in enumerate(s):
-            if c == "(":
-                stack.append(i)
-            else:
-                stack.pop()
-                if not stack:               # 这个 ) 没人匹配，成为新的分界线
-                    stack.append(i)
-                else:
-                    best = max(best, i - stack[-1])
-        return best
-` }, { t: "简洁写法：左右各数一遍", kind: "elegant", note: "反过来扫描时把 ) 当成开括号，逻辑完全一样。空间 O(1)。", code: `
+            if c == "(":                    #@open
+                stack.append(i)             #@open
+            else:                           #@lone,match
+                stack.pop()                 #@lone,match
+                if not stack:               # 这个 ) 没人匹配，成为新的分界线 #@lone,match
+                    stack.append(i)         #@lone
+                else:                       #@match
+                    best = max(best, i - stack[-1])     #@match
+        return best                         #@done
+` }, { t: "简洁写法：左右各数一遍", key: "scan", kind: "elegant", note: "反过来扫描时把 ) 当成开括号，逻辑完全一样。空间 O(1)。", code: `
 class Solution:
     def longestValidParentheses(self, s: str) -> int:
         def scan(s, opener):
-            best = l = r = 0
+            best = l = r = 0                #@fwd,back
             for c in s:
-                if c == opener:
-                    l += 1
+                if c == opener:             #@count
+                    l += 1                  #@count
                 else:
-                    r += 1
-                if l == r:
-                    best = max(best, 2 * r)
-                elif r > l:
-                    l = r = 0
+                    r += 1                  #@count
+                if l == r:                  #@eq
+                    best = max(best, 2 * r) #@eq
+                elif r > l:                 #@reset
+                    l = r = 0               #@reset
             return best
-        return max(scan(s, "("), scan(s[::-1], ")"))
+        return max(scan(s, "("), scan(s[::-1], ")"))   #@fwd,back,done
 ` }],
+  sig: { fn: "longestValidParentheses", params: ["string"], ret: "int" },
+  call: (a) => [a.s],
+  cases: [[""], ["("], [")"], ["()"], ["(()"], ["(()))())("], ["((()))"]],
   pytest: `
 s = Solution()
 assert s.longestValidParentheses("(()") == 2
@@ -61,18 +64,19 @@ assert s.longestValidParentheses("(()))())(") == 4
       { t: "chips", label: "栈（存下标，右边是栈顶）", items: stack.slice(), empty: "空" },
     ];
     const f = () => ({ facts: [["最长", best]] });
-    snap("开始", "栈里先放 -1 当分界线：表示「下标 -1 之后的部分」。", view(-1), f());
+    snap("开始", "栈里先放 -1 当分界线：表示「下标 -1 之后的部分」。", view(-1), { at: "init", ...f() });
     for (let i = 0; i < s.length; i++) {
-      if (s[i] === "(") { stack.push(i); snap("左括号", `下标 ${i} 是 (，压栈等待匹配。`, view(i), f()); continue; }
+      if (s[i] === "(") { stack.push(i); snap("左括号", `下标 ${i} 是 (，压栈等待匹配。`, view(i), { at: "open", ...f() }); continue; }
       const top = stack.pop();
-      if (!stack.length) { stack.push(i); snap("没人匹配", `下标 ${i} 是 )，弹出 ${top} 后栈空了，说明它没有对应的 (。把 ${i} 压进去当新的分界线。`, view(i), { kind: "warn", ...f() }); continue; }
+      if (!stack.length) { stack.push(i); snap("没人匹配", `下标 ${i} 是 )，弹出 ${top} 后栈空了，说明它没有对应的 (。把 ${i} 压进去当新的分界线。`, view(i), { at: "lone", kind: "warn", ...f() }); continue; }
       const len = i - stack[stack.length - 1]; best = Math.max(best, len);
-      snap("匹配", `下标 ${i} 是 )，弹出 ${top} 和它配对。栈顶现在是 ${stack[stack.length - 1]}，以 ${i} 结尾的有效括号长度是 ${i} − ${stack[stack.length - 1]} = <b>${len}</b>。`, view(i, [stack[stack.length - 1], i]), f());
+      snap("匹配", `下标 ${i} 是 )，弹出 ${top} 和它配对。栈顶现在是 ${stack[stack.length - 1]}，以 ${i} 结尾的有效括号长度是 ${i} − ${stack[stack.length - 1]} = <b>${len}</b>。`, view(i, [stack[stack.length - 1], i]), { at: "match", ...f() });
     }
-    snap("完成", `最长有效括号的长度是 <b>${best}</b>。`, view(-1), { kind: "ok", ans: best, ...f() });
+    snap("完成", `最长有效括号的长度是 <b>${best}</b>。`, view(-1), { at: "done", kind: "ok", ans: best, ...f() });
   },
   alts: [{
     t: "左右各数一遍",
+    code: "scan",
     note: "从左往右数 ( 和 ) 的个数：一样多就是一段有效括号，) 多了就清零重来。左括号多出来的情况这样数不出来，所以再从右往左数一遍。",
     legend: [["a", "当前字符"], ["c", "从计数起点到这里，( 和 ) 一样多"]],
     build(a, snap) {
@@ -88,18 +92,18 @@ assert s.longestValidParentheses("(()))())(") == 4
           const seg = fw ? [st, i] : [i, st];
           if (l === r) {
             const up = 2 * r > best; best = Math.max(best, 2 * r);
-            snap("一样多", `下标 ${i} 是 ${c}。( 和 ) 都是 ${l} 个，${fw ? `从 ${st} 到 ${i}` : `从 ${i} 到 ${st}`} 是一段长 ${2 * r} 的有效括号。` + (up ? "比之前的都长。" : ""), view(i, seg, fw), { kind: up ? "ok" : "", ...f() });
+            snap("一样多", `下标 ${i} 是 ${c}。( 和 ) 都是 ${l} 个，${fw ? `从 ${st} 到 ${i}` : `从 ${i} 到 ${st}`} 是一段长 ${2 * r} 的有效括号。` + (up ? "比之前的都长。" : ""), view(i, seg, fw), { at: ["count", "eq"], kind: up ? "ok" : "", ...f() });
           } else if (r > l) {
             l = r = 0; st = fw ? i + 1 : i - 1;
-            snap("清零", `下标 ${i} 是 ${c}，${fw ? ")" : "("} 比 ${open} 多了，这一段不可能再变有效。两个计数清零，从下一格重新数。`, view(i, null, fw), { kind: "warn", ...f() });
-          } else snap("继续", `下标 ${i} 是 ${c}。${open} 比另一种多，后面还可能补上，继续数。`, view(i, seg, fw), f());
+            snap("清零", `下标 ${i} 是 ${c}，${fw ? ")" : "("} 比 ${open} 多了，这一段不可能再变有效。两个计数清零，从下一格重新数。`, view(i, null, fw), { at: ["count", "reset"], kind: "warn", ...f() });
+          } else snap("继续", `下标 ${i} 是 ${c}。${open} 比另一种多，后面还可能补上，继续数。`, view(i, seg, fw), { at: "count", ...f() });
         }
       };
-      snap("从左往右", "先从左往右数。( 和 ) 一样多时，从计数起点到这里就是一段有效括号；) 多了就清零。", view(-1, null, true), { facts: [["最长", 0]] });
+      snap("从左往右", "先从左往右数。( 和 ) 一样多时，从计数起点到这里就是一段有效括号；) 多了就清零。", view(-1, null, true), { at: "fwd", facts: [["最长", 0]] });
       pass(true);
-      snap("换方向", `只从左往右数，会漏掉 ( 一直比 ) 多的情况（比如 "(()"，两个计数永远等不到相等）。所以再从右往左数一遍，这次把 ) 当成开括号。`, view(-1, null, false), { facts: [["最长", best]] });
+      snap("换方向", `只从左往右数，会漏掉 ( 一直比 ) 多的情况（比如 "(()"，两个计数永远等不到相等）。所以再从右往左数一遍，这次把 ) 当成开括号。`, view(-1, null, false), { at: "back", facts: [["最长", best]] });
       pass(false);
-      snap("完成", `两遍都数完了，最长有效括号的长度是 <b>${best}</b>。`, view(-1, null, true), { kind: "ok", ans: best, facts: [["最长", best]] });
+      snap("完成", `两遍都数完了，最长有效括号的长度是 <b>${best}</b>。`, view(-1, null, true), { at: "done", kind: "ok", ans: best, facts: [["最长", best]] });
     },
   }],
   points: [

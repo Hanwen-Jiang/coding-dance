@@ -10,18 +10,18 @@ module.exports = {
   codes: [{ t: "标准解法：当成一维数组二分", code: `
 class Solution:
     def searchMatrix(self, matrix: List[List[int]], target: int) -> bool:
-        m, n = len(matrix), len(matrix[0])
-        lo, hi = 0, m * n - 1               # 当成长度 m·n 的有序数组
-        while lo <= hi:
-            mid = (lo + hi) // 2
-            x = matrix[mid // n][mid % n]   # 一维下标换回行列
-            if x == target:
-                return True
-            if x < target:
-                lo = mid + 1
-            else:
-                hi = mid - 1
-        return False
+        m, n = len(matrix), len(matrix[0])  #@init
+        lo, hi = 0, m * n - 1               # 当成长度 m·n 的有序数组 #@init
+        while lo <= hi:                     #@loop
+            mid = (lo + hi) // 2            #@loop
+            x = matrix[mid // n][mid % n]   # 一维下标换回行列 #@loop
+            if x == target:                 #@found
+                return True                 #@found
+            if x < target:                  #@small
+                lo = mid + 1                #@small
+            else:                           #@big
+                hi = mid - 1                #@big
+        return False                        #@none
 ` }, { t: "简洁写法：bisect 加 key", kind: "elegant", note: "Python 3.10 起 bisect 支持 key 参数，range 不会真的生成列表。", code: `
 from bisect import bisect_left
 
@@ -31,6 +31,9 @@ class Solution:
         k = bisect_left(range(m * n), target, key=lambda k: matrix[k // n][k % n])
         return k < m * n and matrix[k // n][k % n] == target
 ` }],
+  sig: { fn: "searchMatrix", params: ["int[][]", "int"], ret: "bool" },
+  call: (a) => [a.M, a.target],
+  cases: [[[[1]], 1], [[[1]], 2], [[[1, 3]], 3], [[[1], [3]], 2], [[[1, 3, 5, 7], [10, 11, 16, 20], [23, 30, 34, 60]], 60]],
   pytest: `
 s = Solution()
 M = [[1,3,5,7],[10,11,16,20],[23,30,34,60]]
@@ -51,14 +54,14 @@ assert s.searchMatrix([[1]], 1) is True
     let lo = 0, hi = m * n - 1;
     const view = (mid, hit) => [{ t: "grid", label: "matrix（第 i 行第 j 列的一维下标是 i·n + j）", rows: M.map((r, i) => r.map((v, j) => { const k = i * n + j; return { v, cls: k === hit ? "c" : k === mid ? "a" : k < lo || k > hi ? "d" : "e" }; })) }];
     const f = (mid) => ({ facts: [["lo", lo], ["hi", hi], ["mid", mid >= 0 ? `${mid} → (${(mid / n) | 0}, ${mid % n})` : "—"]] });
-    snap("开始", `把 ${m}×${n} 的矩阵看成长度 ${m * n} 的有序数组，下标 0 到 ${m * n - 1}。找 <b>${target}</b>。`, view(-1), f(-1));
+    snap("开始", `把 ${m}×${n} 的矩阵看成长度 ${m * n} 的有序数组，下标 0 到 ${m * n - 1}。找 <b>${target}</b>。`, view(-1), { at: "init", ...f(-1) });
     while (lo <= hi) {
       const mid = (lo + hi) >> 1, x = M[(mid / n) | 0][mid % n];
-      if (x === target) { snap("找到", `下标 ${mid} 对应第 ${(mid / n) | 0} 行第 ${mid % n} 列，值是 ${x}，找到了，返回 <b>true</b>。`, view(-1, mid), { kind: "ok", ans: true, ...f(mid) }); return; }
-      snap(x < target ? "太小" : "太大", `mid = ${mid}，换成行列是 (${(mid / n) | 0}, ${mid % n})，值是 ${x}，比 ${target} ${x < target ? "小，去右半边" : "大，去左半边"}。`, view(mid), f(mid));
+      if (x === target) { snap("找到", `下标 ${mid} 对应第 ${(mid / n) | 0} 行第 ${mid % n} 列，值是 ${x}，找到了，返回 <b>true</b>。`, view(-1, mid), { at: ["loop", "found"], kind: "ok", ans: true, ...f(mid) }); return; }
+      snap(x < target ? "太小" : "太大", `mid = ${mid}，换成行列是 (${(mid / n) | 0}, ${mid % n})，值是 ${x}，比 ${target} ${x < target ? "小，去右半边" : "大，去左半边"}。`, view(mid), { at: ["loop", x < target ? "small" : "big"], ...f(mid) });
       if (x < target) lo = mid + 1; else hi = mid - 1;
     }
-    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，矩阵里没有 ${target}，返回 <b>false</b>。`, view(-1), { kind: "warn", ans: false, ...f(-1) });
+    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，矩阵里没有 ${target}，返回 <b>false</b>。`, view(-1), { at: "none", kind: "warn", ans: false, ...f(-1) });
   },
   points: [
     { t: "除数是列数 n", body: "行号是 k // n，列号是 k % n。用成行数 m 会算错。" },

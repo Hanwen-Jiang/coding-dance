@@ -1,0 +1,20 @@
+{
+ "sig": {"fn":"letterCombinations","params":["string"],"ret":"List<string>","cmp":"unordered"},
+ "cases": [
+  {"in":["23"],"out":["ad","ae","af","bd","be","bf","cd","ce","cf"]},
+  {"in":["234"],"out":["adg","adh","adi","aeg","aeh","aei","afg","afh","afi","bdg","bdh","bdi","beg","beh","bei","bfg","bfh","bfi","cdg","cdh","cdi","ceg","ceh","cei","cfg","cfh","cfi"]},
+  {"in":[""],"out":[]},
+  {"in":["2"],"out":["a","b","c"]},
+  {"in":["79"],"out":["pw","px","py","pz","qw","qx","qy","qz","rw","rx","ry","rz","sw","sx","sy","sz"]},
+  {"in":["26"],"out":["am","an","ao","bm","bn","bo","cm","cn","co"]},
+  {"in":["435"],"out":["gdj","gdk","gdl","gej","gek","gel","gfj","gfk","gfl","hdj","hdk","hdl","hej","hek","hel","hfj","hfk","hfl","idj","idk","idl","iej","iek","iel","ifj","ifk","ifl"]},
+  {"in":["465"],"out":["gmj","gmk","gml","gnj","gnk","gnl","goj","gok","gol","hmj","hmk","hml","hnj","hnk","hnl","hoj","hok","hol","imj","imk","iml","inj","ink","inl","ioj","iok","iol"]},
+  {"in":["35"],"out":["dj","dk","dl","ej","ek","el","fj","fk","fl"]},
+  {"in":["3"],"out":["d","e","f"]},
+  {"in":["64"],"out":["mg","mh","mi","ng","nh","ni","og","oh","oi"]},
+  {"in":["43"],"out":["gd","ge","gf","hd","he","hf","id","ie","if"]},
+  {"in":["4"],"out":["g","h","i"]},
+  {"in":["6"],"out":["m","n","o"]},
+  {"in":["344"],"out":["dgg","dgh","dgi","dhg","dhh","dhi","dig","dih","dii","egg","egh","egi","ehg","ehh","ehi","eig","eih","eii","fgg","fgh","fgi","fhg","fhh","fhi","fig","fih","fii"]}
+ ]
+}

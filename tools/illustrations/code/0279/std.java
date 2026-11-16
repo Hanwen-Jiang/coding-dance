@@ -1,0 +1,13 @@
+class Solution {
+    public int numSquares(int n) {
+        int[] dp = new int[n + 1];                      // dp[i]：和为 i 最少几个平方数 //@init
+        Arrays.fill(dp, Integer.MAX_VALUE);             //@init
+        dp[0] = 0;                                      //@init
+        for (int i = 1; i <= n; i++) {                  //@each
+            for (int j = 1; j * j <= i; j++) {          //@each
+                dp[i] = Math.min(dp[i], dp[i - j * j] + 1);     // 最后一个数取 j² //@each
+            }
+        }
+        return dp[n];                                   //@done
+    }
+}

@@ -321,16 +321,16 @@ const SPEC = { presets: [{"label":"5 行","args":{"n":5},"note":"numRows = 5"},{
 { t: "标准解法", note: null, legend: [["a","正在算的数"],["e","肩上的两个数"],["c","首尾的 1"]], build(a, snap) {
     const n = a.n, res = [];
     const view = (ci, cj) => res.map((row, i) => ({ t: "array", label: `第 ${i} 行`, idx: false, items: row.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : ci >= 0 && i === ci - 1 && (j === cj - 1 || j === cj) ? "e" : (j === 0 || j === row.length - 1) ? "c" : "" })) }));
-    snap("开始", "从第 0 行 [1] 开始，一行一行往下生成。", [{ t: "note", label: "三角", html: "还没有" }]);
+    snap("开始", "从第 0 行 [1] 开始，一行一行往下生成。", [{ t: "note", label: "三角", html: "还没有" }], { at: "init" });
     for (let i = 0; i < n; i++) {
       const row = Array(i + 1).fill(null); row[0] = 1; row[i] = 1; res.push(row);
-      snap(`第 ${i} 行`, `第 ${i} 行有 ${i + 1} 个数，先把首尾填成 1。`, view(-1, -1));
+      snap(`第 ${i} 行`, `第 ${i} 行有 ${i + 1} 个数，先把首尾填成 1。`, view(-1, -1), { at: "row" });
       for (let j = 1; j < i; j++) {
         row[j] = res[i - 1][j - 1] + res[i - 1][j];
-        snap(`第 ${i} 行`, `row[${j}] = 上一行的 ${res[i - 1][j - 1]} + ${res[i - 1][j]} = <b>${row[j]}</b>。`, view(i, j));
+        snap(`第 ${i} 行`, `row[${j}] = 上一行的 ${res[i - 1][j - 1]} + ${res[i - 1][j]} = <b>${row[j]}</b>。`, view(i, j), { at: "mid" });
       }
     }
-    snap("完成", `生成了 ${n} 行。`, view(-1, -1), { kind: "ok", ans: res.map((r) => r.slice()) });
+    snap("完成", `生成了 ${n} 行。`, view(-1, -1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()) });
   } }
 ] };
 (function () {

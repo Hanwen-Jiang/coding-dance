@@ -10,15 +10,15 @@ module.exports = {
   codes: [{ t: "标准解法：单调栈 + 哨兵", code: `
 class Solution:
     def largestRectangleArea(self, heights: List[int]) -> int:
-        heights = [0] + heights + [0]       # 两头加哨兵
-        stack, best = [], 0                 # 栈里下标对应的高度递增
+        heights = [0] + heights + [0]       # 两头加哨兵 #@init
+        stack, best = [], 0                 # 栈里下标对应的高度递增 #@init
         for i, h in enumerate(heights):
-            while stack and heights[stack[-1]] > h:
-                top = stack.pop()           # 以它为高的矩形，右边界是 i
-                left = stack[-1]            # 左边界是新的栈顶
-                best = max(best, heights[top] * (i - left - 1))
-            stack.append(i)
-        return best
+            while stack and heights[stack[-1]] > h:     #@pop
+                top = stack.pop()           # 以它为高的矩形，右边界是 i #@pop
+                left = stack[-1]            # 左边界是新的栈顶 #@pop
+                best = max(best, heights[top] * (i - left - 1))     #@pop
+            stack.append(i)                 #@push
+        return best                         #@done
 ` }, { t: "简洁写法：只在右边补 0", kind: "elegant", note: "栈底放 -1，h[-1] 正好是补在末尾的 0，同时充当左边的哨兵，循环条件也不用判空。", code: `
 class Solution:
     def largestRectangleArea(self, heights: List[int]) -> int:
@@ -30,6 +30,9 @@ class Solution:
             stack.append(i)
         return best
 ` }],
+  sig: { fn: "largestRectangleArea", params: ["int[]"], ret: "int" },
+  call: (a) => [a.h],
+  cases: [[[1]], [[0]], [[2, 2, 2]], [[6, 2, 5, 4, 5, 1, 6]], [[1, 2, 3, 4, 5]]],
   pytest: `
 s = Solution()
 assert s.largestRectangleArea([2,1,5,6,2,3]) == 10
@@ -47,17 +50,17 @@ assert s.largestRectangleArea([6,2,5,4,5,1,6]) == 12
     const H = [0, ...a.h, 0], stack = []; let best = 0, bestR = null;
     const view = (i, top, rect) => [{ t: "bars", label: "heights（两头是哨兵 0）", items: H.map((v, k) => ({ v, cls: k === top ? "b" : k === i ? "a" : rect && k > rect[0] && k < rect[1] ? "w" : bestR && k > bestR[0] && k < bestR[1] && !rect ? "c" : stack.includes(k) ? "e" : (k === 0 || k === H.length - 1) ? "d" : "" })), ptrs: { i: i >= 0 ? i : null } },
       { t: "chips", label: "栈（存下标，右边是栈顶）", items: stack.map((k) => `${k}:${H[k]}`), empty: "空" }];
-    snap("开始", "两头各加一根高度为 0 的哨兵柱子。栈里存下标，对应高度递增。", view(-1, -1), { facts: [["最大面积", best]] });
+    snap("开始", "两头各加一根高度为 0 的哨兵柱子。栈里存下标，对应高度递增。", view(-1, -1), { at: "init", facts: [["最大面积", best]] });
     for (let i = 0; i < H.length; i++) {
       while (stack.length && H[stack[stack.length - 1]] > H[i]) {
         const top = stack.pop(), left = stack[stack.length - 1], area = H[top] * (i - left - 1);
         const better = area > best; if (better) { best = area; bestR = [left, i]; }
-        snap("结算", `${H[i]} 比栈顶的 ${H[top]} 矮，以 ${H[top]} 为高的矩形右边到不了 ${i}，左边到不了新栈顶 ${left}。宽 ${i - left - 1}，面积 <b>${area}</b>${better ? "，是目前最大的" : ""}。`, view(i, top, [left, i]), { facts: [["最大面积", best]] });
+        snap("结算", `${H[i]} 比栈顶的 ${H[top]} 矮，以 ${H[top]} 为高的矩形右边到不了 ${i}，左边到不了新栈顶 ${left}。宽 ${i - left - 1}，面积 <b>${area}</b>${better ? "，是目前最大的" : ""}。`, view(i, top, [left, i]), { at: "pop", facts: [["最大面积", best]] });
       }
       stack.push(i);
-      if (i > 0 && i < H.length - 1) snap("压栈", `${H[i]} 不比栈顶矮，压栈。`, view(i, -1), { facts: [["最大面积", best]] });
+      if (i > 0 && i < H.length - 1) snap("压栈", `${H[i]} 不比栈顶矮，压栈。`, view(i, -1), { at: "push", facts: [["最大面积", best]] });
     }
-    snap("完成", `最大矩形面积是 <b>${best}</b>。`, view(-1, -1), { kind: "ok", ans: best, facts: [["最大面积", best]] });
+    snap("完成", `最大矩形面积是 <b>${best}</b>。`, view(-1, -1), { at: "done", kind: "ok", ans: best, facts: [["最大面积", best]] });
   },
   points: [
     { t: "宽度是 i − left − 1", body: "左右边界都是比它矮的柱子，本身不算在矩形里。" },

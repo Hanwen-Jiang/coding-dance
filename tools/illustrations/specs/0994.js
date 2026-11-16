@@ -10,20 +10,20 @@ module.exports = {
   codes: [{ t: "标准解法：多源 BFS", code: `
 class Solution:
     def orangesRotting(self, grid: List[List[int]]) -> int:
-        m, n = len(grid), len(grid[0])
-        q = deque((i, j) for i in range(m) for j in range(n) if grid[i][j] == 2)
-        fresh = sum(row.count(1) for row in grid)
-        minutes = 0
-        while q and fresh:
-            minutes += 1
-            for _ in range(len(q)):         # 这一分钟里所有烂橘子同时扩散
-                i, j = q.popleft()
-                for x, y in (i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1):
-                    if 0 <= x < m and 0 <= y < n and grid[x][y] == 1:
-                        grid[x][y] = 2
-                        fresh -= 1
-                        q.append((x, y))
-        return -1 if fresh else minutes
+        m, n = len(grid), len(grid[0])      #@init
+        q = deque((i, j) for i in range(m) for j in range(n) if grid[i][j] == 2)  #@init
+        fresh = sum(row.count(1) for row in grid)   #@init
+        minutes = 0                         #@init
+        while q and fresh:                  #@minute
+            minutes += 1                    #@minute
+            for _ in range(len(q)):         # 这一分钟里所有烂橘子同时扩散 #@minute
+                i, j = q.popleft()          #@minute
+                for x, y in (i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1):  #@minute
+                    if 0 <= x < m and 0 <= y < n and grid[x][y] == 1:   #@minute
+                        grid[x][y] = 2      #@minute
+                        fresh -= 1          #@minute
+                        q.append((x, y))    #@minute
+        return -1 if fresh else minutes     #@done
 ` }, { t: "简洁写法：用集合按轮扩散", kind: "elegant", note: "rotten 只保留这一分钟新烂的橘子，就是 BFS 的一层。", code: `
 class Solution:
     def orangesRotting(self, grid: List[List[int]]) -> int:
@@ -41,6 +41,9 @@ class Solution:
             minutes += 1
         return minutes
 ` }],
+  sig: { fn: "orangesRotting", params: ["int[][]"], ret: "int" },
+  call: (a) => [a.grid],
+  cases: [[[[0]]], [[[0, 2]]], [[[1]]], [[[2, 2], [1, 1]]], [[[2, 1, 1], [0, 1, 1], [1, 0, 1]]]],
   pytest: `
 s = Solution()
 assert s.orangesRotting([[2,1,1],[1,1,0],[0,1,1]]) == 4
@@ -62,18 +65,18 @@ assert s.orangesRotting([[2,1,1],[1,1,1],[0,1,2]]) == 2
     const sym = ["", 1, 2];
     const view = () => [{ t: "grid", label: "grid", rows: g.map((r, i) => r.map((v, j) => ({ v: sym[v], cls: v === 0 ? "d" : v === 1 ? "k" : fresh2.some(([x, y]) => x === i && y === j) ? "w" : "b" }))) }];
     const f = () => ({ facts: [["分钟", minutes], ["新鲜", fresh]] });
-    snap("开始", `一开始有 ${q.length} 个烂橘子、${fresh} 个新鲜橘子。所有烂橘子一起放进队列。`, view(), f());
+    snap("开始", `一开始有 ${q.length} 个烂橘子、${fresh} 个新鲜橘子。所有烂橘子一起放进队列。`, view(), { at: "init", ...f() });
     while (q.length && fresh) {
       minutes++; const nq = []; fresh2 = [];
       for (const [i, j] of q) for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {
         if (x >= 0 && y >= 0 && x < m && y < n && g[x][y] === 1) { g[x][y] = 2; fresh--; nq.push([x, y]); fresh2.push([x, y]); }
       }
       q = nq;
-      snap(`第 ${minutes} 分钟`, nq.length ? `上一分钟的烂橘子同时向四周扩散，又烂了 <b>${nq.length}</b> 个。还剩 ${fresh} 个新鲜的。` : "没有新的橘子变烂。", view(), f());
+      snap(`第 ${minutes} 分钟`, nq.length ? `上一分钟的烂橘子同时向四周扩散，又烂了 <b>${nq.length}</b> 个。还剩 ${fresh} 个新鲜的。` : "没有新的橘子变烂。", view(), { at: "minute", ...f() });
     }
     const ans = fresh ? -1 : minutes;
     fresh2 = [];
-    snap("完成", fresh ? `队列空了，还有 ${fresh} 个新鲜橘子被空格隔开，永远烂不了，返回 <b>-1</b>。` : `所有橘子都烂了，用了 <b>${minutes}</b> 分钟。`, view(), { kind: fresh ? "warn" : "ok", ans, ...f() });
+    snap("完成", fresh ? `队列空了，还有 ${fresh} 个新鲜橘子被空格隔开，永远烂不了，返回 <b>-1</b>。` : `所有橘子都烂了，用了 <b>${minutes}</b> 分钟。`, view(), { at: "done", kind: fresh ? "warn" : "ok", ans, ...f() });
   },
   points: [
     { t: "循环条件带上 fresh", body: "<code>while q and fresh</code>：新鲜橘子已经没了就停，否则最后一层还会多算一分钟。" },

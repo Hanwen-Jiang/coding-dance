@@ -346,21 +346,21 @@ const SPEC = { presets: [{"label":"n = 4","args":{"n":4},"note":"n = 4"},{"label
       return { v: "", cls: r >= q.length && hit(r, c) ? "d" : "" };
     })) }];
     const f = () => ({ facts: [["已放", `${q.length} / ${n}`], ["找到", res.length]] });
-    snap("开始", `在 ${n}×${n} 的棋盘上放 ${n} 个皇后。从第 0 行开始，一行放一个。`, view(), f());
+    snap("开始", `在 ${n}×${n} 的棋盘上放 ${n} 个皇后。从第 0 行开始，一行放一个。`, view(), { at: "init", ...f() });
     const dfs = (r) => {
-      if (r === n) { res.push(q.map((c) => ".".repeat(c) + "Q" + ".".repeat(n - c - 1))); snap("找到", `${n} 行都放好了，记下这种摆法（第 ${res.length} 种）。`, view(true), { kind: "ok", ...f() }); return; }
+      if (r === n) { res.push(q.map((c) => ".".repeat(c) + "Q" + ".".repeat(n - c - 1))); snap("找到", `${n} 行都放好了，记下这种摆法（第 ${res.length} 种）。`, view(true), { at: "found", kind: "ok", ...f() }); return; }
       let any = false;
       for (let c = 0; c < n; c++) {
         if (hit(r, c)) continue;
         any = true; q.push(c);
-        snap(`第 ${r} 行`, `第 ${r} 行第 ${c} 列没有被攻击，放一个皇后。灰色是它和上面的皇后能攻击到的格子。`, view(), f());
+        snap(`第 ${r} 行`, `第 ${r} 行第 ${c} 列没有被攻击，放一个皇后。灰色是它和上面的皇后能攻击到的格子。`, view(), { at: "place", ...f() });
         dfs(r + 1);
         q.pop();
       }
-      if (r > 0) snap("回溯", `第 ${r} 行${any ? "剩下的列都试过了" : "每一列都被攻击了，放不下"}。拿掉第 ${r - 1} 行的皇后，换下一列试。`, view(), { kind: "warn", ...f() });
+      if (r > 0) snap("回溯", `第 ${r} 行${any ? "剩下的列都试过了" : "每一列都被攻击了，放不下"}。拿掉第 ${r - 1} 行的皇后，换下一列试。`, view(), { at: "back", kind: "warn", ...f() });
     };
     dfs(0);
-    snap("完成", `所有摆法都试过了，一共 <b>${res.length}</b> 种。`, view(), { kind: "ok", ans: res.map((x) => x.slice()), ...f() });
+    snap("完成", `所有摆法都试过了，一共 <b>${res.length}</b> 种。`, view(), { at: "done", kind: "ok", ans: res.map((x) => x.slice()), ...f() });
   } }
 ] };
 (function () {

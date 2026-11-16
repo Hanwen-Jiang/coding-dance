@@ -10,14 +10,14 @@ module.exports = {
   codes: [{ t: "标准解法：二分，和右端比较", code: `
 class Solution:
     def findMin(self, nums: List[int]) -> int:
-        lo, hi = 0, len(nums) - 1
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if nums[mid] > nums[hi]:        # mid 在前一段，最小值在右边
-                lo = mid + 1
-            else:                           # mid 在后一段，可能就是最小值
-                hi = mid
-        return nums[lo]
+        lo, hi = 0, len(nums) - 1           #@init
+        while lo < hi:                      #@front,back
+            mid = (lo + hi) // 2            #@front,back
+            if nums[mid] > nums[hi]:        # mid 在前一段，最小值在右边 #@front
+                lo = mid + 1                #@front
+            else:                           # mid 在后一段，可能就是最小值 #@back
+                hi = mid                    #@back
+        return nums[lo]                     #@done
 ` }, { t: "简洁写法：bisect 找第一个 ≤ 末尾的数", kind: "elegant", note: "「nums[i] ≤ nums[-1]」在前一段是 False，在后一段是 True。第一个 True 的位置就是最小值。", code: `
 from bisect import bisect_left
 
@@ -25,6 +25,9 @@ class Solution:
     def findMin(self, nums: List[int]) -> int:
         return nums[bisect_left(range(len(nums)), True, key=lambda i: nums[i] <= nums[-1])]
 ` }],
+  sig: { fn: "findMin", params: ["int[]"], ret: "int" },
+  call: (a) => [a.nums],
+  cases: [[[1]], [[2, 1]], [[11, 13, 15, 17]], [[3, 1, 2]], [[-5000, 5000]]],
   pytest: `
 s = Solution()
 assert s.findMin([3,4,5,1,2]) == 1
@@ -45,13 +48,13 @@ for r in range(10):
   build(a, snap) {
     const nums = a.nums; let lo = 0, hi = nums.length - 1;
     const view = (mid, fin) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: fin && k === lo ? "c" : k === mid ? "a" : k === hi && mid >= 0 ? "b" : k < lo || k > hi ? "d" : "e" })), ptrs: { lo, mid: mid >= 0 ? mid : null, hi } }];
-    snap("开始", "搜索范围是整个数组。每次拿 nums[mid] 和 nums[hi] 比。", view(-1));
+    snap("开始", "搜索范围是整个数组。每次拿 nums[mid] 和 nums[hi] 比。", view(-1), { at: "init" });
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (nums[mid] > nums[hi]) { snap("在前一段", `nums[mid] = ${nums[mid]} &gt; nums[hi] = ${nums[hi]}，mid 在前一段，最小值在它右边，lo = ${mid + 1}。`, view(mid)); lo = mid + 1; }
-      else { snap("在后一段", `nums[mid] = ${nums[mid]} ≤ nums[hi] = ${nums[hi]}，mid 在后一段，最小值在 mid 或它左边，hi = ${mid}。`, view(mid)); hi = mid; }
+      if (nums[mid] > nums[hi]) { snap("在前一段", `nums[mid] = ${nums[mid]} &gt; nums[hi] = ${nums[hi]}，mid 在前一段，最小值在它右边，lo = ${mid + 1}。`, view(mid), { at: "front" }); lo = mid + 1; }
+      else { snap("在后一段", `nums[mid] = ${nums[mid]} ≤ nums[hi] = ${nums[hi]}，mid 在后一段，最小值在 mid 或它左边，hi = ${mid}。`, view(mid), { at: "back" }); hi = mid; }
     }
-    snap("完成", `lo = hi = ${lo}，最小值是 <b>${nums[lo]}</b>。`, view(-1, true), { kind: "ok", ans: nums[lo] });
+    snap("完成", `lo = hi = ${lo}，最小值是 <b>${nums[lo]}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: nums[lo] });
   },
   points: [
     { t: "循环条件 lo < hi", body: "区间缩到一个数时就是答案，不用再比较。" },

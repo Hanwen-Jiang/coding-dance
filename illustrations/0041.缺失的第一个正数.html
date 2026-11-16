@@ -325,19 +325,19 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[3,4,-1,1]},"note":"
 { t: "标准解法", note: null, legend: [["a","当前位置"],["b","要换过去的位置"],["c","坐对了：nums[i] = i + 1"],["w","第一个坐错的位置"]], build(a, snap) {
     const n = a.nums.slice(), len = n.length;
     const view = (i, j, bad) => [{ t: "array", label: "nums（下标 i 上应该坐 i + 1）", items: n.map((v, t) => ({ v, cls: t === bad ? "w" : t === i ? "a" : t === j ? "b" : v === t + 1 ? "c" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", `n = ${len}，答案只可能在 1 到 ${len + 1} 之间。规则：数 x 应该放在下标 x − 1。`, view(-1));
+    snap("开始", `n = ${len}，答案只可能在 1 到 ${len + 1} 之间。规则：数 x 应该放在下标 x − 1。`, view(-1), { at: "init" });
     for (let i = 0; i < len; i++) {
       while (n[i] >= 1 && n[i] <= len && n[n[i] - 1] !== n[i]) {
         const j = n[i] - 1, x = n[i];
-        snap("交换", `nums[${i}] = ${x}，它应该在下标 ${j}，那里现在是 ${n[j]}。把 ${x} 换过去。`, view(i, j));
+        snap("交换", `nums[${i}] = ${x}，它应该在下标 ${j}，那里现在是 ${n[j]}。把 ${x} 换过去。`, view(i, j), { at: "swap" });
         [n[i], n[j]] = [n[j], n[i]];
       }
       const x = n[i];
-      snap("不用动", x === i + 1 ? `nums[${i}] = ${x}，已经坐对了。` : x < 1 || x > len ? `nums[${i}] = ${x} 不在 1 到 ${len} 之间，没有它的座位，留在这里。` : `nums[${i}] = ${x}，它的座位（下标 ${x - 1}）上已经有一个 ${x} 了，是重复的，留在这里。`, view(i), { kind: x === i + 1 ? "" : "warn" });
+      snap("不用动", x === i + 1 ? `nums[${i}] = ${x}，已经坐对了。` : x < 1 || x > len ? `nums[${i}] = ${x} 不在 1 到 ${len} 之间，没有它的座位，留在这里。` : `nums[${i}] = ${x}，它的座位（下标 ${x - 1}）上已经有一个 ${x} 了，是重复的，留在这里。`, view(i), { at: "stay", kind: x === i + 1 ? "" : "warn" });
     }
     let ans = len + 1, bad = -1;
     for (let i = 0; i < len; i++) if (n[i] !== i + 1) { ans = i + 1; bad = i; break; }
-    snap("完成", bad >= 0 ? `从左往右找第一个坐错的位置：下标 ${bad} 上应该是 ${bad + 1}，实际是 ${n[bad]}。缺失的第一个正数是 <b>${ans}</b>。` : `每个位置都坐对了，1 到 ${len} 都在，答案是 <b>${ans}</b>。`, view(-1, -1, bad), { kind: "ok", ans });
+    snap("完成", bad >= 0 ? `从左往右找第一个坐错的位置：下标 ${bad} 上应该是 ${bad + 1}，实际是 ${n[bad]}。缺失的第一个正数是 <b>${ans}</b>。` : `每个位置都坐对了，1 到 ${len} 都在，答案是 <b>${ans}</b>。`, view(-1, -1, bad), { at: bad >= 0 ? "scan" : ["scan", "done"], kind: "ok", ans });
   } }
 ] };
 (function () {
