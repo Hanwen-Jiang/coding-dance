@@ -10,11 +10,11 @@ module.exports = {
   codes: [{ t: "标准解法：动态规划", code: `
 class Solution:
     def uniquePaths(self, m: int, n: int) -> int:
-        dp = [[1] * n for _ in range(m)]    # 第一行、第一列都只有 1 种走法
+        dp = [[1] * n for _ in range(m)]    # 第一行、第一列都只有 1 种走法 #@init
         for i in range(1, m):
             for j in range(1, n):
-                dp[i][j] = dp[i - 1][j] + dp[i][j - 1]  # 从上面来 + 从左边来
-        return dp[-1][-1]
+                dp[i][j] = dp[i - 1][j] + dp[i][j - 1]  # 从上面来 + 从左边来 #@cell
+        return dp[-1][-1]                   #@done
 ` }, { t: "简洁写法：组合数", kind: "elegant", code: `
 from math import comb
 
@@ -30,6 +30,9 @@ assert s.uniquePaths(1, 1) == 1
 assert s.uniquePaths(7, 3) == 28
 assert s.uniquePaths(10, 10) == 48620
 `,
+  sig: { fn: "uniquePaths", params: ["int", "int"], ret: "int" },
+  call: (a) => [a.m, a.n],
+  cases: [[1, 1], [1, 5], [7, 3], [10, 10], [23, 12]],
   legend: [["a", "正在算的格子"], ["e", "上面和左边"], ["c", "终点"]],
   presets: [
     { label: "3 × 7", args: { m: 3, n: 7 }, note: "m = 3, n = 7", expect: 28 },
@@ -38,12 +41,12 @@ assert s.uniquePaths(10, 10) == 48620
   build(a, snap) {
     const { m, n } = a, dp = Array.from({ length: m }, (_, i) => Array.from({ length: n }, (_, j) => (i === 0 || j === 0 ? 1 : null)));
     const view = (ci, cj, fin) => [{ t: "grid", label: "dp[i][j]：从左上走到 (i, j) 的路径数", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m - 1 && j === n - 1 ? "c" : i === ci && j === cj ? "a" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? "e" : "" }))) }];
-    snap("开始", "第一行只能一直向右走，第一列只能一直向下走，路径数都是 1。", view(-1, -1));
+    snap("开始", "第一行只能一直向右走，第一列只能一直向下走，路径数都是 1。", view(-1, -1), { at: "init" });
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) {
       dp[i][j] = dp[i - 1][j] + dp[i][j - 1];
-      snap(`(${i}, ${j})`, `从上面 (${i - 1}, ${j}) 来有 ${dp[i - 1][j]} 种，从左边 (${i}, ${j - 1}) 来有 ${dp[i][j - 1]} 种。dp = <b>${dp[i][j]}</b>。`, view(i, j));
+      snap(`(${i}, ${j})`, `从上面 (${i - 1}, ${j}) 来有 ${dp[i - 1][j]} 种，从左边 (${i}, ${j - 1}) 来有 ${dp[i][j - 1]} 种。dp = <b>${dp[i][j]}</b>。`, view(i, j), { at: "cell" });
     }
-    snap("完成", `到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), { kind: "ok", ans: dp[m - 1][n - 1] });
+    snap("完成", `到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), { at: "done", kind: "ok", ans: dp[m - 1][n - 1] });
   },
   points: [
     { t: "可以压成一行", body: "<code>dp[j] += dp[j-1]</code>：更新前的 dp[j] 是上面的值，dp[j-1] 是刚更新过的左边的值。" },
