@@ -320,12 +320,12 @@ const SPEC = { presets: [{"label":"n = 5","args":{"n":5},"note":"n = 5"},{"label
     const n = a.n, dp = Array(n + 1).fill(null);
     dp[0] = 1; dp[1] = 1;
     const view = (i, fin) => [{ t: "array", label: "dp[i]：爬到第 i 阶的方法数", items: dp.map((v, k) => ({ v, cls: fin && k === n ? "c" : k === i ? "a" : i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", "dp[0] = 1（站在地面不动算一种），dp[1] = 1（只能跨 1 步）。", view(-1));
+    snap("开始", "dp[0] = 1（站在地面不动算一种），dp[1] = 1（只能跨 1 步）。", view(-1), { at: "init" });
     for (let i = 2; i <= n; i++) {
       dp[i] = dp[i - 1] + dp[i - 2];
-      snap(`第 ${i} 阶`, `最后一步从第 ${i - 1} 阶跨 1 步（${dp[i - 1]} 种），或从第 ${i - 2} 阶跨 2 步（${dp[i - 2]} 种）。dp[${i}] = ${dp[i - 1]} + ${dp[i - 2]} = <b>${dp[i]}</b>。`, view(i), { facts: [["dp[" + i + "]", dp[i]]] });
+      snap(`第 ${i} 阶`, `最后一步从第 ${i - 1} 阶跨 1 步（${dp[i - 1]} 种），或从第 ${i - 2} 阶跨 2 步（${dp[i - 2]} 种）。dp[${i}] = ${dp[i - 1]} + ${dp[i - 2]} = <b>${dp[i]}</b>。`, view(i), { at: "step", facts: [["dp[" + i + "]", dp[i]]] });
     }
-    snap("完成", `爬到第 ${n} 阶一共有 <b>${dp[n]}</b> 种方法。`, view(-1, true), { kind: "ok", ans: dp[n] });
+    snap("完成", `爬到第 ${n} 阶一共有 <b>${dp[n]}</b> 种方法。`, view(-1, true), { at: "done", kind: "ok", ans: dp[n] });
   } }
 ] };
 (function () {

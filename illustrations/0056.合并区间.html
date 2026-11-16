@@ -332,18 +332,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"iv":[[1,3],[2,6],[8,10],[1
       { t: "chips", label: "按起点排序后的区间", items: iv.map((x, j) => ({ v: f(x), cls: j === i ? "a" : j < i ? "d" : "" })) },
       { t: "chips", label: "结果", items: res.map((x, j) => ({ v: f(x), cls: touched && j === res.length - 1 ? "k" : "" })), empty: "还没有" },
     ];
-    snap("排序", "先按起点排序。之后能合并的区间一定是挨着的。", view(-1));
+    snap("排序", "先按起点排序。之后能合并的区间一定是挨着的。", view(-1), { at: "sort" });
     iv.forEach(([s, e], i) => {
       const last = res[res.length - 1];
       if (last && s <= last[1]) {
         const old = f(last); last[1] = Math.max(last[1], e);
-        snap("合并", `${f([s, e])} 的起点 ${s} 不超过上一段 ${old} 的终点，两段<b>重叠</b>。终点取较大的，上一段变成 ${f(last)}。`, view(i, true));
+        snap("合并", `${f([s, e])} 的起点 ${s} 不超过上一段 ${old} 的终点，两段<b>重叠</b>。终点取较大的，上一段变成 ${f(last)}。`, view(i, true), { at: "merge" });
       } else {
         res.push([s, e]);
-        snap("另起一段", last ? `${f([s, e])} 的起点 ${s} 大于上一段的终点 ${last[1]}，不重叠，作为新的一段。` : `结果是空的，${f([s, e])} 直接放进去。`, view(i, true));
+        snap("另起一段", last ? `${f([s, e])} 的起点 ${s} 大于上一段的终点 ${last[1]}，不重叠，作为新的一段。` : `结果是空的，${f([s, e])} 直接放进去。`, view(i, true), { at: "new" });
       }
     });
-    snap("完成", `合并后剩下 <b>${res.length}</b> 段。`, view(iv.length), { kind: "ok", ans: res });
+    snap("完成", `合并后剩下 <b>${res.length}</b> 段。`, view(iv.length), { at: "done", kind: "ok", ans: res });
   } }
 ] };
 (function () {

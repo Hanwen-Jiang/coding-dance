@@ -13,25 +13,25 @@ class Solution:
         def check(node, lo, hi):
             if not node:
                 return True
-            if not (lo < node.val < hi):
-                return False
-            return check(node.left, lo, node.val) and check(node.right, node.val, hi)
-        return check(root, float("-inf"), float("inf"))
-` }, { t: "另一种写法：中序遍历要严格递增", code: `
+            if not (lo < node.val < hi):    #@range
+                return False                #@bad
+            return check(node.left, lo, node.val) and check(node.right, node.val, hi)  #@down
+        return check(root, float("-inf"), float("inf"))     #@start
+` }, { t: "另一种写法：中序遍历要严格递增", key: "inorder", code: `
 class Solution:
     def isValidBST(self, root: Optional[TreeNode]) -> bool:
-        prev = float("-inf")
+        prev = float("-inf")            #@init
         def inorder(node):
             nonlocal prev
             if not node:
                 return True
             if not inorder(node.left):
                 return False
-            if node.val <= prev:        # 必须比前一个大
-                return False
-            prev = node.val
+            if node.val <= prev:        # 必须比前一个大 #@bad
+                return False            #@bad
+            prev = node.val             #@ok
             return inorder(node.right)
-        return inorder(root)
+        return inorder(root)            #@done
 ` }, { t: "简洁写法：上下界当默认参数", kind: "elegant", code: `
 class Solution:
     def isValidBST(self, root: Optional[TreeNode], lo=float("-inf"), hi=float("inf")) -> bool:
@@ -49,6 +49,10 @@ assert s.isValidBST(T([5,4,6,None,None,3,7])) is False
 assert s.isValidBST(T([1,1])) is False
 assert s.isValidBST(T([2147483647])) is True
 `,
+  sig: { fn: "isValidBST", params: ["TreeNode"], ret: "bool" },
+  call: (a, H) => [H.toLc(a.t)],
+  // 不用 -2147483648：C++ 判题器拿它表示层序里的空位
+  cases: [[[2147483647]], [[1, 1]], [[2147483647, 2147483647]], [[-2147483647, null, 2147483647]], [[5, 1, 4, null, null, 3, 6]], [[0, -1]]],
   method: "递归传上下界",
   legend: [["a", "当前节点"], ["c", "在允许的范围内"], ["w", "超出范围"]],
   presets: [
@@ -61,22 +65,23 @@ assert s.isValidBST(T([2147483647])) is True
     const st = {}, rng = {};
     const f = (x) => (x === -Infinity ? "−∞" : x === Infinity ? "+∞" : x);
     const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur && !st[id] ? "a" : st[id] || ""; return [{ t: "tree", nodes: N, root: 0, cls, badges: rng }]; };
-    snap("开始", "每个节点下方会标出它允许的范围。根节点没有限制。", view(-1));
+    snap("开始", "每个节点下方会标出它允许的范围。根节点没有限制。", view(-1), { at: "start" });
     const check = (id, lo, hi, why) => {
       const nd = N[id]; rng[id] = `(${f(lo)}, ${f(hi)})`;
       const ok = lo < nd.v && nd.v < hi;
       st[id] = ok ? "c" : "w";
-      snap(ok ? "在范围内" : "超出范围", `${nd.v}${why}，允许的范围是 (${f(lo)}, ${f(hi)})。` + (ok ? `${nd.v} 在范围内。` : `<b>${nd.v} 不在范围内</b>，这不是二叉搜索树。`), view(id), ok ? {} : { kind: "warn" });
+      snap(ok ? "在范围内" : "超出范围", `${nd.v}${why}，允许的范围是 (${f(lo)}, ${f(hi)})。` + (ok ? `${nd.v} 在范围内，接着带着收紧的范围去检查左右子树。` : `<b>${nd.v} 不在范围内</b>，这不是二叉搜索树。`), view(id), ok ? { at: ["range", "down"] } : { at: ["range", "bad"], kind: "warn" });
       if (!ok) return false;
       if (nd.l !== null && !check(nd.l, lo, nd.v, ` 在 ${nd.v} 的左边，上界收紧成 ${nd.v}`)) return false;
       if (nd.r !== null && !check(nd.r, nd.v, hi, ` 在 ${nd.v} 的右边，下界收紧成 ${nd.v}`)) return false;
       return true;
     };
     const ans = check(0, -Infinity, Infinity, " 是根节点");
-    snap("完成", ans ? "所有节点都在各自的范围内，是合法的二叉搜索树。" : "有节点超出了祖先给它的范围，返回 false。", view(-1), { kind: ans ? "ok" : "warn", ans });
+    snap("完成", ans ? "所有节点都在各自的范围内，是合法的二叉搜索树。" : "有节点超出了祖先给它的范围，返回 false。", view(-1), { at: "start", kind: ans ? "ok" : "warn", ans });
   },
   alts: [{
     t: "中序要严格递增",
+    code: "inorder",
     note: "和「另一种写法」一样：二叉搜索树的中序遍历一定严格递增。按中序走一遍，每个节点都和前一个比，一旦不比前一个大就不是。",
     legend: [["a", "中序刚轮到的节点"], ["c", "比前一个大"], ["w", "不比前一个大"]],
     build(a, snap) {
@@ -88,7 +93,7 @@ assert s.isValidBST(T([2147483647])) is True
         for (const id in N) cls[id] = +id === cur && st[id] !== "w" ? "a" : st[id] || "";
         return [{ t: "tree", nodes: N, root: 0, cls, badges: { ...order } }, { t: "chips", label: "中序序列（必须严格递增）", items: seq.map((v, i) => ({ v, cls: bad && i === seq.length - 1 ? "w" : "c" })), empty: "还没有" }];
       };
-      snap("开始", "按中序（左 → 自己 → 右）走一遍，每个节点都和前一个比较。prev 一开始是 −∞。", view(-1), { facts: [["prev", "−∞"]] });
+      snap("开始", "按中序（左 → 自己 → 右）走一遍，每个节点都和前一个比较。prev 一开始是 −∞。", view(-1), { at: "init", facts: [["prev", "−∞"]] });
       const inorder = (id) => {
         if (id === null || bad) return;
         const nd = N[id];
@@ -97,15 +102,15 @@ assert s.isValidBST(T([2147483647])) is True
         seq.push(nd.v); order[id] = "第 " + seq.length;
         if (nd.v <= prev) {
           st[id] = "w"; bad = true;
-          snap("不是递增", `中序轮到 ${nd.v}，前一个是 ${prev}，${nd.v} 不比它大。中序不是严格递增，返回 false。`, view(id), { kind: "warn", facts: [["prev", f(prev)]] });
+          snap("不是递增", `中序轮到 ${nd.v}，前一个是 ${prev}，${nd.v} 不比它大。中序不是严格递增，返回 false。`, view(id), { at: "bad", kind: "warn", facts: [["prev", f(prev)]] });
           return;
         }
         const old = prev; prev = nd.v; st[id] = "c";
-        snap("比前一个大", `中序轮到 ${nd.v}，比前一个 ${f(old)} 大。prev 更新成 ${nd.v}。`, view(id), { facts: [["prev", prev]] });
+        snap("比前一个大", `中序轮到 ${nd.v}，比前一个 ${f(old)} 大。prev 更新成 ${nd.v}。`, view(id), { at: "ok", facts: [["prev", prev]] });
         inorder(nd.r);
       };
       inorder(0);
-      snap("完成", bad ? "中序序列不是严格递增的，不是二叉搜索树。" : `中序序列 [${seq.join(", ")}] 严格递增，是合法的二叉搜索树。`, view(-1), { kind: bad ? "warn" : "ok", ans: !bad, facts: [["prev", f(prev)]] });
+      snap("完成", bad ? "中序序列不是严格递增的，不是二叉搜索树。" : `中序序列 [${seq.join(", ")}] 严格递增，是合法的二叉搜索树。`, view(-1), { at: "done", kind: bad ? "warn" : "ok", ans: !bad, facts: [["prev", f(prev)]] });
     },
   }],
   points: [
