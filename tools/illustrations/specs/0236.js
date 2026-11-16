@@ -10,13 +10,13 @@ module.exports = {
   codes: [{ t: "标准解法：后序递归", code: `
 class Solution:
     def lowestCommonAncestor(self, root, p, q):
-        if root is None or root is p or root is q:
-            return root                 # 空，或者就是要找的节点
-        left = self.lowestCommonAncestor(root.left, p, q)
-        right = self.lowestCommonAncestor(root.right, p, q)
-        if left and right:
-            return root                 # p、q 分在两边
-        return left or right            # 哪边有就交哪边
+        if root is None or root is p or root is q:  #@base
+            return root                 # 空，或者就是要找的节点 #@base
+        left = self.lowestCommonAncestor(root.left, p, q)   #@rec
+        right = self.lowestCommonAncestor(root.right, p, q) #@rec
+        if left and right:              #@both,one
+            return root                 # p、q 分在两边 #@both
+        return left or right            # 哪边有就交哪边 #@one
 ` }, { t: "简洁写法：四行递归", kind: "elegant", code: `
 class Solution:
     def lowestCommonAncestor(self, root, p, q):
@@ -24,25 +24,28 @@ class Solution:
             return root
         l, r = (self.lowestCommonAncestor(c, p, q) for c in (root.left, root.right))
         return root if l and r else l or r
-` }, { t: "不用递归：记录父节点", note: "先遍历一遍记下每个节点的父节点，再从 p 一路往上把祖先都放进集合，最后从 q 往上走，第一个在集合里的就是答案。", code: `
+` }, { t: "不用递归：记录父节点", key: "parent", note: "先遍历一遍记下每个节点的父节点，再从 p 一路往上把祖先都放进集合，最后从 q 往上走，第一个在集合里的就是答案。", code: `
 class Solution:
     def lowestCommonAncestor(self, root, p, q):
-        parent = {root: None}
-        stack = [root]
-        while p not in parent or q not in parent:
-            node = stack.pop()
-            for child in (node.left, node.right):
-                if child:
-                    parent[child] = node
-                    stack.append(child)
-        ancestors = set()
-        while p:                        # p 和它所有的祖先
-            ancestors.add(p)
-            p = parent[p]
-        while q not in ancestors:       # q 往上走，第一个碰到的就是答案
-            q = parent[q]
-        return q
+        parent = {root: None}           #@init
+        stack = [root]                  #@init
+        while p not in parent or q not in parent:   #@parent
+            node = stack.pop()          #@parent
+            for child in (node.left, node.right):   #@parent
+                if child:               #@parent
+                    parent[child] = node    #@parent
+                    stack.append(child)     #@parent
+        ancestors = set()               #@up
+        while p:                        # p 和它所有的祖先 #@up
+            ancestors.add(p)            #@up
+            p = parent[p]               #@up
+        while q not in ancestors:       # q 往上走，第一个碰到的就是答案 #@climb
+            q = parent[q]               #@climb
+        return q                        #@done
 ` }],
+  sig: { fn: "lowestCommonAncestor", params: ["TreeNode", "TreeRef", "TreeRef"], ret: "TreeVal" },
+  call: (a, H) => [H.toLc(a.t), a.p, a.q],
+  cases: [[[1, 2], 1, 2], [[1, 2], 2, 1], [[1, null, 2, null, 3], 3, 1], [[3, 5, 1, 6, 2, 0, 8, null, null, 7, 4], 6, 4], [[3, 5, 1, 6, 2, 0, 8, null, null, 7, 4], 0, 8]],
   pytest: `
 def find(r, v):
     if not r: return None
@@ -75,29 +78,30 @@ assert s.lowestCommonAncestor(r, find(r,1), find(r,2)).val == 1
       return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: { ...badges } }];
     };
     const f = () => ({ facts: [["p", a.p], ["q", a.q]] });
-    snap("开始", `找 ${a.p} 和 ${a.q} 的最近公共祖先。每个节点只问左右子树一句话：你们那边找到 p 或 q 了吗？`, view(-1), f());
+    snap("开始", `找 ${a.p} 和 ${a.q} 的最近公共祖先。每个节点只问左右子树一句话：你们那边找到 p 或 q 了吗？`, view(-1), { at: [], ...f() });
     const rec = (id) => {
       if (id === null || !N[id]) return null;
       stack.push(id);
       if (isPQ(id)) {
         done.add(id); badges[id] = "交 " + N[id].v; stack.pop();
-        snap("碰到目标", `${N[id].v} 就是要找的节点，不用再往下找，直接把自己交上去。`, view(id), f());
+        snap("碰到目标", `${N[id].v} 就是要找的节点，不用再往下找，直接把自己交上去。`, view(id), { at: "base", ...f() });
         return id;
       }
-      snap("进入", `进入 ${N[id].v}，先问左子树，再问右子树。`, view(id), f());
+      snap("进入", `进入 ${N[id].v}，先问左子树，再问右子树。`, view(id), { at: "rec", ...f() });
       const l = rec(N[id].l), r = rec(N[id].r);
       const ret = l !== null && r !== null ? id : l !== null ? l : r;
       badges[id] = ret === null ? "空" : "交 " + N[ret].v; done.add(id); stack.pop();
       const msg = l !== null && r !== null ? `左边交上来 ${N[l].v}，右边交上来 ${N[r].v}，p、q 分在两边，<b>${N[id].v}</b> 就是最近公共祖先，把自己交上去。`
         : ret !== null ? `只有一边找到了 ${N[ret].v}，原样往上交。` : "左右两边都没找到，返回空。";
-      snap("返回", `${N[id].v}：${msg}`, view(id), f());
+      snap("返回", `${N[id].v}：${msg}`, view(id), { at: l !== null && r !== null ? "both" : "one", ...f() });
       return ret;
     };
     const res = rec(0);
-    snap("完成", `根节点最后交上来的是 <b>${N[res].v}</b>，它就是 ${a.p} 和 ${a.q} 的最近公共祖先。`, view(-1, res), { kind: "ok", ans: N[res].v, ...f() });
+    snap("完成", `根节点最后交上来的是 <b>${N[res].v}</b>，它就是 ${a.p} 和 ${a.q} 的最近公共祖先。`, view(-1, res), { at: [], kind: "ok", ans: N[res].v, ...f() });
   },
   alts: [{
     t: "记录父节点",
+    code: "parent",
     note: "和「不用递归」的写法一样：先遍历记下每个节点的父节点；再从 p 一路往上，把 p 和它的祖先放进集合；最后从 q 往上走，第一个在集合里的节点就是答案。",
     legend: [["e", "在栈里"], ["a", "当前节点"], ["b", "p 或 q"], ["w", "在 ancestors 集合里"], ["k", "答案"]],
     build(a, snap) {
@@ -113,25 +117,25 @@ assert s.lowestCommonAncestor(r, find(r,1), find(r,2)).val == 1
           : { t: "chips", label: `ancestors：${a.p} 和它所有的祖先`, items: [...anc].map((i) => N[i].v), empty: "空" }];
       };
       const f = () => ({ facts: [["p", a.p], ["q", a.q]] });
-      snap("开始", `第一步：从根出发遍历，记下每个节点的父节点，直到 ${a.p} 和 ${a.q} 的父节点都有了。根的父节点是空。`, view(-1), f());
+      snap("开始", `第一步：从根出发遍历，记下每个节点的父节点，直到 ${a.p} 和 ${a.q} 的父节点都有了。根的父节点是空。`, view(-1), { at: "init", ...f() });
       while (!(P in parent) || !(Q in parent)) {
         const id = stack.pop(), kids = [];
         for (const c of [N[id].l, N[id].r]) if (c !== null) { parent[c] = id; badges[c] = "父 " + N[id].v; stack.push(c); kids.push(N[c].v); }
-        snap("记父节点", `弹出 ${N[id].v}。` + (kids.length ? `它的孩子 ${kids.join("、")} 的父节点记成 ${N[id].v}，放进栈里。` : "它没有孩子。"), view(id), f());
+        snap("记父节点", `弹出 ${N[id].v}。` + (kids.length ? `它的孩子 ${kids.join("、")} 的父节点记成 ${N[id].v}，放进栈里。` : "它没有孩子。"), view(id), { at: "parent", ...f() });
       }
       phase = 2;
-      snap("够了", `${a.p} 和 ${a.q} 的父节点都记下来了，不用再遍历。第二步：从 ${a.p} 一路往上，把它和它的祖先都放进集合。`, view(-1), f());
+      snap("够了", `${a.p} 和 ${a.q} 的父节点都记下来了，不用再遍历。第二步：从 ${a.p} 一路往上，把它和它的祖先都放进集合。`, view(-1), { at: "up", ...f() });
       for (let x = P; x !== null; x = parent[x]) {
         anc.add(x);
-        snap("往上走", `${N[x].v} 放进集合。` + (parent[x] === null ? "它是根，到头了。" : `它的父节点是 ${N[parent[x]].v}。`), view(x), f());
+        snap("往上走", `${N[x].v} 放进集合。` + (parent[x] === null ? "它是根，到头了。" : `它的父节点是 ${N[parent[x]].v}。`), view(x), { at: "up", ...f() });
       }
       let y = Q;
-      snap("从 q 往上", `第三步：从 ${a.q} 往上走，第一个在集合里的节点就是答案。`, view(y), f());
+      snap("从 q 往上", `第三步：从 ${a.q} 往上走，第一个在集合里的节点就是答案。`, view(y), { at: "climb", ...f() });
       while (!anc.has(y)) {
         const old = y; y = parent[y];
-        snap("不在集合里", `${N[old].v} 不在集合里，走到它的父节点 ${N[y].v}。`, view(y), f());
+        snap("不在集合里", `${N[old].v} 不在集合里，走到它的父节点 ${N[y].v}。`, view(y), { at: "climb", ...f() });
       }
-      snap("完成", `<b>${N[y].v}</b> 在集合里：它是 ${a.q} 往上碰到的第一个 ${a.p} 的祖先（节点自己也算），所以是最近公共祖先。`, view(-1, y), { kind: "ok", ans: N[y].v, ...f() });
+      snap("完成", `<b>${N[y].v}</b> 在集合里：它是 ${a.q} 往上碰到的第一个 ${a.p} 的祖先（节点自己也算），所以是最近公共祖先。`, view(-1, y), { at: "done", kind: "ok", ans: N[y].v, ...f() });
     },
   }],
   points: [

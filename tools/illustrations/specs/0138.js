@@ -12,17 +12,17 @@ class Solution:
     def copyRandomList(self, head: 'Optional[Node]') -> 'Optional[Node]':
         if not head:
             return None
-        m = {}                          # 旧节点 -> 新节点
-        cur = head
-        while cur:                      # 第一遍：只造节点
-            m[cur] = Node(cur.val)
-            cur = cur.next
-        cur = head
-        while cur:                      # 第二遍：连指针
-            m[cur].next = m.get(cur.next)
-            m[cur].random = m.get(cur.random)
-            cur = cur.next
-        return m[head]
+        m = {}                          # 旧节点 -> 新节点 #@init
+        cur = head                      #@init
+        while cur:                      # 第一遍：只造节点 #@make
+            m[cur] = Node(cur.val)      #@make
+            cur = cur.next              #@make
+        cur = head                      #@link
+        while cur:                      # 第二遍：连指针 #@link
+            m[cur].next = m.get(cur.next)       #@link
+            m[cur].random = m.get(cur.random)   #@link
+            cur = cur.next              #@link
+        return m[head]                  #@done
 ` }, { t: "简洁写法：defaultdict 一遍完成", kind: "elegant", note: "第一次用到某个节点的副本时，defaultdict 自动创建它，所以 next 和 random 可以在一遍里接好。", code: `
 class Solution:
     def copyRandomList(self, head: "Optional[Node]") -> "Optional[Node]":
@@ -36,6 +36,9 @@ class Solution:
             node = node.next
         return copy[head]
 ` }],
+  sig: { fn: "copyRandomList", params: ["RandomList"], ret: "RandomList" },
+  call: (a) => [a.d],
+  cases: [[[[1, null]]], [[[1, 0]]], [[[3, null], [3, 0], [3, null]]], [[[5, 2], [6, 2], [7, 2]]]],
   pytest: `
 class Node:
     def __init__(self, x, next=None, random=None):
@@ -69,16 +72,16 @@ for data in [[[7,None],[13,0],[11,4],[10,2],[1,0]], [[1,1],[2,1]], [[3,None],[3,
       { t: "chips", label: "哈希表（旧节点 → 新节点）", items: made.map((t) => `旧 ${d[t][0]} → 新 ${d[t][0]}`), empty: "空" },
       { t: "list", label: "新链表", nodes: d.map(([v], t) => ({ v, cls: "k", hide: !made.includes(t) })), next: nnext.slice(), showNil: false, extra: nrand.slice() },
     ];
-    snap("开始", "分两遍。第一遍只造新节点，不连任何指针。", view(-1));
-    for (let i = 0; i < n; i++) { made.push(i); snap("第一遍：造节点", `为旧节点 ${d[i][0]} 造一个值相同的新节点，在哈希表里记下对应关系。`, view(i)); }
-    snap("第二遍", "所有新节点都有了。再走一遍，照着旧节点的 next 和 random，把新节点连起来。", view(-1));
+    snap("开始", "分两遍。第一遍只造新节点，不连任何指针。", view(-1), { at: "init" });
+    for (let i = 0; i < n; i++) { made.push(i); snap("第一遍：造节点", `为旧节点 ${d[i][0]} 造一个值相同的新节点，在哈希表里记下对应关系。`, view(i), { at: "make" }); }
+    snap("第二遍", "所有新节点都有了。再走一遍，照着旧节点的 next 和 random，把新节点连起来。", view(-1), { at: "link" });
     for (let i = 0; i < n; i++) {
       nnext[i] = i + 1 < n ? i + 1 : null;
       const r = d[i][1];
       if (r !== null) nrand.push([i, r]);
-      snap("第二遍：连指针", `旧 ${d[i][0]} 的 next 是${i + 1 < n ? " " + d[i + 1][0] : "空"}，random 是${r === null ? "空" : " " + d[r][0]}。查表，让新 ${d[i][0]} 的 next 指向${i + 1 < n ? "新 " + d[i + 1][0] : "空"}，random 指向${r === null ? "空" : "新 " + d[r][0]}。`, view(i));
+      snap("第二遍：连指针", `旧 ${d[i][0]} 的 next 是${i + 1 < n ? " " + d[i + 1][0] : "空"}，random 是${r === null ? "空" : " " + d[r][0]}。查表，让新 ${d[i][0]} 的 next 指向${i + 1 < n ? "新 " + d[i + 1][0] : "空"}，random 指向${r === null ? "空" : "新 " + d[r][0]}。`, view(i), { at: "link" });
     }
-    snap("完成", "新链表的结构和原链表一模一样，但每个节点都是新造的。返回表里头节点对应的新节点。", view(-1), { kind: "ok", ans: d });
+    snap("完成", "新链表的结构和原链表一模一样，但每个节点都是新造的。返回表里头节点对应的新节点。", view(-1), { at: "done", kind: "ok", ans: d });
   },
   points: [
     { t: "用 m.get 处理空指针", body: "<code>m.get(None)</code> 返回 <code>None</code>，正好对应「旧指针是空，新指针也是空」，不用单独判断。" },

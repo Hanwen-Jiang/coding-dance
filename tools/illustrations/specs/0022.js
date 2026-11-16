@@ -10,23 +10,23 @@ module.exports = {
   codes: [{ t: "标准解法：回溯", code: `
 class Solution:
     def generateParenthesis(self, n: int) -> List[str]:
-        res, path = [], []
+        res, path = [], []              #@init
 
         def dfs(open_, close):
-            if len(path) == 2 * n:
-                res.append("".join(path))
-                return
-            if open_ < n:                   # 还能放左括号
-                path.append("(")
-                dfs(open_ + 1, close)
+            if len(path) == 2 * n:          #@collect
+                res.append("".join(path))   #@collect
+                return                      #@collect
+            if open_ < n:                   # 还能放左括号 #@open
+                path.append("(")            #@open
+                dfs(open_ + 1, close)       #@open
                 path.pop()
-            if close < open_:               # 右括号不能比左括号多
-                path.append(")")
-                dfs(open_, close + 1)
+            if close < open_:               # 右括号不能比左括号多 #@close
+                path.append(")")            #@close
+                dfs(open_, close + 1)       #@close
                 path.pop()
 
-        dfs(0, 0)
-        return res
+        dfs(0, 0)                           #@init
+        return res                          #@done
 ` }, { t: "简洁写法：生成器", kind: "elegant", note: "l、r 记还剩几个左括号、右括号没放。剩下的右括号比左括号多，才能放右括号。", code: `
 class Solution:
     def generateParenthesis(self, n: int) -> List[str]:
@@ -39,6 +39,9 @@ class Solution:
                 yield from gen(s + ")", l, r - 1)
         return list(gen("", n, n))
 ` }],
+  sig: { fn: "generateParenthesis", params: ["int"], ret: "List<string>", cmp: "unordered" },
+  call: (a) => [a.n],
+  cases: [[1], [4]],
   pytest: `
 s = Solution()
 assert s.generateParenthesis(3) == ["((()))","(()())","(())()","()(())","()()()"]
@@ -58,18 +61,18 @@ assert len(set(s.generateParenthesis(5))) == 42
       { t: "chips", label: "已收集的组合", items: res.map((s, i) => ({ v: s, cls: hl === "c" && i === res.length - 1 ? "c" : "" })), empty: "还没有" },
     ];
     const facts = (o, c) => ({ facts: [["左括号", `${o} / ${n}`], ["右括号", `${c} / ${n}`]] });
-    snap("开始", `要放 ${n} 对括号，一共 ${2 * n} 个字符。左括号不能超过 ${n} 个，右括号不能比左括号多。`, view(""), facts(0, 0));
+    snap("开始", `要放 ${n} 对括号，一共 ${2 * n} 个字符。左括号不能超过 ${n} 个，右括号不能比左括号多。`, view(""), { at: "init", ...facts(0, 0) });
     const dfs = (o, c) => {
       if (path.length === 2 * n) {
         res.push(path.join(""));
-        snap("收集", `放满 ${2 * n} 个了，得到 <b>${res[res.length - 1]}</b>。回到上一层，试另一种选择。`, view("c"), facts(o, c));
+        snap("收集", `放满 ${2 * n} 个了，得到 <b>${res[res.length - 1]}</b>。回到上一层，试另一种选择。`, view("c"), { at: "collect", ...facts(o, c) });
         return;
       }
-      if (o < n) { path.push("("); snap("放 (", `左括号才用了 ${o} 个，还没到 ${n}，放一个 <b>(</b>。`, view("a"), facts(o + 1, c)); dfs(o + 1, c); path.pop(); }
-      if (c < o) { path.push(")"); snap("放 )", `右括号 ${c} 个，比左括号 ${o} 个少，可以放一个 <b>)</b>。`, view("a"), facts(o, c + 1)); dfs(o, c + 1); path.pop(); }
+      if (o < n) { path.push("("); snap("放 (", `左括号才用了 ${o} 个，还没到 ${n}，放一个 <b>(</b>。`, view("a"), { at: "open", ...facts(o + 1, c) }); dfs(o + 1, c); path.pop(); }
+      if (c < o) { path.push(")"); snap("放 )", `右括号 ${c} 个，比左括号 ${o} 个少，可以放一个 <b>)</b>。`, view("a"), { at: "close", ...facts(o, c + 1) }); dfs(o, c + 1); path.pop(); }
     };
     dfs(0, 0);
-    snap("完成", `所有分支都试完了，一共 <b>${res.length}</b> 种合法组合。`, view(""), { kind: "ok", ans: res.slice(), facts: [["组合数", res.length]] });
+    snap("完成", `所有分支都试完了，一共 <b>${res.length}</b> 种合法组合。`, view(""), { at: "done", kind: "ok", ans: res.slice(), facts: [["组合数", res.length]] });
   },
   points: [
     { t: "两个条件守住合法性", body: "<code>open &lt; n</code> 才放左括号，<code>close &lt; open</code> 才放右括号。收集时不用再检查。" },

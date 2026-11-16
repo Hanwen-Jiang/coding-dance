@@ -47,7 +47,176 @@
    "kind": null,
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        dp = [[0] * n for _ in range(m)]\n        for i in range(m):\n            for j in range(n):\n                if i == 0 and j == 0:\n                    dp[i][j] = grid[0][0]\n                elif i == 0:\n                    dp[i][j] = dp[i][j - 1] + grid[i][j]    # 第一行只能从左边来\n                elif j == 0:\n                    dp[i][j] = dp[i - 1][j] + grid[i][j]    # 第一列只能从上面来\n                else:\n                    dp[i][j] = min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j]\n        return dp[-1][-1]"
+   "code": "class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        dp = [[0] * n for _ in range(m)]\n        for i in range(m):\n            for j in range(n):\n                if i == 0 and j == 0:\n                    dp[i][j] = grid[0][0]\n                elif i == 0:\n                    dp[i][j] = dp[i][j - 1] + grid[i][j]    # 第一行只能从左边来\n                elif j == 0:\n                    dp[i][j] = dp[i - 1][j] + grid[i][j]    # 第一列只能从上面来\n                else:\n                    dp[i][j] = min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j]\n        return dp[-1][-1]",
+   "marks": {
+    "init": [
+     3,
+     4
+    ],
+    "start": [
+     7,
+     8
+    ],
+    "row": [
+     9,
+     10
+    ],
+    "col": [
+     11,
+     12
+    ],
+    "mid": [
+     13,
+     14
+    ],
+    "done": [
+     15
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public int minPathSum(int[][] grid) {\n        int m = grid.length, n = grid[0].length;\n        int[][] dp = new int[m][n];\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (i == 0 && j == 0) {\n                    dp[i][j] = grid[0][0];\n                } else if (i == 0) {\n                    dp[i][j] = dp[i][j - 1] + grid[i][j];   // 第一行只能从左边来\n                } else if (j == 0) {\n                    dp[i][j] = dp[i - 1][j] + grid[i][j];   // 第一列只能从上面来\n                } else {\n                    dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j];\n                }\n            }\n        }\n        return dp[m - 1][n - 1];\n    }\n}",
+     "marks": {
+      "init": [
+       3,
+       4
+      ],
+      "start": [
+       7,
+       8
+      ],
+      "row": [
+       9,
+       10
+      ],
+      "col": [
+       11,
+       12
+      ],
+      "mid": [
+       13,
+       14
+      ],
+      "done": [
+       18
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    int minPathSum(vector<vector<int>>& grid) {\n        int m = grid.size(), n = grid[0].size();\n        vector<vector<int>> dp(m, vector<int>(n));\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (i == 0 && j == 0) {\n                    dp[i][j] = grid[0][0];\n                } else if (i == 0) {\n                    dp[i][j] = dp[i][j - 1] + grid[i][j];   // 第一行只能从左边来\n                } else if (j == 0) {\n                    dp[i][j] = dp[i - 1][j] + grid[i][j];   // 第一列只能从上面来\n                } else {\n                    dp[i][j] = min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j];\n                }\n            }\n        }\n        return dp[m - 1][n - 1];\n    }\n};",
+     "marks": {
+      "init": [
+       4,
+       5
+      ],
+      "start": [
+       8,
+       9
+      ],
+      "row": [
+       10,
+       11
+      ],
+      "col": [
+       12,
+       13
+      ],
+      "mid": [
+       14,
+       15
+      ],
+      "done": [
+       19
+      ]
+     }
+    },
+    "go": {
+     "code": "func minPathSum(grid [][]int) int {\n\tm, n := len(grid), len(grid[0])\n\tdp := make([][]int, m)\n\tfor i := range dp {\n\t\tdp[i] = make([]int, n)\n\t}\n\tfor i := 0; i < m; i++ {\n\t\tfor j := 0; j < n; j++ {\n\t\t\tif i == 0 && j == 0 {\n\t\t\t\tdp[i][j] = grid[0][0]\n\t\t\t} else if i == 0 {\n\t\t\t\tdp[i][j] = dp[i][j-1] + grid[i][j] // 第一行只能从左边来\n\t\t\t} else if j == 0 {\n\t\t\t\tdp[i][j] = dp[i-1][j] + grid[i][j] // 第一列只能从上面来\n\t\t\t} else {\n\t\t\t\tdp[i][j] = min(dp[i-1][j], dp[i][j-1]) + grid[i][j]\n\t\t\t}\n\t\t}\n\t}\n\treturn dp[m-1][n-1]\n}",
+     "marks": {
+      "init": [
+       2,
+       3,
+       4,
+       5
+      ],
+      "start": [
+       9,
+       10
+      ],
+      "row": [
+       11,
+       12
+      ],
+      "col": [
+       13,
+       14
+      ],
+      "mid": [
+       15,
+       16
+      ],
+      "done": [
+       20
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var minPathSum = function(grid) {\n    const m = grid.length, n = grid[0].length;\n    const dp = Array.from({ length: m }, () => new Array(n).fill(0));\n    for (let i = 0; i < m; i++) {\n        for (let j = 0; j < n; j++) {\n            if (i === 0 && j === 0) {\n                dp[i][j] = grid[0][0];\n            } else if (i === 0) {\n                dp[i][j] = dp[i][j - 1] + grid[i][j];   // 第一行只能从左边来\n            } else if (j === 0) {\n                dp[i][j] = dp[i - 1][j] + grid[i][j];   // 第一列只能从上面来\n            } else {\n                dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j];\n            }\n        }\n    }\n    return dp[m - 1][n - 1];\n};",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "start": [
+       6,
+       7
+      ],
+      "row": [
+       8,
+       9
+      ],
+      "col": [
+       10,
+       11
+      ],
+      "mid": [
+       12,
+       13
+      ],
+      "done": [
+       17
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function minPathSum(grid: number[][]): number {\n    const m = grid.length, n = grid[0].length;\n    const dp: number[][] = Array.from({ length: m }, () => new Array(n).fill(0));\n    for (let i = 0; i < m; i++) {\n        for (let j = 0; j < n; j++) {\n            if (i === 0 && j === 0) {\n                dp[i][j] = grid[0][0];\n            } else if (i === 0) {\n                dp[i][j] = dp[i][j - 1] + grid[i][j];   // 第一行只能从左边来\n            } else if (j === 0) {\n                dp[i][j] = dp[i - 1][j] + grid[i][j];   // 第一列只能从上面来\n            } else {\n                dp[i][j] = Math.min(dp[i - 1][j], dp[i][j - 1]) + grid[i][j];\n            }\n        }\n    }\n    return dp[m - 1][n - 1];\n}",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "start": [
+       6,
+       7
+      ],
+      "row": [
+       8,
+       9
+      ],
+      "col": [
+       10,
+       11
+      ],
+      "mid": [
+       12,
+       13
+      ],
+      "done": [
+       17
+      ]
+     }
+    }
+   }
   },
   {
    "t": "简洁写法：一行滚动",
@@ -115,7 +284,7 @@
     "note": "grid = [[1,2,3],[4,5,6]]"
    }
   ],
-  "build": "build(a, snap) {\n    const g = a.grid, m = g.length, n = g[0].length, dp = g.map((r) => r.map(() => null));\n    let path = [];\n    const cls = (i, j, ci, cj) => (path.some(([x, y]) => x === i && y === j) ? \"c\" : i === ci && j === cj ? \"a\" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? \"e\" : \"\");\n    const view = (ci, cj) => [\n      { t: \"grid\", label: \"grid\", rows: g.map((r, i) => r.map((v, j) => ({ v, cls: cls(i, j, ci, cj) }))) },\n      { t: \"grid\", label: \"dp[i][j]：走到 (i, j) 的最小路径和\", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? \"\" : v, cls: cls(i, j, ci, cj) }))) },\n    ];\n    snap(\"开始\", `从左上角 ${g[0][0]} 出发，只能向右或向下。`, view(-1, -1));\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      let msg;\n      if (!i && !j) { dp[i][j] = g[0][0]; msg = `起点，dp = ${g[0][0]}。`; }\n      else if (!i) { dp[i][j] = dp[i][j - 1] + g[i][j]; msg = `第一行只能从左边来：${dp[i][j - 1]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else if (!j) { dp[i][j] = dp[i - 1][j] + g[i][j]; msg = `第一列只能从上面来：${dp[i - 1][j]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else { const u = dp[i - 1][j], l = dp[i][j - 1]; dp[i][j] = Math.min(u, l) + g[i][j]; msg = `上面 ${u}，左边 ${l}，取小的 ${Math.min(u, l)}，加上自己 ${g[i][j]}，dp = <b>${dp[i][j]}</b>。`; }\n      snap(`(${i}, ${j})`, msg, view(i, j));\n    }\n    let i = m - 1, j = n - 1; path = [[i, j]];\n    while (i || j) { if (!i) j--; else if (!j) i--; else if (dp[i - 1][j] <= dp[i][j - 1]) i--; else j--; path.unshift([i, j]); }\n    snap(\"完成\", `最小路径和是 <b>${dp[m - 1][n - 1]}</b>，路径是 ${path.map(([x, y]) => g[x][y]).join(\" → \")}。`, view(-1, -1), { kind: \"ok\", ans: dp[m - 1][n - 1] });\n  }",
+  "build": "build(a, snap) {\n    const g = a.grid, m = g.length, n = g[0].length, dp = g.map((r) => r.map(() => null));\n    let path = [];\n    const cls = (i, j, ci, cj) => (path.some(([x, y]) => x === i && y === j) ? \"c\" : i === ci && j === cj ? \"a\" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? \"e\" : \"\");\n    const view = (ci, cj) => [\n      { t: \"grid\", label: \"grid\", rows: g.map((r, i) => r.map((v, j) => ({ v, cls: cls(i, j, ci, cj) }))) },\n      { t: \"grid\", label: \"dp[i][j]：走到 (i, j) 的最小路径和\", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? \"\" : v, cls: cls(i, j, ci, cj) }))) },\n    ];\n    snap(\"开始\", `从左上角 ${g[0][0]} 出发，只能向右或向下。`, view(-1, -1), { at: \"init\" });\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      let msg, at;\n      if (!i && !j) { at = \"start\"; dp[i][j] = g[0][0]; msg = `起点，dp = ${g[0][0]}。`; }\n      else if (!i) { at = \"row\"; dp[i][j] = dp[i][j - 1] + g[i][j]; msg = `第一行只能从左边来：${dp[i][j - 1]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else if (!j) { at = \"col\"; dp[i][j] = dp[i - 1][j] + g[i][j]; msg = `第一列只能从上面来：${dp[i - 1][j]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else { at = \"mid\"; const u = dp[i - 1][j], l = dp[i][j - 1]; dp[i][j] = Math.min(u, l) + g[i][j]; msg = `上面 ${u}，左边 ${l}，取小的 ${Math.min(u, l)}，加上自己 ${g[i][j]}，dp = <b>${dp[i][j]}</b>。`; }\n      snap(`(${i}, ${j})`, msg, view(i, j), { at });\n    }\n    let i = m - 1, j = n - 1; path = [[i, j]];\n    while (i || j) { if (!i) j--; else if (!j) i--; else if (dp[i - 1][j] <= dp[i][j - 1]) i--; else j--; path.unshift([i, j]); }\n    snap(\"完成\", `最小路径和是 <b>${dp[m - 1][n - 1]}</b>，路径是 ${path.map(([x, y]) => g[x][y]).join(\" → \")}。`, view(-1, -1), { at: \"done\", kind: \"ok\", ans: dp[m - 1][n - 1] });\n  }",
   "methods": [
    {
     "t": "标准解法",
@@ -135,7 +304,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const g = a.grid, m = g.length, n = g[0].length, dp = g.map((r) => r.map(() => null));\n    let path = [];\n    const cls = (i, j, ci, cj) => (path.some(([x, y]) => x === i && y === j) ? \"c\" : i === ci && j === cj ? \"a\" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? \"e\" : \"\");\n    const view = (ci, cj) => [\n      { t: \"grid\", label: \"grid\", rows: g.map((r, i) => r.map((v, j) => ({ v, cls: cls(i, j, ci, cj) }))) },\n      { t: \"grid\", label: \"dp[i][j]：走到 (i, j) 的最小路径和\", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? \"\" : v, cls: cls(i, j, ci, cj) }))) },\n    ];\n    snap(\"开始\", `从左上角 ${g[0][0]} 出发，只能向右或向下。`, view(-1, -1));\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      let msg;\n      if (!i && !j) { dp[i][j] = g[0][0]; msg = `起点，dp = ${g[0][0]}。`; }\n      else if (!i) { dp[i][j] = dp[i][j - 1] + g[i][j]; msg = `第一行只能从左边来：${dp[i][j - 1]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else if (!j) { dp[i][j] = dp[i - 1][j] + g[i][j]; msg = `第一列只能从上面来：${dp[i - 1][j]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else { const u = dp[i - 1][j], l = dp[i][j - 1]; dp[i][j] = Math.min(u, l) + g[i][j]; msg = `上面 ${u}，左边 ${l}，取小的 ${Math.min(u, l)}，加上自己 ${g[i][j]}，dp = <b>${dp[i][j]}</b>。`; }\n      snap(`(${i}, ${j})`, msg, view(i, j));\n    }\n    let i = m - 1, j = n - 1; path = [[i, j]];\n    while (i || j) { if (!i) j--; else if (!j) i--; else if (dp[i - 1][j] <= dp[i][j - 1]) i--; else j--; path.unshift([i, j]); }\n    snap(\"完成\", `最小路径和是 <b>${dp[m - 1][n - 1]}</b>，路径是 ${path.map(([x, y]) => g[x][y]).join(\" → \")}。`, view(-1, -1), { kind: \"ok\", ans: dp[m - 1][n - 1] });\n  }"
+    "build": "build(a, snap) {\n    const g = a.grid, m = g.length, n = g[0].length, dp = g.map((r) => r.map(() => null));\n    let path = [];\n    const cls = (i, j, ci, cj) => (path.some(([x, y]) => x === i && y === j) ? \"c\" : i === ci && j === cj ? \"a\" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? \"e\" : \"\");\n    const view = (ci, cj) => [\n      { t: \"grid\", label: \"grid\", rows: g.map((r, i) => r.map((v, j) => ({ v, cls: cls(i, j, ci, cj) }))) },\n      { t: \"grid\", label: \"dp[i][j]：走到 (i, j) 的最小路径和\", rows: dp.map((r, i) => r.map((v, j) => ({ v: v === null ? \"\" : v, cls: cls(i, j, ci, cj) }))) },\n    ];\n    snap(\"开始\", `从左上角 ${g[0][0]} 出发，只能向右或向下。`, view(-1, -1), { at: \"init\" });\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      let msg, at;\n      if (!i && !j) { at = \"start\"; dp[i][j] = g[0][0]; msg = `起点，dp = ${g[0][0]}。`; }\n      else if (!i) { at = \"row\"; dp[i][j] = dp[i][j - 1] + g[i][j]; msg = `第一行只能从左边来：${dp[i][j - 1]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else if (!j) { at = \"col\"; dp[i][j] = dp[i - 1][j] + g[i][j]; msg = `第一列只能从上面来：${dp[i - 1][j]} + ${g[i][j]} = <b>${dp[i][j]}</b>。`; }\n      else { at = \"mid\"; const u = dp[i - 1][j], l = dp[i][j - 1]; dp[i][j] = Math.min(u, l) + g[i][j]; msg = `上面 ${u}，左边 ${l}，取小的 ${Math.min(u, l)}，加上自己 ${g[i][j]}，dp = <b>${dp[i][j]}</b>。`; }\n      snap(`(${i}, ${j})`, msg, view(i, j), { at });\n    }\n    let i = m - 1, j = n - 1; path = [[i, j]];\n    while (i || j) { if (!i) j--; else if (!j) i--; else if (dp[i - 1][j] <= dp[i][j - 1]) i--; else j--; path.unshift([i, j]); }\n    snap(\"完成\", `最小路径和是 <b>${dp[m - 1][n - 1]}</b>，路径是 ${path.map(([x, y]) => g[x][y]).join(\" → \")}。`, view(-1, -1), { at: \"done\", kind: \"ok\", ans: dp[m - 1][n - 1] });\n  }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const grid = Array.from({ length: R.int(2, 4) }, () => R.arr(3, 1, 9));\n    return { args: { grid }, note: `grid = ${R.fmt(grid)}`, py: `Solution().minPathSum(${R.py(grid)})` };\n  })(R); return { args: r.args, note: r.note }; }"

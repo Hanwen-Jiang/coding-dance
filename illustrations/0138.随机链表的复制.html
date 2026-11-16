@@ -338,16 +338,16 @@ const SPEC = { presets: [{"label":"示例 1","args":{"d":[[7,null],[13,0],[11,4]
       { t: "chips", label: "哈希表（旧节点 → 新节点）", items: made.map((t) => `旧 ${d[t][0]} → 新 ${d[t][0]}`), empty: "空" },
       { t: "list", label: "新链表", nodes: d.map(([v], t) => ({ v, cls: "k", hide: !made.includes(t) })), next: nnext.slice(), showNil: false, extra: nrand.slice() },
     ];
-    snap("开始", "分两遍。第一遍只造新节点，不连任何指针。", view(-1));
-    for (let i = 0; i < n; i++) { made.push(i); snap("第一遍：造节点", `为旧节点 ${d[i][0]} 造一个值相同的新节点，在哈希表里记下对应关系。`, view(i)); }
-    snap("第二遍", "所有新节点都有了。再走一遍，照着旧节点的 next 和 random，把新节点连起来。", view(-1));
+    snap("开始", "分两遍。第一遍只造新节点，不连任何指针。", view(-1), { at: "init" });
+    for (let i = 0; i < n; i++) { made.push(i); snap("第一遍：造节点", `为旧节点 ${d[i][0]} 造一个值相同的新节点，在哈希表里记下对应关系。`, view(i), { at: "make" }); }
+    snap("第二遍", "所有新节点都有了。再走一遍，照着旧节点的 next 和 random，把新节点连起来。", view(-1), { at: "link" });
     for (let i = 0; i < n; i++) {
       nnext[i] = i + 1 < n ? i + 1 : null;
       const r = d[i][1];
       if (r !== null) nrand.push([i, r]);
-      snap("第二遍：连指针", `旧 ${d[i][0]} 的 next 是${i + 1 < n ? " " + d[i + 1][0] : "空"}，random 是${r === null ? "空" : " " + d[r][0]}。查表，让新 ${d[i][0]} 的 next 指向${i + 1 < n ? "新 " + d[i + 1][0] : "空"}，random 指向${r === null ? "空" : "新 " + d[r][0]}。`, view(i));
+      snap("第二遍：连指针", `旧 ${d[i][0]} 的 next 是${i + 1 < n ? " " + d[i + 1][0] : "空"}，random 是${r === null ? "空" : " " + d[r][0]}。查表，让新 ${d[i][0]} 的 next 指向${i + 1 < n ? "新 " + d[i + 1][0] : "空"}，random 指向${r === null ? "空" : "新 " + d[r][0]}。`, view(i), { at: "link" });
     }
-    snap("完成", "新链表的结构和原链表一模一样，但每个节点都是新造的。返回表里头节点对应的新节点。", view(-1), { kind: "ok", ans: d });
+    snap("完成", "新链表的结构和原链表一模一样，但每个节点都是新造的。返回表里头节点对应的新节点。", view(-1), { at: "done", kind: "ok", ans: d });
   } }
 ] };
 (function () {

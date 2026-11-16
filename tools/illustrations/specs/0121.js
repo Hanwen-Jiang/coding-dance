@@ -10,11 +10,11 @@ module.exports = {
   codes: [{ t: "标准解法：一次遍历", code: `
 class Solution:
     def maxProfit(self, prices: List[int]) -> int:
-        min_price, best = float("inf"), 0
+        min_price, best = float("inf"), 0  #@init
         for p in prices:
-            min_price = min(min_price, p)       # 到今天为止的最低价
-            best = max(best, p - min_price)     # 今天卖出能赚多少
-        return best
+            min_price = min(min_price, p)       # 到今天为止的最低价 #@low
+            best = max(best, p - min_price)     # 今天卖出能赚多少 #@sell
+        return best                         #@done
 ` }, { t: "简洁写法：前缀最小值", kind: "elegant", note: "accumulate(prices, min) 生成每一天之前（含当天）的最低价。", code: `
 from itertools import accumulate
 
@@ -22,6 +22,9 @@ class Solution:
     def maxProfit(self, prices: List[int]) -> int:
         return max(p - m for p, m in zip(prices, accumulate(prices, min)))
 ` }],
+  sig: { fn: "maxProfit", params: ["int[]"], ret: "int" },
+  call: (a) => [a.prices],
+  cases: [[[1]], [[2, 4, 1]], [[1, 2]], [[2, 1]]],
   pytest: `
 s = Solution()
 assert s.maxProfit([7,1,5,3,6,4]) == 5
@@ -40,14 +43,14 @@ assert s.maxProfit([3,2,6,5,0,3]) == 4
     const P = a.prices; let mi = -1, best = 0, bb = -1, bs = -1;
     const view = (i, fin) => [{ t: "bars", label: "prices", items: P.map((v, k) => ({ v, cls: fin ? (k === bb || k === bs ? "c" : "") : k === i ? "a" : k === mi ? "b" : k > i ? "d" : "" })), ptrs: { 今天: fin ? null : i, 最低: !fin && mi >= 0 && mi !== i ? mi : null } }];
     const f = () => ({ facts: [["最低价", mi >= 0 ? P[mi] : "—"], ["最大利润", best]] });
-    snap("开始", "从第 0 天开始，每一天都假设自己在这天卖出。", view(-1), f());
+    snap("开始", "从第 0 天开始，每一天都假设自己在这天卖出。", view(-1), { at: "init", ...f() });
     P.forEach((p, i) => {
-      if (mi < 0 || p < P[mi]) { mi = i; snap("新低", `第 ${i} 天价格 ${p}，比之前都低，记成最低价。今天买今天卖赚 0。`, view(i), f()); return; }
+      if (mi < 0 || p < P[mi]) { mi = i; snap("新低", `第 ${i} 天价格 ${p}，比之前都低，记成最低价。今天买今天卖赚 0。`, view(i), { at: "low", ...f() }); return; }
       const g = p - P[mi];
-      if (g > best) { best = g; bb = mi; bs = i; snap("更好的一笔", `第 ${i} 天卖出：${p} − ${P[mi]} = <b>${g}</b>，比之前的都多，更新答案。`, view(i), f()); }
-      else snap("卖出试试", `第 ${i} 天卖出：${p} − ${P[mi]} = ${g}，没有超过 ${best}。`, view(i), f());
+      if (g > best) { best = g; bb = mi; bs = i; snap("更好的一笔", `第 ${i} 天卖出：${p} − ${P[mi]} = <b>${g}</b>，比之前的都多，更新答案。`, view(i), { at: "sell", ...f() }); }
+      else snap("卖出试试", `第 ${i} 天卖出：${p} − ${P[mi]} = ${g}，没有超过 ${best}。`, view(i), { at: "sell", ...f() });
     });
-    snap("完成", best ? `最大利润是 <b>${best}</b>：第 ${bb} 天以 ${P[bb]} 买入，第 ${bs} 天以 ${P[bs]} 卖出。` : "每天卖出都不赚钱，不交易，利润 <b>0</b>。", view(-1, true), { kind: "ok", ans: best, ...f() });
+    snap("完成", best ? `最大利润是 <b>${best}</b>：第 ${bb} 天以 ${P[bb]} 买入，第 ${bs} 天以 ${P[bs]} 卖出。` : "每天卖出都不赚钱，不交易，利润 <b>0</b>。", view(-1, true), { at: "done", kind: "ok", ans: best, ...f() });
   },
   points: [
     { t: "先更新最低价再算利润", body: "两句顺序反过来也对，因为当天买当天卖利润是 0，不会影响答案。" },

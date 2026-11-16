@@ -10,44 +10,47 @@ module.exports = {
   codes: [{ t: "标准解法：排序 + 双指针", code: `
 class Solution:
     def threeSum(self, nums: List[int]) -> List[List[int]]:
-        nums.sort()
-        n, res = len(nums), []
+        nums.sort()                     #@sort
+        n, res = len(nums), []          #@sort
         for i in range(n - 2):
-            if nums[i] > 0:
-                break                   # 最小的都大于 0，后面不可能了
-            if i > 0 and nums[i] == nums[i - 1]:
-                continue                # 第一个数去重
-            l, r = i + 1, n - 1
+            if nums[i] > 0:             #@stop
+                break                   # 最小的都大于 0，后面不可能了 #@stop
+            if i > 0 and nums[i] == nums[i - 1]:    #@skip
+                continue                # 第一个数去重 #@skip
+            l, r = i + 1, n - 1         #@fix
             while l < r:
-                s = nums[i] + nums[l] + nums[r]
-                if s < 0:
-                    l += 1
-                elif s > 0:
-                    r -= 1
+                s = nums[i] + nums[l] + nums[r]     #@small,big,found
+                if s < 0:               #@small
+                    l += 1              #@small
+                elif s > 0:             #@big
+                    r -= 1              #@big
                 else:
-                    res.append([nums[i], nums[l], nums[r]])
-                    l += 1
-                    r -= 1
-                    while l < r and nums[l] == nums[l - 1]:
-                        l += 1          # 第二个数去重
-                    while l < r and nums[r] == nums[r + 1]:
-                        r -= 1          # 第三个数去重
-        return res
-` }, { t: "简洁写法：固定一个数，剩下的用集合找", kind: "elegant", note: "固定 x 之后就是两数之和。结果放进集合去重，最后排序输出。同样是 O(n²)。", code: `
+                    res.append([nums[i], nums[l], nums[r]])     #@found
+                    l += 1              #@found
+                    r -= 1              #@found
+                    while l < r and nums[l] == nums[l - 1]:     #@found
+                        l += 1          # 第二个数去重 #@found
+                    while l < r and nums[r] == nums[r + 1]:     #@found
+                        r -= 1          # 第三个数去重 #@found
+        return res                      #@done
+` }, { t: "简洁写法：固定一个数，剩下的用集合找", key: "set", kind: "elegant", note: "固定 x 之后就是两数之和。结果放进集合去重，最后排序输出。同样是 O(n²)。", code: `
 class Solution:
     def threeSum(self, nums: List[int]) -> List[List[int]]:
-        nums.sort()
-        res = set()
+        nums.sort()                     #@sort
+        res = set()                     #@sort
         for i, x in enumerate(nums):
-            if i and x == nums[i - 1]:
-                continue
-            seen = set()
+            if i and x == nums[i - 1]:  #@skip
+                continue                #@skip
+            seen = set()                #@fix
             for y in nums[i + 1:]:
-                if -x - y in seen:
-                    res.add((x, -x - y, y))
-                seen.add(y)
-        return sorted(map(list, res))
+                if -x - y in seen:      #@found,miss
+                    res.add((x, -x - y, y))     #@found
+                seen.add(y)             #@miss
+        return sorted(map(list, res))   #@done
 ` }],
+  sig: { fn: "threeSum", params: ["int[]"], ret: "List<List<int>>", cmp: "unordered" },
+  call: (a) => [a.nums],
+  cases: [[[0, 1, 1]], [[0, 0, 0]], [[0, 0, 0, 0]], [[-2, 0, 0, 2, 2]]],
   pytest: `
 s = Solution()
 assert s.threeSum([-1,0,1,2,-1,-4]) == [[-1,-1,2],[-1,0,1]]
@@ -68,29 +71,30 @@ assert s.threeSum([-2,0,0,2,2]) == [[-2,0,2]]
       { t: "array", label: "排序后的 nums", items: nums.map((v, t) => ({ v, cls: hit && (t === i || t === l || t === r) ? "c" : t === i ? "b" : t === l || t === r ? "a" : t < i ? "d" : "" })), ptrs: { i, l, r } },
       { t: "chips", label: "结果", items: res.map((t) => `[${t.join(", ")}]`), empty: "还没有" },
     ];
-    snap("排序", `先排序，得到 [${nums.join(", ")}]。`, view(null, null, null));
+    snap("排序", `先排序，得到 [${nums.join(", ")}]。`, view(null, null, null), { at: "sort" });
     for (let i = 0; i < n - 2; i++) {
-      if (nums[i] > 0) { snap("提前结束", `nums[${i}] = ${nums[i]} 已经大于 0，它后面的数更大，三个数不可能加起来等于 0。`, view(i, null, null), { kind: "warn" }); break; }
-      if (i > 0 && nums[i] === nums[i - 1]) { snap("去重", `nums[${i}] = ${nums[i]} 和前一个数相同，以它开头的三元组前面已经找过了，<b>跳过</b>。`, view(i, null, null), { kind: "warn" }); continue; }
+      if (nums[i] > 0) { snap("提前结束", `nums[${i}] = ${nums[i]} 已经大于 0，它后面的数更大，三个数不可能加起来等于 0。`, view(i, null, null), { at: "stop", kind: "warn" }); break; }
+      if (i > 0 && nums[i] === nums[i - 1]) { snap("去重", `nums[${i}] = ${nums[i]} 和前一个数相同，以它开头的三元组前面已经找过了，<b>跳过</b>。`, view(i, null, null), { at: "skip", kind: "warn" }); continue; }
       let l = i + 1, r = n - 1;
-      snap("固定第一个数", `固定 nums[${i}] = <b>${nums[i]}</b>，在它右边找两个数，和要等于 ${-nums[i]}。`, view(i, l, r));
+      snap("固定第一个数", `固定 nums[${i}] = <b>${nums[i]}</b>，在它右边找两个数，和要等于 ${-nums[i]}。`, view(i, l, r), { at: "fix" });
       while (l < r) {
         const s = nums[i] + nums[l] + nums[r];
-        if (s < 0) { snap("和太小", `${nums[i]} + ${nums[l]} + ${nums[r]} = ${s}，小于 0，需要更大的数，l 右移。`, view(i, l, r)); l++; }
-        else if (s > 0) { snap("和太大", `${nums[i]} + ${nums[l]} + ${nums[r]} = ${s}，大于 0，需要更小的数，r 左移。`, view(i, l, r)); r--; }
+        if (s < 0) { snap("和太小", `${nums[i]} + ${nums[l]} + ${nums[r]} = ${s}，小于 0，需要更大的数，l 右移。`, view(i, l, r), { at: "small" }); l++; }
+        else if (s > 0) { snap("和太大", `${nums[i]} + ${nums[l]} + ${nums[r]} = ${s}，大于 0，需要更小的数，r 左移。`, view(i, l, r), { at: "big" }); r--; }
         else {
           res.push([nums[i], nums[l], nums[r]]);
-          snap("找到一组", `${nums[i]} + ${nums[l]} + ${nums[r]} = 0，记下 <b>[${nums[i]}, ${nums[l]}, ${nums[r]}]</b>。l、r 同时往里收，并跳过和刚才相同的值。`, view(i, l, r, true), { kind: "ok" });
+          snap("找到一组", `${nums[i]} + ${nums[l]} + ${nums[r]} = 0，记下 <b>[${nums[i]}, ${nums[l]}, ${nums[r]}]</b>。l、r 同时往里收，并跳过和刚才相同的值。`, view(i, l, r, true), { at: "found", kind: "ok" });
           l++; r--;
           while (l < r && nums[l] === nums[l - 1]) l++;
           while (l < r && nums[r] === nums[r + 1]) r--;
         }
       }
     }
-    snap("完成", `一共找到 <b>${res.length}</b> 组。`, view(null, null, null), { kind: "ok", ans: res });
+    snap("完成", `一共找到 <b>${res.length}</b> 组。`, view(null, null, null), { at: "done", kind: "ok", ans: res });
   },
   alts: [{
     t: "固定一个数 + 集合",
+    code: "set",
     note: "和简洁写法一样：排序后固定第一个数 x，剩下的就是两数之和：往后扫 y，看 −x − y 在不在前面见过的集合里。结果放进集合去重。",
     legend: [["b", "固定的 x"], ["a", "正在看的 y"], ["e", "seen 里的数"], ["c", "凑成 0 的一组"]],
     build(a, snap) {
@@ -101,27 +105,27 @@ assert s.threeSum([-2,0,0,2,2]) == [[-2,0,2]]
         { t: "chips", label: "seen", items: seenIdx.map((t) => nums[t]), empty: "空" },
         { t: "chips", label: "结果（集合，自动去重）", items: res.map((t) => `[${t.join(", ")}]`), empty: "还没有" },
       ];
-      snap("排序", `先排序，得到 [${nums.join(", ")}]。`, view(-1, -1, -1));
+      snap("排序", `先排序，得到 [${nums.join(", ")}]。`, view(-1, -1, -1), { at: "sort" });
       for (let i = 0; i < n; i++) {
         const x = nums[i];
-        if (i && x === nums[i - 1]) { snap("跳过", `x = ${x} 和前一个数相同，以它开头的三元组已经找过了，跳过。`, view(i, -1, -1), { kind: "warn" }); continue; }
+        if (i && x === nums[i - 1]) { snap("跳过", `x = ${x} 和前一个数相同，以它开头的三元组已经找过了，跳过。`, view(i, -1, -1), { at: "skip", kind: "warn" }); continue; }
         if (i + 1 >= n) continue;
         seenIdx = [];
-        snap("固定 x", `固定 x = <b>${x}</b>，往后扫 y，找 y + z = ${-x}。seen 清空。`, view(i, -1, -1));
+        snap("固定 x", `固定 x = <b>${x}</b>，往后扫 y，找 y + z = ${-x}。seen 清空。`, view(i, -1, -1), { at: "fix" });
         for (let j = i + 1; j < n; j++) {
           const y = nums[j], z = -x - y, zi = seenIdx.find((t) => nums[t] === z);
           if (zi !== undefined) {
             const t = [x, z, y], k = t.join(",");
             const dup = key.has(k);
             if (!dup) { key.add(k); res.push(t); }
-            snap("找到一组", `y = ${y}，要找 ${-x} − ${y} = ${z}，它在 seen 里。` + (dup ? `[${t.join(", ")}] 已经在结果里了，集合会去重。` : `记下 <b>[${t.join(", ")}]</b>。`), view(i, j, zi), { kind: dup ? "warn" : "ok" });
-          } else snap("没找到", `y = ${y}，要找 ${-x} − ${y} = ${z}，seen 里没有。把 ${y} 放进 seen。`, view(i, j, -1));
+            snap("找到一组", `y = ${y}，要找 ${-x} − ${y} = ${z}，它在 seen 里。` + (dup ? `[${t.join(", ")}] 已经在结果里了，集合会去重。` : `记下 <b>[${t.join(", ")}]</b>。`), view(i, j, zi), { at: "found", kind: dup ? "warn" : "ok" });
+          } else snap("没找到", `y = ${y}，要找 ${-x} − ${y} = ${z}，seen 里没有。把 ${y} 放进 seen。`, view(i, j, -1), { at: "miss" });
           seenIdx.push(j);
         }
       }
       res.sort((p, q) => p[0] - q[0] || p[1] - q[1] || p[2] - q[2]);
       seenIdx = [];
-      snap("完成", `一共找到 <b>${res.length}</b> 组，排好序输出。`, view(-1, -1, -1), { kind: "ok", ans: res });
+      snap("完成", `一共找到 <b>${res.length}</b> 组，排好序输出。`, view(-1, -1, -1), { at: "done", kind: "ok", ans: res });
     },
   }],
   points: [

@@ -17,14 +17,63 @@ class TreeNode {
 }
 
 class H {
+    // 本用例建出的节点：要按「是不是同一个节点」判的题用（见 judge/util.js 里的类型说明）
+    static ArrayList<ListNode> nodes = new ArrayList<>();
+    static TreeNode lastTree;
+
+    static void reset() { nodes.clear(); lastTree = null; }
+
     static ListNode list(int[] vals) {
         ListNode dummy = new ListNode(), cur = dummy;
-        for (int v : vals) { cur.next = new ListNode(v); cur = cur.next; }
+        for (int v : vals) { cur.next = new ListNode(v); cur = cur.next; nodes.add(cur); }
         return dummy.next;
     }
 
+    // 最后一个节点接回下标 pos 的节点（-1 不成环）
+    static ListNode cycle(int[] vals, int pos) {
+        int s = nodes.size();
+        ListNode head = list(vals);
+        if (pos >= 0 && vals.length > 0) nodes.get(s + vals.length - 1).next = nodes.get(s + pos);
+        return head;
+    }
+
+    // 独有部分后面接上本用例建出的第 k 个节点（-1 不接）
+    static ListNode join(int[] vals, int k) {
+        ListNode tail = k >= 0 ? nodes.get(k) : null;
+        int s = nodes.size();
+        ListNode head = list(vals);
+        if (vals.length == 0) return tail;
+        nodes.get(s + vals.length - 1).next = tail;
+        return head;
+    }
+
+    static Object index(ListNode n) {
+        if (n == null) return null;
+        for (int i = 0; i < nodes.size(); i++) if (nodes.get(i) == n) return i;
+        return "不是输入里的节点";
+    }
+
+    static TreeNode find(int v) {
+        ArrayDeque<TreeNode> st = new ArrayDeque<>();
+        if (lastTree != null) st.push(lastTree);
+        while (!st.isEmpty()) {
+            TreeNode t = st.pop();
+            if (t.val == v) return t;
+            if (t.left != null) st.push(t.left);
+            if (t.right != null) st.push(t.right);
+        }
+        return null;
+    }
+
+    static Object val(TreeNode n) { return n == null ? null : n.val; }
+
     // 层序数组，null 表示空位
     static TreeNode tree(Integer[] vals) {
+        lastTree = treeOf(vals);
+        return lastTree;
+    }
+
+    static TreeNode treeOf(Integer[] vals) {
         if (vals.length == 0 || vals[0] == null) return null;
         TreeNode root = new TreeNode(vals[0]);
         ArrayList<TreeNode> q = new ArrayList<>();
