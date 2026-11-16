@@ -338,19 +338,19 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
       { t: "array", label: "path（正在填的排列）", items: Array.from({ length: n }, (_, k) => ({ v: k < path.length ? path[k] : "", cls: k < path.length ? (done ? "c" : k === path.length - 1 && cur >= 0 ? "a" : "e") : "" })), idx: true },
       { t: "chips", label: "已收集", items: res.map((r) => `[${r.join(",")}]`), empty: "还没有" },
     ];
-    snap("开始", `有 ${n} 个空位，从左往右填。每一位从还没用过的数里挑。`, view(-1));
+    snap("开始", `有 ${n} 个空位，从左往右填。每一位从还没用过的数里挑。`, view(-1), { at: "init" });
     const dfs = () => {
-      if (path.length === n) { res.push(path.slice()); snap("收集", `${n} 个位置都填好了，得到 <b>[${path.join(",")}]</b>。`, view(-1, true), { kind: "ok", facts: [["已收集", res.length]] }); return; }
+      if (path.length === n) { res.push(path.slice()); snap("收集", `${n} 个位置都填好了，得到 <b>[${path.join(",")}]</b>。`, view(-1, true), { at: "collect", kind: "ok", facts: [["已收集", res.length]] }); return; }
       for (let i = 0; i < n; i++) {
         if (used[i]) continue;
         used[i] = true; path.push(nums[i]);
-        snap("填第 " + path.length + " 位", `第 ${path.length} 位填 <b>${nums[i]}</b>，把它标记成用过。`, view(i), { facts: [["已收集", res.length]] });
+        snap("填第 " + path.length + " 位", `第 ${path.length} 位填 <b>${nums[i]}</b>，把它标记成用过。`, view(i), { at: "choose", facts: [["已收集", res.length]] });
         dfs();
         path.pop(); used[i] = false;
       }
     };
     dfs();
-    snap("完成", `一共 ${res.length} 个排列，正好是 ${n}! 个。`, view(-1), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
+    snap("完成", `一共 ${res.length} 个排列，正好是 ${n}! 个。`, view(-1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
   } }
 ] };
 (function () {

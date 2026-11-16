@@ -10,22 +10,22 @@ module.exports = {
   codes: [{ t: "标准解法：二分，看哪一半有序", code: `
 class Solution:
     def search(self, nums: List[int], target: int) -> int:
-        lo, hi = 0, len(nums) - 1
+        lo, hi = 0, len(nums) - 1                   #@init
         while lo <= hi:
-            mid = (lo + hi) // 2
-            if nums[mid] == target:
-                return mid
-            if nums[lo] <= nums[mid]:               # 左半有序
-                if nums[lo] <= target < nums[mid]:
-                    hi = mid - 1
-                else:
-                    lo = mid + 1
-            else:                                   # 右半有序
-                if nums[mid] < target <= nums[hi]:
-                    lo = mid + 1
-                else:
-                    hi = mid - 1
-        return -1
+            mid = (lo + hi) // 2                    #@found,left,right
+            if nums[mid] == target:                 #@found
+                return mid                          #@found
+            if nums[lo] <= nums[mid]:               # 左半有序 #@left
+                if nums[lo] <= target < nums[mid]:  #@left
+                    hi = mid - 1                    #@left
+                else:                               #@left
+                    lo = mid + 1                    #@left
+            else:                                   # 右半有序 #@right
+                if nums[mid] < target <= nums[hi]:  #@right
+                    lo = mid + 1                    #@right
+                else:                               #@right
+                    hi = mid - 1                    #@right
+        return -1                                   #@miss
 ` }, { t: "简洁写法：先判断在不在同一段", kind: "elegant", note: "数组分成两段升序：前一段都 ≥ nums[0]，后一段都 &lt; nums[0]。target 和 nums[mid] 在同一段就按普通二分走，不在同一段就往 target 那段走。", code: `
 class Solution:
     def search(self, nums: List[int], target: int) -> int:
@@ -59,6 +59,9 @@ for r in range(7):
     for t in range(0, 9):
         assert s.search(a, t) == (a.index(t) if t in a else -1)
 `,
+  sig: { fn: "search", params: ["int[]", "int"], ret: "int" },
+  call: (a) => [a.nums, a.target],
+  cases: [[[1], 0], [[1], 1], [[3, 1], 1], [[3, 1], 3], [[5, 1, 3], 5], [[1, 3], 3]],
   legend: [["e", "还在搜索范围里"], ["a", "mid"], ["k", "有序的那一半"], ["d", "已排除"], ["c", "找到"]],
   presets: [
     { label: "示例 1", args: { nums: [4, 5, 6, 7, 0, 1, 2], target: 0 }, note: "nums = [4,5,6,7,0,1,2], target = 0", expect: 4 },
@@ -70,21 +73,21 @@ for r in range(7):
     let lo = 0, hi = nums.length - 1;
     const view = (mid, sorted, hit) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === hit ? "c" : k === mid ? "a" : k < lo || k > hi ? "d" : sorted && k >= sorted[0] && k <= sorted[1] ? "k" : "e" })), ptrs: { lo, mid, hi } }];
     const facts = () => ({ facts: [["target", target], ["lo", lo], ["hi", hi]] });
-    snap("开始", `在 [${nums.join(",")}] 里找 <b>${target}</b>。搜索范围是整个数组。`, view(-1), facts());
+    snap("开始", `在 [${nums.join(",")}] 里找 <b>${target}</b>。搜索范围是整个数组。`, view(-1), { at: "init", ...facts() });
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (nums[mid] === target) { snap("找到", `nums[${mid}] = ${nums[mid]}，正好是 target，返回 <b>${mid}</b>。`, view(-2, null, mid), { kind: "ok", ans: mid, ...facts() }); return; }
+      if (nums[mid] === target) { snap("找到", `nums[${mid}] = ${nums[mid]}，正好是 target，返回 <b>${mid}</b>。`, view(-2, null, mid), { at: "found", kind: "ok", ans: mid, ...facts() }); return; }
       if (nums[lo] <= nums[mid]) {
         const inL = nums[lo] <= target && target < nums[mid];
-        snap("左半有序", `nums[lo] = ${nums[lo]} ≤ nums[mid] = ${nums[mid]}，左半 [${lo}..${mid}] 是升序的。${target} ${inL ? "在" : "不在"} [${nums[lo]}, ${nums[mid]}) 里，${inL ? "去左半" : "去右半"}。`, view(mid, [lo, mid]), facts());
+        snap("左半有序", `nums[lo] = ${nums[lo]} ≤ nums[mid] = ${nums[mid]}，左半 [${lo}..${mid}] 是升序的。${target} ${inL ? "在" : "不在"} [${nums[lo]}, ${nums[mid]}) 里，${inL ? "去左半" : "去右半"}。`, view(mid, [lo, mid]), { at: "left", ...facts() });
         if (inL) hi = mid - 1; else lo = mid + 1;
       } else {
         const inR = nums[mid] < target && target <= nums[hi];
-        snap("右半有序", `nums[lo] = ${nums[lo]} &gt; nums[mid] = ${nums[mid]}，断点在左半，右半 [${mid}..${hi}] 是升序的。${target} ${inR ? "在" : "不在"} (${nums[mid]}, ${nums[hi]}] 里，${inR ? "去右半" : "去左半"}。`, view(mid, [mid, hi]), facts());
+        snap("右半有序", `nums[lo] = ${nums[lo]} &gt; nums[mid] = ${nums[mid]}，断点在左半，右半 [${mid}..${hi}] 是升序的。${target} ${inR ? "在" : "不在"} (${nums[mid]}, ${nums[hi]}] 里，${inR ? "去右半" : "去左半"}。`, view(mid, [mid, hi]), { at: "right", ...facts() });
         if (inR) lo = mid + 1; else hi = mid - 1;
       }
     }
-    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，数组里没有 ${target}，返回 <b>-1</b>。`, view(-1), { kind: "warn", ans: -1, ...facts() });
+    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，数组里没有 ${target}，返回 <b>-1</b>。`, view(-1), { at: "miss", kind: "warn", ans: -1, ...facts() });
   },
   points: [
     { t: "左半有序用 <=", body: "<code>nums[lo] &lt;= nums[mid]</code>。只有两个数时 lo 等于 mid，少了等号会判错方向。" },

@@ -11,36 +11,36 @@ module.exports = {
 class Solution:
     def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:
         # 堆里放 (值, 链表编号, 节点)，编号用来在值相等时比较
-        heap = [(node.val, i, node) for i, node in enumerate(lists) if node]
-        heapq.heapify(heap)
-        dummy = cur = ListNode()
+        heap = [(node.val, i, node) for i, node in enumerate(lists) if node]   #@build
+        heapq.heapify(heap)             #@build
+        dummy = cur = ListNode()        #@build
         while heap:
-            val, i, node = heapq.heappop(heap)
-            cur.next = node
-            cur = node
-            if node.next:
-                heapq.heappush(heap, (node.next.val, i, node.next))
-        return dummy.next
-` }, { t: "另一种写法：分治，两两合并", note: "把 k 个链表对半分，两半各自合并成一个，再合并这两个。复杂度同样是 O(n log k)。", code: `
+            val, i, node = heapq.heappop(heap)  #@pop
+            cur.next = node             #@pop
+            cur = node                  #@pop
+            if node.next:               #@push,end
+                heapq.heappush(heap, (node.next.val, i, node.next))    #@push
+        return dummy.next               #@done
+` }, { t: "另一种写法：分治，两两合并", key: "dc", note: "每一轮把相邻的两个链表合并成一个，链表个数减半，直到只剩一个。复杂度同样是 O(n log k)。", code: `
 class Solution:
     def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:
-        def merge2(a, b):
-            dummy = cur = ListNode()
-            while a and b:
-                if a.val <= b.val:
-                    cur.next, a = a, a.next
-                else:
-                    cur.next, b = b, b.next
-                cur = cur.next
-            cur.next = a or b
-            return dummy.next
+        def merge2(a, b):               # 合并两个有序链表
+            dummy = cur = ListNode()    #@merge
+            while a and b:              #@merge
+                if a.val <= b.val:      #@merge
+                    cur.next, a = a, a.next     #@merge
+                else:                   #@merge
+                    cur.next, b = b, b.next     #@merge
+                cur = cur.next          #@merge
+            cur.next = a or b           #@merge,single
+            return dummy.next           #@merge,single
 
-        if not lists:
-            return None
-        while len(lists) > 1:
-            lists = [merge2(lists[i], lists[i + 1] if i + 1 < len(lists) else None)
-                     for i in range(0, len(lists), 2)]
-        return lists[0]
+        if not lists:                   #@empty
+            return None                 #@empty
+        while len(lists) > 1:           # 每一轮个数减半 #@round
+            lists = [merge2(lists[i], lists[i + 1] if i + 1 < len(lists) else None)   #@merge,single
+                     for i in range(0, len(lists), 2)]  #@merge,single
+        return lists[0]                 #@done
 ` }, { t: "简洁写法：heapq.merge", kind: "elegant", note: "heapq.merge 内部就是小顶堆多路归并。每条链表包成一个生成器，按节点的值合并，再把节点依次串起来。", code: `
 class Solution:
     def mergeKLists(self, lists: List[Optional[ListNode]]) -> Optional[ListNode]:
@@ -63,6 +63,9 @@ for _ in range(100):
     ls = [sorted(random.randint(-9, 9) for _ in range(random.randint(0, 6))) for _ in range(random.randint(0, 6))]
     assert toL(s.mergeKLists([L(x) for x in ls])) == sorted(sum(ls, []))
 `,
+  sig: { fn: "mergeKLists", params: ["ListNode[]"], ret: "ListNode" },
+  call: (a) => [a.ls],
+  cases: [[[]], [[[]]], [[[], [1]]], [[[2], [1]]], [[[-2, 0, 3], [], [-2, -1], [5]]]],
   method: "小顶堆",
   legend: [["a", "在堆里的头节点"], ["d", "已经接走"], ["c", "刚弹出的最小值"], ["k", "结果"]],
   presets: [
@@ -79,20 +82,21 @@ for _ in range(100):
     ];
     ls.forEach((l, i) => { if (l.length) heap.push([l[0], i]); });
     sortHeap();
-    snap("建堆", `把 ${ls.length} 个链表的头节点都放进小顶堆。`, view());
+    snap("建堆", `把 ${ls.length} 个链表的头节点都放进小顶堆。`, view(), { at: "build" });
     while (heap.length) {
       const [v, i] = heap.shift();
       popped = i;
-      snap("弹出最小值", `堆顶是 ${v}，来自链表 ${i}。它是所有头节点里最小的，弹出来接到结果后面。`, view());
+      snap("弹出最小值", `堆顶是 ${v}，来自链表 ${i}。它是所有头节点里最小的，弹出来接到结果后面。`, view(), { at: "pop" });
       out.push(v); pos[i]++; popped = null;
       const nx = ls[i][pos[i]];
-      if (nx !== undefined) { heap.push([nx, i]); sortHeap(); snap("补进下一个", `链表 ${i} 的下一个节点是 ${nx}，把它放进堆，作为这个链表新的头。`, view()); }
-      else snap("这个链表走完了", `链表 ${i} 后面没有节点了，不用补。堆里剩 ${heap.length} 个。`, view(), { kind: "warn" });
+      if (nx !== undefined) { heap.push([nx, i]); sortHeap(); snap("补进下一个", `链表 ${i} 的下一个节点是 ${nx}，把它放进堆，作为这个链表新的头。`, view(), { at: "push" }); }
+      else snap("这个链表走完了", `链表 ${i} 后面没有节点了，不用补。堆里剩 ${heap.length} 个。`, view(), { at: "end", kind: "warn" });
     }
-    snap("完成", `堆空了，所有节点都接好了：[${out.join(", ")}]。`, view(), { kind: "ok", ans: out });
+    snap("完成", `堆空了，所有节点都接好了：[${out.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: out });
   },
   alts: [{
     t: "分治两两合并",
+    code: "dc",
     note: "和「另一种写法」一样：每一轮把相邻的两个链表合并成一个（就是「合并两个有序链表」），链表个数减半，直到只剩一个。",
     legend: [["a", "正在合并的两个"], ["d", "这一轮已经合并过"], ["c", "刚合并出来的"]],
     build(a, snap) {
@@ -102,24 +106,24 @@ for _ in range(100):
         ...ls.map((l, i) => ({ t: "chips", label: `${nx ? "这一轮 · " : ""}链表 ${i}`, items: l.map((v) => ({ v, cls: hl.includes(i) ? "a" : nx && i < Math.min(...hl) ? "d" : "" })), empty: "空" })),
         ...(nx || []).map((l, t) => ({ t: "chips", label: `下一轮 · 链表 ${t}`, items: l.map((v) => ({ v, cls: t === nx.length - 1 ? "c" : "" })), empty: "空" })),
       ];
-      if (!ls.length) { snap("完成", "没有链表，返回空。", [{ t: "note", label: "lists", html: "空" }], { kind: "ok", ans: [] }); return; }
-      snap("开始", `一共 ${ls.length} 个链表。每一轮把相邻的两个合并成一个，个数减半。`, view([], null));
+      if (!ls.length) { snap("完成", "没有链表，返回空。", [{ t: "note", label: "lists", html: "空" }], { at: "empty", kind: "ok", ans: [] }); return; }
+      snap("开始", `一共 ${ls.length} 个链表。每一轮把相邻的两个合并成一个，个数减半。`, view([], null), { at: "round" });
       while (ls.length > 1) {
         round++;
         const nx = [];
         for (let i = 0; i < ls.length; i += 2) {
           if (i + 1 < ls.length) {
             nx.push(merge2(ls[i], ls[i + 1]));
-            snap(`第 ${round} 轮`, `合并链表 ${i} 和链表 ${i + 1}：两个头比大小，小的先接上，得到 [${nx[nx.length - 1].join(", ")}]。`, view([i, i + 1], nx));
+            snap(`第 ${round} 轮`, `合并链表 ${i} 和链表 ${i + 1}：两个头比大小，小的先接上，得到 [${nx[nx.length - 1].join(", ")}]。`, view([i, i + 1], nx), { at: "merge" });
           } else {
             nx.push(ls[i]);
-            snap(`第 ${round} 轮`, `链表 ${i} 落单了，和空链表合并等于它自己，原样进入下一轮。`, view([i], nx));
+            snap(`第 ${round} 轮`, `链表 ${i} 落单了，和空链表合并等于它自己，原样进入下一轮。`, view([i], nx), { at: "single" });
           }
         }
         ls = nx;
-        snap(`第 ${round} 轮完`, ls.length > 1 ? `还剩 ${ls.length} 个链表，继续下一轮。` : "只剩一个链表了。", view([], null));
+        snap(`第 ${round} 轮完`, ls.length > 1 ? `还剩 ${ls.length} 个链表，继续下一轮。` : "只剩一个链表了。", view([], null), { at: "round" });
       }
-      snap("完成", `合并完成：[${ls[0].join(", ")}]。一共 ${round} 轮，每轮每个节点只被处理一次，所以是 O(n log k)。`, view([], null), { kind: "ok", ans: ls[0] });
+      snap("完成", `合并完成：[${ls[0].join(", ")}]。一共 ${round} 轮，每轮每个节点只被处理一次，所以是 O(n log k)。`, view([], null), { at: "done", kind: "ok", ans: ls[0] });
     },
   }],
   points: [
