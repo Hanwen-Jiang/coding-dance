@@ -354,16 +354,16 @@ const SPEC = { presets: [{"label":"示例","args":{"ops":[["push",-2],["push",0]
       { t: "array", label: "mins（和 stack 一一对应）", items: mins.length ? mins.map((v, k) => ({ v, cls: k === mins.length - 1 ? "c" : "" })) : [{ v: "", cls: "d" }], ptrs: {} },
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : v)), empty: "还没有" },
     ];
-    snap("开始", "两个栈都是空的。", view(-1));
+    snap("开始", "两个栈都是空的。", view(-1), { at: "init" });
     ops.forEach((o, i) => {
       let msg;
       if (o[0] === "push") { const m = mins.length ? Math.min(o[1], mins[mins.length - 1]) : o[1]; st.push(o[1]); mins.push(m); out.push(null); msg = `把 ${o[1]} 压进 stack。压入后的最小值是 ${mins.length > 1 ? `min(${o[1]}, ${mins[mins.length - 2]})` : o[1]} = <b>${m}</b>，压进 mins。`; }
       else if (o[0] === "pop") { const v = st.pop(); mins.pop(); out.push(null); msg = `弹出 ${v}，mins 也同步弹出一层。现在的最小值是 ${mins.length ? mins[mins.length - 1] : "—"}。`; }
       else if (o[0] === "top") { out.push(st[st.length - 1]); msg = `栈顶是 <b>${st[st.length - 1]}</b>。`; }
       else { out.push(mins[mins.length - 1]); msg = `mins 的栈顶就是最小值，返回 <b>${mins[mins.length - 1]}</b>，O(1)。`; }
-      snap(name(o), msg, view(i));
+      snap(name(o), msg, view(i), { at: o[0] });
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { kind: "ok", ans: out.slice() });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { at: [], kind: "ok", ans: out.slice() });
   } }
 ] };
 (function () {

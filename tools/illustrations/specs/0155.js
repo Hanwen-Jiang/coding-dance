@@ -10,22 +10,22 @@ module.exports = {
   codes: [{ t: "标准解法：辅助栈", code: `
 class MinStack:
     def __init__(self):
-        self.stack = []
-        self.mins = []                      # mins[-1] 是当前栈里的最小值
+        self.stack = []                     #@init
+        self.mins = []                      # mins[-1] 是当前栈里的最小值 #@init
 
     def push(self, val: int) -> None:
-        self.stack.append(val)
-        self.mins.append(min(val, self.mins[-1]) if self.mins else val)
+        self.stack.append(val)              #@push
+        self.mins.append(min(val, self.mins[-1]) if self.mins else val)    #@push
 
     def pop(self) -> None:
-        self.stack.pop()
-        self.mins.pop()                     # 和主栈同步弹出
+        self.stack.pop()                    #@pop
+        self.mins.pop()                     # 和主栈同步弹出 #@pop
 
     def top(self) -> int:
-        return self.stack[-1]
+        return self.stack[-1]               #@top
 
     def getMin(self) -> int:
-        return self.mins[-1]
+        return self.mins[-1]                #@getMin
 ` }, { t: "简洁写法：一个栈存二元组 + 哨兵", kind: "elegant", note: "栈底放一个最小值为 inf 的哨兵，push 时就不用判断栈是否为空。", code: `
 from math import inf
 
@@ -59,6 +59,12 @@ assert m.getMin() == 0
 m.pop(); m.pop(); m.push(5)
 assert m.top() == 5 and m.getMin() == 5
 `,
+  sig: { cls: "MinStack", ctor: [], methods: { push: [["int"], "void"], pop: [[], "void"], top: [[], "int"], getMin: [[], "int"] } },
+  call: (a) => [["MinStack", ...a.ops.map((o) => o[0])], [[], ...a.ops.map((o) => o.slice(1))]],
+  cases: [
+    [["MinStack", "push", "push", "getMin", "push", "getMin", "pop", "getMin", "pop", "top"], [[], [2147483647], [-2147483648], [], [-2147483648], [], [], [], [], []]],
+    [["MinStack", "push", "top", "getMin", "pop", "push", "getMin"], [[], [5], [], [], [], [-1], []]],
+  ],
   legend: [["a", "正在执行的操作"], ["c", "当前的最小值"]],
   presets: [
     { label: "示例", args: { ops: [["push", -2], ["push", 0], ["push", -3], ["getMin"], ["pop"], ["top"], ["getMin"]] }, note: "push(-2) push(0) push(-3) getMin() pop() top() getMin()", expect: [null, null, null, -3, null, 0, -2] },
@@ -73,16 +79,16 @@ assert m.top() == 5 and m.getMin() == 5
       { t: "array", label: "mins（和 stack 一一对应）", items: mins.length ? mins.map((v, k) => ({ v, cls: k === mins.length - 1 ? "c" : "" })) : [{ v: "", cls: "d" }], ptrs: {} },
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : v)), empty: "还没有" },
     ];
-    snap("开始", "两个栈都是空的。", view(-1));
+    snap("开始", "两个栈都是空的。", view(-1), { at: "init" });
     ops.forEach((o, i) => {
       let msg;
       if (o[0] === "push") { const m = mins.length ? Math.min(o[1], mins[mins.length - 1]) : o[1]; st.push(o[1]); mins.push(m); out.push(null); msg = `把 ${o[1]} 压进 stack。压入后的最小值是 ${mins.length > 1 ? `min(${o[1]}, ${mins[mins.length - 2]})` : o[1]} = <b>${m}</b>，压进 mins。`; }
       else if (o[0] === "pop") { const v = st.pop(); mins.pop(); out.push(null); msg = `弹出 ${v}，mins 也同步弹出一层。现在的最小值是 ${mins.length ? mins[mins.length - 1] : "—"}。`; }
       else if (o[0] === "top") { out.push(st[st.length - 1]); msg = `栈顶是 <b>${st[st.length - 1]}</b>。`; }
       else { out.push(mins[mins.length - 1]); msg = `mins 的栈顶就是最小值，返回 <b>${mins[mins.length - 1]}</b>，O(1)。`; }
-      snap(name(o), msg, view(i));
+      snap(name(o), msg, view(i), { at: o[0] });
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { kind: "ok", ans: out.slice() });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { at: [], kind: "ok", ans: out.slice() });
   },
   points: [
     { t: "重复的最小值也要压", body: "mins 每次都压一层，而不是只在更小时才压。否则弹出一个重复的最小值后，记录就对不上了。" },

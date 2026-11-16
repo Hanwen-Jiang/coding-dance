@@ -1,7 +1,7 @@
 class Solution {
 public:
     vector<vector<int>> subsets(vector<int>& nums) {
-        vector<vector<int>> res = {{}};                     //@init
+        vector<vector<int>> res(1);                         // 只有一个空集 //@init
         for (int x : nums) {
             int size = res.size();                          // 只复制已有的子集 //@add
             for (int k = 0; k < size; k++) {                //@add

@@ -203,7 +203,7 @@
      }
     },
     "cpp": {
-     "code": "class Solution {\npublic:\n    vector<vector<int>> subsets(vector<int>& nums) {\n        vector<vector<int>> res = {{}};\n        for (int x : nums) {\n            int size = res.size();                          // 只复制已有的子集\n            for (int k = 0; k < size; k++) {\n                vector<int> s = res[k];\n                s.push_back(x);\n                res.push_back(s);\n            }\n        }\n        return res;\n    }\n};",
+     "code": "class Solution {\npublic:\n    vector<vector<int>> subsets(vector<int>& nums) {\n        vector<vector<int>> res(1);                         // 只有一个空集\n        for (int x : nums) {\n            int size = res.size();                          // 只复制已有的子集\n            for (int k = 0; k < size; k++) {\n                vector<int> s = res[k];\n                s.push_back(x);\n                res.push_back(s);\n            }\n        }\n        return res;\n    }\n};",
      "marks": {
       "init": [
        4

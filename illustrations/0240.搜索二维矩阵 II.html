@@ -316,14 +316,14 @@ const SPEC = { presets: [{"label":"示例 1：找 5","args":{"t":5},"note":"targ
     const M = [[1, 4, 7, 11, 15], [2, 5, 8, 12, 19], [3, 6, 9, 16, 22], [10, 13, 14, 17, 24], [18, 21, 23, 26, 30]], t = a.t;
     let i = 0, j = M[0].length - 1;
     const view = (hit) => [{ t: "grid", label: "matrix", rows: M.map((r, x) => r.map((v, y) => ({ v, cls: x === i && y === j ? (hit ? "c" : "a") : x < i || y > j ? "d" : "" }))) }];
-    snap("开始", `要找 <b>${t}</b>。从右上角 ${M[i][j]} 出发：往左数变小，往下数变大。`, view(), { facts: [["target", t]] });
+    snap("开始", `要找 <b>${t}</b>。从右上角 ${M[i][j]} 出发：往左数变小，往下数变大。`, view(), { at: "init", facts: [["target", t]] });
     while (i < M.length && j >= 0) {
       const x = M[i][j];
-      if (x === t) { snap("找到", `当前是 ${x}，等于 target。返回 true。`, view(true), { kind: "ok", ans: true, facts: [["target", t]] }); return; }
-      if (x > t) { snap("往左", `当前是 ${x}，比 ${t} 大。它下面的数都更大，<b>这一列全部排除</b>，往左走。`, view(), { facts: [["target", t]] }); j--; }
-      else { snap("往下", `当前是 ${x}，比 ${t} 小。它左边的数都更小，<b>这一行全部排除</b>，往下走。`, view(), { facts: [["target", t]] }); i++; }
+      if (x === t) { snap("找到", `当前是 ${x}，等于 target。返回 true。`, view(true), { at: ["cmp", "found"], kind: "ok", ans: true, facts: [["target", t]] }); return; }
+      if (x > t) { snap("往左", `当前是 ${x}，比 ${t} 大。它下面的数都更大，<b>这一列全部排除</b>，往左走。`, view(), { at: ["cmp", "left"], facts: [["target", t]] }); j--; }
+      else { snap("往下", `当前是 ${x}，比 ${t} 小。它左边的数都更小，<b>这一行全部排除</b>，往下走。`, view(), { at: ["cmp", "down"], facts: [["target", t]] }); i++; }
     }
-    snap("没找到", `走出了矩阵，所有行和列都被排除。${t} 不在矩阵里，返回 false。`, view(), { kind: "warn", ans: false, facts: [["target", t]] });
+    snap("没找到", `走出了矩阵，所有行和列都被排除。${t} 不在矩阵里，返回 false。`, view(), { at: "none", kind: "warn", ans: false, facts: [["target", t]] });
   } }
 ] };
 (function () {
