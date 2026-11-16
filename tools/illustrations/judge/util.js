@@ -6,14 +6,33 @@ const cp = require("child_process");
  *   int long double bool string char ListNode TreeNode
  *   T[]      数组（Java 里是 T[]）
  *   List<T>  列表（Java 里是 List<T>；其他语言和数组一样）
+ *
+ * 要按「是不是同一个节点」判的题用下面几种（每个用例开始时清空记录）：
+ *   CycleList   参数：[值数组, pos]，最后一个节点接回下标 pos 的节点（-1 不成环）。141、142
+ *   JoinList    参数：[自己独有的值数组, k]，独有部分后面接上本用例前面参数里建出的第 k 个链表节点（-1 不接）。160
+ *   NodeIndex   返回值：ListNode，判成它是本用例建出的第几个链表节点，空是 null
+ *   TreeRef     参数：一个值，传进去的是前面 TreeNode 参数里值等于它的那个节点。236
+ *   TreeVal     返回值：TreeNode，判成它的值，空是 null
+ *   RandomList  参数和返回值：[[val, random 指向的下标或 null], …]，节点类是力扣的 Node（JS/TS 里叫 _Node）；
+ *               返回值里出现原链表的节点就算错（没有真的复制）。138
+ * 这些类型在各语言里的实际类型：CycleList、JoinList、NodeIndex 是 ListNode，TreeRef、TreeVal 是 TreeNode。
  */
+const BASES = ["int", "long", "double", "bool", "string", "char", "ListNode", "TreeNode", "void", "CycleList", "JoinList", "NodeIndex", "TreeRef", "TreeVal", "RandomList"];
 function parseType(s) {
   s = String(s).trim();
   if (s.endsWith("[]")) return { arr: parseType(s.slice(0, -2)), list: false, src: s };
   const m = s.match(/^List<(.+)>$/);
   if (m) return { arr: parseType(m[1]), list: true, src: s };
-  if (!["int", "long", "double", "bool", "string", "char", "ListNode", "TreeNode", "void"].includes(s)) throw new Error(`不认识的类型：${s}`);
+  if (!BASES.includes(s)) throw new Error(`不认识的类型：${s}`);
   return { base: s, src: s };
+}
+
+/** 签名里用没用到某种类型（只看最外层，比如要不要带上 RandomList 的 Node 类） */
+function usesType(sig, base) {
+  const ts = sig.kind === "design"
+    ? [...sig.ctor, ...Object.values(sig.methods).flatMap((m) => [...m.params, m.ret])]
+    : [...sig.params, sig.ret];
+  return ts.some((t) => t.base === base);
 }
 
 /**
@@ -101,4 +120,4 @@ function parseLines(stdout, n, extra) {
 }
 const cores = Math.max(2, Math.min(8, require("os").cpus().length));
 
-module.exports = { parseType, normSig, flatSig, deepSort, matches, run, pool, hasTool, parseLines, cores };
+module.exports = { parseType, usesType, normSig, flatSig, deepSort, matches, run, pool, hasTool, parseLines, cores };
