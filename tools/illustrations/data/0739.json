@@ -110,7 +110,7 @@
      }
     },
     "go": {
-     "code": "func dailyTemperatures(temperatures []int) []int {\n\tans := make([]int, len(temperatures))\n\tstack := []int{}                      // 还在等待的日子（下标），温度从底到顶递减\n\tfor i, t := range temperatures {\n\t\tfor len(stack) > 0 && temperatures[stack[len(stack)-1]] < t {\n\t\t\tj := stack[len(stack)-1]\n\t\t\tstack = stack[:len(stack)-1]\n\t\t\tans[j] = i - j             // 第 j 天等到了第 i 天\n\t\t}\n\t\tstack = append(stack, i)\n\t}\n\treturn ans\n}",
+     "code": "func dailyTemperatures(temperatures []int) []int {\n\tans := make([]int, len(temperatures))\n\tstack := []int{}                      // 还在等待的日子（下标），温度从底到顶递减\n\tfor i, t := range temperatures {\n\t\tfor len(stack) > 0 && temperatures[stack[len(stack)-1]] < t {\n\t\t\tj := stack[len(stack)-1]\n\t\t\tstack = stack[:len(stack)-1]\n\t\t\tans[j] = i - j               // 第 j 天等到了第 i 天\n\t\t}\n\t\tstack = append(stack, i)\n\t}\n\treturn ans\n}",
      "marks": {
       "init": [
        2,

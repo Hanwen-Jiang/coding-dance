@@ -10,23 +10,26 @@ module.exports = {
   codes: [{ t: "标准解法：哑节点 + 迭代", code: `
 class Solution:
     def swapPairs(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        dummy = ListNode(0, head)
-        prev = dummy
-        while prev.next and prev.next.next:
-            a, b = prev.next, prev.next.next
-            prev.next, a.next, b.next = b, b.next, a   # 三根指针一起改
-            prev = a                    # a 现在在后面，是下一对的前驱
-        return dummy.next
-` }, { t: "简洁写法：递归", kind: "elegant", note: "交换前两个，第一个的后面接上「从第三个开始两两交换的结果」。", code: `
+        dummy = ListNode(0, head)       #@init
+        prev = dummy                    #@init
+        while prev.next and prev.next.next:     #@pair
+            a, b = prev.next, prev.next.next    #@pair
+            prev.next, a.next, b.next = b, b.next, a   # 三根指针一起改 #@swap
+            prev = a                    # a 现在在后面，是下一对的前驱 #@next
+        return dummy.next               #@done
+` }, { t: "简洁写法：递归", key: "rec", kind: "elegant", note: "交换前两个，第一个的后面接上「从第三个开始两两交换的结果」。", code: `
 class Solution:
     def swapPairs(self, head: Optional[ListNode]) -> Optional[ListNode]:
-        if not head or not head.next:
-            return head
-        nxt = head.next
-        head.next = self.swapPairs(nxt.next)
-        nxt.next = head
-        return nxt
+        if not head or not head.next:   #@base
+            return head                 #@base
+        nxt = head.next                 #@call
+        head.next = self.swapPairs(nxt.next)    #@call,swap
+        nxt.next = head                 #@swap
+        return nxt                      #@swap,done
 ` }],
+  sig: { fn: "swapPairs", params: ["ListNode"], ret: "ListNode" },
+  call: (a) => [a.v],
+  cases: [[[]], [[1]], [[1, 2, 3]], [[1, 2]]],
   pytest: `
 s = Solution()
 assert toL(s.swapPairs(L([1,2,3,4]))) == [2,1,4,3]
@@ -43,19 +46,20 @@ assert toL(s.swapPairs(L([1,2,3]))) == [2,1,3]
   build(a, snap) {
     const o = ["D", ...a.v]; let p = 0;
     const view = (x, y) => [{ t: "list", label: "链表（D 是哑节点）", nodes: o.map((v, i) => ({ v, cls: i === p ? "g" : i === x ? "a" : i === y ? "b" : i < p ? "k" : "" })), ptrs: { prev: p, a: x, b: y } }];
-    snap("开始", "prev 从哑节点 D 出发，它后面的两个节点是第一对。", view());
+    snap("开始", "prev 从哑节点 D 出发，它后面的两个节点是第一对。", view(), { at: "init" });
     while (p + 2 < o.length) {
       const x = p + 1, y = p + 2, va = o[x], vb = o[y];
-      snap("找到一对", `prev 后面有两个节点：a = ${va}，b = ${vb}。`, view(x, y));
+      snap("找到一对", `prev 后面有两个节点：a = ${va}，b = ${vb}。`, view(x, y), { at: "pair" });
       [o[x], o[y]] = [o[y], o[x]];
-      snap("改三根指针", `prev.next 指向 ${vb}；${va}.next 指向 ${vb} 原来的下一个；${vb}.next 指向 ${va}。现在顺序是 ${vb} → ${va}。`, view(y, x));
+      snap("改三根指针", `prev.next 指向 ${vb}；${va}.next 指向 ${vb} 原来的下一个；${vb}.next 指向 ${va}。现在顺序是 ${vb} → ${va}。`, view(y, x), { at: "swap" });
       p += 2;
-      snap("跳到下一对前面", `${va} 现在排在后面，它是下一对的前一个节点，prev 移到 ${va}。`, view());
+      snap("跳到下一对前面", `${va} 现在排在后面，它是下一对的前一个节点，prev 移到 ${va}。`, view(), { at: "next" });
     }
-    snap("完成", (p + 1 < o.length ? `后面只剩 ${o[p + 1]} 一个节点，不够一对，保持不动。` : "后面没有节点了。") + `结果是 [${o.slice(1).join(", ")}]。`, view(), { kind: "ok", ans: o.slice(1) });
+    snap("完成", (p + 1 < o.length ? `后面只剩 ${o[p + 1]} 一个节点，不够一对，保持不动。` : "后面没有节点了。") + `结果是 [${o.slice(1).join(", ")}]。`, view(), { at: "done", kind: "ok", ans: o.slice(1) });
   },
   alts: [{
     t: "递归",
+    code: "rec",
     note: "和简洁写法一样：每一层负责最前面的一对。先递归交换从第三个节点开始的部分，拿到结果后，第一个节点接上它，第二个节点指回第一个。",
     legend: [["a", "这一层负责的一对"], ["e", "在调用栈上，还没交换"], ["k", "已经交换好的部分"]],
     build(a, snap) {
@@ -68,17 +72,17 @@ assert toL(s.swapPairs(L([1,2,3]))) == [2,1,3]
       let i = 0;
       for (; i + 1 < n; i += 2) {
         calls.push(i);
-        snap("往下递归", `swapPairs(${v[i]})：${v[i]} 和 ${v[i + 1]} 是一对。先递归处理从${i + 2 < n ? ` ${v[i + 2]}` : "空"}开始的部分，拿到结果再交换这一对。`, view(i));
+        snap("往下递归", `swapPairs(${v[i]})：${v[i]} 和 ${v[i + 1]} 是一对。先递归处理从${i + 2 < n ? ` ${v[i + 2]}` : "空"}开始的部分，拿到结果再交换这一对。`, view(i), { at: "call" });
       }
-      if (i < n) { tail = [v[i]]; done.add(i); snap("到底", `swapPairs(${v[i]})：只剩一个节点，凑不成一对，原样返回。`, view(-1)); }
-      else snap("到底", "swapPairs(空)：没有节点了，返回空。", view(-1));
+      if (i < n) { tail = [v[i]]; done.add(i); snap("到底", `swapPairs(${v[i]})：只剩一个节点，凑不成一对，原样返回。`, view(-1), { at: "base" }); }
+      else snap("到底", "swapPairs(空)：没有节点了，返回空。", view(-1), { at: "base" });
       while (calls.length) {
         const c = calls[calls.length - 1], old = tail.slice();
         tail = [v[c + 1], v[c], ...tail]; done.add(c); done.add(c + 1);
-        snap("交换", `回到 swapPairs(${v[c]})：${v[c]}.next 接上下一层返回的${old.length ? ` [${old.join(", ")}]` : "空"}，${v[c + 1]}.next 指向 ${v[c]}。返回 ${v[c + 1]}，这一段变成 [${tail.join(", ")}]。`, view(c));
+        snap("交换", `回到 swapPairs(${v[c]})：${v[c]}.next 接上下一层返回的${old.length ? ` [${old.join(", ")}]` : "空"}，${v[c + 1]}.next 指向 ${v[c]}。返回 ${v[c + 1]}，这一段变成 [${tail.join(", ")}]。`, view(c), { at: "swap" });
         calls.pop();
       }
-      snap("完成", `递归全部返回，结果是 [${tail.join(", ")}]。`, view(-1), { kind: "ok", ans: tail });
+      snap("完成", `递归全部返回，结果是 [${tail.join(", ")}]。`, view(-1), { at: "done", kind: "ok", ans: tail });
     },
   }],
   points: [

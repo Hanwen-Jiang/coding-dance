@@ -274,7 +274,7 @@
      }
     },
     "go": {
-     "code": "func sortColors(nums []int) {\n\tp0, p1 := 0, 0 // 下一个 0、下一个 1 该写的位置\n\tfor i, x := range nums {\n\t\tnums[i] = 2\n\t\tif x < 2 {\n\t\t\tnums[p1] = 1\n\t\t\tp1++\n\t\t}\n\t\tif x == 0 {\n\t\t\tnums[p0] = 0\n\t\t\tp0++\n\t\t}\n\t}\n}",
+     "code": "func sortColors(nums []int) {\n\tp0, p1 := 0, 0           // 下一个 0、下一个 1 该写的位置\n\tfor i, x := range nums {\n\t\tnums[i] = 2\n\t\tif x < 2 {\n\t\t\tnums[p1] = 1\n\t\t\tp1++\n\t\t}\n\t\tif x == 0 {\n\t\t\tnums[p0] = 0\n\t\t\tp0++\n\t\t}\n\t}\n}",
      "marks": {
       "init": [
        2

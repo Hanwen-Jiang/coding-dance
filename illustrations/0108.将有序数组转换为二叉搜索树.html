@@ -329,18 +329,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[-10,-3,0,5,9]},"not
       const tree = root === null ? { t: "chips", label: "树", items: [], empty: "还没有节点" } : { t: "tree", label: "树", nodes: JSON.parse(JSON.stringify(N)), root, cls };
       return [{ t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i === mid ? "a" : made.has(i) ? "d" : i >= lo && i <= hi ? "e" : "" })), ptrs: lo <= hi ? { lo, hi, mid } : {} }, tree];
     };
-    snap("开始", "数组是有序的。先在整个数组里取中间的数当根。", view(0, nums.length - 1));
+    snap("开始", "数组是有序的。先在整个数组里取中间的数当根。", view(0, nums.length - 1), { at: "init" });
     const build = (lo, hi, parent, side) => {
       if (lo > hi) return null;
       const mid = (lo + hi) >> 1;
       N[mid] = { v: nums[mid], l: null, r: null }; made.add(mid); pre.push(nums[mid]);
       if (parent === null) root = mid; else N[parent][side] = mid;
-      snap("取中点建节点", `在下标 [${lo}, ${hi}] 这一段里，中点是下标 ${mid}，值 <b>${nums[mid]}</b>。` + (parent === null ? "它是整棵树的根。" : `它成为 ${nums[parent]} 的${side === "l" ? "左" : "右"}孩子。`) + (lo === hi ? "这一段只有它一个，是叶子。" : `它左边的 [${lo}, ${mid - 1}] 去建左子树，右边的 [${mid + 1}, ${hi}] 去建右子树。`), view(lo, hi, mid));
+      snap("取中点建节点", `在下标 [${lo}, ${hi}] 这一段里，中点是下标 ${mid}，值 <b>${nums[mid]}</b>。` + (parent === null ? "它是整棵树的根。" : `它成为 ${nums[parent]} 的${side === "l" ? "左" : "右"}孩子。`) + (lo === hi ? "这一段只有它一个，是叶子。" : `它左边的 [${lo}, ${mid - 1}] 去建左子树，右边的 [${mid + 1}, ${hi}] 去建右子树。`), view(lo, hi, mid), { at: lo === hi ? "node" : ["node", "sub"] });
       build(lo, mid - 1, mid, "l"); build(mid + 1, hi, mid, "r");
       return mid;
     };
     build(0, nums.length - 1, null, null);
-    snap("完成", "每个数都成了一个节点。任何节点的左右子树高度最多差 1，中序遍历出来就是原数组。", view(0, -1), { kind: "ok", ans: pre });
+    snap("完成", "每个数都成了一个节点。任何节点的左右子树高度最多差 1，中序遍历出来就是原数组。", view(0, -1), { at: "done", kind: "ok", ans: pre });
   } }
 ] };
 (function () {

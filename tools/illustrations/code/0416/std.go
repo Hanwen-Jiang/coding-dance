@@ -6,7 +6,7 @@ func canPartition(nums []int) bool {
 	if total%2 != 0 { //@odd
 		return false //@odd
 	}
-	target := total / 2           //@init
+	target := total / 2          //@init
 	dp := make([]bool, target+1) // dp[j]：能不能凑出和 j //@init
 	dp[0] = true                 //@init
 	for _, x := range nums {     //@add

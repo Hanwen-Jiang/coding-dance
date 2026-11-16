@@ -10,28 +10,31 @@ module.exports = {
   codes: [{ t: "标准解法：原地挪左子树", code: `
 class Solution:
     def flatten(self, root: Optional[TreeNode]) -> None:
-        cur = root
+        cur = root                          #@init
         while cur:
-            if cur.left:
-                pre = cur.left
-                while pre.right:            # 左子树最右边的节点
-                    pre = pre.right
-                pre.right = cur.right       # 原来的右子树接到它后面
-                cur.right = cur.left        # 左子树挪到右边
-                cur.left = None
-            cur = cur.right
-` }, { t: "简洁写法：反向前序", kind: "elegant", note: "按 右 → 左 → 根 的顺序访问，正好是前序倒过来，也就是从链表尾往头。每个节点接上一个访问的节点就行。", code: `
+            if cur.left:                    #@pre,skip
+                pre = cur.left              #@pre
+                while pre.right:            # 左子树最右边的节点 #@pre
+                    pre = pre.right         #@pre
+                pre.right = cur.right       # 原来的右子树接到它后面 #@move
+                cur.right = cur.left        # 左子树挪到右边 #@move
+                cur.left = None             #@move
+            cur = cur.right                 #@skip
+` }, { t: "简洁写法：反向前序", key: "rev", kind: "elegant", note: "按 右 → 左 → 根 的顺序访问，正好是前序倒过来，也就是从链表尾往头。每个节点接上一个访问的节点就行。", code: `
 class Solution:
     def flatten(self, root: Optional[TreeNode]) -> None:
-        prev = None
+        prev = None                         #@init
         def dfs(node):
             nonlocal prev
             if node:
                 dfs(node.right)
                 dfs(node.left)
-                node.right, node.left, prev = prev, None, node
-        dfs(root)
+                node.right, node.left, prev = prev, None, node  #@link
+        dfs(root)                           #@init
 ` }],
+  sig: { fn: "flatten", params: ["TreeNode"], ret: "void" },
+  call: (a, H) => [H.toLc(a.t)],
+  cases: [[[]], [[0]], [[1, 2, null, 3]], [[1, null, 2, 3]]],
   pytest: `
 s = Solution()
 def chain(r):
@@ -55,23 +58,24 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
     const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
     const done = [];
     const view = (cur, pre) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : +id === pre ? "b" : done.includes(+id) ? "c" : ""; return [{ t: "tree", nodes: N, root: 0, cls }]; };
-    snap("开始", "从根节点开始，沿着右指针一路往下处理。", view(-1, -1));
+    snap("开始", "从根节点开始，沿着右指针一路往下处理。", view(-1, -1), { at: "init" });
     let cur = 0;
     while (cur !== null) {
       const nd = N[cur];
       if (nd.l !== null) {
         let pre = nd.l; while (N[pre].r !== null) pre = N[pre].r;
-        snap("找 pre", `${nd.v} 有左子树。左子树最右边的节点是 <b>${N[pre].v}</b>，它是左子树前序遍历的最后一个。`, view(cur, pre));
+        snap("找 pre", `${nd.v} 有左子树。左子树最右边的节点是 <b>${N[pre].v}</b>，它是左子树前序遍历的最后一个。`, view(cur, pre), { at: "pre" });
         N[pre].r = nd.r; nd.r = nd.l; nd.l = null;
-        snap("挪过去", `把 ${nd.v} 原来的右子树接到 ${N[pre].v} 后面，再把左子树整个挪到 ${nd.v} 的右边。`, view(cur, pre));
-      } else snap("没有左子树", `${nd.v} 没有左子树，不用动。`, view(cur, -1));
+        snap("挪过去", `把 ${nd.v} 原来的右子树接到 ${N[pre].v} 后面，再把左子树整个挪到 ${nd.v} 的右边。`, view(cur, pre), { at: "move" });
+      } else snap("没有左子树", `${nd.v} 没有左子树，不用动，沿右指针往下走。`, view(cur, -1), { at: "skip" });
       done.push(cur); cur = nd.r;
     }
     const out = []; let p = 0; while (p !== null) { out.push(N[p].v); p = N[p].r; }
-    snap("完成", `展开成了一条只用右指针的链：${out.join(" → ")}，正是前序遍历的顺序。`, view(-1, -1), { kind: "ok", ans: out });
+    snap("完成", `展开成了一条只用右指针的链：${out.join(" → ")}，正是前序遍历的顺序。`, view(-1, -1), { at: [], kind: "ok", ans: out });
   },
   alts: [{
     t: "反向前序",
+    code: "rev",
     note: "和简洁写法一样：按 右 → 左 → 自己 的顺序访问，正好是前序倒过来，也就是从链表的尾巴往头走。每访问一个节点，就让它的 right 指向上一个访问的节点 prev。",
     legend: [["e", "在调用栈上"], ["a", "正在接的节点"], ["c", "已经串进链表"]],
     build(a, snap) {
@@ -86,7 +90,7 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
           ? { t: "list", label: "已经串好的链（从 prev 开始，只用 right 指针）", nodes: c.map((v, i) => ({ v, cls: i === 0 && cur >= 0 ? "a" : "c" })) }
           : { t: "note", label: "已经串好的链", html: "还没有" }];
       };
-      snap("开始", "前序是 根 → 左 → 右。反过来按 右 → 左 → 根 访问，访问顺序就是展开后链表从尾到头的顺序。prev 一开始是空。", view(-1));
+      snap("开始", "前序是 根 → 左 → 右。反过来按 右 → 左 → 根 访问，访问顺序就是展开后链表从尾到头的顺序。prev 一开始是空。", view(-1), { at: "init" });
       const dfs = (id) => {
         if (id === null) return;
         const nd = N[id];
@@ -95,12 +99,12 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
         dfs(nd.l);
         const old = prev;
         link[id] = prev; done.add(id); prev = id;
-        snap("接上", `${nd.v} 的右子树、左子树都处理完了。${nd.v}.right 指向 prev${old === null ? "（空）" : ` ${N[old].v}`}，left 置空，prev 变成 ${nd.v}。`, view(id));
+        snap("接上", `${nd.v} 的右子树、左子树都处理完了。${nd.v}.right 指向 prev${old === null ? "（空）" : ` ${N[old].v}`}，left 置空，prev 变成 ${nd.v}。`, view(id), { at: "link" });
         stack.pop();
       };
       dfs(N[0] ? 0 : null);
       const out = chain();
-      snap("完成", `展开成了一条只用右指针的链：${out.join(" → ")}，正是前序遍历的顺序。`, view(-1), { kind: "ok", ans: out });
+      snap("完成", `展开成了一条只用右指针的链：${out.join(" → ")}，正是前序遍历的顺序。`, view(-1), { at: [], kind: "ok", ans: out });
     },
   }],
   points: [

@@ -3,7 +3,7 @@ func maxArea(height []int) int {
 	best := 0                //@init
 	for l < r {
 		best = max(best, min(height[l], height[r])*(r-l)) //@area
-		if height[l] < height[r] { // 移动短板 //@move
+		if height[l] < height[r] {                        // 移动短板 //@move
 			l++ //@move
 		} else { //@move
 			r-- //@move

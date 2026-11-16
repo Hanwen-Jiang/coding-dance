@@ -112,7 +112,7 @@
      }
     },
     "go": {
-     "code": "func maxArea(height []int) int {\n\tl, r := 0, len(height)-1\n\tbest := 0\n\tfor l < r {\n\t\tbest = max(best, min(height[l], height[r])*(r-l))\n\t\tif height[l] < height[r] { // 移动短板\n\t\t\tl++\n\t\t} else {\n\t\t\tr--\n\t\t}\n\t}\n\treturn best\n}",
+     "code": "func maxArea(height []int) int {\n\tl, r := 0, len(height)-1\n\tbest := 0\n\tfor l < r {\n\t\tbest = max(best, min(height[l], height[r])*(r-l))\n\t\tif height[l] < height[r] {                        // 移动短板\n\t\t\tl++\n\t\t} else {\n\t\t\tr--\n\t\t}\n\t}\n\treturn best\n}",
      "marks": {
       "init": [
        2,

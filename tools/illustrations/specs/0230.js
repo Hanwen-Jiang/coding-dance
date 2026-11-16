@@ -10,16 +10,16 @@ module.exports = {
   codes: [{ t: "标准解法：迭代中序遍历", code: `
 class Solution:
     def kthSmallest(self, root: Optional[TreeNode], k: int) -> int:
-        stack, cur = [], root
+        stack, cur = [], root               #@init
         while True:
-            while cur:                      # 一路向左
-                stack.append(cur)
-                cur = cur.left
-            cur = stack.pop()
-            k -= 1
-            if k == 0:                      # 中序遍历的第 k 个
-                return cur.val
-            cur = cur.right
+            while cur:                      # 一路向左 #@left
+                stack.append(cur)           #@left
+                cur = cur.left              #@left
+            cur = stack.pop()               #@pop
+            k -= 1                          #@pop
+            if k == 0:                      # 中序遍历的第 k 个 #@found
+                return cur.val              #@found
+            cur = cur.right                 #@right
 ` }, { t: "简洁写法：生成器 + islice", kind: "elegant", note: "生成器是惰性的，取到第 k 个就不会再往下遍历。", code: `
 from itertools import islice
 
@@ -39,6 +39,9 @@ assert s.kthSmallest(T([5,3,6,2,4,None,None,1]), 3) == 3
 assert s.kthSmallest(T([5,3,6,2,4,None,None,1]), 6) == 6
 assert s.kthSmallest(T([1]), 1) == 1
 `,
+  sig: { fn: "kthSmallest", params: ["TreeNode", "int"], ret: "int" },
+  call: (a, H) => [H.toLc(a.t), a.k],
+  cases: [[[1], 1], [[5, 3, 6, 2, 4, null, null, 1], 6], [[2, 1, 3], 3], [[1, null, 2, null, 3], 2]],
   legend: [["e", "在栈里"], ["a", "当前节点"], ["c", "已经数过"], ["k", "答案"]],
   presets: [
     { label: "示例 1", args: { t: [3, 1, 4, null, 2], k: 1 }, note: "root = [3,1,4,null,2], k = 1", expect: 1 },
@@ -48,12 +51,12 @@ assert s.kthSmallest(T([1]), 1) == 1
     const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
     const stack = [], done = [], badges = {}; let k = a.k, cur = 0;
     const view = (now, ans) => { const cls = {}; for (const id in N) cls[id] = +id === ans ? "k" : +id === now ? "a" : done.includes(+id) ? "c" : stack.includes(+id) ? "e" : ""; return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges }, { t: "chips", label: "栈（右边是栈顶）", items: stack.map((i) => N[i].v), empty: "空" }]; };
-    snap("开始", `中序遍历是从小到大的顺序，数到第 ${k} 个就是答案。`, view(-1), { facts: [["还要数", k]] });
+    snap("开始", `中序遍历是从小到大的顺序，数到第 ${k} 个就是答案。`, view(-1), { at: "init", facts: [["还要数", k]] });
     while (true) {
-      while (cur !== null && cur !== undefined && N[cur]) { stack.push(cur); snap("向左走", `把 ${N[cur].v} 压栈，继续往左走。`, view(cur), { facts: [["还要数", k]] }); cur = N[cur].l; }
+      while (cur !== null && cur !== undefined && N[cur]) { stack.push(cur); snap("向左走", `把 ${N[cur].v} 压栈，继续往左走。`, view(cur), { at: "left", facts: [["还要数", k]] }); cur = N[cur].l; }
       cur = stack.pop(); k--; done.push(cur); badges[cur] = "第 " + done.length;
-      if (k === 0) { snap("找到", `弹出 ${N[cur].v}，这是中序遍历的第 ${a.k} 个，答案是 <b>${N[cur].v}</b>。后面的节点不用再看了。`, view(-1, cur), { kind: "ok", ans: N[cur].v, facts: [["还要数", 0]] }); return; }
-      snap("数一个", `左边走到头了，弹出 ${N[cur].v}，它是第 ${done.length} 小的。还要再数 ${k} 个，转向它的右子树。`, view(cur), { facts: [["还要数", k]] });
+      if (k === 0) { snap("找到", `弹出 ${N[cur].v}，这是中序遍历的第 ${a.k} 个，答案是 <b>${N[cur].v}</b>。后面的节点不用再看了。`, view(-1, cur), { at: ["pop", "found"], kind: "ok", ans: N[cur].v, facts: [["还要数", 0]] }); return; }
+      snap("数一个", `左边走到头了，弹出 ${N[cur].v}，它是第 ${done.length} 小的。还要再数 ${k} 个，转向它的右子树。`, view(cur), { at: ["pop", "right"], facts: [["还要数", k]] });
       cur = N[cur].r;
     }
   },

@@ -11,8 +11,8 @@ func decodeString(s string) string {
 			stack = append(stack, saved{cur, k}) // 存档：括号外的前缀和重复次数 //@push
 			cur, k = "", 0                       //@push
 		} else if c == ']' { //@pop
-			top := stack[len(stack)-1]                     //@pop
-			stack = stack[:len(stack)-1]                   //@pop
+			top := stack[len(stack)-1]                      //@pop
+			stack = stack[:len(stack)-1]                    //@pop
 			cur = top.prev + strings.Repeat(cur, top.times) // 展开后接回前缀 //@pop
 		} else { //@letter
 			cur += string(c) //@letter

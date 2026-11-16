@@ -353,14 +353,14 @@ const SPEC = { presets: [{"label":"能修完","args":{"n":4,"pre":[[1,0],[2,0],[
       { t: "chips", label: "队列", items: q.slice(), empty: "空" },
     ];
     for (let i = 0; i < n; i++) if (!indeg[i]) q.push(i);
-    snap("开始", `入度为 0 的课 ${q.length ? q.join("、") : "没有"} 没有先修课，可以直接上，放进队列。`, view(-1), { facts: [["已上", 0], ["总数", n]] });
+    snap("开始", `入度为 0 的课 ${q.length ? q.join("、") : "没有"} 没有先修课，可以直接上，放进队列。`, view(-1), { at: "init", facts: [["已上", 0], ["总数", n]] });
     while (q.length) {
       const b = q.shift(); taken.push(b); const freed = [];
       for (const x of g[b]) { indeg[x]--; if (!indeg[x]) { q.push(x); freed.push(x); } }
-      snap(`上课 ${b}`, `上完课 ${b}。` + (g[b].length ? `它是 ${g[b].join("、")} 的先修课，这些课的入度各减一。` : "没有课依赖它。") + (freed.length ? `${freed.join("、")} 的入度变成 0，入队。` : ""), view(b), { facts: [["已上", taken.length], ["总数", n]] });
+      snap(`上课 ${b}`, `上完课 ${b}。` + (g[b].length ? `它是 ${g[b].join("、")} 的先修课，这些课的入度各减一。` : "没有课依赖它。") + (freed.length ? `${freed.join("、")} 的入度变成 0，入队。` : ""), view(b), { at: "take", facts: [["已上", taken.length], ["总数", n]] });
     }
     const ok = taken.length === n;
-    snap("完成", ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join("、")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`, view(-1, true), { kind: ok ? "ok" : "warn", ans: ok, facts: [["已上", taken.length], ["总数", n]] });
+    snap("完成", ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join("、")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`, view(-1, true), { at: "done", kind: ok ? "ok" : "warn", ans: ok, facts: [["已上", taken.length], ["总数", n]] });
   } },
 { t: "DFS 三色标记", note: "和简洁写法一样：从一门课出发，沿着「要先上哪门」一路往下走。state 为 1 表示这门课还在当前的递归路径上，又走回了路径上的课，就说明有环。", legend: [["a","当前的课 / 正在看的关系"],["e","1：在递归路径上"],["c","2：确认没问题"],["w","绕回来的课"]], build(a, snap) {
       const n = a.n, g = Array.from({ length: n }, () => []);
@@ -374,27 +374,27 @@ const SPEC = { presets: [{"label":"能修完","args":{"n":4,"pre":[[1,0],[2,0],[
       ];
       const ok = (u) => {
         state[u] = 1; path.push(u);
-        snap("进入", `进入课 ${u}，标成 1。` + (g[u].length ? `上它之前要先上 ${g[u].join("、")}，挨个检查。` : "它没有先修课。"), view(u));
+        snap("进入", `进入课 ${u}，标成 1。` + (g[u].length ? `上它之前要先上 ${g[u].join("、")}，挨个检查。` : "它没有先修课。"), view(u), { at: "enter" });
         for (const v of g[u]) {
           edge = [u, v];
           if (state[v] === 1) {
             bad = v;
-            snap("有环", `课 ${u} 要先上课 ${v}，可是 ${v} 还在当前的递归路径上：${path.slice(path.indexOf(v)).join(" → ")} → ${v} 绕成了一个环，这些课互相等待。返回 false。`, view(u), { kind: "warn" });
+            snap("有环", `课 ${u} 要先上课 ${v}，可是 ${v} 还在当前的递归路径上：${path.slice(path.indexOf(v)).join(" → ")} → ${v} 绕成了一个环，这些课互相等待。返回 false。`, view(u), { at: "cycle", kind: "warn" });
             return false;
           }
-          if (state[v] === 2) { snap("已确认", `课 ${u} 要先上课 ${v}，${v} 之前已经确认没问题，跳过。`, view(u)); continue; }
+          if (state[v] === 2) { snap("已确认", `课 ${u} 要先上课 ${v}，${v} 之前已经确认没问题，跳过。`, view(u), { at: "seen" }); continue; }
           if (!ok(v)) return false;
         }
         edge = null; state[u] = 2; path.pop();
-        snap("确认", `课 ${u} 的先修课都没问题，标成 2，离开递归路径。`, view(u));
+        snap("确认", `课 ${u} 的先修课都没问题，标成 2，离开递归路径。`, view(u), { at: "confirm" });
         return true;
       };
-      snap("开始", "所有课的 state 都是 0。从课 0 开始，依次把每门没访问过的课当起点做 DFS。", view(-1));
+      snap("开始", "所有课的 state 都是 0。从课 0 开始，依次把每门没访问过的课当起点做 DFS。", view(-1), { at: "init" });
       for (let u = 0; u < n; u++) {
         if (state[u]) continue;
-        if (!ok(u)) { snap("完成", "找到了环，环上的课永远上不完，返回 <b>false</b>。", view(-1), { kind: "warn", ans: false }); return; }
+        if (!ok(u)) { snap("完成", "找到了环，环上的课永远上不完，返回 <b>false</b>。", view(-1), { at: "done", kind: "warn", ans: false }); return; }
       }
-      snap("完成", `所有课都标成了 2，没有环，${n} 门课都能上完，返回 <b>true</b>。`, view(-1), { kind: "ok", ans: true });
+      snap("完成", `所有课都标成了 2，没有环，${n} 门课都能上完，返回 <b>true</b>。`, view(-1), { at: "done", kind: "ok", ans: true });
     } }
 ] };
 (function () {

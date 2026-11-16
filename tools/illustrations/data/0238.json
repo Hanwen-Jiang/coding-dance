@@ -116,7 +116,7 @@
      }
     },
     "go": {
-     "code": "func productExceptSelf(nums []int) []int {\n\tn := len(nums)\n\tanswer := make([]int, n)\n\tanswer[0] = 1\n\tfor i := 1; i < n; i++ { // answer[i] = 左边所有数的乘积\n\t\tanswer[i] = answer[i-1] * nums[i-1]\n\t}\n\tright := 1                   // 右边所有数的乘积\n\tfor i := n - 1; i >= 0; i-- {\n\t\tanswer[i] *= right\n\t\tright *= nums[i]\n\t}\n\treturn answer\n}",
+     "code": "func productExceptSelf(nums []int) []int {\n\tn := len(nums)\n\tanswer := make([]int, n)\n\tanswer[0] = 1\n\tfor i := 1; i < n; i++ { // answer[i] = 左边所有数的乘积\n\t\tanswer[i] = answer[i-1] * nums[i-1]\n\t}\n\tright := 1                    // 右边所有数的乘积\n\tfor i := n - 1; i >= 0; i-- {\n\t\tanswer[i] *= right\n\t\tright *= nums[i]\n\t}\n\treturn answer\n}",
      "marks": {
       "init": [
        2,

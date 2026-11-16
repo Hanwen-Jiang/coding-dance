@@ -99,7 +99,7 @@
      }
     },
     "go": {
-     "code": "func moveZeroes(nums []int) {\n\tj := 0                         // 下一个非零数放的位置\n\tfor i := 0; i < len(nums); i++ {\n\t\tif nums[i] != 0 {\n\t\t\tnums[i], nums[j] = nums[j], nums[i]\n\t\t\tj++\n\t\t}\n\t}\n}",
+     "code": "func moveZeroes(nums []int) {\n\tj := 0                           // 下一个非零数放的位置\n\tfor i := 0; i < len(nums); i++ {\n\t\tif nums[i] != 0 {\n\t\t\tnums[i], nums[j] = nums[j], nums[i]\n\t\t\tj++\n\t\t}\n\t}\n}",
      "marks": {
       "init": [
        2
