@@ -1,6 +1,6 @@
 // 把资源仓里的 Markdown / JSON 解析成网站需要的数据。这里只有不变的题目资源，个人进度在 progress.ts 里从用户自己的进度仓读。
 
-import type { IndexData, Level, ProblemDetail, ProblemSummary, Spec, Tier } from "../../lib/types";
+import type { IndexData, Level, ProblemDetail, ProblemSummary, Spec, Tier, Topic, TopicDetail, TopicLink, TopicSummary } from "../../lib/types";
 import { byImportance } from "../../lib/types";
 import { type Env, HttpError, listFiles, readText } from "./github";
 
@@ -104,9 +104,10 @@ export async function loadProblem(env: Env, id: number): Promise<ProblemDetail> 
   const docPath = files.find((f) => f.startsWith("problems/" + p) && f.endsWith(".md"));
   const ill = files.find((f) => f.startsWith("illustrations/" + p) && f.endsWith(".html"));
 
-  const [doc, specText] = await Promise.all([
+  const [doc, specText, topics] = await Promise.all([
     docPath ? readText(env, docPath) : Promise.resolve(null),
     summary.hasSpec ? readText(env, `tools/illustrations/data/${pad(id)}.json`) : Promise.resolve(null),
+    loadTopics(env).catch(() => [] as TopicSummary[]), // 专题读不到不影响题目页
   ]);
   const { slug, html } = doc ? parseProblemDoc(doc) : { slug: null, html: "" };
   let spec: Spec | null = null;
@@ -128,5 +129,35 @@ export async function loadProblem(env: Env, id: number): Promise<ProblemDetail> 
     illustrationUrl: ill ? "/api/raw/" + ill.split("/").map(encodeURIComponent).join("/") : null,
     prev: link(ranked[k - 1]),
     next: link(ranked[k + 1]),
+    learn: topics.filter((t) => t.related.includes(id)).map(topicLink),
   };
+}
+
+const TOPICS_DIR = "tools/illustrations/data/topics";
+const topicLink = (t: TopicLink): TopicLink => ({ slug: t.slug, name: t.name, kind: t.kind });
+
+/** 基础专题的目录：data/topics/index.json（由 build.js 导出），还没有时是空列表 */
+export async function loadTopics(env: Env): Promise<TopicSummary[]> {
+  const text = await readText(env, `${TOPICS_DIR}/index.json`);
+  if (!text) return [];
+  try {
+    return JSON.parse(text) as TopicSummary[];
+  } catch {
+    throw new HttpError(502, "专题目录的格式不对");
+  }
+}
+
+/** 一个专题：讲解、代码、演示，加上相关热题的信息和前后两个专题 */
+export async function loadTopic(env: Env, slug: string): Promise<TopicDetail> {
+  const [list, text, index] = await Promise.all([loadTopics(env), readText(env, `${TOPICS_DIR}/${slug}.json`), loadIndex(env)]);
+  const k = list.findIndex((t) => t.slug === slug);
+  if (k < 0 || !text) throw new HttpError(404, `没有「${slug}」这个专题`);
+  let topic: Topic;
+  try {
+    topic = JSON.parse(text) as Topic;
+  } catch {
+    throw new HttpError(502, "专题数据的格式不对");
+  }
+  const problems = topic.related.map((id) => index.problems.find((p) => p.id === id)).filter((p): p is ProblemSummary => !!p);
+  return { topic, problems, prev: list[k - 1] ? topicLink(list[k - 1]) : null, next: list[k + 1] ? topicLink(list[k + 1]) : null };
 }

@@ -11,14 +11,14 @@ import { CodePanel } from "@/components/code-panel";
 import { DemoPlayer } from "@/components/demo/demo-player";
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
-import { LangTabs } from "@/components/lang-picker";
 import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel, StatusPixel } from "@/components/pixel";
+import { SolutionCode } from "@/components/solution-code";
 import { TierChip, TopicChip } from "@/components/tags";
-import { codeIn, langLabel, langsFor } from "@/lib/langs";
+import { codeIn } from "@/lib/langs";
 import { usePrefs } from "@/lib/prefs";
 import { useProgress } from "@/lib/progress";
-import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec, SpecCode } from "@/lib/types";
-import { TIER_INFO } from "@/lib/types";
+import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec } from "@/lib/types";
+import { TIER_INFO, TOPIC_KIND } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
 
 const SECTIONS = [
@@ -74,26 +74,6 @@ function Hints({ spec }: { spec: Spec }) {
         </Accordion.Item>
       ))}
     </Accordion>
-  );
-}
-
-/** 一种写法的代码：按用户的常用语言显示，可以切换；这种写法没有用户选的语言时显示 Python */
-function SolutionCode({ code }: { code: SpecCode }) {
-  const { langs: prefs } = usePrefs();
-  const { langs, fallback } = langsFor(code, prefs);
-  const [picked, setPicked] = useState<string | null>(null);
-  const lang = picked && langs.includes(picked) ? picked : langs[0];
-  const text = codeIn(code, lang) ?? code;
-  return (
-    <div className="flex flex-col gap-2">
-      {(langs.length > 1 || fallback) && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <LangTabs label="题解的语言" langs={langs} value={lang} onChange={setPicked} />
-          {fallback && <span className="text-xs text-muted">这种写法是 Python 特有的，没有 {prefs.map(langLabel).join(" / ")} 版本。</span>}
-        </div>
-      )}
-      <CodePanel code={text.code} label={lang === "python" ? "Python 3" : langLabel(lang)} lang={lang} />
-    </div>
   );
 }
 
@@ -444,6 +424,26 @@ function HandwrittenDemo({ src }: { src: string }) {
   );
 }
 
+/** 相关基础：这道题用到的数据结构和算法专题（专题的 related 里有这道题） */
+function LearnLinks({ learn }: { learn: NonNullable<ProblemDetail["learn"]> }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="text-xs text-muted">相关基础</span>
+      {learn.map((t) => (
+        <NextLink
+          key={t.slug}
+          className="inline-flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5 text-xs no-underline transition-colors hover:border-accent hover:text-accent"
+          href={`/learn/${t.slug}/`}
+          title={`${TOPIC_KIND[t.kind].label}专题：${t.name}`}
+        >
+          <span aria-hidden className={clsx("size-1.5 rounded-[2px]", t.kind === "ds" ? "bg-accent" : "bg-warning")} />
+          {t.name}
+        </NextLink>
+      ))}
+    </div>
+  );
+}
+
 function DemoSection({ d }: { d: ProblemDetail }) {
   if (d.spec?.demo) return <DemoPlayer codes={d.spec.codes} demo={d.spec.demo} />;
   if (d.illustrationUrl) return <HandwrittenDemo src={d.illustrationUrl} />;
@@ -506,6 +506,7 @@ export function ProblemView({ id }: { id: number }) {
                 {progressCtx.ready ? null : <StatusPixel status={statusOf(s.id)} />}
               </div>
               <StatusPicker id={s.id} />
+              {d.learn?.length ? <LearnLinks learn={d.learn} /> : null}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">

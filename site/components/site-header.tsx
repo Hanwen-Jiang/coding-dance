@@ -52,6 +52,13 @@ export function SiteHeader() {
           </span>
         </NextLink>
         <div className="flex items-center gap-1">
+          <NextLink
+            aria-label="数据结构与算法基础"
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-muted no-underline transition-colors hover:text-foreground sm:px-3"
+            href="/learn/"
+          >
+            <PixelTitle cell={1.5} px={12} text="基础" weight={500} />
+          </NextLink>
           <a
             className="hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-muted no-underline transition-colors hover:text-foreground sm:inline-flex"
             href="https://leetcode.cn/studyplan/top-100-liked/"
