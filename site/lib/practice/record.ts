@@ -2,10 +2,11 @@
 // 服务端接口 functions/api/progress/practice.ts 和测试 lib/practice/test/record.test.ts 共用。
 // 规则以模板仓 README 为准（和 check.mjs、functions/_lib/progress.ts、lib/sync/core.ts 同一套）：
 //   「测试全部」跑完 → 一条尝试记录 attempts/<四位题号>.<题名>/<YYYY-MM-DD>.<序号>.<结果>.md，开头写 source: practice 和 mode；
-//   全部通过 → 代码同时存成题解 solutions/<语言>/<四位题号>.<题名>[.ACM].<后缀>（「我的历史题解」）；
+//   全部通过 → 代码同时存成题解 solutions/<语言>/<四位题号>.<题名>[.ACM].<后缀>（「我的历史题解」）：
+//     已有的题解一个都不动——和某份已有题解是同一份代码（codeKey 一样）就不再存，文件名被占了就存成 .2 / .3（ACM 模式 .ACM2 / .ACM3）；
 //   Ctrl+S、自动保存 → 草稿 drafts/<语言>/<四位题号>.<题名>[.ACM].<后缀>，换台电脑也能接着写。
 // 路径和文件内容都在这里按规则生成，页面只传代码和测试结果。
-import { attemptPath, cnParts, fence, nextStatus, parseAttemptPath, writeProgress, type ProgressFile, type Problem, type Result, type StatusName } from "../sync/core.ts";
+import { attemptPath, cnParts, codeKey, fence, nextStatus, parseAttemptPath, writeProgress, type ProgressFile, type Problem, type Result, type StatusName } from "../sync/core.ts";
 import { SyncError } from "../sync/server.ts";
 
 /** 练习区能跑的语言 → 进度仓里的后缀 */
@@ -61,6 +62,31 @@ const tidy = (code: string) => code.replace(/\r\n?/g, "\n").replace(/\s+$/, "") 
 export const draftPath = (p: Pick<Problem, "id" | "name">, lang: string, mode: PracticeMode) => `drafts/${lang}/${pad4(p.id)}.${p.name}${variant(mode)}${PRACTICE_EXT[lang]}`;
 export const solutionPath = (p: Pick<Problem, "id" | "name">, lang: string, mode: PracticeMode) => `solutions/${lang}/${pad4(p.id)}.${p.name}${variant(mode)}${PRACTICE_EXT[lang]}`;
 
+/** 仓库里这道题这种语言的所有题解（任何写法，包括手写的、从别处存的） */
+export function existingSolutions(paths: string[], id: number, lang: string) {
+  const ext = PRACTICE_EXT[lang];
+  if (!ext) return [];
+  const re = new RegExp(`^solutions/${lang}/${pad4(id)}\\.[^./]+(\\.[^./]+)?\\${ext}$`);
+  return paths.filter((p) => re.test(p));
+}
+
+/**
+ * 全部通过时题解存到哪里；返回 undefined 表示不用存。
+ * solutions：existingSolutions 列出的文件 → 内容（读不到的当作代码不一样）。
+ */
+export function pickSolutionPath(p: Pick<Problem, "id" | "name">, lang: string, mode: PracticeMode, code: string, paths: string[], solutions: Record<string, string>) {
+  const mine = existingSolutions(paths, p.id, lang);
+  const key = codeKey(code);
+  if (mine.some((f) => solutions[f] != null && codeKey(solutions[f]) === key)) return undefined;
+  const taken = new Set(paths);
+  const base = solutionPath(p, lang, mode);
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const next = `solutions/${lang}/${pad4(p.id)}.${p.name}.${mode === "acm" ? "ACM" : ""}${n}${PRACTICE_EXT[lang]}`;
+    if (!taken.has(next)) return next;
+  }
+}
+
 /** 不知道题名时按题号找草稿：drafts/<语言>/<四位题号>.<任意题名>[.ACM].<后缀>（热题 100 的题名里没有「.」） */
 export function findDraft(paths: string[], id: number, lang: string, mode: PracticeMode) {
   const ext = PRACTICE_EXT[lang];
@@ -94,10 +120,11 @@ export interface SavePlan {
 }
 
 /**
- * 要写哪些文件。paths：仓库里现有的文件（算当天的序号）；progress：现在的 progress.json；now：毫秒时间戳。
+ * 要写哪些文件。paths：仓库里现有的文件（算当天的序号）；progress：现在的 progress.json；now：毫秒时间戳；
+ * solutions：这道题这种语言已有题解的内容（见 existingSolutions；全部通过时用来判断要不要另存）。
  * 日期按北京时间算，和从力扣同步的记录一致。状态只升不降（规则和同步一样，见 core.ts 的 nextStatus）。
  */
-export function planSave(s: PracticeSave, ctx: { problem: Problem; paths: string[]; progress: ProgressFile | null; now: number }): SavePlan {
+export function planSave(s: PracticeSave, ctx: { problem: Problem; paths: string[]; progress: ProgressFile | null; now: number; solutions?: Record<string, string> }): SavePlan {
   const { problem } = ctx;
   const what = `第 ${problem.id} 题 ${problem.name} · ${LABEL[s.lang]}${s.mode === "acm" ? "（ACM）" : ""}`;
   if (s.kind === "draft") return { files: [{ path: draftPath(problem, s.lang, s.mode), content: tidy(s.code) }], message: `练习草稿：${what}` };
@@ -106,7 +133,7 @@ export function planSave(s: PracticeSave, ctx: { problem: Problem; paths: string
   for (const p of ctx.paths) { const a = parseAttemptPath(p); if (a && a.id === problem.id && a.date === at.date) seq = Math.max(seq, a.seq); }
   const attempt = attemptPath(problem, at.date, seq + 1, s.result);
   const files = [{ path: attempt, content: renderPracticeAttempt(s, at) }];
-  const solution = s.result === "通过" ? solutionPath(problem, s.lang, s.mode) : undefined;
+  const solution = s.result === "通过" ? pickSolutionPath(problem, s.lang, s.mode, s.code, ctx.paths, ctx.solutions ?? {}) : undefined;
   if (solution) files.push({ path: solution, content: tidy(s.code) });
   const progress: ProgressFile = ctx.progress ?? { version: 1, problems: {} };
   const next = nextStatus(progress.problems?.[String(problem.id)], [{ result: s.result, date: at.date }]);

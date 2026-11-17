@@ -1,7 +1,7 @@
 // node lib/practice/test/record.test.ts：练习区写进度仓（草稿、「测试全部」的记录、题解、状态），用假的 GitHub 跑一遍服务端
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { draftPath, findDraft, gitBlobSha, planSave, renderPracticeAttempt, solutionPath, validateSave } from "../record.ts";
+import { draftPath, existingSolutions, findDraft, gitBlobSha, pickSolutionPath, planSave, renderPracticeAttempt, solutionPath, validateSave } from "../record.ts";
 import { loadPracticeDraft, savePractice } from "../server.ts";
 import { matchExisting, parseAttemptPath, readAttempt, validateAttempt } from "../../sync/core.ts";
 import { SyncError } from "../../sync/server.ts";
@@ -91,6 +91,24 @@ await test("planSave：当天序号接着排、全部通过才存题解、状态
   assert.equal(acm.solution, "solutions/typescript/0001.两数之和.ACM.ts");
 });
 
+await test("全部通过存题解：已有的题解一个都不动，同一份代码不再存，重名存成 .2 / .ACM2", () => {
+  const mine = "solutions/python/0001.两数之和.py", dp = "solutions/python/0001.两数之和.哈希.py";
+  const other = "class Solution:\n    def twoSum(self, nums, target):\n        return [0, 1]\n";
+  assert.deepEqual(existingSolutions([mine, dp, "solutions/python/0010.正则.py", "solutions/java/0001.两数之和.java", "solutions/python/0001.两数之和.a.b.py"], 1, "python"), [mine, dp]);
+  // 主文件名被别的代码占着：另存成 .2，原来的不写
+  const taken = planSave(validateSave(run()), { problem: P1, paths: [mine], progress: null, now: NOW, solutions: { [mine]: other } });
+  assert.equal(taken.solution, "solutions/python/0001.两数之和.2.py");
+  assert(!taken.files.some((f) => f.path === mine));
+  assert.equal(pickSolutionPath(P1, "python", "leetcode", CODE, [mine, "solutions/python/0001.两数之和.2.py"], {}), "solutions/python/0001.两数之和.3.py", "读不到内容的当作不一样");
+  // 和某份已有题解（任何写法名）是同一份代码，只差注释和空白：不再存
+  const same = planSave(validateSave(run()), { problem: P1, paths: [mine, dp], progress: null, now: NOW, solutions: { [mine]: other, [dp]: "# 哈希表\n" + CODE.replace(/ {4}/g, "\t") } });
+  assert.equal(same.solution, undefined);
+  assert.deepEqual(same.files.map((f) => f.path), [same.attempt, "progress.json"]);
+  // ACM 模式：.ACM 被占了存成 .ACM2（写法名只有一段）
+  const acm = "solutions/typescript/0001.两数之和.ACM.ts";
+  assert.equal(pickSolutionPath(P1, "typescript", "acm", "let x = 1", [acm], { [acm]: "let y = 2" }), "solutions/typescript/0001.两数之和.ACM2.ts");
+});
+
 await test("git 的 blob sha 和 git 算的一样", async () => {
   const c = "print('你好')\n";
   const want = createHash("sha1").update(`blob ${Buffer.byteLength(c)}\0`).update(c).digest("hex");
@@ -134,6 +152,20 @@ await test("服务端：「测试全部」记成一个 commit（记录 + 题解 
   // 同一份代码再全部通过一次：记录照记（第 3 次），题解和状态没变就不写
   const again = await savePractice(gh.api, gh.repo, run(), () => NOW);
   assert.deepEqual(again.files, ["attempts/0001.两数之和/2026-11-17.3.通过.md"]);
+  assert.equal(again.solution, undefined);
+  // 换一种写法通过：另存成 .2，第一份题解原样保留
+  const before = gh.files()["solutions/python/0001.两数之和.py"];
+  const other = await savePractice(gh.api, gh.repo, run({ code: "class Solution:\n    def twoSum(self, nums, target):\n        return [nums.index(x) for x in nums][:2]\n" }), () => NOW);
+  assert.equal(other.solution, "solutions/python/0001.两数之和.2.py");
+  assert.equal(gh.files()["solutions/python/0001.两数之和.py"], before);
+});
+
+await test("服务端：用户已有的题解（手写、从力扣同步来的）不会被「测试全部」覆盖", async () => {
+  const curated = "# 整理过的写法\nclass Solution:\n    def twoSum(self, nums, target):\n        ...\n";
+  const gh = mockGitHub({ "hot100.json": JSON.stringify(hot), "solutions/python/0001.两数之和.py": curated });
+  const res = await savePractice(gh.api, gh.repo, run(), () => NOW);
+  assert.equal(res.solution, "solutions/python/0001.两数之和.2.py");
+  assert.equal(gh.files()["solutions/python/0001.两数之和.py"], curated);
 });
 
 await test("服务端：拒绝不合规的请求和不在热题里的题", async () => {

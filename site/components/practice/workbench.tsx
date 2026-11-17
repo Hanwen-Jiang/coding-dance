@@ -204,7 +204,6 @@ export function PracticeWorkbench() {
       <Button aria-label={stowed ? "展开练习区" : "写代码"} className="practice-launcher-button" onPress={stowed ? summon : openFocus} ref={launcher}>
         <CodeIcon />
         <span className="font-semibold">写代码</span>
-        <span className="practice-launcher-meta">{LANGUAGES.find((entry) => entry.id === language)?.label} · {mode === "acm" ? "ACM" : "LeetCode"}</span>
       </Button>
     </div>
     </>

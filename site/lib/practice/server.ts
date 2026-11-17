@@ -4,7 +4,7 @@
 // 分支在这期间被别处移动过就重新读一遍再写，最多三次。
 import type { Problem, ProgressFile } from "../sync/core.ts";
 import { type Api, SyncError, commitFiles, readBlobs, readRepo } from "../sync/server.ts";
-import { findDraft, gitBlobSha, planSave, validateSave, type PracticeMode } from "./record.ts";
+import { existingSolutions, findDraft, gitBlobSha, planSave, validateSave, type PracticeMode } from "./record.ts";
 
 export interface SaveResult {
   /** 真的写了（有内容和仓库里不一样） */
@@ -25,7 +25,9 @@ export async function savePractice(api: Api, repo: string, body: unknown, now = 
     const sha = new Map(head.files.map((f) => [f.path, f.sha]));
     if (!sha.has("hot100.json")) throw new SyncError("进度仓里没有 hot100.json：确认这个仓库是用模板建的", 409);
     const want = ["hot100.json", "progress.json"].filter((p) => sha.has(p));
-    const texts = await readBlobs(api, repo, want.map((p) => sha.get(p)!));
+    // 全部通过时要和已有的题解比一比（同一份代码不再存）；最多读 40 份
+    const mine = s.kind === "run" && s.result === "通过" ? existingSolutions(head.files.map((f) => f.path), s.id, s.lang).slice(0, 40) : [];
+    const texts = await readBlobs(api, repo, [...new Set([...want, ...mine].map((p) => sha.get(p)!))]);
     const read = (p: string) => (sha.has(p) ? texts[sha.get(p)!] : null);
     let hot: Problem[], progress: ProgressFile | null;
     try {
@@ -36,7 +38,8 @@ export async function savePractice(api: Api, repo: string, body: unknown, now = 
     }
     const problem = Array.isArray(hot) ? hot.find((p) => p.id === s.id) : undefined;
     if (!problem) throw new SyncError("这道题不在你进度仓的 hot100.json 里", 404);
-    const plan = planSave(s, { problem, paths: head.files.map((f) => f.path), progress, now: now() });
+    const solutions = Object.fromEntries(mine.map((p) => [p, texts[sha.get(p)!]]));
+    const plan = planSave(s, { problem, paths: head.files.map((f) => f.path), progress, now: now(), solutions });
     const files = [];
     for (const f of plan.files) if (sha.get(f.path) !== (await gitBlobSha(f.content))) files.push(f);
     const meta = { attempt: plan.attempt, solution: plan.solution, status: plan.status, draft: s.kind === "draft" ? plan.files[0].path : undefined };
