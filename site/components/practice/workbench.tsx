@@ -15,6 +15,7 @@ import { type DebugRun, PracticeDebugger } from "@/components/practice/debugger"
 import { PracticeResults } from "@/components/practice/results";
 import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice/resize";
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
+import { usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
@@ -84,17 +85,6 @@ type StatementView = "split" | "folded" | "only";
  * 桌面（≥1200）页面右侧的练习区展开还是收起，记在浏览器里，换题、刷新都不变。
  * 状态写在 <html data-practice> 上，样式全靠它（practice.css）；layout.tsx 在首屏前就按存的值设好，避免先展开再收起的闪动。
  */
-export const DOCK_KEY = "hot100:practice:dock";
-function usePracticeDock() {
-  const [docked, setDockedState] = useState(true);
-  useEffect(() => { setDockedState(document.documentElement.dataset.practice !== "closed"); }, []);
-  const setDocked = useCallback((open: boolean) => {
-    setDockedState(open);
-    document.documentElement.dataset.practice = open ? "open" : "closed";
-    try { localStorage.setItem(DOCK_KEY, open ? "open" : "closed"); } catch { /* 这次仍然生效 */ }
-  }, []);
-  return [docked, setDocked] as const;
-}
 
 /**
  * 桌面上练习区占多宽：占整行（题目页的 grid）的比例，拖正文和练习区之间的竖条调整，存在浏览器里。

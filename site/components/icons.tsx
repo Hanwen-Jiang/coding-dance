@@ -58,6 +58,11 @@ export const EyeIcon = (p: P) => (
     <circle cx="8" cy="8" r="2" />
   </svg>
 );
+export const AlertIcon = (p: P) => (
+  <svg {...base} {...p}>
+    <path d="M8 1.8 14.6 13.5H1.4zM8 6.2v3.3M8 11.6v.1" />
+  </svg>
+);
 export const SearchOffIcon = (p: P) => (
   <svg {...base} {...p}>
     <circle cx="7" cy="7" r="4.5" />

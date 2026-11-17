@@ -15,6 +15,42 @@
   .problem-learn-inline { display: none; }
 }
 .practice-sidebar { min-width: 0; margin-top: 40px; }
+
+/*
+ * 「写代码」的布局（桌面上练习区展开时，见 problem-view.tsx 的 StudyBar / StudySheet）：
+ * 题面上方一排入口，滚动时停在顶栏下面；点开的面板盖在题目这一栏上，和右边的编辑器一样钉在顶栏下面、一样高。
+ */
+.problem-study-bar {
+  position: sticky; top: 57px; z-index: 20;
+  margin: -8px -8px 0; padding: 8px;
+  background: color-mix(in oklch, var(--background) 86%, transparent);
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+}
+.problem-study-entries { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.problem-study-entry { gap: 6px; }
+.problem-study-entry.is-open { background: color-mix(in oklch, var(--accent) 12%, transparent); color: var(--accent); }
+/* 「我的题解」「尝试记录」是自己的东西，和前面隔开一点 */
+.problem-study-entry--mine { position: relative; margin-inline-start: 13px; }
+.problem-study-entry--mine::before { content: ""; position: absolute; inset-inline-start: -8px; top: 25%; height: 50%; width: 1px; background: var(--separator); }
+.problem-study-count { min-width: 18px; padding: 0 5px; border-radius: 999px; background: color-mix(in oklch, var(--foreground) 8%, transparent); font-family: var(--font-mono); font-size: 11px; line-height: 18px; text-align: center; }
+.problem-sheet { display: none; }
+@media (min-width: 1200px) {
+  .problem-sheet:not([hidden]) {
+    position: fixed; z-index: 25; top: 80px; bottom: 16px;
+    left: var(--practice-right); width: calc(var(--practice-row) - var(--practice-dock-w) - 24px);
+    display: flex; flex-direction: column; overflow: hidden;
+    border: 1px solid var(--border); border-radius: 24px; background: var(--surface);
+    box-shadow: 0 18px 48px color-mix(in oklch, var(--foreground) 12%, transparent);
+    animation: problem-sheet-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  }
+  /* 专注模式盖住整个屏幕，面板不用露出来 */
+  body:has(.practice-shell--focus) .problem-sheet { display: none; }
+}
+.problem-sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; flex-shrink: 0; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--separator); }
+.problem-sheet-head h2 svg { flex-shrink: 0; }
+.problem-sheet-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 20px 24px 24px; }
+@keyframes problem-sheet-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .problem-sheet:not([hidden]) { animation: none; } }
 .practice-focus-statement { display: none; }
 
 /*
