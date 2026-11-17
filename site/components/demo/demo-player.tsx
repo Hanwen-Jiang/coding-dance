@@ -338,7 +338,7 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
                         <EyeIcon />
                         查看代码
                       </Button>
-                      <span className="text-xs text-muted">和下面的题解一起显示</span>
+                      <span className="text-xs text-muted">和题解里的代码一起显示</span>
                     </div>
                   </div>
                 ))}
