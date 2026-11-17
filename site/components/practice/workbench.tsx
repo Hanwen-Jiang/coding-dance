@@ -44,6 +44,11 @@ function readHints(): PracticeHints {
   try { const v = localStorage.getItem(HINTS_KEY); if (v === "full" || v === "none") return v; } catch { /* 存储不可用 */ }
   return "full";
 }
+/** 长行自动折行（默认开），存在浏览器里；关掉就是一行到底、横向滚动 */
+const WRAP_KEY = "hot100:practice:wrap";
+function readWrap() {
+  try { return localStorage.getItem(WRAP_KEY) !== "off"; } catch { return true; }
+}
 /** 停下不改多久之后自动把草稿存进进度仓（每存一次是一个 commit，所以不要太勤） */
 const AUTOSAVE_MS = 60_000;
 /** 比较两份代码时不管换行符和末尾空白（服务端存的时候会统一成这样） */
@@ -262,6 +267,8 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const [ready, setReady] = useState(false);
   const [hints, setHints] = useState<PracticeHints>(readHints);
   const changeHints = (value: PracticeHints) => { setHints(value); try { localStorage.setItem(HINTS_KEY, value); } catch { /* 这次仍然生效 */ } };
+  const [wrap, setWrap] = useState(readWrap);
+  const toggleWrap = () => setWrap((on) => { try { localStorage.setItem(WRAP_KEY, on ? "off" : "on"); } catch { /* 这次仍然生效 */ } return !on; });
   const [confirmReset, setConfirmReset] = useState(false);
   const resetDescriptionId = useId();
   const [tab, setTab] = useState<TestTab>("results");
@@ -544,6 +551,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
               </ListBox>
             </Select.Popover>
           </Select>
+          {/* 长行折行：默认开，按下去的样子表示开着 */}
+          <Button aria-label="自动换行" aria-pressed={wrap} className={clsx(wrap && "bg-accent/10 text-accent")} isIconOnly onPress={toggleWrap} size="sm" variant="ghost">
+            <span className="sr-only">{wrap ? "长行自动折到下一行，点一下改成不折行" : "长行不折行，点一下改成自动折行"}</span>
+            <WrapIcon />
+          </Button>
           <Modal isOpen={confirmReset} onOpenChange={setConfirmReset}>
             <Button aria-label="重置代码" isDisabled={running || !ready} isIconOnly size="sm" variant="ghost"><ResetIcon /></Button>
             <Modal.Backdrop style={{ zIndex: 140 }}>
@@ -580,7 +592,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
           </span>
         </div>
       )}
-      <CodeEditor code={code} debugLine={debugLine} hints={hints} language={language} onBreakpoints={setBreakpoints} onChange={changeCode} ready={ready} />
+      <CodeEditor code={code} debugLine={debugLine} hints={hints} language={language} onBreakpoints={setBreakpoints} onChange={changeCode} ready={ready} wrap={wrap} />
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="border-t border-separator px-4 py-2 text-[11px] leading-5 text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
       {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
@@ -654,6 +666,11 @@ function BugIcon() {
 /** 收起侧栏：一个框，右边一栏带向右的箭头 */
 function StowIcon() {
   return <svg aria-hidden fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="14"><rect height="12" rx="2" width="13" x="1.5" y="2" /><path d="M10 2v12M5 6l2 2-2 2" /></svg>;
+}
+
+/** 自动换行：一行字折回来 */
+function WrapIcon() {
+  return <svg aria-hidden fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="16"><path d="M2 3.5h12M2 8h9.5a2.25 2.25 0 0 1 0 4.5H8M9.5 11 8 12.5 9.5 14M2 12.5h3.5" /></svg>;
 }
 
 function ResetIcon() {

@@ -1,7 +1,7 @@
 // 编辑器里的调试标记：当前执行到的那一行（高亮整行）、断点（行号左边一栏，点一下加上或去掉）。
 // 都是 CodeMirror 的状态字段：改代码时跟着移动；页面通过 effect 设当前行，通过回调拿到断点所在的行号。
-import { RangeSet, StateEffect, StateField, type Extension } from "@codemirror/state";
-import { Decoration, type DecorationSet, EditorView, gutter, GutterMarker } from "@codemirror/view";
+import { Prec, RangeSet, StateEffect, StateField, type Extension } from "@codemirror/state";
+import { Decoration, type DecorationSet, EditorView, gutter, GutterMarker, keymap, lineNumbers } from "@codemirror/view";
 
 /** 设当前执行到的行（从 1 开始；null 表示不在调试） */
 export const setDebugLine = StateEffect.define<number | null>();
@@ -55,22 +55,26 @@ export function breakpointLines(view: EditorView) {
   return [...new Set(out)];
 }
 
-/** 调试用的扩展：当前行高亮 + 断点栏。onBreakpoints：断点变了（加、去、改代码移动）时回调 */
+/**
+ * 调试用的扩展：当前行高亮 + 断点栏 + 行号。onBreakpoints：断点变了（加、去、改代码移动）时回调。
+ * 加断点：点行号左边那一栏或者点行号（和 VS Code 一样），或者光标停在那一行按 F9。
+ * 行号由这里提供（编辑器的 basicSetup 里关掉了），这样点行号也能切换断点；断点栏排在行号前面。
+ */
 export function debugExtensions(onBreakpoints: (lines: number[]) => void): Extension {
+  const toggle = { mousedown(view: EditorView, line: { from: number }) { view.dispatch({ effects: toggleBreakpoint.of(line.from) }); return true; } };
   return [
     debugLine,
     breakpoints,
-    gutter({
+    Prec.highest(gutter({
       class: "cm-breakpoint-gutter",
       markers: (v) => v.state.field(breakpoints),
       initialSpacer: () => marker,
-      domEventHandlers: {
-        mousedown(view, line) {
-          view.dispatch({ effects: toggleBreakpoint.of(line.from) });
-          return true;
-        },
-      },
-    }),
+      // 每一行都有一格，鼠标移上去能看到淡淡的圆点，知道这里能点
+      renderEmptyElements: true,
+      domEventHandlers: toggle,
+    })),
+    Prec.high(lineNumbers({ domEventHandlers: toggle })),
+    keymap.of([{ key: "F9", run: (view) => { view.dispatch({ effects: toggleBreakpoint.of(view.state.doc.lineAt(view.state.selection.main.head).from) }); return true; } }]),
     EditorView.updateListener.of((u) => {
       if (u.transactions.some((t) => t.effects.some((e) => e.is(toggleBreakpoint) || e.is(clearBreakpoints))) || (u.docChanged && u.state.field(breakpoints).size)) onBreakpoints(breakpointLines(u.view));
     }),

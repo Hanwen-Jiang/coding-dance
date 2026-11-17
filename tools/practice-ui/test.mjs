@@ -292,6 +292,51 @@ try {
     console.log("✓ Desktop divider: drag, min body width, keys, double-click reset, survives reload, hidden when stowed");
   }
 
+  // 桌面上练习区钉在顶栏下面：滚到页面最底下也不被页脚顶上去，页脚的字不被它盖住
+  {
+    const sidebarY = async () => (await page.locator(".practice-sidebar").boundingBox()).y;
+    assert(Math.abs((await sidebarY()) - 80) < 2, "Docked practice sits under the header");
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await page.waitForTimeout(200);
+    assert(Math.abs((await sidebarY()) - 80) < 2, "…and stays there at the very bottom of the page");
+    const footerText = await page.locator("body > footer").evaluate((el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().right; });
+    assert(footerText < (await page.locator(".practice-sidebar").boundingBox()).x, "Footer text stays clear of the fixed practice area");
+    await page.evaluate(() => window.scrollTo(0, 0));
+    console.log("✓ Docked practice stays fixed under the header, even at the bottom; footer text not covered");
+  }
+
+  // 断点：点行号、点行号左边那一栏、F9 都能切换；长行默认折行，可以关掉，记在浏览器里
+  {
+    await language("Python");
+    await writeCode("class Solution:\n    def threeSum(self, nums):\n        out = []\n        nums.sort()\n        return out  # " + "x".repeat(160));
+    const dots = async () => (await page.locator(".cm-breakpoint-gutter .cm-breakpoint-dot").count()) - 1; // 减去撑宽度用的占位
+    const order = await page.evaluate(() => [...document.querySelectorAll(".cm-gutters > .cm-gutter")].map((g) => g.classList[1]));
+    assert.deepEqual(order.slice(0, 2), ["cm-breakpoint-gutter", "cm-lineNumbers"], `Breakpoint column is left of the line numbers (${order})`);
+    await page.locator(".cm-lineNumbers .cm-gutterElement", { hasText: /^3$/ }).click();
+    assert.equal(await dots(), 1, "Clicking a line number adds a breakpoint");
+    await page.locator(".cm-lineNumbers .cm-gutterElement", { hasText: /^3$/ }).click();
+    assert.equal(await dots(), 0, "Clicking it again removes it");
+    const g = await page.locator(".cm-breakpoint-gutter").boundingBox(), l4 = await page.locator(".cm-lineNumbers .cm-gutterElement", { hasText: /^4$/ }).boundingBox();
+    await page.mouse.click(g.x + g.width / 2, l4.y + l4.height / 2);
+    assert.equal(await dots(), 1, "Clicking the column left of the numbers adds one");
+    await page.locator(".cm-line").nth(4).click();
+    await page.keyboard.press("F9");
+    assert.equal(await dots(), 2, "F9 toggles the cursor line");
+    const scroller = page.locator(".practice-editor .cm-scroller");
+    const overflows = () => scroller.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
+    const wrapButton = page.getByRole("button", { name: "自动换行", exact: true });
+    assert.equal(await wrapButton.getAttribute("aria-pressed"), "true", "Wrapping is on by default");
+    assert.equal(await overflows(), false, "Long lines wrap by default");
+    await wrapButton.click();
+    assert.equal(await overflows(), true, "Turning wrapping off scrolls long lines sideways");
+    await page.reload();
+    await waitEditor();
+    assert.equal(await page.getByRole("button", { name: "自动换行", exact: true }).getAttribute("aria-pressed"), "false", "Wrap choice survives reload");
+    await page.getByRole("button", { name: "自动换行", exact: true }).click();
+    await mode("LeetCode");
+    console.log("✓ Breakpoints: line numbers, column and F9; long lines wrap by default and can be switched off");
+  }
+
   await page.getByRole("button", { name: "进入专注模式", exact: true }).click();
   await page.locator(".practice-shell--focus").waitFor();
   // 专注模式是一整块铺满屏幕的工作区：没有外框，代码卡片也不再套边框
