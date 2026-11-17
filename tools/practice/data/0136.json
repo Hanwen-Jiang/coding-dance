@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def singleNumber(self, nums: List[int]) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction singleNumber(nums) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction singleNumber(nums: number[]): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def singleNumber(self, nums: List[int]) -> int:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar singleNumber = function(nums) {\n  \n};",
+      "typescript": "function singleNumber(nums: number[]): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -384,6 +384,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "d11126ec"
+    ],
+    "javascript": [
+      "d7033a8a"
+    ],
+    "typescript": [
+      "3506d724"
     ]
   }
 }

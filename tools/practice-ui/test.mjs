@@ -205,13 +205,49 @@ try {
   assert((await page.locator(".cm-content").innerText()).includes("debug-fixture"));
   await page.locator("#practice").getByRole("button", { name: "重置代码", exact: true }).click();
   await page.getByRole("button", { name: "确认重置", exact: true }).click();
-  await page.waitForFunction(() => document.querySelector(".cm-content")?.textContent?.includes("请完成解法"));
+  await page.waitForFunction(() => { const t = document.querySelector(".cm-content")?.textContent || ""; return !t.includes("debug-fixture") && t.includes("threeSum"); });
   console.log("✓ Reset requires explicit confirmation");
 
   await writeCode(spec.codes[0].langs.javascript.code);
   await page.getByRole("textbox", { name: "代码编辑器", exact: true }).press("ControlOrMeta+Enter");
   await page.getByText("全部通过", { exact: true }).waitFor();
   console.log("✓ Keyboard shortcut runs once");
+
+  // 编辑器提示程度：用真实按键验证（整段插入文字会绕过回车缩进和括号配对）。
+  // 两档都有语法颜色、括号配对、自动缩进；「无提示」只补全代码里已有的变量，不提示内置函数、关键字
+  const hintLevel = async (pattern) => {
+    await page.locator('.practice-editor-toolbar button[aria-label="编辑器提示"]').click();
+    await page.getByRole("option", { name: pattern }).click();
+    await page.waitForFunction(() => !document.querySelector('[role="listbox"]'));
+  };
+  const typeAfter = async (head, keys) => {
+    await writeCode(head);
+    await page.getByRole("textbox", { name: "代码编辑器", exact: true }).click();
+    await page.keyboard.press("ControlOrMeta+End");
+    await page.keyboard.press("Enter");
+    await page.keyboard.type(keys);
+    await page.waitForTimeout(500);
+    return page.evaluate(() => {
+      const e = document.querySelector(".cm-content"), v = e.cmTile?.root?.view || e.cmView?.view;
+      return { doc: v.state.doc.toString(), options: [...document.querySelectorAll(".cm-tooltip-autocomplete .cm-completionLabel")].map((n) => n.textContent), colored: e.querySelectorAll(".cm-line span").length };
+    });
+  };
+  await language("Python");
+  await hintLevel(/^无提示/);
+  const local = await typeAfter("def f():\n    total = 1", "tot");
+  assert(local.options.includes("total"), `No hints still completes existing variables (${local.options})`);
+  await page.keyboard.press("Escape");
+  const builtin = await typeAfter("def f():\n    total = 1", "pri");
+  assert(!builtin.options.includes("print"), `No hints must not suggest builtins (${builtin.options})`);
+  await page.keyboard.press("Escape");
+  const paired = await typeAfter("def f():", "x = (");
+  assert.equal(paired.doc, "def f():\n    x = ()", "No hints keeps auto-indent and bracket pairing");
+  assert(paired.colored > 0, "No hints keeps syntax colors");
+  await hintLevel(/^完整提示/);
+  const full = await typeAfter("def f():", "pri");
+  assert(full.options.includes("print"), `Full hints suggest builtins (${full.options})`);
+  await page.keyboard.press("Escape");
+  console.log("✓ Editor hints: full suggests builtins; no-hints only completes existing variables, keeping colors, pairing and indentation");
 
   await page.getByRole("button", { name: "进入专注模式", exact: true }).click();
   await page.locator(".practice-shell--focus").waitFor();
@@ -225,10 +261,30 @@ try {
   await page.getByRole("button", { name: /点一下切到深色/ }).click();
   await page.waitForFunction(() => document.documentElement.classList.contains("dark"));
   await page.screenshot({ path: path.join(screenshots, "desktop-dark.png"), animations: "disabled" });
+  // 手机：页面里不放编辑器，底部常驻「写代码」；点开是全屏的题面 + 编辑器，题面可以收起、展开、只看题目
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.locator(".practice-shell").screenshot({ path: path.join(screenshots, "mobile-dark.png"), animations: "disabled" });
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), "Mobile layout must not overflow horizontally");
-  console.log("✓ Focus, Escape, light/dark themes and mobile layout");
+  assert.equal(await page.locator(".practice-sidebar").isVisible(), false, "Mobile page keeps the editor out of the page flow");
+  const launch = page.getByRole("button", { name: "写代码", exact: true });
+  await launch.click();
+  await page.locator(".practice-shell--focus").waitFor();
+  await page.locator(".practice-shell").screenshot({ path: path.join(screenshots, "mobile-dark.png"), animations: "disabled" });
+  const box = (selector) => page.locator(selector).boundingBox();
+  const [statementBox, editorBox] = [await box(".practice-focus-statement"), await box(".practice-editor-column")];
+  assert(editorBox.y >= statementBox.y + statementBox.height - 1 && statementBox.x >= 0 && editorBox.x + editorBox.width <= 391, "Mobile workspace stacks statement above code inside the screen");
+  await page.getByRole("button", { name: "收起题目", exact: true }).click();
+  assert.equal(await page.locator(".practice-focus-statement-body").isVisible(), false, "Folding hides the statement body");
+  assert((await box(".cm-editor")).height > editorBox.height * 0.5, "Folding leaves the editor usable");
+  await page.getByRole("button", { name: "展开题目", exact: true }).click();
+  await page.getByRole("button", { name: "只看题目", exact: true }).click();
+  assert.equal(await page.locator("#practice").isVisible(), false, "Statement-only view hides the code card");
+  assert(await page.getByRole("button", { name: "退出专注模式", exact: true }).isVisible(), "Exit stays reachable in statement-only view");
+  await page.getByRole("button", { name: "返回代码", exact: true }).click();
+  assert(await page.locator("#practice").isVisible(), "Back to code shows the editor again");
+  await page.keyboard.press("Escape");
+  await page.locator(".practice-shell--focus").waitFor({ state: "detached" });
+  assert(await launch.isVisible(), "Launcher returns after leaving the workspace");
+  console.log("✓ Focus, Escape, light/dark themes and mobile workspace (launcher, fold, statement-only)");
   assert.deepEqual(errors, [], "No unhandled browser errors");
   console.log(`Practice UI browser checks passed. Screenshots: ${screenshots}`);
 } catch (error) {

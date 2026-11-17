@@ -15,9 +15,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction coinChange(coins, amount) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction coinChange(coins: number[], amount: number): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        ",
+      "javascript": "/**\n * @param {number[]} coins\n * @param {number} amount\n * @return {number}\n */\nvar coinChange = function(coins, amount) {\n  \n};",
+      "typescript": "function coinChange(coins: number[], amount: number): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -372,6 +372,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "b6545408"
+    ],
+    "javascript": [
+      "cc338789"
+    ],
+    "typescript": [
+      "3a9be622"
     ]
   }
 }

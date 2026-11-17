@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def detectCycle(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction detectCycle(head) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction detectCycle(head: ListNode | null): ListNode | null {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\nclass Solution:\n    def detectCycle(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        ",
+      "javascript": "/**\n * Definition for singly-linked list.\n * function ListNode(val, next) {\n *     this.val = (val===undefined ? 0 : val)\n *     this.next = (next===undefined ? null : next)\n * }\n */\n/**\n * @param {ListNode} head\n * @return {ListNode}\n */\nvar detectCycle = function(head) {\n  \n};",
+      "typescript": "/**\n * Definition for singly-linked list.\n * class ListNode {\n *     val: number\n *     next: ListNode | null\n *     constructor(val?: number, next?: ListNode | null) {\n *         this.val = (val===undefined ? 0 : val)\n *         this.next = (next===undefined ? null : next)\n *     }\n * }\n */\n\nfunction detectCycle(head: ListNode | null): ListNode | null {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -450,6 +450,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "130f4481"
+    ],
+    "javascript": [
+      "6e7c5ac1"
+    ],
+    "typescript": [
+      "75c7f737"
     ]
   }
 }

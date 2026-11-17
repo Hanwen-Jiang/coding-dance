@@ -14,9 +14,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def longestPalindrome(self, s: str) -> str:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction longestPalindrome(s) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction longestPalindrome(s: string): string {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def longestPalindrome(self, s: str) -> str:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @return {string}\n */\nvar longestPalindrome = function(s) {\n  \n};",
+      "typescript": "function longestPalindrome(s: string): string {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -260,6 +260,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "ad6ebea6"
+    ],
+    "javascript": [
+      "41f5da5c"
+    ],
+    "typescript": [
+      "61cd5b52"
     ]
   }
 }

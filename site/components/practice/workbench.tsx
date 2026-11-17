@@ -4,17 +4,18 @@ import { Button, Card, ListBox, Modal, Select, TextArea } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 
-import { CodeIcon, PlayIcon } from "@/components/icons";
+import { ChevronDown, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
 import { PixelLoader, Skel } from "@/components/pixel";
 import { PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
 import { PracticeResults } from "@/components/practice/results";
+import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice/resize";
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
 import { runPractice } from "@/lib/practice/runner";
-import type { PracticeCase, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
+import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
 import { formatPracticeInput, formatPracticeResult, formatPracticeValue, parsePracticeFields, practiceInputFields, starterHash, type PracticeInputField } from "@/lib/practice/format";
 
 import "./practice.css";
@@ -29,13 +30,37 @@ const LANGUAGES: { id: PracticeLanguage; label: string }[] = [
   { id: "typescript", label: "TypeScript" },
 ];
 type TestTab = "examples" | "custom" | "results";
+/** 编辑器提示程度，存在浏览器里，换题、换语言都不变 */
+const HINT_LEVELS: { id: PracticeHints; label: string; desc: string }[] = [
+  { id: "full", label: "完整提示", desc: "提示关键字、内置函数、库函数和类型" },
+  { id: "none", label: "无提示", desc: "只补全代码里已有的变量和函数" },
+];
+const HINTS_KEY = "hot100:practice:hints";
+function readHints(): PracticeHints {
+  try { const v = localStorage.getItem(HINTS_KEY); if (v === "full" || v === "none") return v; } catch { /* 存储不可用 */ }
+  return "full";
+}
+/**
+ * 专注模式里题面的三种状态：split 题面和代码都在；folded 题面收起，只留标题栏（并排时收成一条窄边）；
+ * only 只看题面（上下排列时代码区只留顶上那一行工具条）。
+ */
+type StatementView = "split" | "folded" | "only";
 
 export function PracticeWorkbench() {
   const { detail, problem, error, retry, mode, language, select } = usePractice();
   const [focusPhase, setFocusPhase] = useState<"closed" | "open" | "closing">("closed");
+  const [statementView, setStatementView] = useState<StatementView>("split");
   const active = focusPhase !== "closed";
   const reducedMotion = useReducedMotion();
   const focusButton = useRef<HTMLButtonElement>(null);
+  const launcher = useRef<HTMLButtonElement>(null);
+  const shell = useRef<HTMLElement>(null);
+  const statementBodyId = useId();
+  // 题面占多大：并排（≥1024）时是宽度，上下排列时是高度；两种各记各的
+  const wide = useMedia("(min-width: 1024px)");
+  const [splitX, setSplitX, commitX] = useStoredFraction("hot100:practice:split-x", 0.47, 0.22, 0.75);
+  const [splitY, setSplitY, commitY] = useStoredFraction("hot100:practice:split-y", 0.38, 0.15, 0.8);
+  const openFocus = useCallback(() => { setStatementView("split"); setFocusPhase("open"); }, []);
   const closeFocus = useCallback(() => setFocusPhase((phase) => phase === "open" ? "closing" : phase), []);
   const finishClosing = useCallback(() => setFocusPhase((phase) => phase === "closing" ? "closed" : phase), []);
 
@@ -52,7 +77,8 @@ export function PracticeWorkbench() {
       document.body.style.overflow = overflow;
       background.forEach((node, index) => { node.inert = previous[index]; });
       window.removeEventListener("keydown", onEscape);
-      focusButton.current?.focus({ preventScroll: true });
+      // 窄屏上页面里的编辑器是收起来的，焦点回到底部的「写代码」按钮
+      (focusButton.current?.offsetParent ? focusButton.current : launcher.current)?.focus({ preventScroll: true });
     };
   }, [active, closeFocus]);
 
@@ -71,23 +97,58 @@ export function PracticeWorkbench() {
     return () => clearTimeout(timeout);
   }, [focusPhase, reducedMotion, finishClosing]);
 
+  const folded = statementView === "folded";
   return (
+    <>
     <aside
       aria-label={active ? "代码专注模式" : "代码练习"}
       aria-modal={active ? true : undefined}
       className={clsx("practice-sidebar practice-shell", active && "practice-shell--focus", focusPhase === "closing" && "practice-shell--closing")}
       data-focus-phase={focusPhase}
+      data-statement={statementView}
       onAnimationEnd={(event) => { if (event.target === event.currentTarget && focusPhase === "closing") flushSync(finishClosing); }}
+      ref={shell}
       role={active ? "dialog" : undefined}
+      style={active ? ({ "--practice-statement-size": `${(wide ? splitX : splitY) * 100}%` } as React.CSSProperties) : undefined}
     >
       <section aria-label="专注题面" className="practice-focus-statement" hidden={!active} key="statement">
-        <div className="practice-focus-statement-heading"><span className="font-mono text-xs text-muted">{detail.summary.id}.</span><h2 className="text-base font-bold">{detail.summary.name}</h2></div>
-        <div className="practice-focus-statement-body"><PracticeStatement /></div>
+        <div className="practice-focus-statement-heading">
+          <span className="practice-statement-id font-mono text-xs text-muted">{detail.summary.id}.</span>
+          <h2 className="practice-statement-title min-w-0 flex-1 truncate text-base font-bold">{detail.summary.name}</h2>
+          <div className="practice-statement-actions flex shrink-0 items-center gap-1">
+            {statementView === "only" ? (
+              <Button onPress={() => setStatementView("split")} size="sm" variant="ghost"><CodeIcon />返回代码</Button>
+            ) : (
+              <>
+                {/* 只看题目：上下排列（窄屏）时才有，并排时用不着 */}
+                {!folded && <Button className="practice-only-toggle" onPress={() => setStatementView("only")} size="sm" variant="ghost"><DocIcon />只看题目</Button>}
+                <Button aria-controls={statementBodyId} aria-expanded={!folded} aria-label={folded ? "展开题目" : "收起题目"} className="practice-fold-toggle" onPress={() => setStatementView(folded ? "split" : "folded")} size="sm" variant="ghost">
+                  <ChevronDown className={clsx("practice-fold-icon transition-transform", folded && "-rotate-90")} />
+                  <span className="practice-fold-label">{folded ? "展开题目" : "收起"}</span>
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+        <div className="practice-focus-statement-body" hidden={folded} id={statementBodyId}><PracticeStatement /></div>
       </section>
+      <ResizeHandle
+        axis={wide ? "x" : "y"}
+        className="practice-split-handle"
+        container={() => shell.current}
+        fallback={wide ? 0.47 : 0.38}
+        hidden={!active || statementView !== "split"}
+        label={wide ? "调整题面宽度" : "调整题面高度"}
+        max={wide ? 0.75 : 0.8}
+        min={wide ? 0.22 : 0.15}
+        onChange={wide ? setSplitX : setSplitY}
+        onCommit={wide ? commitX : commitY}
+        value={wide ? splitX : splitY}
+      />
       <div className="practice-editor-column" key="editor">
         <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-3">
           <PracticeModeSwitch />
-          <Button aria-label={active ? "退出专注模式" : "进入专注模式"} isDisabled={focusPhase === "closing"} onPress={() => { if (active) closeFocus(); else setFocusPhase("open"); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} />{active ? "退出专注" : "专注模式"}</Button>
+          <Button aria-label={active ? "退出专注模式" : "进入专注模式"} isDisabled={focusPhase === "closing"} onPress={() => { if (active) closeFocus(); else openFocus(); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} />{active ? "退出专注" : "专注模式"}</Button>
         </div>
         {problem ? <PracticeSession key={`${problem.id}:${mode}:${language}`} language={language} mode={mode} onLanguageChange={(value) => select(mode, value)} problem={problem} /> : (
           <Card className="min-w-0 items-center justify-center gap-4 px-6 py-14">
@@ -96,6 +157,15 @@ export function PracticeWorkbench() {
         )}
       </div>
     </aside>
+    {/* 1200px 以下页面里不放编辑器：屏幕底部常驻「写代码」，点开是全屏的题面 + 编辑器（显示规则见 practice.css） */}
+    <div className="practice-launcher" hidden={active}>
+      <Button aria-label="写代码" className="practice-launcher-button" onPress={openFocus} ref={launcher}>
+        <CodeIcon />
+        <span className="font-semibold">写代码</span>
+        <span className="practice-launcher-meta">{LANGUAGES.find((entry) => entry.id === language)?.label} · {mode === "acm" ? "ACM" : "LeetCode"}</span>
+      </Button>
+    </div>
+    </>
   );
 }
 
@@ -110,11 +180,14 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const draftKey = `hot100:practice:draft:${problem.id}:${mode}:${language}`;
   const [code, setCode] = useState(starter);
   const [ready, setReady] = useState(false);
+  const [hints, setHints] = useState<PracticeHints>(readHints);
+  const changeHints = (value: PracticeHints) => { setHints(value); try { localStorage.setItem(HINTS_KEY, value); } catch { /* 这次仍然生效 */ } };
   const [confirmReset, setConfirmReset] = useState(false);
   const resetDescriptionId = useId();
   const [tab, setTab] = useState<TestTab>("results");
   const [panelOpen, setPanelOpen] = useState(false);
-  const reducedMotion = useReducedMotion();
+  // 控制台（示例 / 自定义 / 运行结果）占卡片多高，拖动条可以调
+  const [consoleSize, setConsoleSize, commitConsole] = useStoredFraction("hot100:practice:console", 0.4, 0.15, 0.75);
   const [sample, setSample] = useState(0);
   const [customInput, setCustomInput] = useState(samples[0].stdin);
   const [customFields, setCustomFields] = useState<PracticeInputField[]>(() => practiceInputFields(problem, samples[0].input));
@@ -141,6 +214,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
           restored = starter;
         }
       }
+      // 力扣模式换成了和力扣一样的模板：没改过的旧模板草稿直接换成新的
+      if (saved !== null && mode === "leetcode" && (problem.previousLeetcodeStarterHashes?.[language] ?? []).includes(hash)) {
+        localStorage.setItem(draftKey, starter);
+        restored = starter;
+      }
       if (restored !== null) { setCode(restored); codeRef.current = restored; }
     } catch { /* 存储不可用时继续使用当前编辑器。 */ }
     setReady(true);
@@ -159,6 +237,14 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
 
   const execute = useCallback(async (cases: PracticeCase[], unchecked = false) => {
     if (!ready || running || abortRef.current || !cases.length) return;
+    // 模板原样没动（和力扣一样方法体是空的）：不跑，直接提示
+    if (codeRef.current.trim() === starter.trim()) {
+      setReport(null);
+      setPanelOpen(true);
+      setTab("results");
+      setError(mode === "acm" ? "还没写程序：先写好读入、计算和输出，再运行。" : "还没写解法：在模板的方法里补上代码，再运行。");
+      return;
+    }
     const token = ++sequenceRef.current;
     const controller = new AbortController();
     abortRef.current = controller;
@@ -180,7 +266,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
     } finally {
       if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
     }
-  }, [language, mode, problem, ready, running]);
+  }, [language, mode, problem, ready, running, starter]);
 
   const runCustom = () => {
     try {
@@ -204,7 +290,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const selectedSample = samples[Math.min(sample, samples.length - 1)];
 
   return (
-    <Card className="min-w-0 gap-0 overflow-hidden p-0" id="practice" onKeyDownCapture={(event) => {
+    <Card className="min-w-0 gap-0 overflow-hidden p-0" id="practice" style={{ "--practice-console-size": `${consoleSize * 100}%` } as React.CSSProperties} onKeyDownCapture={(event) => {
       if (confirmReset) return;
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         event.preventDefault();
@@ -218,6 +304,19 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
           <Select aria-label="练习语言" className="w-36" isDisabled={running} onChange={(value) => { if (typeof value === "string") onLanguageChange(value as PracticeLanguage); }} value={language} variant="secondary">
             <Select.Trigger aria-label="练习语言" className="h-8 min-h-8 text-xs"><Select.Value /><Select.Indicator /></Select.Trigger>
             <Select.Popover className="min-w-36" style={{ zIndex: 120 }}><ListBox aria-label="可选练习语言">{LANGUAGES.map((entry) => <ListBox.Item id={entry.id} key={entry.id} textValue={entry.label}>{entry.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+          </Select>
+          <Select aria-label="编辑器提示" className="w-28" onChange={(value) => { if (typeof value === "string") changeHints(value as PracticeHints); }} value={hints} variant="secondary">
+            <Select.Trigger aria-label="编辑器提示" className="h-8 min-h-8 text-xs"><Select.Value /><Select.Indicator /></Select.Trigger>
+            <Select.Popover className="min-w-52" style={{ zIndex: 120 }}>
+              <ListBox aria-label="编辑器提示程度">
+                {HINT_LEVELS.map((entry) => (
+                  <ListBox.Item id={entry.id} key={entry.id} textValue={entry.label}>
+                    <span className="flex flex-col"><span>{entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>
+                    <ListBox.ItemIndicator />
+                  </ListBox.Item>
+                ))}
+              </ListBox>
+            </Select.Popover>
           </Select>
           <Modal isOpen={confirmReset} onOpenChange={setConfirmReset}>
             <Button aria-label="重置代码" isDisabled={running || !ready} isIconOnly size="sm" variant="ghost"><ResetIcon /></Button>
@@ -246,16 +345,16 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
           </Modal>
         </div>
       </div>
-      <CodeEditor code={code} language={language} onChange={changeCode} ready={ready} />
+      <CodeEditor code={code} hints={hints} language={language} onChange={changeCode} ready={ready} />
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="border-t border-separator px-4 py-2 text-[11px] leading-5 text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
+      {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
       <div className="practice-run-controls flex justify-end gap-2 border-y border-separator px-4 py-3">
         <div className="flex gap-2">
           {running ? <Button onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止运行</Button> : <><Button isDisabled={!ready} onPress={() => void execute(problem.cases)} size="sm" variant="outline">测试全部 · {problem.cases.length}</Button><Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples); }} size="sm"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button></>}
         </div>
       </div>
-      <AnimatePresence initial={false}>
-      {panelOpen && <motion.div animate={{ height: "auto", opacity: 1 }} className="overflow-hidden" data-testid="practice-test-panel" initial={{ height: 0, opacity: 0 }} key="test-panel" transition={{ duration: reducedMotion ? 0 : 0.22, ease: "easeOut" }}>
+      {panelOpen && <div className="practice-console" data-testid="practice-test-panel">
       <div className="flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-2">
           <Segment aria-label="测试面板" onSelectionChange={(key) => setTab(String(key) as TestTab)} selectedKey={tab} size="sm" variant="ghost">
@@ -275,8 +374,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
         </div>}
         {tab === "results" && (running ? <div className="flex items-center gap-3 rounded-xl border border-border px-4 py-6" role="status"><span aria-hidden className="bullet-blink size-2 shrink-0 rounded-[2px] bg-accent" /><p className="text-xs leading-5 text-muted">{status}</p></div> : report ? <PracticeResults problem={problem} cases={report.cases} key={report.result.duration} mode={mode} result={report.result} stale={report.code !== code} unchecked={report.unchecked} /> : <p className="py-5 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
       </div>
-      </motion.div>}
-      </AnimatePresence>
+      </div>}
     </Card>
   );
 }

@@ -5,17 +5,43 @@
 /* 「相关基础」：侧栏显示时放在侧栏里，其余宽度放在题面下面（两处的显示条件正好相反） */
 .problem-learn-inline { display: block; }
 .practice-sidebar { min-width: 0; margin-top: 40px; }
-.practice-sidebar { --practice-editor-height: clamp(500px, calc(100dvh - 256px), 960px); }
-.practice-editor-column { min-width: 0; }
 .practice-focus-statement { display: none; }
+
+/*
+ * 练习区不写死任何高度：外框（桌面侧栏或专注模式）定高，里面按比例分。
+ * 题面 ↔ 代码、编辑器 ↔ 控制台之间各有一条拖动条（resize.tsx），比例存在浏览器里。
+ */
+.practice-editor-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.practice-editor-column > #practice { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
+.practice-editor-toolbar, .practice-run-controls { flex-shrink: 0; }
+.practice-editor, .practice-editor-loading { flex: 1 1 0; min-height: 120px; }
+.practice-console { flex: 0 0 var(--practice-console-size, 40%); min-height: 96px; overflow: auto; }
+.practice-run-controls { background: var(--surface); border-radius: 0 0 24px 24px; }
+#practice:has([data-testid="practice-test-panel"]) > .practice-run-controls { border-radius: 0; }
+
+/* 拖动条 */
+.practice-resize-handle { position: relative; display: flex; flex-shrink: 0; align-items: center; justify-content: center; touch-action: none; outline: none; user-select: none; }
+.practice-resize-handle[hidden] { display: none !important; }
+.practice-resize-handle--y { height: 12px; cursor: row-resize; }
+.practice-resize-handle--x { width: 16px; cursor: col-resize; }
+.practice-resize-grip { border-radius: 999px; background: var(--border); transition: background-color 120ms ease; }
+.practice-resize-handle--y .practice-resize-grip { width: 44px; height: 4px; }
+.practice-resize-handle--x .practice-resize-grip { width: 4px; height: 44px; }
+.practice-resize-handle:hover .practice-resize-grip, .practice-resize-handle--active .practice-resize-grip { background: var(--accent); }
+.practice-resize-handle:focus-visible { border-radius: 8px; box-shadow: inset 0 0 0 2px var(--accent); }
+.practice-resize-handle:focus-visible .practice-resize-grip { background: var(--accent); }
+.practice-console-handle { background: var(--surface); border-top: 1px solid var(--separator); }
+
+/* 专注模式：铺满屏幕的题面 + 代码 */
 .practice-shell--focus {
   position: fixed !important;
   inset: 16px !important;
   z-index: 80;
   isolation: isolate;
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
-  gap: 16px;
+  grid-template-columns: minmax(240px, var(--practice-statement-size, 47%)) 16px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
   width: min(1800px, calc(100vw - 32px)) !important;
   height: calc(100dvh - 32px);
   max-height: calc(100dvh - 32px) !important;
@@ -27,8 +53,11 @@
   overflow: hidden !important;
   box-shadow: 0 0 0 100vmax color-mix(in oklch, var(--background) 88%, transparent);
   animation: practice-focus-in 240ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  --practice-editor-height: clamp(320px, calc(100dvh - 226px), 1040px);
 }
+/* 收起题面时拖动条隐藏，所以位置都写死在格子里，不靠自动排布 */
+.practice-shell--focus > .practice-focus-statement { grid-column: 1; grid-row: 1; }
+.practice-shell--focus > .practice-split-handle { grid-column: 2; grid-row: 1; }
+.practice-shell--focus > .practice-editor-column { grid-column: 3; grid-row: 1; }
 .practice-shell--closing { animation: practice-focus-out 60ms linear both; }
 .practice-shell--focus .practice-focus-statement {
   display: flex;
@@ -40,21 +69,31 @@
   border-radius: 20px;
   background: var(--surface);
 }
-.practice-focus-statement-heading { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 16px 20px; border-bottom: 1px solid var(--separator); }
+.practice-focus-statement-heading { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--separator); }
+.practice-shell--focus[data-statement="folded"] .practice-focus-statement-heading { border-bottom: 0; }
 .practice-focus-statement-body { min-height: 0; overflow: auto; padding: 24px; }
-.practice-shell--focus .practice-editor-column { display: flex; flex-direction: column; min-height: 0; }
-.practice-shell--focus .practice-editor-column > #practice { min-height: 0; flex: 1; overflow-y: auto; }
-.practice-editor, .practice-editor-toolbar, .practice-run-controls { flex-shrink: 0; }
-.practice-editor-column > #practice { overflow: visible; }
-.practice-run-controls {
-  position: sticky;
-  bottom: 0;
-  z-index: 250;
-  background: var(--surface);
-  border-radius: 0 0 24px 24px;
+
+/* 1200px 以下页面里不放编辑器：底部常驻「写代码」，点开进入全屏的题面 + 编辑器 */
+.practice-launcher { display: none; }
+.practice-launcher[hidden] { display: none !important; }
+.practice-launcher-button { height: 48px; gap: 8px; padding-inline: 20px; border-radius: 999px; box-shadow: 0 10px 28px color-mix(in oklch, var(--foreground) 22%, transparent); }
+.practice-launcher-meta { font-size: 12px; opacity: 0.78; }
+@media (max-width: 1199px) {
+  .practice-sidebar:not(.practice-shell--focus) { display: none; }
+  .problem-page-layout { padding-bottom: 96px; }
+  .practice-launcher { position: fixed; z-index: 60; left: 50%; bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); transform: translateX(-50%); display: flex; }
 }
-#practice:has([data-testid="practice-test-panel"]) > .practice-run-controls { border-radius: 0; }
-.practice-editor-loading { height: var(--practice-editor-height); }
+
+/* 并排（≥1024）：「只看题目」用不着；题面收起时变成左边一条窄边，代码占满 */
+@media (min-width: 1024px) {
+  .practice-only-toggle { display: none; }
+  .practice-shell--focus[data-statement="folded"] { grid-template-columns: 52px 16px minmax(0, 1fr); }
+  .practice-shell--focus[data-statement="folded"] .practice-focus-statement-heading { flex-direction: column; align-items: center; height: 100%; gap: 12px; padding: 10px 4px; }
+  .practice-shell--focus[data-statement="folded"] .practice-statement-actions { order: -1; }
+  .practice-shell--focus[data-statement="folded"] .practice-fold-label { display: none; }
+  .practice-shell--focus[data-statement="folded"] .practice-statement-title { flex: 0 1 auto; max-height: 60vh; writing-mode: vertical-rl; }
+}
+
 @keyframes practice-focus-in { from { opacity: 0; transform: translateY(12px) scale(0.985); } to { opacity: 1; transform: none; } }
 @keyframes practice-focus-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(12px) scale(0.985); } }
 @media (prefers-reduced-motion: reduce) {
@@ -85,6 +124,8 @@
   .problem-learn-inline { display: none; }
 }
 @media (min-width: 1200px) {
+  /* 题目页撑宽时，顶栏也跟着撑宽：内边距 24px，正好和下面正文（宽 min(1744px, 100vw - 48px)）的左右边缘对齐 */
+  body:has(.problem-page-layout) .site-header-inner { max-width: min(1792px, 100vw); }
   /* Only this problem page leaves the global max-w-6xl container. The homepage is unchanged. */
   .problem-page-layout {
     display: grid;
@@ -94,7 +135,9 @@
     width: min(1744px, calc(100vw - 48px));
     margin-left: calc((100% - min(1744px, calc(100vw - 48px))) / 2);
   }
-  .practice-sidebar { position: sticky; top: 80px; max-height: calc(100dvh - 96px); overflow: auto; margin-top: 32px; }
+  /* 桌面侧栏：跟着页面滚动停在顶栏下面，高度占满剩下的屏幕，里面的编辑器和控制台按比例分 */
+  .practice-sidebar:not(.practice-shell--focus) { position: sticky; top: 80px; display: flex; flex-direction: column; height: calc(100dvh - 96px); margin-top: 32px; }
+  .practice-sidebar:not(.practice-shell--focus) > .practice-editor-column { flex: 1 1 auto; }
 }
 @media (min-width: 1500px) {
   .problem-page-layout { grid-template-columns: minmax(0, 1fr) 540px; }
@@ -105,18 +148,33 @@
   .problem-toc { display: block; }
   .problem-learn-inline { display: none; }
 }
-@media (max-width: 767px) {
+/* 上下排列（<1024，手机和竖着的平板）：铺满整个屏幕；题面在上，可以拖动调整高度、收起、只看题目 */
+@media (max-width: 1023px) {
   .practice-shell--focus {
-    inset: 8px !important;
-    width: calc(100vw - 16px) !important;
-    height: calc(100dvh - 16px);
-    max-height: calc(100dvh - 16px) !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100dvh;
+    max-height: 100dvh !important;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(160px, 0.35fr) minmax(0, 0.65fr);
-    gap: 12px;
-    padding: 12px;
-    border-radius: 20px;
-    --practice-editor-height: clamp(230px, 36dvh, 380px);
+    grid-template-rows: minmax(0, var(--practice-statement-size, 38%)) 14px minmax(0, 1fr);
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    border: 0;
+    border-radius: 0;
   }
+  .practice-shell--focus > .practice-focus-statement { grid-column: 1; grid-row: 1; }
+  .practice-shell--focus > .practice-split-handle { grid-column: 1; grid-row: 2; width: auto; height: 14px; }
+  .practice-shell--focus > .practice-editor-column { grid-column: 1; grid-row: 3; }
+  .practice-shell--focus .practice-focus-statement { border-radius: 16px; }
+  /* 收起题目：只留标题栏，下面全给代码 */
+  .practice-shell--focus[data-statement="folded"] { grid-template-rows: auto 8px minmax(0, 1fr); }
+  /* 只看题目：题面占满，代码区只留顶上那一行（模式切换、退出），点「返回代码」回来 */
+  .practice-shell--focus[data-statement="only"] { grid-template-rows: minmax(0, 1fr) 8px auto; }
+  .practice-shell--focus[data-statement="only"] .practice-editor-column > :not(:first-child),
+  .practice-shell--focus[data-statement="only"] .practice-editor-column > #practice { display: none; }
+  .practice-shell--focus[data-statement="only"] .practice-editor-column > :first-child { padding-bottom: 0; }
+  .practice-focus-statement-heading { padding: 8px 8px 8px 14px; }
   .practice-focus-statement-body { padding: 16px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .practice-shell--focus { padding: 16px; }
 }

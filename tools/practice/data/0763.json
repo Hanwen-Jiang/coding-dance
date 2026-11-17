@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def partitionLabels(self, s: str) -> List[int]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction partitionLabels(s) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction partitionLabels(s: string): number[] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def partitionLabels(self, s: str) -> List[int]:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @return {number[]}\n */\nvar partitionLabels = function(s) {\n  \n};",
+      "typescript": "function partitionLabels(s: string): number[] {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -304,6 +304,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "aee8cafc"
+    ],
+    "javascript": [
+      "2e6585bc"
+    ],
+    "typescript": [
+      "9e50e402"
     ]
   }
 }

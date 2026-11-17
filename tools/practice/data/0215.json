@@ -15,9 +15,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def findKthLargest(self, nums: List[int], k: int) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction findKthLargest(nums, k) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction findKthLargest(nums: number[], k: number): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def findKthLargest(self, nums: List[int], k: int) -> int:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @param {number} k\n * @return {number}\n */\nvar findKthLargest = function(nums, k) {\n  \n};",
+      "typescript": "function findKthLargest(nums: number[], k: number): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -415,6 +415,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "eef37ebb"
+    ],
+    "javascript": [
+      "57f99a6e"
+    ],
+    "typescript": [
+      "9ba9967f"
     ]
   }
 }

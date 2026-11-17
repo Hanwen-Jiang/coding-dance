@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def nextPermutation(self, nums: List[int]) -> None:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction nextPermutation(nums) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction nextPermutation(nums: number[]): void {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def nextPermutation(self, nums: List[int]) -> None:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @return {void}\n */\nvar nextPermutation = function(nums) {\n  \n};",
+      "typescript": "function nextPermutation(nums: number[]): void {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -498,6 +498,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "ee6e84dd"
+    ],
+    "javascript": [
+      "b1e225b8"
+    ],
+    "typescript": [
+      "b1b9fb49"
     ]
   }
 }

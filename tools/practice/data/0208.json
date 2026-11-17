@@ -31,9 +31,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Trie:\n    def __init__(self):\n        # 初始化数据结构\n        pass\n\n    def insert(self, word: str) -> None:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def search(self, word: str) -> bool:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def startsWith(self, prefix: str) -> bool:\n        raise NotImplementedError(\"请完成此方法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass Trie {\n  constructor() {\n    // 初始化数据结构\n  }\n\n  insert(word) {\n    throw new Error(\"请完成此方法\");\n  }\n\n  search(word) {\n    throw new Error(\"请完成此方法\");\n  }\n\n  startsWith(prefix) {\n    throw new Error(\"请完成此方法\");\n  }\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass Trie {\n  constructor() {\n    // 初始化数据结构\n  }\n\n  insert(word: string): void {\n    throw new Error(\"请完成此方法\");\n  }\n\n  search(word: string): boolean {\n    throw new Error(\"请完成此方法\");\n  }\n\n  startsWith(prefix: string): boolean {\n    throw new Error(\"请完成此方法\");\n  }\n}\n"
+      "python": "class Trie:\n\n    def __init__(self):\n        \n\n    def insert(self, word: str) -> None:\n        \n\n    def search(self, word: str) -> bool:\n        \n\n    def startsWith(self, prefix: str) -> bool:\n        \n\n\n# Your Trie object will be instantiated and called as such:\n# obj = Trie()\n# obj.insert(word)\n# param_1 = obj.search(word)\n# param_2 = obj.startsWith(prefix)\n",
+      "javascript": "var Trie = function() {\n  \n};\n\n/**\n * @param {string} word\n * @return {void}\n */\nTrie.prototype.insert = function(word) {\n  \n};\n\n/**\n * @param {string} word\n * @return {boolean}\n */\nTrie.prototype.search = function(word) {\n  \n};\n\n/**\n * @param {string} prefix\n * @return {boolean}\n */\nTrie.prototype.startsWith = function(prefix) {\n  \n};\n\n/**\n * Your Trie object will be instantiated and called as such:\n * var obj = new Trie()\n * obj.insert(word)\n * var param_1 = obj.search(word)\n * var param_2 = obj.startsWith(prefix)\n */\n",
+      "typescript": "class Trie {\n  constructor() {\n    \n  }\n\n  insert(word: string): void {\n    \n  }\n\n  search(word: string): boolean {\n    \n  }\n\n  startsWith(prefix: string): boolean {\n    \n  }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * var obj = new Trie()\n * obj.insert(word)\n * var param_1 = obj.search(word)\n * var param_2 = obj.startsWith(prefix)\n */\n"
     },
     "acm": {
       "python": "",
@@ -850,6 +850,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "00e2c418"
+    ],
+    "javascript": [
+      "37ce6dc6"
+    ],
+    "typescript": [
+      "38d69031"
     ]
   }
 }

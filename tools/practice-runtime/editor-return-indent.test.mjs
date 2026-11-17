@@ -290,7 +290,11 @@ async function reducedMotionReturn() {
 async function narrowFocusReturn() {
   const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "no-preference" }), p = await mobile.newPage();
   p.on("pageerror", (error) => errors.push(error.message));
-  await p.goto(`${base}/p/15/`); const code = p.getByRole("textbox", { name: "代码编辑器", exact: true }); await code.waitFor();
+  // 1200px 以下页面里不放编辑器：从底部的「写代码」进入全屏的题面 + 编辑器
+  await p.goto(`${base}/p/15/`);
+  await p.getByRole("button", { name: "写代码", exact: true }).click();
+  await p.waitForFunction(() => document.querySelector(".practice-sidebar")?.dataset.focusPhase === "open");
+  const code = p.getByRole("textbox", { name: "代码编辑器", exact: true }); await code.waitFor();
   await p.waitForFunction(() => document.querySelector(".cm-content")?.getAttribute("contenteditable") === "true");
   await code.evaluate((element) => {
     const view = element.cmTile?.root?.view || element.cmView?.view;
@@ -298,8 +302,6 @@ async function narrowFocusReturn() {
     view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: source }, selection: { anchor: 3, head: 7 } });
     window.__mobileFocusRefs = { element, view, source, selection: view.state.selection.main.toJSON() };
   });
-  await p.getByRole("button", { name: "进入专注模式", exact: true }).click();
-  await p.waitForFunction(() => document.querySelector(".practice-sidebar")?.dataset.focusPhase === "open");
   await p.locator(".practice-sidebar").evaluate(async (e) => { await Promise.all(e.getAnimations().filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime)).map((a) => a.finished.catch(() => {}))); });
   const layout = await p.evaluate(() => {
     const a = document.querySelector(".practice-focus-statement").getBoundingClientRect(), b = document.querySelector(".practice-editor-column").getBoundingClientRect();

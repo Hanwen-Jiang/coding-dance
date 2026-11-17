@@ -146,6 +146,8 @@ for (const file of dataFiles) {
           assert.ok(!knownPrevious.has(templates.starterHash(previous + "\n// user-edited")), `${id} ${language}: edited prior starter must stay outside automatic migration`);
         }
       }
+      // 力扣模式的模板方法体是空的（和力扣一样）：填一句占位异常，验证模板能被解析、输入能构造、能走到方法里
+      if (mode === "leetcode") starter = starter.replace(/^([ \t]+)$/gm, (_, indent) => language === "python" ? `${indent}raise NotImplementedError("请完成")` : `${indent}throw new Error("请完成");`);
       if (language === "typescript") starter = typescript.transpileModule(starter, { compilerOptions: { target: typescript.ScriptTarget.ES2022, module: typescript.ModuleKind.None } }).outputText;
       const result = language === "python" ? executePython(starter, mode, problem.signature, selectedCases[0]) : execute(starter, mode, problem.signature, selectedCases[0]);
       if (mode === "leetcode") assert.match(result.error || "", /请完成/, `${id} ${language} ${mode} template should parse/construct inputs and reach its blank method: ${result.error}`);
