@@ -28,6 +28,31 @@ jobs:
         working-directory: site
         run: node lib/sync/test/sync.test.ts
 
+  practice:
+    name: 练习数据和运行器
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 练习数据要和提交的一致
+        run: |
+          node tools/practice/build.cjs
+          git diff --exit-code -- site/public/practice
+      - name: 练习数据和输入输出的测试
+        run: node tools/practice/test.cjs
+      # 网站的其他依赖（HeroUI Pro）要授权，CI 里装不了，所以网站本身不在 CI 里构建；这里只单独装运行器测试用到的两个包
+      - name: 装运行器测试要的包
+        run: |
+          mkdir -p /tmp/rt && cd /tmp/rt && npm init -y > /dev/null && npm install --no-audit --no-fund pyodide@314.0.8 typescript@5.6.3
+          mkdir -p "$GITHUB_WORKSPACE/site/node_modules" && cp -r /tmp/rt/node_modules/. "$GITHUB_WORKSPACE/site/node_modules/"
+      - name: 运行器的测试（Python、JavaScript、TypeScript）
+        run: node tools/practice-runtime/test.mjs
+
   judge:
     name: 判题 ${{ matrix.lang }}
     runs-on: ubuntu-latest

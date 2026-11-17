@@ -134,7 +134,7 @@
 
 ## 任务
 
-### 阶段 0：合并 PR #14
+### 阶段 0：合并 PR #14 — 认领：Claude（主会话，分支 `practice`）
 - [ ] 让 CI 跑起来（外部 fork 的 PR 要在 GitHub 上批准运行）
 - [ ] 练习数据别只放在 `site/public/practice/`：至少在 CI 里重新生成并 `git diff` 检查，或者改成运行时从仓库读
 - [ ] TypeScript 只转译不做类型检查：要么做类型检查，要么在界面上说明
