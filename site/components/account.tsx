@@ -386,11 +386,11 @@ export function SetupCard() {
 }
 
 /** 「用 GitHub 登录」按钮。顺手 Star 和关注共创者都放在登录之后的开通卡片里，这里只管登录 */
-export function LoginButton({ size }: { size?: "sm" | "md" | "lg" }) {
+export function LoginButton({ size, className }: { size?: "sm" | "md" | "lg"; className?: string }) {
   const { loginHref } = useProgress();
   // 在 Button 自己的 onPress 里跳转：Button 不让点击冒泡，包一层 <a onClick> 是收不到的
   return (
-    <Button size={size} onPress={() => { window.location.href = loginHref(); }}>
+    <Button className={className} size={size} onPress={() => { window.location.href = loginHref(); }}>
       <PixelIcon cell={1.75} name="cat" />
       用 GitHub 登录
     </Button>
@@ -403,17 +403,18 @@ export function LoginHint() {
   if (loading || !session?.configured || session.user) return null;
   return (
     <Card className="reveal p-5 sm:px-6">
+      {/* 说明至少要 18rem 宽：放不下按钮时按钮换到下一行（手机上占满一行），不再把说明挤成一两个字一行 */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 flex-1 items-start gap-4">
+        <div className="flex min-w-0 grow basis-72 items-start gap-4">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-foreground/[0.06]"><PixelIcon cell={2.5} name="cat" /></span>
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-base font-semibold">登录后，这里显示你自己的进度</span>
             <span className="text-sm leading-6 text-muted">
-              现在看到的是 0 进度。用 GitHub 登录并授权后，网站会在你的账号下建一个 <span className="font-mono">{session.repoName}</span> 仓库（私有或公开由你定），进度、题解和尝试记录都存在里面。网站能读写哪些仓库，由你在 GitHub 的授权页面上选。
+              进度和题解存在你自己 GitHub 账号下的 <span className="font-mono">{session.repoName}</span> 仓库里，可以设成私有。
             </span>
           </div>
         </div>
-        <LoginButton />
+        <LoginButton className="w-full sm:w-auto" />
       </div>
     </Card>
   );

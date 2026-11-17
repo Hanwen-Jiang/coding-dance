@@ -215,6 +215,8 @@ export interface SessionInfo {
   starred: boolean;
   /** 页面上请用户点 Star 的仓库，各自 Star 了没有 */
   stars: { repo: string; starred: boolean }[];
+  /** 网站有几个域名、这个会话还没同步到其余域名时，列出要同步的域名（只在登录域名上出现，见 functions/_lib/sso.ts） */
+  spread?: string[] | null;
 }
 
 /** POST /api/progress/star 里每个仓库的结果；没点上时 status 是 GitHub 返回的状态码 */
