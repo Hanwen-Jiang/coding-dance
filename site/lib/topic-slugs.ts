@@ -17,4 +17,7 @@ export const TOPIC_SLUGS = [
   "bfs",
   "dfs",
   "backtracking",
+  "two-pointers",
+  "sliding-window",
+  "monotonic",
 ];

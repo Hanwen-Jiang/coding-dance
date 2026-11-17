@@ -1,0 +1,504 @@
+{
+ "slug": "monotonic",
+ "name": "单调栈与单调队列",
+ "kind": "algo",
+ "order": 10,
+ "lede": "单调栈里的元素从栈底到栈顶保持单调。新元素进来前，把破坏单调性的元素都弹掉——被弹掉的那一刻，正好就是它「找到了右边第一个更小（或更大）的元素」。单调队列是两头都能出的单调栈，用来维护滑动窗口的最值。",
+ "related": [
+  739,
+  84,
+  42,
+  239,
+  496
+ ],
+ "sections": [
+  {
+   "key": "stack",
+   "t": "单调栈：下一个更小的元素",
+   "body": [
+    "每件商品的折扣是它<b>右边第一个</b>价格不超过它的商品的价格。暴力是对每个 i 往右找，O(n²)。",
+    "换个角度：从左往右扫，栈里放「还没找到折扣」的商品下标，它们的价格从栈底到栈顶是<b>递增</b>的。新来一个价格 p，栈顶的商品如果价格 &gt;= p，p 就是它右边第一个不超过它的价格——弹出它、算折扣；一直弹到栈顶比 p 小为止，再把 p 自己压进去。",
+    "每个下标进栈、出栈各一次，O(n)。「每日温度」（739）找的是右边第一个更大的，栈就是递减的。"
+   ],
+   "points": [
+    {
+     "t": "栈里存下标",
+     "body": "存下标才知道要更新答案的哪个位置；需要值时用 <code>prices[i]</code> 取。"
+    },
+    {
+     "t": "最后还在栈里的",
+     "body": "扫完以后还在栈里的商品，右边没有更便宜的，没有折扣，答案就是原价。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "递增栈",
+     "kind": null,
+     "note": null,
+     "key": "stack",
+     "code": "class Solution:\n    def finalPrices(self, prices: List[int]) -> List[int]:\n        ans = prices[:]\n        stack = []                              # 还没找到折扣的下标，价格从栈底到栈顶递增\n        for i, p in enumerate(prices):\n            while stack and prices[stack[-1]] >= p:     # p 是它右边第一个不超过它的价格\n                ans[stack.pop()] -= p\n            stack.append(i)\n        return ans",
+     "marks": {
+      "init": [
+       4
+      ],
+      "loop": [
+       5
+      ],
+      "pop": [
+       6,
+       7
+      ],
+      "push": [
+       8
+      ],
+      "done": [
+       9
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    public int[] finalPrices(int[] prices) {\n        int[] ans = prices.clone();\n        Deque<Integer> stack = new ArrayDeque<>();      // 还没找到折扣的下标，价格从栈底到栈顶递增\n        for (int i = 0; i < prices.length; i++) {\n            while (!stack.isEmpty() && prices[stack.peek()] >= prices[i]) { // prices[i] 是它右边第一个不超过它的价格\n                ans[stack.pop()] -= prices[i];\n            }\n            stack.push(i);\n        }\n        return ans;\n    }\n}",
+       "marks": {
+        "init": [
+         4
+        ],
+        "loop": [
+         5
+        ],
+        "pop": [
+         6,
+         7
+        ],
+        "push": [
+         9
+        ],
+        "done": [
+         11
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\npublic:\n    vector<int> finalPrices(vector<int>& prices) {\n        vector<int> ans = prices;\n        vector<int> st;                                 // 还没找到折扣的下标，价格从栈底到栈顶递增\n        for (int i = 0; i < (int)prices.size(); i++) {\n            while (!st.empty() && prices[st.back()] >= prices[i]) { // prices[i] 是它右边第一个不超过它的价格\n                ans[st.back()] -= prices[i];\n                st.pop_back();\n            }\n            st.push_back(i);\n        }\n        return ans;\n    }\n};",
+       "marks": {
+        "init": [
+         5
+        ],
+        "loop": [
+         6
+        ],
+        "pop": [
+         7,
+         8,
+         9
+        ],
+        "push": [
+         11
+        ],
+        "done": [
+         13
+        ]
+       }
+      },
+      "go": {
+       "code": "func finalPrices(prices []int) []int {\n\tans := append([]int{}, prices...)\n\tstack := []int{} // 还没找到折扣的下标，价格从栈底到栈顶递增\n\tfor i, p := range prices {\n\t\tfor len(stack) > 0 && prices[stack[len(stack)-1]] >= p { // p 是它右边第一个不超过它的价格\n\t\t\tans[stack[len(stack)-1]] -= p\n\t\t\tstack = stack[:len(stack)-1]\n\t\t}\n\t\tstack = append(stack, i)\n\t}\n\treturn ans\n}",
+       "marks": {
+        "init": [
+         3
+        ],
+        "loop": [
+         4
+        ],
+        "pop": [
+         5,
+         6,
+         7
+        ],
+        "push": [
+         9
+        ],
+        "done": [
+         11
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var finalPrices = function(prices) {\n    const ans = prices.slice();\n    const stack = [];                               // 还没找到折扣的下标，价格从栈底到栈顶递增\n    prices.forEach((p, i) => {\n        while (stack.length && prices[stack[stack.length - 1]] >= p) {  // p 是它右边第一个不超过它的价格\n            ans[stack.pop()] -= p;\n        }\n        stack.push(i);\n    });\n    return ans;\n};",
+       "marks": {
+        "init": [
+         3
+        ],
+        "loop": [
+         4
+        ],
+        "pop": [
+         5,
+         6
+        ],
+        "push": [
+         8
+        ],
+        "done": [
+         10
+        ]
+       }
+      },
+      "typescript": {
+       "code": "function finalPrices(prices: number[]): number[] {\n    const ans = prices.slice();\n    const stack: number[] = [];                     // 还没找到折扣的下标，价格从栈底到栈顶递增\n    prices.forEach((p, i) => {\n        while (stack.length && prices[stack[stack.length - 1]] >= p) {  // p 是它右边第一个不超过它的价格\n            ans[stack.pop()!] -= p;\n        }\n        stack.push(i);\n    });\n    return ans;\n}",
+       "marks": {
+        "init": [
+         3
+        ],
+        "loop": [
+         4
+        ],
+        "pop": [
+         5,
+         6
+        ],
+        "push": [
+         8
+        ],
+        "done": [
+         10
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "单调栈：下一个更小的元素",
+    "legend": [
+     [
+      "a",
+      "新来的价格"
+     ],
+     [
+      "e",
+      "在栈里（还没找到折扣）"
+     ],
+     [
+      "c",
+      "已经算好折扣"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例 1",
+      "args": {
+       "prices": [
+        8,
+        4,
+        6,
+        2,
+        3
+       ]
+      },
+      "note": "prices = [8,4,6,2,3]"
+     }
+    ],
+    "build": "build(a, snap) {\n        const P = a.prices, ans = P.slice(), st = [], done = new Set();\n        let cur = -1;\n        const view = () => [\n          { t: \"bars\", label: \"prices\", items: P.map((v, i) => ({ v, cls: i === cur ? \"a\" : st.includes(i) ? \"e\" : done.has(i) ? \"c\" : \"\" })) },\n          { t: \"chips\", label: \"栈（右边是栈顶，写的是 下标:价格）\", items: st.map((i) => `${i}:${P[i]}`), empty: \"空\" },\n          { t: \"array\", label: \"ans\", items: ans.map((v, i) => ({ v, cls: done.has(i) ? \"c\" : \"\" })) },\n        ];\n        snap(\"开始\", \"栈是空的。ans 先复制一份原价。\", view(), { at: \"init\" });\n        P.forEach((p, i) => {\n          cur = i;\n          const popped = [];\n          while (st.length && P[st[st.length - 1]] >= p) { const j = st.pop(); ans[j] -= p; done.add(j); popped.push(j); }\n          if (popped.length) snap(\"弹出\", `新来的价格 ${p}。栈顶 ${popped.map((j) => `${j}:${P[j]}`).join(\"、\")} 的价格都 &gt;= ${p}，${p} 就是它们右边第一个不超过它们的价格，依次弹出、减去 ${p}。`, view(), { at: [\"loop\", \"pop\"] });\n          st.push(i);\n          snap(\"压栈\", `${popped.length ? \"栈顶比 \" + p + \" 小了，\" : `栈顶${st.length > 1 ? \"比 \" + p + \" 小\" : \"是空的\"}，`}把下标 ${i} 压进去。栈里的价格仍然递增。`, view(), { at: popped.length ? \"push\" : [\"loop\", \"pop\", \"push\"] });\n        });\n        cur = -1;\n        snap(\"完成\", st.length ? `栈里剩下的 ${st.map((i) => `${i}:${P[i]}`).join(\"、\")} 右边没有更便宜的，按原价。` : \"所有商品都找到了折扣。\", view(), { at: \"done\", kind: \"ok\", ans: ans.slice() });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "新来的价格"
+       ],
+       [
+        "e",
+        "在栈里（还没找到折扣）"
+       ],
+       [
+        "c",
+        "已经算好折扣"
+       ]
+      ],
+      "code": "stack",
+      "build": "build(a, snap) {\n        const P = a.prices, ans = P.slice(), st = [], done = new Set();\n        let cur = -1;\n        const view = () => [\n          { t: \"bars\", label: \"prices\", items: P.map((v, i) => ({ v, cls: i === cur ? \"a\" : st.includes(i) ? \"e\" : done.has(i) ? \"c\" : \"\" })) },\n          { t: \"chips\", label: \"栈（右边是栈顶，写的是 下标:价格）\", items: st.map((i) => `${i}:${P[i]}`), empty: \"空\" },\n          { t: \"array\", label: \"ans\", items: ans.map((v, i) => ({ v, cls: done.has(i) ? \"c\" : \"\" })) },\n        ];\n        snap(\"开始\", \"栈是空的。ans 先复制一份原价。\", view(), { at: \"init\" });\n        P.forEach((p, i) => {\n          cur = i;\n          const popped = [];\n          while (st.length && P[st[st.length - 1]] >= p) { const j = st.pop(); ans[j] -= p; done.add(j); popped.push(j); }\n          if (popped.length) snap(\"弹出\", `新来的价格 ${p}。栈顶 ${popped.map((j) => `${j}:${P[j]}`).join(\"、\")} 的价格都 &gt;= ${p}，${p} 就是它们右边第一个不超过它们的价格，依次弹出、减去 ${p}。`, view(), { at: [\"loop\", \"pop\"] });\n          st.push(i);\n          snap(\"压栈\", `${popped.length ? \"栈顶比 \" + p + \" 小了，\" : `栈顶${st.length > 1 ? \"比 \" + p + \" 小\" : \"是空的\"}，`}把下标 ${i} 压进去。栈里的价格仍然递增。`, view(), { at: popped.length ? \"push\" : [\"loop\", \"pop\", \"push\"] });\n        });\n        cur = -1;\n        snap(\"完成\", st.length ? `栈里剩下的 ${st.map((i) => `${i}:${P[i]}`).join(\"、\")} 右边没有更便宜的，按原价。` : \"所有商品都找到了折扣。\", view(), { at: \"done\", kind: \"ok\", ans: ans.slice() });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => { const prices = R.arr(R.int(4, 9), 1, 10); return { args: { prices }, note: `prices = ${R.fmt(prices)}` }; })(R); return { args: r.args, note: r.note }; }"
+   }
+  },
+  {
+   "key": "queue",
+   "t": "单调队列：滑动窗口的最小值",
+   "body": [
+    "求每个长度为 k 的窗口里的最小值。队列里存下标，对应的值从队头到队尾<b>递增</b>：新来一个数 x，队尾比 x 大的都弹掉——它们比 x 早离开窗口、又比 x 大，以后不可能再是最小值了。",
+    "队头的下标如果已经滑出窗口（<code>&lt;= i - k</code>）就从队头弹掉。这样队头永远是当前窗口的最小值。每个下标进出队列各一次，O(n)。",
+    "「滑动窗口最大值」（239）把比较方向反过来就行，可以拿这一节的代码去改。"
+   ],
+   "points": [
+    {
+     "t": "两头都要出",
+     "body": "队尾弹「没用的」，队头弹「过期的」，所以要用双端队列：Python <code>deque</code>，Java <code>ArrayDeque</code>，C++ <code>deque</code>。"
+    },
+    {
+     "t": "窗口满了才记答案",
+     "body": "<code>i &gt;= k - 1</code> 时窗口里才有 k 个数。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "递增的双端队列",
+     "kind": null,
+     "note": null,
+     "key": "queue",
+     "code": "class Solution:\n    def minSlidingWindow(self, nums: List[int], k: int) -> List[int]:\n        q = deque()                             # 存下标，对应的值从队头到队尾递增\n        res = []\n        for i, x in enumerate(nums):\n            while q and nums[q[-1]] >= x:       # 比 x 大的以后不可能是最小值了\n                q.pop()\n            q.append(i)\n            if q[0] <= i - k:                   # 队头滑出了窗口\n                q.popleft()\n            if i >= k - 1:                      # 窗口满了：队头就是最小值\n                res.append(nums[q[0]])\n        return res",
+     "marks": {
+      "init": [
+       3,
+       4
+      ],
+      "loop": [
+       5
+      ],
+      "pop": [
+       6,
+       7
+      ],
+      "push": [
+       8
+      ],
+      "expire": [
+       9,
+       10
+      ],
+      "record": [
+       11,
+       12
+      ],
+      "done": [
+       13
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    public int[] minSlidingWindow(int[] nums, int k) {\n        Deque<Integer> q = new ArrayDeque<>();          // 存下标，对应的值从队头到队尾递增\n        int[] res = new int[nums.length - k + 1];\n        for (int i = 0; i < nums.length; i++) {\n            while (!q.isEmpty() && nums[q.peekLast()] >= nums[i]) {     // 比 nums[i] 大的以后不可能是最小值了\n                q.pollLast();\n            }\n            q.offerLast(i);\n            if (q.peekFirst() <= i - k) {               // 队头滑出了窗口\n                q.pollFirst();\n            }\n            if (i >= k - 1) {                           // 窗口满了：队头就是最小值\n                res[i - k + 1] = nums[q.peekFirst()];\n            }\n        }\n        return res;\n    }\n}",
+       "marks": {
+        "init": [
+         3,
+         4
+        ],
+        "loop": [
+         5
+        ],
+        "pop": [
+         6,
+         7
+        ],
+        "push": [
+         9
+        ],
+        "expire": [
+         10,
+         11
+        ],
+        "record": [
+         13,
+         14
+        ],
+        "done": [
+         17
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\npublic:\n    vector<int> minSlidingWindow(vector<int>& nums, int k) {\n        deque<int> q;                                   // 存下标，对应的值从队头到队尾递增\n        vector<int> res;\n        for (int i = 0; i < (int)nums.size(); i++) {\n            while (!q.empty() && nums[q.back()] >= nums[i]) {   // 比 nums[i] 大的以后不可能是最小值了\n                q.pop_back();\n            }\n            q.push_back(i);\n            if (q.front() <= i - k) {                   // 队头滑出了窗口\n                q.pop_front();\n            }\n            if (i >= k - 1) {                           // 窗口满了：队头就是最小值\n                res.push_back(nums[q.front()]);\n            }\n        }\n        return res;\n    }\n};",
+       "marks": {
+        "init": [
+         4,
+         5
+        ],
+        "loop": [
+         6
+        ],
+        "pop": [
+         7,
+         8
+        ],
+        "push": [
+         10
+        ],
+        "expire": [
+         11,
+         12
+        ],
+        "record": [
+         14,
+         15
+        ],
+        "done": [
+         18
+        ]
+       }
+      },
+      "go": {
+       "code": "func minSlidingWindow(nums []int, k int) []int {\n\tq := []int{}   // 存下标，对应的值从队头到队尾递增\n\tres := []int{}\n\tfor i, x := range nums {\n\t\tfor len(q) > 0 && nums[q[len(q)-1]] >= x { // 比 x 大的以后不可能是最小值了\n\t\t\tq = q[:len(q)-1]\n\t\t}\n\t\tq = append(q, i)\n\t\tif q[0] <= i-k { // 队头滑出了窗口\n\t\t\tq = q[1:]\n\t\t}\n\t\tif i >= k-1 { // 窗口满了：队头就是最小值\n\t\t\tres = append(res, nums[q[0]])\n\t\t}\n\t}\n\treturn res\n}",
+       "marks": {
+        "init": [
+         2,
+         3
+        ],
+        "loop": [
+         4
+        ],
+        "pop": [
+         5,
+         6
+        ],
+        "push": [
+         8
+        ],
+        "expire": [
+         9,
+         10
+        ],
+        "record": [
+         12,
+         13
+        ],
+        "done": [
+         16
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var minSlidingWindow = function(nums, k) {\n    const q = [];                                   // 存下标，对应的值从队头到队尾递增\n    let head = 0;                                   // 队头的位置，出队只要 head++\n    const res = [];\n    nums.forEach((x, i) => {\n        while (q.length > head && nums[q[q.length - 1]] >= x) {     // 比 x 大的以后不可能是最小值了\n            q.pop();\n        }\n        q.push(i);\n        if (q[head] <= i - k) {                     // 队头滑出了窗口\n            head++;\n        }\n        if (i >= k - 1) {                           // 窗口满了：队头就是最小值\n            res.push(nums[q[head]]);\n        }\n    });\n    return res;\n};",
+       "marks": {
+        "init": [
+         2,
+         3,
+         4
+        ],
+        "loop": [
+         5
+        ],
+        "pop": [
+         6,
+         7
+        ],
+        "push": [
+         9
+        ],
+        "expire": [
+         10,
+         11
+        ],
+        "record": [
+         13,
+         14
+        ],
+        "done": [
+         17
+        ]
+       }
+      },
+      "typescript": {
+       "code": "function minSlidingWindow(nums: number[], k: number): number[] {\n    const q: number[] = [];                         // 存下标，对应的值从队头到队尾递增\n    let head = 0;                                   // 队头的位置，出队只要 head++\n    const res: number[] = [];\n    nums.forEach((x, i) => {\n        while (q.length > head && nums[q[q.length - 1]] >= x) {     // 比 x 大的以后不可能是最小值了\n            q.pop();\n        }\n        q.push(i);\n        if (q[head] <= i - k) {                     // 队头滑出了窗口\n            head++;\n        }\n        if (i >= k - 1) {                           // 窗口满了：队头就是最小值\n            res.push(nums[q[head]]);\n        }\n    });\n    return res;\n}",
+       "marks": {
+        "init": [
+         2,
+         3,
+         4
+        ],
+        "loop": [
+         5
+        ],
+        "pop": [
+         6,
+         7
+        ],
+        "push": [
+         9
+        ],
+        "expire": [
+         10,
+         11
+        ],
+        "record": [
+         13,
+         14
+        ],
+        "done": [
+         17
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "单调队列：滑动窗口的最小值",
+    "legend": [
+     [
+      "a",
+      "新来的数"
+     ],
+     [
+      "e",
+      "窗口"
+     ],
+     [
+      "g",
+      "在队列里"
+     ],
+     [
+      "c",
+      "队头：窗口最小值"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例",
+      "args": {
+       "nums": [
+        1,
+        3,
+        -1,
+        -3,
+        5,
+        3,
+        6,
+        7
+       ],
+       "k": 3
+      },
+      "note": "nums = [1,3,-1,-3,5,3,6,7], k = 3"
+     }
+    ],
+    "build": "build(a, snap) {\n        const A = a.nums, k = a.k, q = [], res = [];\n        let cur = -1;\n        const view = () => [\n          { t: \"array\", label: \"nums\", items: A.map((v, i) => ({ v, cls: i === cur ? \"a\" : q.length && i === q[0] && cur >= k - 1 ? \"c\" : q.includes(i) ? \"g\" : cur >= 0 && i > cur - k && i <= cur ? \"e\" : \"\" })) },\n          { t: \"chips\", label: \"队列（左边是队头，写的是 下标:值）\", items: q.map((i) => `${i}:${A[i]}`), empty: \"空\" },\n          { t: \"chips\", label: \"res\", items: res.slice(), empty: \"空\" },\n        ];\n        snap(\"开始\", `队列是空的，窗口长度 k = ${k}。`, view(), { at: \"init\" });\n        A.forEach((x, i) => {\n          cur = i;\n          const popped = [];\n          while (q.length && A[q[q.length - 1]] >= x) popped.push(q.pop());\n          q.push(i);\n          const tags = [\"loop\", \"pop\", \"push\"];\n          let msg = `新来 nums[${i}] = ${x}。` + (popped.length ? `队尾 ${popped.map((j) => A[j]).join(\"、\")} 都 &gt;= ${x}，它们比 ${x} 先离开窗口又更大，不可能再是最小值，弹掉。` : \"队尾比它小（或者队列空），不用弹。\") + `把 ${i} 放到队尾。`;\n          if (q[0] <= i - k) { const e = q.shift(); msg += `队头的下标 ${e} 已经滑出窗口，从队头弹掉。`; tags.push(\"expire\"); }\n          if (i >= k - 1) { res.push(A[q[0]]); msg += `窗口 [${i - k + 1}, ${i}] 满了，队头 ${A[q[0]]} 就是最小值。`; tags.push(\"record\"); }\n          snap(i >= k - 1 ? \"记下最小值\" : \"窗口还没满\", msg, view(), { at: tags });\n        });\n        cur = -1;\n        snap(\"完成\", `结果是 [${res.join(\", \")}]。`, view(), { at: \"done\", kind: \"ok\", ans: res.slice() });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "新来的数"
+       ],
+       [
+        "e",
+        "窗口"
+       ],
+       [
+        "g",
+        "在队列里"
+       ],
+       [
+        "c",
+        "队头：窗口最小值"
+       ]
+      ],
+      "code": "queue",
+      "build": "build(a, snap) {\n        const A = a.nums, k = a.k, q = [], res = [];\n        let cur = -1;\n        const view = () => [\n          { t: \"array\", label: \"nums\", items: A.map((v, i) => ({ v, cls: i === cur ? \"a\" : q.length && i === q[0] && cur >= k - 1 ? \"c\" : q.includes(i) ? \"g\" : cur >= 0 && i > cur - k && i <= cur ? \"e\" : \"\" })) },\n          { t: \"chips\", label: \"队列（左边是队头，写的是 下标:值）\", items: q.map((i) => `${i}:${A[i]}`), empty: \"空\" },\n          { t: \"chips\", label: \"res\", items: res.slice(), empty: \"空\" },\n        ];\n        snap(\"开始\", `队列是空的，窗口长度 k = ${k}。`, view(), { at: \"init\" });\n        A.forEach((x, i) => {\n          cur = i;\n          const popped = [];\n          while (q.length && A[q[q.length - 1]] >= x) popped.push(q.pop());\n          q.push(i);\n          const tags = [\"loop\", \"pop\", \"push\"];\n          let msg = `新来 nums[${i}] = ${x}。` + (popped.length ? `队尾 ${popped.map((j) => A[j]).join(\"、\")} 都 &gt;= ${x}，它们比 ${x} 先离开窗口又更大，不可能再是最小值，弹掉。` : \"队尾比它小（或者队列空），不用弹。\") + `把 ${i} 放到队尾。`;\n          if (q[0] <= i - k) { const e = q.shift(); msg += `队头的下标 ${e} 已经滑出窗口，从队头弹掉。`; tags.push(\"expire\"); }\n          if (i >= k - 1) { res.push(A[q[0]]); msg += `窗口 [${i - k + 1}, ${i}] 满了，队头 ${A[q[0]]} 就是最小值。`; tags.push(\"record\"); }\n          snap(i >= k - 1 ? \"记下最小值\" : \"窗口还没满\", msg, view(), { at: tags });\n        });\n        cur = -1;\n        snap(\"完成\", `结果是 [${res.join(\", \")}]。`, view(), { at: \"done\", kind: \"ok\", ans: res.slice() });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => { const nums = R.arr(R.int(4, 9), 1, 12), k = R.int(1, Math.min(4, nums.length)); return { args: { nums, k }, note: `nums = ${R.fmt(nums)}, k = ${k}` }; })(R); return { args: r.args, note: r.note }; }"
+   }
+  }
+ ]
+}
