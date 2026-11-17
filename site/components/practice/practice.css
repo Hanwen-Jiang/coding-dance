@@ -175,6 +175,10 @@
   .practice-dock-handle .practice-resize-grip { height: 56px; }
   .problem-page-layout:has(> .practice-dock-handle.practice-resize-handle--active) { transition: none; }
   html:has(.practice-dock-handle.practice-resize-handle--active) { cursor: col-resize; }
+  /* 练习区在右边时不再放「本页」目录（两列侧栏挤在一起很别扭），相关基础放在题面下面 */
+  html:not([data-practice="closed"]) .problem-original-sections { grid-template-columns: minmax(0, 1fr); }
+  html:not([data-practice="closed"]) .problem-toc { display: none; }
+  html:not([data-practice="closed"]) .problem-learn-inline { display: block; }
   /* 桌面侧栏：跟着页面滚动停在顶栏下面，高度占满剩下的屏幕，里面的编辑器和控制台按比例分 */
   .practice-sidebar:not(.practice-shell--focus) { position: sticky; top: 80px; display: flex; flex-direction: column; height: calc(100dvh - 96px); margin-top: 32px; transition: opacity 200ms ease 120ms, visibility 0s; }
   .practice-sidebar:not(.practice-shell--focus) > .practice-editor-column { flex: 1 1 auto; }
