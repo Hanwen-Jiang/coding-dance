@@ -221,7 +221,8 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
           )}
           <div className="dm-views" dangerouslySetInnerHTML={{ __html: html }} />
           <div className="flex flex-col gap-3 border-t border-separator pt-4">
-            <div className="flex flex-wrap items-center gap-2">
+            {/* 一行放下：手机上和桌面窄的演示栏里，「自动播放」带字会被挤到第二行，所以只留图标（读屏和悬停提示里有文字） */}
+            <div className="flex flex-nowrap items-center gap-2">
               <Button size="sm" variant="ghost" onPress={() => { setPlaying(false); go(0); }}>
                 重置
               </Button>
@@ -233,9 +234,8 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
                 下一步
                 <ChevronRight />
               </Button>
-              <Button size="sm" variant="outline" onPress={togglePlay}>
+              <Button isIconOnly aria-label={playing ? "暂停" : "自动播放"} className="ms-auto shrink-0" size="sm" variant="outline" onPress={togglePlay}>
                 {playing ? <PauseIcon /> : <PlayIcon />}
-                {playing ? "暂停" : "自动播放"}
               </Button>
             </div>
             <div className="flex items-center gap-3">
