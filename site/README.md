@@ -39,7 +39,7 @@
 | 尝试记录（每次提交的原样代码、结果和分析，按时间排） | 登录用户自己的进度仓里的 `attempts/<编号>.<题名>/<日期>.<序号>.<结果>.md` |
 | 手写图解（spec 标了 `handwritten` 的题，目前没有） | `illustrations/<编号>.<题名>.html`，内嵌在题目页里 |
 
-通过 GitHub 读取的资源只要改仓库、push，网站最多一分钟后就会显示新内容（Functions 在内存里缓存 60 秒）。练习模板、ACM 题面和练习测试用例修改后，需要重新生成数据、构建并部署网站。
+通过 GitHub 读取的资源只要改仓库、push，不用重新部署。公共的资源接口（`/api/problems`、`/api/problem/<题号>`、`/api/practice/<题号>`、`/api/topics`、`/api/topic/<slug>`、`/api/raw/...`）在 Cloudflare 每个机房缓存（`functions/_lib/edge-cache.ts`）：60 秒内直接用缓存；过了 60 秒，下一次请求先拿到旧内容、同时在后台刷新，再下一次就是新的（响应头 `X-Edge-Cache` 是 `HIT` / `STALE` / `MISS`）。所以 push 一分钟后打开页面，可能要刷新两次才看到新内容。登录用户自己的接口（`/api/session`、`/api/progress*`、`/api/solutions`、`/api/settings`、`/api/sync/*`、`/api/auth/*`）不经过这个缓存，也不能加。练习模板、ACM 题面和练习测试用例修改后，需要重新生成数据、构建并部署网站。
 
 ## 登录和每个人自己的进度
 
@@ -105,6 +105,27 @@ wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 ```
 
 不要把令牌写进 `wrangler.toml`、`.dev.vars` 以外的任何文件，也不要提交 `.dev.vars`。仓库公开后可以删掉这个 secret，接口照样能用（未认证请求每小时有 60 次的限额，靠缓存一般够用）。
+
+## 首屏加载
+
+大部分访客在国内，首次打开要快、不能依赖国外的第三方服务：
+
+- **字体自托管**：Inter、JetBrains Mono、Silkscreen 的 latin 子集放在 `app/fonts/`（取自 fontsource，附 OFL 许可证），由 `app/fonts.ts` 用 `next/font/local` 输出到 `/_next/static/media/`。页面不请求 Google Fonts。正文和像素字体预加载，等宽字体用到才下载；都是 `font-display: swap`，等待期间用按字宽缩放过的后备字体，换上来时文字不跳。
+- **HeroUI 样式按组件引入**：`styles/heroui.css` 只引入用到的组件（OSS 和 Pro），整包有 680 KB。**用到新的 HeroUI 组件时，要在这个文件里加上它的样式**，否则组件没有样式；组件内部用到的组件也要有（比如 Select 要 list-box、popover）。
+- 首页的统计卡片没有用 Pro 的 `KPI` 组件（从 `@heroui-pro/react/kpi` 引入会连带 recharts，首页多 390 KB JS），而是在 `components/problem-list.tsx` 里按它的结构写了一样的标记，样式还是 Pro 的 `kpi.css`。
+- **缓存**（`public/_headers`）：`/_next/static/*`（文件名带内容哈希）和 `/practice-runtime/vendor/*` 缓存一年（`immutable`）；HTML 每次回源确认。Pyodide 和 TypeScript 由 `npm run prepare:practice` 复制到带版本号的目录 `public/practice-runtime/vendor/pyodide/<版本>/`、`vendor/typescript/<版本>/`，版本号由 `next.config.mjs` 从 `node_modules` 读出来写进 `lib/practice/runner.ts`，升级依赖后路径自动变，不会用到旧缓存。
+
+### 静态资源放到别的域名（可选，目前没用）
+
+`next.config.mjs` 的 `assetPrefix` 读构建时的环境变量 `ASSET_PREFIX`，默认空，静态资源和页面同域。以后要把 `/_next/static`（JS、CSS、字体）放到国内的 CDN 或对象存储（腾讯云 COS、阿里云 OSS 加 CDN）上：
+
+1. 那边的配置：
+   - **跨域**：字体是跨域加载的，要返回 `Access-Control-Allow-Origin`（`*`，或者列出网站的几个域名）；JS、CSS 也加上，免得以后用到 `crossorigin`。
+   - **类型**：`Content-Type` 要对（`.js` 是 `application/javascript`、`.css` 是 `text/css`、`.woff2` 是 `font/woff2`），对象存储按扩展名自动识别时检查一遍。
+   - **缓存**：`Cache-Control: public, max-age=31536000, immutable`，文件名带哈希，内容不会变。
+   - **域名**：国内 CDN 绑定自定义域名要 ICP 备案。
+2. 构建：`ASSET_PREFIX=https://<静态资源域名> npm run build`。
+3. 发布顺序：**先把 `out/_next/static/` 原样上传**（只增不删，旧页面还在用旧文件），**再部署 HTML**（`wrangler pages deploy out ...`）。反过来的话，新页面会引用还没上传的文件。
 
 ## 本地开发和部署
 

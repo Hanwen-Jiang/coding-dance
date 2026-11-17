@@ -1,9 +1,12 @@
 // 一道题的练习数据（力扣模式和 ACM 模式的模板、ACM 题面、练习用例）。
 // 数据在资源仓的 tools/practice/data/<四位编号>.json，由 tools/practice/build.cjs 生成；和其他题目资源一样运行时从仓库读，push 后一分钟内生效。
+import { edgeCached } from "../../_lib/edge-cache";
 import type { Env } from "../../_lib/github";
 import { fail, json, readText } from "../../_lib/github";
 
-export const onRequestGet = async ({ env, params }: { env: Env; params: { id: string } }) => {
+type Ctx = { request: Request; env: Env; params: { id: string }; waitUntil: (p: Promise<unknown>) => void };
+
+export const onRequestGet = edgeCached(async ({ env, params }: Ctx) => {
   const id = Number(params.id);
   if (!Number.isInteger(id) || id <= 0 || id > 9999) return json({ error: "题号不对" }, 400);
   try {
@@ -13,4 +16,4 @@ export const onRequestGet = async ({ env, params }: { env: Env; params: { id: st
   } catch (e) {
     return fail(e);
   }
-};
+});
