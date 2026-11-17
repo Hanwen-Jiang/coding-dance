@@ -15,6 +15,21 @@ export interface AuthEnv {
   PROGRESS_REPO: string;
   /** 页面上请用户点 Star 的仓库，逗号分隔的 owner/name；不设就只有模板仓 */
   STAR_REPOS?: string;
+  /** 创始会员的截止时间（ISO 时间）：在这之前授权网站或建好进度仓的用户，永久享有最高档 */
+  FOUNDER_CUTOFF?: string;
+}
+
+/**
+ * 会员档位。现在只有创始会员这一种区别（订阅还没做，见 ROADMAP 阶段 7）：
+ * 第一次授权网站或建好进度仓的时间早于 FOUNDER_CUTOFF 的，就是创始会员，永久最高档。数据来自 GitHub，网站不另存名单。
+ */
+export function membership(env: AuthEnv, joinedAt: (string | null | undefined)[]) {
+  const cutoff = Date.parse(env.FOUNDER_CUTOFF || "");
+  const first = joinedAt.map((t) => Date.parse(t || "")).filter(Number.isFinite).sort((a, b) => a - b)[0];
+  const founder = Number.isFinite(cutoff) && first !== undefined && first < cutoff;
+  return founder
+    ? { tier: "pro" as const, founder: true, since: new Date(first).toISOString().slice(0, 10) }
+    : { tier: "free" as const, founder: false, since: null };
 }
 
 /** 请用户点 Star 的仓库列表（只认 owner/name 这种写法） */

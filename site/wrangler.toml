@@ -15,5 +15,7 @@ TEMPLATE_REPO = "Hanwen-Jiang/hot100-progress-template"
 PROGRESS_REPO = "hot100-progress"
 # 页面上请用户点 Star 的仓库（逗号分隔）。界面上会逐个列出来，默认勾着，用户可以取消
 STAR_REPOS = "Hanwen-Jiang/agent-runtime,Hanwen-Jiang/coding-agent,Hanwen-Jiang/leetcode,Timmononon/StoreAgent,Timmononon/my-runtime"
+# 创始会员：在这之前授权网站或建好进度仓的用户，永久享有最高档（北京时间 2026-11-18 0 点）
+FOUNDER_CUTOFF = "2026-11-18T00:00:00+08:00"
 # GitHub App 的 slug（https://github.com/apps/<slug>），建好 App 后填上
 GITHUB_APP_SLUG = "hot-100"

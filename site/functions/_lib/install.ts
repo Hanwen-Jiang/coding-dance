@@ -8,16 +8,18 @@ export interface Installation {
   selection: "all" | "selected";
   /** 这次授权带不带「建仓库」的权限（App 后来才加的权限，老的授权要用户同意之后才有） */
   canCreate: boolean;
+  /** 第一次授权的时间（判断是不是创始会员用） */
+  createdAt: string | null;
 }
 
 /** 当前用户在自己账号上的授权；没有返回 null */
 export async function userInstallation(token: string, login: string): Promise<Installation | null> {
   const r = await gh(token, "GET", "/user/installations?per_page=100");
   if (!r.ok) return null;
-  const j = (await r.json()) as { installations?: { id: number; account?: { login?: string }; repository_selection?: string; permissions?: Record<string, string> }[] };
+  const j = (await r.json()) as { installations?: { id: number; account?: { login?: string }; repository_selection?: string; permissions?: Record<string, string>; created_at?: string }[] };
   const inst = (j.installations || []).find((i) => (i.account?.login || "").toLowerCase() === login.toLowerCase());
   if (!inst) return null;
-  return { id: inst.id, selection: inst.repository_selection === "all" ? "all" : "selected", canCreate: inst.permissions?.repository_creation === "write" };
+  return { id: inst.id, selection: inst.repository_selection === "all" ? "all" : "selected", canCreate: inst.permissions?.repository_creation === "write", createdAt: inst.created_at || null };
 }
 
 /** 授权范围里有没有这个仓库（owner/name） */

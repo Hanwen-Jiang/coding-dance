@@ -1,7 +1,7 @@
 // 当前登录状态：是谁、进度仓建了没有、有没有授权网站读写它、Star 了没有。令牌本身从不返回给浏览器。
 import { installationCovers, userInstallation } from "../_lib/install";
 import { gh } from "../_lib/progress";
-import { type AuthEnv, SESSION_COOKIE, authConfigured, getSession, privateJson, setCookie, starRepos } from "../_lib/session";
+import { type AuthEnv, SESSION_COOKIE, authConfigured, getSession, membership, privateJson, setCookie, starRepos } from "../_lib/session";
 
 export const onRequestGet = async ({ request, env }: { request: Request; env: AuthEnv }) => {
   const [tOwner, tName] = env.TEMPLATE_REPO.split("/");
@@ -33,10 +33,14 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
   const accessible = !!inst && rr.ok && (inst.selection === "all" || (await installationCovers(s.t, inst, repo)));
   // 每个仓库 Star 了没有
   const stars = list.map((r, i) => ({ repo: r, starred: starred[i].status === 204 }));
+  // 会员档位：按第一次授权网站、建好进度仓的时间判断是不是创始会员
+  const repoCreated = rr.ok ? ((await rr.json().catch(() => ({}))) as { created_at?: string }).created_at : null;
+  const member = membership(env, [inst?.createdAt, repoCreated]);
   return privateJson(
     {
       ...base,
       user: { login: s.l, avatar: s.a },
+      member,
       repo: {
         name: repo,
         url: `https://github.com/${repo}`,
