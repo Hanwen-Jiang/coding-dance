@@ -1,6 +1,5 @@
-import { SESSION_COOKIE, privateJson, sameOrigin, setCookie } from "../../_lib/session";
+// 退出：清掉当前域名的会话；有几个域名时返回 next，页面跳过去把其余域名的会话也清掉（见 _lib/sso.ts）
+import type { AuthEnv } from "../../_lib/session";
+import { onLogout } from "../../_lib/sso";
 
-export const onRequestPost = async ({ request }: { request: Request }) => {
-  if (!sameOrigin(request)) return privateJson({ error: "不接受跨站请求" }, 403);
-  return privateJson({ ok: true }, 200, [setCookie(SESSION_COOKIE, "", 0)]);
-};
+export const onRequestPost = ({ request, env }: { request: Request; env: AuthEnv }) => onLogout(request, env);

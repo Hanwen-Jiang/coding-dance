@@ -90,22 +90,33 @@ try {
     const left = document.querySelector(".problem-original"), right = document.querySelector(".practice-sidebar");
     const l = left.getBoundingClientRect(), r = right.getBoundingClientRect();
     return { leftWidth: l.width, rightX: r.x, leftRight: l.right, rightWidth: r.width, overflows: document.documentElement.scrollWidth > innerWidth,
-      order: [...left.querySelectorAll("h2[id]")].map((node) => node.id), statementMaxHeight: getComputedStyle(document.querySelector("#statement").closest("section").querySelector(".card")).maxHeight };
+      order: [...left.querySelectorAll("h2[id]")].map((node) => node.id), entries: document.querySelectorAll(".problem-study-bar .problem-study-entry").length,
+      statementMaxHeight: getComputedStyle(document.querySelector("#statement").closest("section").querySelector(".card")).maxHeight };
   });
-  assert.equal(desktop.leftWidth, 1104);
-  assert(desktop.rightX > desktop.leftRight && desktop.rightWidth >= 500);
+  // 宽度可以拖（默认练习区占 38%），正文至少 560px、练习区至少 360px
+  assert(desktop.leftWidth >= 560 && desktop.rightWidth >= 360, JSON.stringify(desktop));
+  assert(desktop.rightX > desktop.leftRight);
   assert(!desktop.overflows);
-  assert.deepEqual(desktop.order, ["statement", "hints", "demo", "solution", "history", "attempts", "points"]);
+  // 练习区展开时是「写代码」的布局：题面之外的几节收成一排入口（用到时弹出面板），不再一路串下去
+  assert.deepEqual(desktop.order, ["statement"]);
+  assert(desktop.entries >= 5, `Entries for hints/demo/solution/mine (${desktop.entries})`);
   assert.equal(desktop.statementMaxHeight, "none");
-  await page.evaluate(() => window.scrollTo(0, document.querySelector("#hints").getBoundingClientRect().top + scrollY - 120));
-  assert(Math.abs((await page.locator(".practice-sidebar").boundingBox()).y - 80) < 2, "The independent right editor stays sticky while reading hints");
-  await page.screenshot({ path: path.join(screenshots, "1920-hints-sticky-editor.png"), animations: "disabled" });
-  console.log("✓ Original left page width/order and unbounded statement restored; independent right editor stays sticky");
+  await page.evaluate(() => window.scrollTo(0, 600));
+  assert(Math.abs((await page.locator(".practice-sidebar").boundingBox()).y - 80) < 2, "The independent right editor stays fixed while reading");
+  assert(Math.abs((await page.locator(".problem-study-bar").boundingBox()).y - 57) < 2, "The entry bar stays under the header while reading");
+  await page.screenshot({ path: path.join(screenshots, "1920-coding-layout.png"), animations: "disabled" });
+  // 收起练习区：回到从上往下读的布局
+  await page.getByRole("button", { name: "收起练习区", exact: true }).click();
+  await page.locator("h2#hints").waitFor();
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll(".problem-original h2[id]")].map((n) => n.id)), ["statement", "hints", "demo", "solution", "history", "attempts", "points"]);
+  await page.getByRole("button", { name: "展开练习区", exact: true }).click();
+  await page.locator("h2#hints").waitFor({ state: "detached" });
+  console.log("✓ Docked practice: coding layout (statement + entry bar); stowed: serial reading layout; editor fixed");
 
   await page.setViewportSize({ width: 1440, height: 1080 });
   await shot("1440-leetcode-right-editor.png");
   const medium = await page.evaluate(() => ({ l: document.querySelector(".problem-original").getBoundingClientRect().width, r: document.querySelector(".practice-sidebar").getBoundingClientRect().width, overflow: document.documentElement.scrollWidth > innerWidth, toc: getComputedStyle(document.querySelector(".problem-toc")).display }));
-  assert(medium.l >= 850 && medium.r >= 480 && !medium.overflow && medium.toc === "none");
+  assert(medium.l >= 560 && medium.r >= 360 && !medium.overflow && medium.toc === "none", JSON.stringify(medium));
   await page.setViewportSize({ width: 390, height: 844 });
   await shot("390-original-page.png");
   await page.locator(".practice-sidebar").evaluate((node) => window.scrollTo(0, node.getBoundingClientRect().top + scrollY - 80));
@@ -125,6 +136,7 @@ try {
     await language(name); await code(source); await run(); console.log(`✓ LeetCode ${name}: original official examples`);
   }
   await language("JavaScript");
+  await run(); // 换语言后控制台是收起的，先跑一次示例把它打开
   await page.getByRole("radio", { name: "自定义", exact: true }).click();
   await page.getByRole("textbox", { name: "自定义参数 nums", exact: true }).fill("[3,3]");
   await page.getByRole("textbox", { name: "自定义参数 target", exact: true }).fill("6");

@@ -341,6 +341,35 @@ try {
     console.log("✓ Run controls: 运行示例 then test; quick (examples + boundaries) vs full level, remembered");
   }
 
+  // 练习区展开时是「写代码」的布局：题面之外收成一排入口，点开在题目这一栏上弹出面板；收起练习区回到从上往下读
+  {
+    const bar = page.locator(".problem-study-bar");
+    assert.equal(await page.locator(".problem-original h2#hints").count(), 0, "No serial sections while coding");
+    await bar.getByRole("button", { name: /^提示/ }).click();
+    const sheet = page.locator(".problem-sheet");
+    await sheet.waitFor();
+    await page.waitForTimeout(300); // 弹出有 180ms 的动画
+    const [sb, side] = [await sheet.boundingBox(), await page.locator(".practice-sidebar").boundingBox()];
+    assert(Math.abs(sb.y - side.y) < 2 && sb.x + sb.width < side.x && Math.abs(sb.height - side.height) < 2, `Panel sits over the problem column, level with the editor (${JSON.stringify(sb)} vs ${JSON.stringify(side)})`);
+    const hintSteps = () => sheet.locator(".hint-text:visible").count();
+    assert.equal(await hintSteps(), 1, "Hints start with one step");
+    await sheet.getByRole("button", { name: /再给一点提示/ }).click();
+    assert.equal(await hintSteps(), 2, "…and reveal the next on request");
+    await sheet.getByRole("button", { name: /^题解/ }).click();
+    assert.equal(await sheet.getByRole("button", { name: "查看题解", exact: true }).count(), 0, "Opening 题解 from the bar shows it directly");
+    await sheet.getByRole("button", { name: /^提示/ }).click();
+    assert.equal(await hintSteps(), 2, "Switching back keeps the revealed hints");
+    await page.keyboard.press("Escape");
+    assert.equal(await sheet.isVisible(), false, "Esc closes the panel");
+    assert(await page.locator(".cm-editor").isVisible(), "Editor stays visible throughout");
+    await page.getByRole("button", { name: "收起练习区", exact: true }).click();
+    await page.locator(".problem-original h2#hints").waitFor();
+    assert.equal(await bar.count(), 0, "Stowed practice: back to the serial reading layout");
+    await page.getByRole("button", { name: "展开练习区", exact: true }).click();
+    await bar.waitFor();
+    console.log("✓ Coding layout: entry bar, panel level with the editor, step-by-step hints, Esc; stowed → serial reading layout");
+  }
+
   // 桌面上练习区钉在顶栏下面：滚到页面最底下也不被页脚顶上去，页脚的字不被它盖住
   {
     const sidebarY = async () => (await page.locator(".practice-sidebar").boundingBox()).y;

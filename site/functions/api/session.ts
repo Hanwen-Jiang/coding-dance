@@ -2,6 +2,7 @@
 import { installationCovers, userInstallation } from "../_lib/install";
 import { gh } from "../_lib/progress";
 import { type AuthEnv, SESSION_COOKIE, authConfigured, getSession, membership, privateJson, setCookie, starRepos } from "../_lib/session";
+import { needSpread } from "../_lib/sso";
 
 export const onRequestGet = async ({ request, env }: { request: Request; env: AuthEnv }) => {
   const [tOwner, tName] = env.TEMPLATE_REPO.split("/");
@@ -55,6 +56,8 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
       },
       starred: stars.every((x) => x.starred),
       stars,
+      // 以前只在登录域名上登录过：页面测一下其余域名连不连得上，再整页跳 /api/auth/spread 补同步一次
+      spread: await needSpread(request, env, s),
     },
     200,
     [cookie],
