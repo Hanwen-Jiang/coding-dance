@@ -306,7 +306,8 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
             <Select.Popover className="min-w-36" style={{ zIndex: 120 }}><ListBox aria-label="可选练习语言">{LANGUAGES.map((entry) => <ListBox.Item id={entry.id} key={entry.id} textValue={entry.label}>{entry.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
           </Select>
           <Select aria-label="编辑器提示" className="w-28" onChange={(value) => { if (typeof value === "string") changeHints(value as PracticeHints); }} value={hints} variant="secondary">
-            <Select.Trigger aria-label="编辑器提示" className="h-8 min-h-8 text-xs"><Select.Value /><Select.Indicator /></Select.Trigger>
+            {/* 框里只显示档位名，说明文字只在展开的选项里 */}
+            <Select.Trigger aria-label="编辑器提示" className="h-8 min-h-8 text-xs"><Select.Value>{({ selectedText }) => selectedText}</Select.Value><Select.Indicator /></Select.Trigger>
             <Select.Popover className="min-w-52" style={{ zIndex: 120 }}>
               <ListBox aria-label="编辑器提示程度">
                 {HINT_LEVELS.map((entry) => (
