@@ -1,0 +1,575 @@
+{
+  "id": 114,
+  "name": "二叉树展开为链表",
+  "signature": {
+    "fn": "flatten",
+    "params": [
+      "TreeNode"
+    ],
+    "ret": "void"
+  },
+  "parameterNames": [
+    "root"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def flatten(self, root: Optional[TreeNode]) -> None:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction flatten(root) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction flatten(root: TreeNode | null): void {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "a63651f3",
+    "javascript": "82f6d0b9",
+    "typescript": "0ca1a400"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          1,
+          2,
+          5,
+          3,
+          4,
+          null,
+          6
+        ]
+      ],
+      "label": "示例 1",
+      "expected": [
+        1,
+        null,
+        2,
+        null,
+        3,
+        null,
+        4,
+        null,
+        5,
+        null,
+        6
+      ],
+      "stdin": "7\n1 2 5 3 4 null 6\n",
+      "stdout": "11\n1 null 2 null 3 null 4 null 5 null 6\n",
+      "source": {
+        "path": "problems/0114.二叉树展开为链表.md",
+        "index": 1,
+        "input": "root = [1,2,5,3,4,null,6]",
+        "output": "[1,null,2,null,3,null,4,null,5,null,6]"
+      }
+    },
+    {
+      "input": [
+        []
+      ],
+      "label": "示例 2 · 边界",
+      "expected": [],
+      "stdin": "0\n",
+      "stdout": "0\n",
+      "source": {
+        "path": "problems/0114.二叉树展开为链表.md",
+        "index": 2,
+        "input": "root = []",
+        "output": "[]"
+      }
+    },
+    {
+      "input": [
+        [
+          0
+        ]
+      ],
+      "label": "示例 3",
+      "expected": [
+        0
+      ],
+      "stdin": "1\n0\n",
+      "stdout": "1\n0\n",
+      "source": {
+        "path": "problems/0114.二叉树展开为链表.md",
+        "index": 3,
+        "input": "root = [0]",
+        "output": "[0]"
+      }
+    },
+    {
+      "input": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      ],
+      "label": "仓库判题用例 2",
+      "expected": [
+        1,
+        null,
+        2,
+        null,
+        4,
+        null,
+        5,
+        null,
+        3,
+        null,
+        6,
+        null,
+        7
+      ],
+      "stdin": "7\n1 2 3 4 5 6 7\n",
+      "stdout": "13\n1 null 2 null 4 null 5 null 3 null 6 null 7\n"
+    },
+    {
+      "input": [
+        [
+          1,
+          2,
+          null,
+          3
+        ]
+      ],
+      "label": "仓库判题用例 5",
+      "expected": [
+        1,
+        null,
+        2,
+        null,
+        3
+      ],
+      "stdin": "4\n1 2 null 3\n",
+      "stdout": "5\n1 null 2 null 3\n"
+    },
+    {
+      "input": [
+        [
+          1,
+          null,
+          2,
+          3
+        ]
+      ],
+      "label": "仓库判题用例 6",
+      "expected": [
+        1,
+        null,
+        2,
+        null,
+        3
+      ],
+      "stdin": "4\n1 null 2 3\n",
+      "stdout": "5\n1 null 2 null 3\n"
+    },
+    {
+      "input": [
+        [
+          5,
+          null,
+          8,
+          7,
+          3,
+          null,
+          9,
+          null,
+          null,
+          8,
+          8
+        ]
+      ],
+      "label": "仓库判题用例 7",
+      "expected": [
+        5,
+        null,
+        8,
+        null,
+        7,
+        null,
+        9,
+        null,
+        8,
+        null,
+        8,
+        null,
+        3
+      ],
+      "stdin": "11\n5 null 8 7 3 null 9 null null 8 8\n",
+      "stdout": "13\n5 null 8 null 7 null 9 null 8 null 8 null 3\n"
+    },
+    {
+      "input": [
+        [
+          3,
+          6,
+          7,
+          9,
+          5,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 8",
+      "expected": [
+        3,
+        null,
+        6,
+        null,
+        9,
+        null,
+        5,
+        null,
+        7,
+        null,
+        4
+      ],
+      "stdin": "6\n3 6 7 9 5 4\n",
+      "stdout": "11\n3 null 6 null 9 null 5 null 7 null 4\n"
+    },
+    {
+      "input": [
+        [
+          6,
+          5,
+          9,
+          null,
+          null,
+          6,
+          5,
+          5
+        ]
+      ],
+      "label": "仓库判题用例 9",
+      "expected": [
+        6,
+        null,
+        5,
+        null,
+        9,
+        null,
+        6,
+        null,
+        5,
+        null,
+        5
+      ],
+      "stdin": "8\n6 5 9 null null 6 5 5\n",
+      "stdout": "11\n6 null 5 null 9 null 6 null 5 null 5\n"
+    },
+    {
+      "input": [
+        [
+          6,
+          8,
+          8,
+          8,
+          null,
+          null,
+          null,
+          null,
+          1
+        ]
+      ],
+      "label": "仓库判题用例 10",
+      "expected": [
+        6,
+        null,
+        8,
+        null,
+        8,
+        null,
+        1,
+        null,
+        8
+      ],
+      "stdin": "9\n6 8 8 8 null null null null 1\n",
+      "stdout": "9\n6 null 8 null 8 null 1 null 8\n"
+    },
+    {
+      "input": [
+        [
+          3,
+          2,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 11",
+      "expected": [
+        3,
+        null,
+        2,
+        null,
+        4
+      ],
+      "stdin": "3\n3 2 4\n",
+      "stdout": "5\n3 null 2 null 4\n"
+    },
+    {
+      "input": [
+        [
+          1,
+          6,
+          3,
+          3,
+          null,
+          2,
+          null,
+          null,
+          null,
+          4,
+          null,
+          null,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 12",
+      "expected": [
+        1,
+        null,
+        6,
+        null,
+        3,
+        null,
+        3,
+        null,
+        2,
+        null,
+        4,
+        null,
+        4
+      ],
+      "stdin": "13\n1 6 3 3 null 2 null null null 4 null null 4\n",
+      "stdout": "13\n1 null 6 null 3 null 3 null 2 null 4 null 4\n"
+    },
+    {
+      "input": [
+        [
+          5,
+          6,
+          4,
+          7,
+          2,
+          6
+        ]
+      ],
+      "label": "仓库判题用例 13",
+      "expected": [
+        5,
+        null,
+        6,
+        null,
+        7,
+        null,
+        2,
+        null,
+        4,
+        null,
+        6
+      ],
+      "stdin": "6\n5 6 4 7 2 6\n",
+      "stdout": "11\n5 null 6 null 7 null 2 null 4 null 6\n"
+    },
+    {
+      "input": [
+        [
+          6,
+          3,
+          1,
+          null,
+          3,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 14",
+      "expected": [
+        6,
+        null,
+        3,
+        null,
+        3,
+        null,
+        1,
+        null,
+        4
+      ],
+      "stdin": "6\n6 3 1 null 3 4\n",
+      "stdout": "9\n6 null 3 null 3 null 1 null 4\n"
+    },
+    {
+      "input": [
+        [
+          1,
+          6,
+          8,
+          null,
+          null,
+          9,
+          null,
+          4,
+          null,
+          null,
+          2
+        ]
+      ],
+      "label": "仓库判题用例 15",
+      "expected": [
+        1,
+        null,
+        6,
+        null,
+        8,
+        null,
+        9,
+        null,
+        4,
+        null,
+        2
+      ],
+      "stdin": "11\n1 6 8 null null 9 null 4 null null 2\n",
+      "stdout": "11\n1 null 6 null 8 null 9 null 4 null 2\n"
+    },
+    {
+      "input": [
+        [
+          8,
+          8,
+          7,
+          null,
+          2,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 16",
+      "expected": [
+        8,
+        null,
+        8,
+        null,
+        2,
+        null,
+        7,
+        null,
+        4
+      ],
+      "stdin": "6\n8 8 7 null 2 4\n",
+      "stdout": "9\n8 null 8 null 2 null 7 null 4\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          1,
+          2,
+          5,
+          3,
+          4,
+          null,
+          6
+        ]
+      ],
+      "expected": [
+        1,
+        null,
+        2,
+        null,
+        3,
+        null,
+        4,
+        null,
+        5,
+        null,
+        6
+      ],
+      "stdin": "7\n1 2 5 3 4 null 6\n",
+      "stdout": "11\n1 null 2 null 3 null 4 null 5 null 6\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0114.二叉树展开为链表.md",
+        "index": 1,
+        "input": "root = [1,2,5,3,4,null,6]",
+        "output": "[1,null,2,null,3,null,4,null,5,null,6]"
+      }
+    },
+    {
+      "input": [
+        []
+      ],
+      "expected": [],
+      "stdin": "0\n",
+      "stdout": "0\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0114.二叉树展开为链表.md",
+        "index": 2,
+        "input": "root = []",
+        "output": "[]"
+      }
+    },
+    {
+      "input": [
+        [
+          0
+        ]
+      ],
+      "expected": [
+        0
+      ],
+      "stdin": "1\n0\n",
+      "stdout": "1\n0\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0114.二叉树展开为链表.md",
+        "index": 3,
+        "input": "root = [0]",
+        "output": "[0]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定一棵二叉树，按前序遍历次序把它原地展开成一条链。所有左孩子都应为空，每个右孩子指向前序遍历的下一个节点，按二叉树层序格式输出结果。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. root：二叉树层序序列：先一行序列长度 n；n > 0 时下一行给出 n 个空格分隔的节点值或 null。按队列从左到右分配每个非空节点的左右孩子，末尾多余 null 可省略；空树写 0。",
+    "output": "输出修改后的 root。格式为：二叉树层序序列：先一行序列长度 n；n > 0 时下一行给出 n 个空格分隔的节点值或 null。按队列从左到右分配每个非空节点的左右孩子，末尾多余 null 可省略；空树写 0。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：树中结点数在范围 [0, 2000] 内",
+      "数据范围：-100",
+      "LeetCode 模式检查原参数的修改结果；ACM 模式请将最终结果按输出格式写到标准输出。",
+      "ACM 使用上述序列格式表示链表或二叉树，程序需自行读取输入并处理这些结构。LeetCode 模式由测试环境建立节点。"
+    ],
+    "examples": [
+      {
+        "input": "7\n1 2 5 3 4 null 6\n",
+        "output": "11\n1 null 2 null 3 null 4 null 5 null 6\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "0\n",
+        "output": "0\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "1\n0\n",
+        "output": "1\n0\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

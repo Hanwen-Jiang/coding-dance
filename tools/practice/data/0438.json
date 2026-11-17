@@ -1,0 +1,329 @@
+{
+  "id": 438,
+  "name": "找到字符串中所有字母异位词",
+  "signature": {
+    "fn": "findAnagrams",
+    "params": [
+      "string",
+      "string"
+    ],
+    "ret": "List<int>"
+  },
+  "parameterNames": [
+    "s",
+    "p"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def findAnagrams(self, s: str, p: str) -> List[int]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction findAnagrams(s, p) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction findAnagrams(s: string, p: string): number[] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "6b59b53d",
+    "javascript": "f5f0e15f",
+    "typescript": "e065306a"
+  },
+  "cases": [
+    {
+      "input": [
+        "cbaebabacd",
+        "abc"
+      ],
+      "label": "示例 1",
+      "expected": [
+        0,
+        6
+      ],
+      "stdin": "cbaebabacd\nabc\n",
+      "stdout": "2\n0 6\n",
+      "source": {
+        "path": "problems/0438.找到字符串中所有字母异位词.md",
+        "index": 1,
+        "input": "s = \"cbaebabacd\", p = \"abc\"",
+        "output": "[0,6]"
+      }
+    },
+    {
+      "input": [
+        "abab",
+        "ab"
+      ],
+      "label": "示例 2",
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "stdin": "abab\nab\n",
+      "stdout": "3\n0 1 2\n",
+      "source": {
+        "path": "problems/0438.找到字符串中所有字母异位词.md",
+        "index": 2,
+        "input": "s = \"abab\", p = \"ab\"",
+        "output": "[0,1,2]"
+      }
+    },
+    {
+      "input": [
+        "a",
+        "ab"
+      ],
+      "label": "仓库判题用例 3",
+      "expected": [],
+      "stdin": "a\nab\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        "aaaa",
+        "a"
+      ],
+      "label": "仓库判题用例 4",
+      "expected": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "stdin": "aaaa\na\n",
+      "stdout": "4\n0 1 2 3\n"
+    },
+    {
+      "input": [
+        "xyz",
+        "zyx"
+      ],
+      "label": "仓库判题用例 5",
+      "expected": [
+        0
+      ],
+      "stdin": "xyz\nzyx\n",
+      "stdout": "1\n0\n"
+    },
+    {
+      "input": [
+        "baa",
+        "aa"
+      ],
+      "label": "仓库判题用例 6",
+      "expected": [
+        1
+      ],
+      "stdin": "baa\naa\n",
+      "stdout": "1\n1\n"
+    },
+    {
+      "input": [
+        "ccbabcbcc",
+        "cb"
+      ],
+      "label": "仓库判题用例 7",
+      "expected": [
+        1,
+        4,
+        5,
+        6
+      ],
+      "stdin": "ccbabcbcc\ncb\n",
+      "stdout": "4\n1 4 5 6\n"
+    },
+    {
+      "input": [
+        "abbbcccaa",
+        "bc"
+      ],
+      "label": "仓库判题用例 8",
+      "expected": [
+        3
+      ],
+      "stdin": "abbbcccaa\nbc\n",
+      "stdout": "1\n3\n"
+    },
+    {
+      "input": [
+        "bbaabcaac",
+        "aca"
+      ],
+      "label": "仓库判题用例 9",
+      "expected": [
+        5,
+        6
+      ],
+      "stdin": "bbaabcaac\naca\n",
+      "stdout": "2\n5 6\n"
+    },
+    {
+      "input": [
+        "acaccbacb",
+        "ac"
+      ],
+      "label": "仓库判题用例 10",
+      "expected": [
+        0,
+        1,
+        2,
+        6
+      ],
+      "stdin": "acaccbacb\nac\n",
+      "stdout": "4\n0 1 2 6\n"
+    },
+    {
+      "input": [
+        "abbabbcaca",
+        "cb"
+      ],
+      "label": "仓库判题用例 11",
+      "expected": [
+        5
+      ],
+      "stdin": "abbabbcaca\ncb\n",
+      "stdout": "1\n5\n"
+    },
+    {
+      "input": [
+        "accabcaca",
+        "cc"
+      ],
+      "label": "仓库判题用例 12",
+      "expected": [
+        1
+      ],
+      "stdin": "accabcaca\ncc\n",
+      "stdout": "1\n1\n"
+    },
+    {
+      "input": [
+        "aabaaacabac",
+        "aaa"
+      ],
+      "label": "仓库判题用例 13",
+      "expected": [
+        3
+      ],
+      "stdin": "aabaaacabac\naaa\n",
+      "stdout": "1\n3\n"
+    },
+    {
+      "input": [
+        "accaccbbbaa",
+        "aac"
+      ],
+      "label": "仓库判题用例 14",
+      "expected": [],
+      "stdin": "accaccbbbaa\naac\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        "aaccabcccbb",
+        "ca"
+      ],
+      "label": "仓库判题用例 15",
+      "expected": [
+        1,
+        3
+      ],
+      "stdin": "aaccabcccbb\nca\n",
+      "stdout": "2\n1 3\n"
+    },
+    {
+      "input": [
+        "cacacbabab",
+        "bb"
+      ],
+      "label": "仓库判题用例 16",
+      "expected": [],
+      "stdin": "cacacbabab\nbb\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        "a",
+        "aa"
+      ],
+      "label": "边界用例 1",
+      "expected": [],
+      "stdin": "a\naa\n",
+      "stdout": "0\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "cbaebabacd",
+        "abc"
+      ],
+      "expected": [
+        0,
+        6
+      ],
+      "stdin": "cbaebabacd\nabc\n",
+      "stdout": "2\n0 6\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0438.找到字符串中所有字母异位词.md",
+        "index": 1,
+        "input": "s = \"cbaebabacd\", p = \"abc\"",
+        "output": "[0,6]"
+      }
+    },
+    {
+      "input": [
+        "abab",
+        "ab"
+      ],
+      "expected": [
+        0,
+        1,
+        2
+      ],
+      "stdin": "abab\nab\n",
+      "stdout": "3\n0 1 2\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0438.找到字符串中所有字母异位词.md",
+        "index": 2,
+        "input": "s = \"abab\", p = \"ab\"",
+        "output": "[0,1,2]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定字符串 s 和 p，找出 s 中所有长度等于 p、且字符种类与各字符次数都与 p 相同的连续子串。按从小到大输出它们的起始下标，下标从 0 开始。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. s：字符串（占完整一行，不加引号，空串用空行）。\n2. p：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。"
+    ],
+    "examples": [
+      {
+        "input": "cbaebabacd\nabc\n",
+        "output": "2\n0 6\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "abab\nab\n",
+        "output": "3\n0 1 2\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

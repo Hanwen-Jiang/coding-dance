@@ -1,0 +1,420 @@
+{
+  "id": 215,
+  "name": "数组中的第K个最大元素",
+  "signature": {
+    "fn": "findKthLargest",
+    "params": [
+      "int[]",
+      "int"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "nums",
+    "k"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def findKthLargest(self, nums: List[int], k: int) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction findKthLargest(nums, k) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction findKthLargest(nums: number[], k: number): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "d4824581",
+    "javascript": "1af2d643",
+    "typescript": "0096f640"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          3,
+          2,
+          1,
+          5,
+          6,
+          4
+        ],
+        2
+      ],
+      "label": "示例 1",
+      "expected": 5,
+      "stdin": "6\n3 2 1 5 6 4\n2\n",
+      "stdout": "5\n",
+      "source": {
+        "path": "problems/0215.数组中的第K个最大元素.md",
+        "index": 1,
+        "input": "[3,2,1,5,6,4], k = 2",
+        "output": "5"
+      }
+    },
+    {
+      "input": [
+        [
+          3,
+          2,
+          3,
+          1,
+          2,
+          4,
+          5,
+          5,
+          6
+        ],
+        4
+      ],
+      "label": "示例 2",
+      "expected": 4,
+      "stdin": "9\n3 2 3 1 2 4 5 5 6\n4\n",
+      "stdout": "4\n",
+      "source": {
+        "path": "problems/0215.数组中的第K个最大元素.md",
+        "index": 2,
+        "input": "[3,2,3,1,2,4,5,5,6], k = 4",
+        "output": "4"
+      }
+    },
+    {
+      "input": [
+        [
+          1
+        ],
+        1
+      ],
+      "label": "仓库判题用例 3 · 边界",
+      "expected": 1,
+      "stdin": "1\n1\n1\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        [
+          2,
+          2,
+          2,
+          2
+        ],
+        3
+      ],
+      "label": "仓库判题用例 4",
+      "expected": 2,
+      "stdin": "4\n2 2 2 2\n3\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        [
+          -1,
+          -1
+        ],
+        2
+      ],
+      "label": "仓库判题用例 5",
+      "expected": -1,
+      "stdin": "2\n-1 -1\n2\n",
+      "stdout": "-1\n"
+    },
+    {
+      "input": [
+        [
+          5,
+          4,
+          3,
+          2,
+          1
+        ],
+        5
+      ],
+      "label": "仓库判题用例 6",
+      "expected": 1,
+      "stdin": "5\n5 4 3 2 1\n5\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        1
+      ],
+      "label": "仓库判题用例 7",
+      "expected": 5,
+      "stdin": "5\n1 2 3 4 5\n1\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          6,
+          6,
+          2,
+          9,
+          6,
+          1
+        ],
+        2
+      ],
+      "label": "仓库判题用例 8",
+      "expected": 6,
+      "stdin": "6\n6 6 2 9 6 1\n2\n",
+      "stdout": "6\n"
+    },
+    {
+      "input": [
+        [
+          9,
+          9,
+          9,
+          6,
+          1,
+          1,
+          1,
+          9
+        ],
+        1
+      ],
+      "label": "仓库判题用例 9",
+      "expected": 9,
+      "stdin": "8\n9 9 9 6 1 1 1 9\n1\n",
+      "stdout": "9\n"
+    },
+    {
+      "input": [
+        [
+          8,
+          5,
+          7,
+          4,
+          2,
+          8
+        ],
+        2
+      ],
+      "label": "仓库判题用例 10",
+      "expected": 8,
+      "stdin": "6\n8 5 7 4 2 8\n2\n",
+      "stdout": "8\n"
+    },
+    {
+      "input": [
+        [
+          9,
+          6,
+          5,
+          5,
+          9,
+          3
+        ],
+        5
+      ],
+      "label": "仓库判题用例 11",
+      "expected": 5,
+      "stdin": "6\n9 6 5 5 9 3\n5\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          6,
+          5,
+          7,
+          6,
+          7,
+          2,
+          7,
+          3
+        ],
+        8
+      ],
+      "label": "仓库判题用例 12",
+      "expected": 2,
+      "stdin": "8\n6 5 7 6 7 2 7 3\n8\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        [
+          5,
+          1,
+          7,
+          9,
+          8,
+          3,
+          3
+        ],
+        2
+      ],
+      "label": "仓库判题用例 13",
+      "expected": 8,
+      "stdin": "7\n5 1 7 9 8 3 3\n2\n",
+      "stdout": "8\n"
+    },
+    {
+      "input": [
+        [
+          7,
+          6,
+          4,
+          2,
+          2,
+          1
+        ],
+        1
+      ],
+      "label": "仓库判题用例 14",
+      "expected": 7,
+      "stdin": "6\n7 6 4 2 2 1\n1\n",
+      "stdout": "7\n"
+    },
+    {
+      "input": [
+        [
+          6,
+          5,
+          6,
+          3,
+          7,
+          5,
+          8,
+          8
+        ],
+        7
+      ],
+      "label": "仓库判题用例 15",
+      "expected": 5,
+      "stdin": "8\n6 5 6 3 7 5 8 8\n7\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          5,
+          3,
+          9,
+          8,
+          1,
+          5,
+          1,
+          6,
+          5
+        ],
+        4
+      ],
+      "label": "仓库判题用例 16",
+      "expected": 5,
+      "stdin": "9\n5 3 9 8 1 5 1 6 5\n4\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          9,
+          4,
+          7,
+          1,
+          3,
+          3,
+          7,
+          3
+        ],
+        4
+      ],
+      "label": "仓库判题用例 17",
+      "expected": 4,
+      "stdin": "8\n9 4 7 1 3 3 7 3\n4\n",
+      "stdout": "4\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          3,
+          2,
+          1,
+          5,
+          6,
+          4
+        ],
+        2
+      ],
+      "expected": 5,
+      "stdin": "6\n3 2 1 5 6 4\n2\n",
+      "stdout": "5\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0215.数组中的第K个最大元素.md",
+        "index": 1,
+        "input": "[3,2,1,5,6,4], k = 2",
+        "output": "5"
+      }
+    },
+    {
+      "input": [
+        [
+          3,
+          2,
+          3,
+          1,
+          2,
+          4,
+          5,
+          5,
+          6
+        ],
+        4
+      ],
+      "expected": 4,
+      "stdin": "9\n3 2 3 1 2 4 5 5 6\n4\n",
+      "stdout": "4\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0215.数组中的第K个最大元素.md",
+        "index": 2,
+        "input": "[3,2,3,1,2,4,5,5,6], k = 4",
+        "output": "4"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定一个整数序列和 k，按非递增顺序排列后第 k 个位置的数就是第 k 大元素。重复元素占据各自的位置，求并输出第 k 大元素。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. nums：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。\n2. k：整数。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。"
+    ],
+    "examples": [
+      {
+        "input": "6\n3 2 1 5 6 4\n2\n",
+        "output": "5\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "9\n3 2 3 1 2 4 5 5 6\n4\n",
+        "output": "4\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

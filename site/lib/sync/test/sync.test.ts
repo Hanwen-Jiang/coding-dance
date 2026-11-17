@@ -40,7 +40,7 @@ const CODE: Record<number, string> = { 101: "class Solution:\n    def twoSum(sel
 const limitedMsg = "力扣：🐸☕超出访问限制，请稍后再试";
 
 /** 假的力扣：subs 是它上面的全部提交；calls 记下各种查询发了几次；limit(query, variables) 返回 true 时这次请求被限流 */
-function fakeLeetCode(subs: S[], { limit = (_q: string, _v: any) => false, progress = null as null | { titleSlug: string; translatedTitle: string }[] } = {}) {
+function fakeLeetCode(subs: S[], { limit = (_q: string, _v: any): boolean => false, progress = null as null | { titleSlug: string; translatedTitle: string }[] } = {}) {
   const calls = { list: 0, detail: 0, progress: 0 };
   const sorted = () => [...subs].sort((a, b) => Number(b.timestamp) - Number(a.timestamp));
   const transport = async (query: string, v: any): Promise<any> => {

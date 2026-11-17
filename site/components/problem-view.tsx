@@ -8,8 +8,9 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CodePanel } from "@/components/code-panel";
+import { PracticeProvider, PracticeStatement } from "@/components/practice/context";
+import { PracticeWorkbench } from "@/components/practice/workbench";
 import { DemoPlayer } from "@/components/demo/demo-player";
-import { withFigures } from "@/components/demo/figures";
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
 import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel } from "@/components/pixel";
@@ -561,7 +562,9 @@ export function ProblemView({ id }: { id: number }) {
   const sections = SECTIONS.filter((x) => (x.id === "points" ? d.spec?.points?.length : true));
 
   return (
-    <div className="reveal flex flex-col gap-8 pt-8">
+    <PracticeProvider detail={d} key={s.id}>
+    <div className="problem-page-layout">
+    <div className="problem-original reveal flex flex-col gap-8 pt-8">
       <div className="flex flex-col gap-4">
         <Breadcrumbs>
           <Breadcrumbs.Item className="no-underline" href="/">
@@ -607,15 +610,15 @@ export function ProblemView({ id }: { id: number }) {
         </div>
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_200px]">
+      <div className="problem-original-sections">
         <div className="flex min-w-0 flex-col gap-12">
           <section className="flex flex-col gap-4">
             <SectionTitle id="statement">题目描述</SectionTitle>
             <Card className="p-5 sm:p-7">
-              {d.statementHtml ? <div className="statement" dangerouslySetInnerHTML={{ __html: withFigures(d.statementHtml, d.spec?.figures) }} /> : <p className="text-muted">仓库里还没有这道题的题面。</p>}
+              <PracticeStatement />
             </Card>
-            {/* 窄屏没有侧栏：相关基础放在题面下面 */}
-            {d.learn?.length ? <div className="lg:hidden"><LearnLinks learn={d.learn} /></div> : null}
+            {/* 侧栏（problem-toc）不显示的宽度下，相关基础放在题面下面；显示规则见 practice.css */}
+            {d.learn?.length ? <div className="problem-learn-inline"><LearnLinks learn={d.learn} /></div> : null}
           </section>
 
           <section className="flex flex-col gap-4">
@@ -698,7 +701,7 @@ export function ProblemView({ id }: { id: number }) {
           </nav>
         </div>
 
-        <aside className="hidden lg:block">
+        <aside className="problem-toc">
           <div className="sticky top-24 flex flex-col gap-6">
             <nav aria-label="本页" className="flex flex-col gap-1">
               <span className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">本页</span>
@@ -713,5 +716,8 @@ export function ProblemView({ id }: { id: number }) {
         </aside>
       </div>
     </div>
+    <PracticeWorkbench />
+    </div>
+    </PracticeProvider>
   );
 }

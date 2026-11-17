@@ -1,0 +1,265 @@
+{
+  "id": 5,
+  "name": "最长回文子串",
+  "signature": {
+    "fn": "longestPalindrome",
+    "params": [
+      "string"
+    ],
+    "ret": "string",
+    "cmp": "length"
+  },
+  "parameterNames": [
+    "s"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def longestPalindrome(self, s: str) -> str:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction longestPalindrome(s) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction longestPalindrome(s: string): string {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "148ec128",
+    "javascript": "d9e0d6fe",
+    "typescript": "ef26bbf1"
+  },
+  "cases": [
+    {
+      "input": [
+        "babad"
+      ],
+      "label": "示例 1",
+      "expected": "bab",
+      "stdin": "babad\n",
+      "stdout": "bab\n",
+      "source": {
+        "path": "problems/0005.最长回文子串.md",
+        "index": 1,
+        "input": "s = \"babad\"",
+        "output": "\"bab\""
+      }
+    },
+    {
+      "input": [
+        "cbbd"
+      ],
+      "label": "示例 2",
+      "expected": "bb",
+      "stdin": "cbbd\n",
+      "stdout": "bb\n",
+      "source": {
+        "path": "problems/0005.最长回文子串.md",
+        "index": 2,
+        "input": "s = \"cbbd\"",
+        "output": "\"bb\""
+      }
+    },
+    {
+      "input": [
+        "xabacabay"
+      ],
+      "label": "仓库判题用例 3",
+      "expected": "abacaba",
+      "stdin": "xabacabay\n",
+      "stdout": "abacaba\n"
+    },
+    {
+      "input": [
+        "a"
+      ],
+      "label": "仓库判题用例 4 · 边界",
+      "expected": "a",
+      "stdin": "a\n",
+      "stdout": "a\n"
+    },
+    {
+      "input": [
+        "ac"
+      ],
+      "label": "仓库判题用例 5",
+      "expected": "a",
+      "stdin": "ac\n",
+      "stdout": "a\n"
+    },
+    {
+      "input": [
+        "aaaa"
+      ],
+      "label": "仓库判题用例 6",
+      "expected": "aaaa",
+      "stdin": "aaaa\n",
+      "stdout": "aaaa\n"
+    },
+    {
+      "input": [
+        "abcba"
+      ],
+      "label": "仓库判题用例 7",
+      "expected": "abcba",
+      "stdin": "abcba\n",
+      "stdout": "abcba\n"
+    },
+    {
+      "input": [
+        "bbbba"
+      ],
+      "label": "仓库判题用例 8",
+      "expected": "bbbb",
+      "stdin": "bbbba\n",
+      "stdout": "bbbb\n"
+    },
+    {
+      "input": [
+        "aabba"
+      ],
+      "label": "仓库判题用例 9",
+      "expected": "abba",
+      "stdin": "aabba\n",
+      "stdout": "abba\n"
+    },
+    {
+      "input": [
+        "aabbaa"
+      ],
+      "label": "仓库判题用例 10",
+      "expected": "aabbaa",
+      "stdin": "aabbaa\n",
+      "stdout": "aabbaa\n"
+    },
+    {
+      "input": [
+        "babbab"
+      ],
+      "label": "仓库判题用例 11",
+      "expected": "babbab",
+      "stdin": "babbab\n",
+      "stdout": "babbab\n"
+    },
+    {
+      "input": [
+        "aaabaaaa"
+      ],
+      "label": "仓库判题用例 12",
+      "expected": "aaabaaa",
+      "stdin": "aaabaaaa\n",
+      "stdout": "aaabaaa\n"
+    },
+    {
+      "input": [
+        "abcccaabb"
+      ],
+      "label": "仓库判题用例 13",
+      "expected": "ccc",
+      "stdin": "abcccaabb\n",
+      "stdout": "ccc\n"
+    },
+    {
+      "input": [
+        "abbbaaaa"
+      ],
+      "label": "仓库判题用例 14",
+      "expected": "abbba",
+      "stdin": "abbbaaaa\n",
+      "stdout": "abbba\n"
+    },
+    {
+      "input": [
+        "abbaaab"
+      ],
+      "label": "仓库判题用例 15",
+      "expected": "baaab",
+      "stdin": "abbaaab\n",
+      "stdout": "baaab\n"
+    },
+    {
+      "input": [
+        "aaaabba"
+      ],
+      "label": "仓库判题用例 16",
+      "expected": "aaaa",
+      "stdin": "aaaabba\n",
+      "stdout": "aaaa\n"
+    },
+    {
+      "input": [
+        "aaabaaa"
+      ],
+      "label": "仓库判题用例 17",
+      "expected": "aaabaaa",
+      "stdin": "aaabaaa\n",
+      "stdout": "aaabaaa\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "babad"
+      ],
+      "expected": "bab",
+      "stdin": "babad\n",
+      "stdout": "bab\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0005.最长回文子串.md",
+        "index": 1,
+        "input": "s = \"babad\"",
+        "output": "\"bab\""
+      }
+    },
+    {
+      "input": [
+        "cbbd"
+      ],
+      "expected": "bb",
+      "stdin": "cbbd\n",
+      "stdout": "bb\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0005.最长回文子串.md",
+        "index": 2,
+        "input": "s = \"cbbd\"",
+        "output": "\"bb\""
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定一个字符串，找出其中最长的回文连续子串并输出。回文从左向右和从右向左读取相同；如果存在多个同样长的答案，输出任意一个。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. s：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：字符串（占完整一行，不加引号，空串用空行）。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= s.length <= 1000",
+      "数据范围：s 仅由数字和英文字母组成",
+      "最优子串可能不唯一，测试会验证子串合法性及最优长度。"
+    ],
+    "examples": [
+      {
+        "input": "babad\n",
+        "output": "bab\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "cbbd\n",
+        "output": "bb\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}
