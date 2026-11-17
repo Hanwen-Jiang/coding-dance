@@ -10,6 +10,7 @@ import { HistoryIcon, PlayIcon, SearchOffIcon } from "@/components/icons";
 import { LevelPixels, PixelTitle, ProgressMatrix, Skel, StatusPixel, TYPING_WORDS, TypingPixels } from "@/components/pixel";
 import { TierChip, TopicChip, langShort } from "@/components/tags";
 import { LoginHint, SetupCard } from "@/components/account";
+import { useMatrixPreview } from "@/components/matrix-preview";
 import { useProgress } from "@/lib/progress";
 import type { IndexData, Problem, Status } from "@/lib/types";
 import { LEVEL_ORDER, TIER_INFO, TIER_ORDER, byImportance } from "@/lib/types";
@@ -149,6 +150,8 @@ export function ProblemList() {
 
   // 题目资源对所有人一样；状态和题解来自当前用户的进度仓（没登录就是 0 进度）
   const { loading: sessionLoading, session, statusOf, langsOf } = useProgress();
+  // 进度格子：停一下（手机上点一下）浮出那道题的预览
+  const preview = useMatrixPreview();
   const problems: Problem[] = useMemo(
     () => (data?.problems ?? []).map((p) => ({ ...p, status: statusOf(p.id), langs: langsOf(p.id) })),
     [data, statusOf, langsOf],
@@ -240,7 +243,8 @@ export function ProblemList() {
                 <StatusPixel status="未开始" />
               </span>
             </div>
-            <ProgressMatrix problems={ready ? problems.slice().sort(byImportance) : null} />
+            <ProgressMatrix cellProps={preview.cellProps} problems={ready ? problems.slice().sort(byImportance) : null} />
+            {preview.layer}
           </Card>
           <SetupCard />
           <LoginHint />

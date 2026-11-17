@@ -256,11 +256,10 @@ export function PracticeWorkbench() {
         )}
       </div>
     </aside>
-    {/* 1200px 以下页面里不放编辑器：屏幕底部常驻「写代码」，点开是全屏的题面 + 编辑器（显示规则见 practice.css） */}
+    {/* 1200px 以下页面里不放编辑器：右下角一个只有图标的圆按钮「写代码」，点开是全屏的题面 + 编辑器（显示规则见 practice.css） */}
     <div className="practice-launcher" hidden={active}>
-      <Button aria-label="写代码" className="practice-launcher-button" onPress={openFocus} ref={launcher}>
-        <CodeIcon />
-        <span className="font-semibold">写代码</span>
+      <Button isIconOnly aria-label="写代码" className="practice-launcher-button" onPress={openFocus} ref={launcher}>
+        <CodeIcon height={20} width={20} />
       </Button>
     </div>
     {/* 桌面上练习区收起时：贴在屏幕右边的一条窄边（和练习区一样高），点一下或按住往左拖就展开 */}
