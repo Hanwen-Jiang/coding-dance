@@ -53,28 +53,29 @@ html {
 .demo .dm-scroll { overflow-x: auto; padding: 4px 2px; }
 .demo .dm-arr { display: flex; gap: 4px; width: max-content; min-width: 100%; }
 .demo .dm-cc { flex: 1 1 0; min-width: 30px; max-width: 58px; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
-.demo .dm-cell { height: 38px; border: 1px solid var(--dm-line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; background: var(--surface); transition: background-color 0.25s ease, transform 0.25s ease; }
+.demo .dm-cell { height: 38px; border: 1px solid var(--dm-line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; background: var(--surface); transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease; }
 .demo .dm-ci { text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 .demo .dm-cp { min-height: 18px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .demo .dm-cp span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.25; color: var(--dm-accent); white-space: nowrap; }
 .demo .dm-bar-slot { height: 150px; display: flex; flex-direction: column; justify-content: flex-end; }
-.demo .dm-bar { border: 1px solid var(--dm-line); border-radius: 4px 4px 2px 2px; display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; padding-top: 2px; min-height: 3px; background: var(--dm-dim); }
-.demo .dm-wat { background: var(--dm-water); border-radius: 3px 3px 0 0; }
+.demo .dm-bar { border: 1px solid var(--dm-line); border-radius: 4px 4px 2px 2px; display: flex; align-items: flex-start; justify-content: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; padding-top: 2px; min-height: 3px; background: var(--dm-dim); transition: height 0.3s ease, background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
+.demo .dm-wat { background: var(--dm-water); border-radius: 3px 3px 0 0; transition: height 0.3s ease; }
 .demo .dm-bv { text-align: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; line-height: 1.3; }
 .demo .dm-grid { display: grid; gap: 4px; width: max-content; }
 .demo .dm-grid .dm-cell { width: 40px; height: 40px; }
 .demo .dm-ax { display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 .demo .dm-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
-.demo .dm-chip { font-family: var(--font-mono); font-size: 13px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--dm-line); background: var(--surface); }
+.demo .dm-chip { font-family: var(--font-mono); font-size: 13px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--dm-line); background: var(--surface); transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
 .demo .dm-empty { color: var(--muted); font-size: 13px; }
 .demo .dm-note pre { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; white-space: pre; overflow-x: auto; margin: 0; }
 .demo svg.dm-g2 { display: block; height: auto; }
-.demo svg.dm-g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; }
+.demo svg.dm-g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; transition: stroke 0.25s ease, stroke-width 0.25s ease, opacity 0.25s ease; }
 .demo svg.dm-g2 .edge.on { stroke: var(--dm-accent); stroke-width: 2.6; }
 .demo svg.dm-g2 .edge.warm { stroke: var(--dm-warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
 .demo svg.dm-g2 .edge.dim { opacity: 0.25; }
 .demo svg.dm-g2 .ah { fill: var(--muted); }
-.demo svg.dm-g2 rect.n, .demo svg.dm-g2 circle.n { fill: var(--surface); stroke: var(--dm-line); stroke-width: 2; transition: fill 0.25s ease; }
+.demo svg.dm-g2 rect.n, .demo svg.dm-g2 circle.n { fill: var(--surface); stroke: var(--dm-line); stroke-width: 2; transition: fill 0.25s ease, stroke 0.25s ease; }
+.demo svg.dm-g2 text { transition: fill 0.25s ease; }
 .demo svg.dm-g2 .n.r-a { fill: var(--dm-accent); stroke: var(--dm-accent); }
 .demo svg.dm-g2 .n.r-b { fill: var(--dm-warm); stroke: var(--dm-warm); }
 .demo svg.dm-g2 .n.r-c { fill: var(--dm-ok); stroke: var(--dm-ok); }
@@ -105,7 +106,8 @@ html {
 .demo .dm-cell.r-a, .demo .dm-cell.r-b, .demo .dm-cell.r-c { transform: translateY(-2px); }
 .demo .dm-sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; border: 1px solid var(--dm-line); }
 .demo .dm-msg b { color: var(--dm-accent); }
-.demo .dm-msg { animation: dm-fade 0.3s ease both; }
+/* 每一步的说明换成新的时轻轻亮一下（不从全透明开始，也不位移，连续点「下一步」时不晃眼） */
+.demo .dm-msg { animation: dm-msg 0.2s ease both; }
 .demo .dm-range { accent-color: var(--accent); }
 .demo:focus-visible { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 1.5rem; }
 /* 并排的几张图（题面配图里「变换前 → 变换后」） */
@@ -123,6 +125,14 @@ html {
 @keyframes dm-fade {
   from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: none; }
+}
+@keyframes dm-msg {
+  from { opacity: 0.45; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .demo .dm-v, .demo .dm-msg { animation: none; }
+  .demo .dm-cell, .demo .dm-bar, .demo .dm-wat, .demo .dm-chip, .demo svg.dm-g2 * { transition: none; }
 }
 
 /* ———— 像素矩阵风格 ———— */
