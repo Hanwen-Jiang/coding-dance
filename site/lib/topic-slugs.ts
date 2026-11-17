@@ -14,4 +14,7 @@ export const TOPIC_SLUGS = [
   "quick-sort",
   "merge-sort",
   "heap-sort",
+  "bfs",
+  "dfs",
+  "backtracking",
 ];
