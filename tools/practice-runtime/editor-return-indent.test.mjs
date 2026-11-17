@@ -168,7 +168,8 @@ async function traceFocusTransition(button, stablePhase, label) {
   await page.waitForTimeout(60);
   const frames = await page.evaluate(() => { window.__focusSyncToken = null; return window.__focusSyncFrames; });
   await fs.writeFile(path.join(artifacts, `focus-${label}-frames.json`), JSON.stringify(frames, null, 2));
-  const running = (frame, key) => frame[key].animations.filter((a) => a.playState === "running" && a.duration >= 80);
+  // 退出专注模式是 60 ms 的动画（下面断言了这个时长），过滤条件要能把它算进来；50 ms 以下的才算瞬间完成
+  const running = (frame, key) => frame[key].animations.filter((a) => a.playState === "running" && a.duration >= 50);
   const editorMotion = frames.filter((frame) => running(frame, "editor").length), statementMotion = frames.filter((frame) => running(frame, "statement").length);
   assert(editorMotion.length && statementMotion.length, `${label}: sample real motion on both code and statement`);
   const firstEditor = editorMotion[0], firstStatement = statementMotion[0], lastEditor = editorMotion.at(-1), lastStatement = statementMotion.at(-1);

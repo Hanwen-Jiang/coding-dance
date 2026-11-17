@@ -134,12 +134,13 @@
 
 ## 任务
 
-### 阶段 0：合并 PR #14 — 认领：Claude（主会话，分支 `practice`）
-- [ ] 让 CI 跑起来（外部 fork 的 PR 要在 GitHub 上批准运行）
-- [ ] 练习数据别只放在 `site/public/practice/`：至少在 CI 里重新生成并 `git diff` 检查，或者改成运行时从仓库读
-- [ ] TypeScript 只转译不做类型检查：要么做类型检查，要么在界面上说明
-- [ ] 去掉没用到的 `recharts` 依赖；`@playwright/test` 写的界面测试接进 CI
-- [ ] 检查手机上题目页的布局（目录栏去掉了 `hidden lg:block`）
+### 阶段 0：合并 PR #14 — 认领：Claude（分支 `practice-workbench`，接手了另一个会话在 `practice` 分支上的提交）
+- [x] 让 CI 跑起来：改成从本仓库的 `practice-workbench` 分支开 PR（保留朋友的全部提交），不用再等外部 fork 的批准
+- [x] 练习数据挪到资源仓的 `tools/practice/data/`，网站经 `/api/practice/<题号>` 运行时读；CI 重新生成一遍并 `git diff` 检查
+- [x] TypeScript 只转译不做类型检查：编辑器下面加了说明（真做类型检查要带 `lib.*.d.ts`，以后再说）
+- [x] 去掉没用到的 `recharts` 依赖
+- [ ] `@playwright/test` 写的界面测试接进 CI：**卡在 HeroUI Pro**——它的 npm 包要授权才能装（公开的只是空壳），CI 里构建不了网站。要接进 CI，得在 GitHub 上配一个 HeroUI Pro 的授权密钥（作者决定）。目前在本地跑：`node tools/dev/preview.mjs` 起预览，再跑 `node tools/practice-ui/test.mjs`
+- [x] 检查题目页的布局：手机（430 px）和桌面（1440 px）都没有横向溢出；「相关基础」在侧栏不显示的宽度下放到题面下面
 
 ### 阶段 1：运行环境包框架
 - [ ] 清单格式、R2 存放、版本和 sha256 校验
@@ -190,3 +191,4 @@
 ## 变更记录
 
 - 2026-11-17：建立文档；完成 C++（147/147）、Go（147/147）、Java teavm-javac（142/147）浏览器编译的全量实测，以及崩溃、递归深度、ACM 标准输入的探针。实测脚本没有入库，方法写在「实测结果」里。
+- 2026-11-17：阶段 0 基本完成（分支 `practice-workbench`）。练习数据按最新的判题用例重新生成（1461 → 1598 组，PR 里提交的那份已经过期）；顺手修了网站接口缓存跨请求共享 Promise、偶发 500 的问题。剩下界面测试进 CI 这一项，等 HeroUI Pro 授权。

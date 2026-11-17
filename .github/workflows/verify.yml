@@ -43,6 +43,8 @@ jobs:
         run: |
           node tools/practice/build.cjs
           git diff --exit-code -- tools/practice/data
+          # 新生成、还没提交的文件（比如新加了一题）git diff 看不到，用 status 再查一遍
+          test -z "$(git status --porcelain -- tools/practice/data)" || { git status --short -- tools/practice/data; exit 1; }
       - name: 练习数据和输入输出的测试
         run: node tools/practice/test.cjs
       # 网站的其他依赖（HeroUI Pro）要授权，CI 里装不了，所以网站本身不在 CI 里构建；这里只单独装运行器测试用到的两个包
