@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction minPathSum(grid) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction minPathSum(grid: number[][]): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def minPathSum(self, grid: List[List[int]]) -> int:\n        ",
+      "javascript": "/**\n * @param {number[][]} grid\n * @return {number}\n */\nvar minPathSum = function(grid) {\n  \n};",
+      "typescript": "function minPathSum(grid: number[][]): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -509,6 +509,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "afc3b49c"
+    ],
+    "javascript": [
+      "808f204a"
+    ],
+    "typescript": [
+      "9d8bca44"
     ]
   }
 }

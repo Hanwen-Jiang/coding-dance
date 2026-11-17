@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def canPartition(self, nums: List[int]) -> bool:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction canPartition(nums) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction canPartition(nums: number[]): boolean {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def canPartition(self, nums: List[int]) -> bool:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @return {boolean}\n */\nvar canPartition = function(nums) {\n  \n};",
+      "typescript": "function canPartition(nums: number[]): boolean {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -433,6 +433,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "b589d1f4"
+    ],
+    "javascript": [
+      "010cebd7"
+    ],
+    "typescript": [
+      "f6dc9f62"
     ]
   }
 }

@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def isValid(self, s: str) -> bool:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction isValid(s) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction isValid(s: string): boolean {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def isValid(self, s: str) -> bool:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @return {boolean}\n */\nvar isValid = function(s) {\n  \n};",
+      "typescript": "function isValid(s: string): boolean {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -372,6 +372,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "5bb67894"
+    ],
+    "javascript": [
+      "33acae75"
+    ],
+    "typescript": [
+      "363720c8"
     ]
   }
 }

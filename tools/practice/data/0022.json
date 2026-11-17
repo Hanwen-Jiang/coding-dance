@@ -14,9 +14,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def generateParenthesis(self, n: int) -> List[str]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction generateParenthesis(n) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction generateParenthesis(n: number): string[] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def generateParenthesis(self, n: int) -> List[str]:\n        ",
+      "javascript": "/**\n * @param {number} n\n * @return {string[]}\n */\nvar generateParenthesis = function(n) {\n  \n};",
+      "typescript": "function generateParenthesis(n: number): string[] {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -176,6 +176,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "1c2df0ab"
+    ],
+    "javascript": [
+      "d35eca6d"
+    ],
+    "typescript": [
+      "7f8c68d7"
     ]
   }
 }

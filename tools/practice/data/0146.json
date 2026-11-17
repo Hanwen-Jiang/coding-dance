@@ -28,9 +28,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass LRUCache:\n    def __init__(self, capacity: int):\n        # 初始化数据结构\n        pass\n\n    def get(self, key: int) -> int:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def put(self, key: int, value: int) -> None:\n        raise NotImplementedError(\"请完成此方法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass LRUCache {\n  constructor(capacity) {\n    // 初始化数据结构\n  }\n\n  get(key) {\n    throw new Error(\"请完成此方法\");\n  }\n\n  put(key, value) {\n    throw new Error(\"请完成此方法\");\n  }\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass LRUCache {\n  constructor(capacity: number) {\n    // 初始化数据结构\n  }\n\n  get(key: number): number {\n    throw new Error(\"请完成此方法\");\n  }\n\n  put(key: number, value: number): void {\n    throw new Error(\"请完成此方法\");\n  }\n}\n"
+      "python": "class LRUCache:\n\n    def __init__(self, capacity: int):\n        \n\n    def get(self, key: int) -> int:\n        \n\n    def put(self, key: int, value: int) -> None:\n        \n\n\n# Your LRUCache object will be instantiated and called as such:\n# obj = LRUCache(capacity)\n# param_1 = obj.get(key)\n# obj.put(key,value)\n",
+      "javascript": "/**\n * @param {number} capacity\n */\nvar LRUCache = function(capacity) {\n  \n};\n\n/**\n * @param {number} key\n * @return {number}\n */\nLRUCache.prototype.get = function(key) {\n  \n};\n\n/**\n * @param {number} key\n * @param {number} value\n * @return {void}\n */\nLRUCache.prototype.put = function(key, value) {\n  \n};\n\n/**\n * Your LRUCache object will be instantiated and called as such:\n * var obj = new LRUCache(capacity)\n * var param_1 = obj.get(key)\n * obj.put(key,value)\n */\n",
+      "typescript": "class LRUCache {\n  constructor(capacity: number) {\n    \n  }\n\n  get(key: number): number {\n    \n  }\n\n  put(key: number, value: number): void {\n    \n  }\n}\n\n/**\n * Your LRUCache object will be instantiated and called as such:\n * var obj = new LRUCache(capacity)\n * var param_1 = obj.get(key)\n * obj.put(key,value)\n */\n"
     },
     "acm": {
       "python": "",
@@ -897,6 +897,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "5a91bdef"
+    ],
+    "javascript": [
+      "ecd901f3"
+    ],
+    "typescript": [
+      "3c513524"
     ]
   }
 }

@@ -3,6 +3,7 @@ import json as _practice_json
 import io as _practice_io
 import sys as _practice_sys
 import contextlib as _practice_contextlib
+import traceback as _practice_traceback
 
 
 def __practice_run(request_json):
@@ -179,6 +180,11 @@ def __practice_run(request_json):
             error = f"SystemExit: {exc.code}"
     except BaseException as exc:
         error = f"{type(exc).__name__}: {exc}"
+        # 带上出错的那一行（只看用户代码 solution.py 里的帧；语法错误本身的信息里已经有行号）
+        frames = [f for f in _practice_traceback.extract_tb(exc.__traceback__) if f.filename == "solution.py"]
+        if frames and not isinstance(exc, SyntaxError):
+            last = frames[-1]
+            error += f"（第 {last.lineno} 行：{(last.line or '').strip()}）"
     finally:
         _practice_sys.stdin = previous_stdin
     try:

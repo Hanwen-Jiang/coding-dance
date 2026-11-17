@@ -31,9 +31,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass MinStack:\n    def __init__(self):\n        # 初始化数据结构\n        pass\n\n    def push(self, val: int) -> None:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def pop(self) -> None:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def top(self) -> int:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def getMin(self) -> int:\n        raise NotImplementedError(\"请完成此方法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass MinStack {\n  constructor() {\n    // 初始化数据结构\n  }\n\n  push(val) {\n    throw new Error(\"请完成此方法\");\n  }\n\n  pop() {\n    throw new Error(\"请完成此方法\");\n  }\n\n  top() {\n    throw new Error(\"请完成此方法\");\n  }\n\n  getMin() {\n    throw new Error(\"请完成此方法\");\n  }\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass MinStack {\n  constructor() {\n    // 初始化数据结构\n  }\n\n  push(val: number): void {\n    throw new Error(\"请完成此方法\");\n  }\n\n  pop(): void {\n    throw new Error(\"请完成此方法\");\n  }\n\n  top(): number {\n    throw new Error(\"请完成此方法\");\n  }\n\n  getMin(): number {\n    throw new Error(\"请完成此方法\");\n  }\n}\n"
+      "python": "class MinStack:\n\n    def __init__(self):\n        \n\n    def push(self, val: int) -> None:\n        \n\n    def pop(self) -> None:\n        \n\n    def top(self) -> int:\n        \n\n    def getMin(self) -> int:\n        \n\n\n# Your MinStack object will be instantiated and called as such:\n# obj = MinStack()\n# obj.push(val)\n# obj.pop()\n# param_1 = obj.top()\n# param_2 = obj.getMin()\n",
+      "javascript": "var MinStack = function() {\n  \n};\n\n/**\n * @param {number} val\n * @return {void}\n */\nMinStack.prototype.push = function(val) {\n  \n};\n\n/**\n * @return {void}\n */\nMinStack.prototype.pop = function() {\n  \n};\n\n/**\n * @return {number}\n */\nMinStack.prototype.top = function() {\n  \n};\n\n/**\n * @return {number}\n */\nMinStack.prototype.getMin = function() {\n  \n};\n\n/**\n * Your MinStack object will be instantiated and called as such:\n * var obj = new MinStack()\n * obj.push(val)\n * obj.pop()\n * var param_1 = obj.top()\n * var param_2 = obj.getMin()\n */\n",
+      "typescript": "class MinStack {\n  constructor() {\n    \n  }\n\n  push(val: number): void {\n    \n  }\n\n  pop(): void {\n    \n  }\n\n  top(): number {\n    \n  }\n\n  getMin(): number {\n    \n  }\n}\n\n/**\n * Your MinStack object will be instantiated and called as such:\n * var obj = new MinStack()\n * obj.push(val)\n * obj.pop()\n * var param_1 = obj.top()\n * var param_2 = obj.getMin()\n */\n"
     },
     "acm": {
       "python": "",
@@ -820,6 +820,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "72306d8b"
+    ],
+    "javascript": [
+      "6fe01113"
+    ],
+    "typescript": [
+      "5b9983c2"
     ]
   }
 }

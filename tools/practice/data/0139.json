@@ -15,9 +15,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> bool:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction wordBreak(s, wordDict) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction wordBreak(s: string, wordDict: string[]): boolean {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> bool:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @param {string[]} wordDict\n * @return {boolean}\n */\nvar wordBreak = function(s, wordDict) {\n  \n};",
+      "typescript": "function wordBreak(s: string, wordDict: string[]): boolean {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -391,6 +391,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "d2ae7e68"
+    ],
+    "javascript": [
+      "4c6041b6"
+    ],
+    "typescript": [
+      "425e7e8e"
     ]
   }
 }

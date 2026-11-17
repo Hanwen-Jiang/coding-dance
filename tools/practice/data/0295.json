@@ -23,9 +23,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass MedianFinder:\n    def __init__(self):\n        # 初始化数据结构\n        pass\n\n    def addNum(self, num: int) -> None:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def findMedian(self) -> float:\n        raise NotImplementedError(\"请完成此方法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass MedianFinder {\n  constructor() {\n    // 初始化数据结构\n  }\n\n  addNum(num) {\n    throw new Error(\"请完成此方法\");\n  }\n\n  findMedian() {\n    throw new Error(\"请完成此方法\");\n  }\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass MedianFinder {\n  constructor() {\n    // 初始化数据结构\n  }\n\n  addNum(num: number): void {\n    throw new Error(\"请完成此方法\");\n  }\n\n  findMedian(): number {\n    throw new Error(\"请完成此方法\");\n  }\n}\n"
+      "python": "class MedianFinder:\n\n    def __init__(self):\n        \n\n    def addNum(self, num: int) -> None:\n        \n\n    def findMedian(self) -> float:\n        \n\n\n# Your MedianFinder object will be instantiated and called as such:\n# obj = MedianFinder()\n# obj.addNum(num)\n# param_1 = obj.findMedian()\n",
+      "javascript": "var MedianFinder = function() {\n  \n};\n\n/**\n * @param {number} num\n * @return {void}\n */\nMedianFinder.prototype.addNum = function(num) {\n  \n};\n\n/**\n * @return {number}\n */\nMedianFinder.prototype.findMedian = function() {\n  \n};\n\n/**\n * Your MedianFinder object will be instantiated and called as such:\n * var obj = new MedianFinder()\n * obj.addNum(num)\n * var param_1 = obj.findMedian()\n */\n",
+      "typescript": "class MedianFinder {\n  constructor() {\n    \n  }\n\n  addNum(num: number): void {\n    \n  }\n\n  findMedian(): number {\n    \n  }\n}\n\n/**\n * Your MedianFinder object will be instantiated and called as such:\n * var obj = new MedianFinder()\n * obj.addNum(num)\n * var param_1 = obj.findMedian()\n */\n"
     },
     "acm": {
       "python": "",
@@ -746,6 +746,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "ed40ce88"
+    ],
+    "javascript": [
+      "edbe6e56"
+    ],
+    "typescript": [
+      "3c036d76"
     ]
   }
 }

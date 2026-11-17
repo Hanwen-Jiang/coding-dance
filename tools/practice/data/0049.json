@@ -14,9 +14,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction groupAnagrams(strs) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction groupAnagrams(strs: string[]): string[][] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def groupAnagrams(self, strs: List[str]) -> List[List[str]]:\n        ",
+      "javascript": "/**\n * @param {string[]} strs\n * @return {string[][]}\n */\nvar groupAnagrams = function(strs) {\n  \n};",
+      "typescript": "function groupAnagrams(strs: string[]): string[][] {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -564,6 +564,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "d89787ad"
+    ],
+    "javascript": [
+      "8c135e5d"
+    ],
+    "typescript": [
+      "f07c713f"
     ]
   }
 }

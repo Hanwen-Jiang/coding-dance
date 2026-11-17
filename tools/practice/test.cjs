@@ -25,7 +25,11 @@ async function main() {
     assert.equal(p.examples.length, official[p.id].length);
     assert.equal(p.acm.examples.length, p.examples.length);
     for (const lang of ["python", "javascript", "typescript"]) {
-      assert(p.starters.leetcode[lang].includes("请完成"), `${p.id}: blank LeetCode starter required`);
+      // 力扣模式的起始代码要和力扣一样：不 import、不放 raise / throw 占位，方法体留空
+      const lc = p.starters.leetcode[lang], declared = p.signature.cls || (lang === "python" ? p.signature.pythonFn || p.signature.fn : p.signature.fn);
+      assert(!/from typing|NotImplementedError|throw new Error|请完成/.test(lc), `${p.id} ${lang}: LeetCode starter must look like LeetCode's (no import, no placeholder raise/throw)`);
+      assert(lc.includes(declared), `${p.id} ${lang}: LeetCode starter must declare ${declared}`);
+      assert(Array.isArray(p.previousLeetcodeStarterHashes?.[lang]) && p.previousLeetcodeStarterHashes[lang].length === 1, `${p.id} ${lang}: previous LeetCode starter hash required for draft migration`);
       const blank = p.starters.acm[lang];
       assert.equal(blank, "", `${p.id}: ACM starter must be exactly empty, with no whitespace, imports or comments`);
       assert(!/solve/.test(p.acm.notes.join(" ")), `${p.id}: ACM notes must not describe hidden solve adapters`);

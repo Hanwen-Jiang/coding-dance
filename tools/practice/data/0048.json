@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def rotate(self, matrix: List[List[int]]) -> None:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction rotate(matrix) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction rotate(matrix: number[][]): void {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def rotate(self, matrix: List[List[int]]) -> None:\n        ",
+      "javascript": "/**\n * @param {number[][]} matrix\n * @return {void}\n */\nvar rotate = function(matrix) {\n  \n};",
+      "typescript": "function rotate(matrix: number[][]): void {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -392,6 +392,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "210a65a5"
+    ],
+    "javascript": [
+      "db0570bc"
+    ],
+    "typescript": [
+      "a8aecbc1"
     ]
   }
 }

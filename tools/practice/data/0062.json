@@ -15,9 +15,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction uniquePaths(m, n) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction uniquePaths(m: number, n: number): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        ",
+      "javascript": "/**\n * @param {number} m\n * @param {number} n\n * @return {number}\n */\nvar uniquePaths = function(m, n) {\n  \n};",
+      "typescript": "function uniquePaths(m: number, n: number): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -323,6 +323,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "4e3dc55b"
+    ],
+    "javascript": [
+      "ed8fcbb0"
+    ],
+    "typescript": [
+      "f0209ca5"
     ]
   }
 }
