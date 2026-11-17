@@ -1,14 +1,14 @@
 "use client";
 
 // 账号相关的小组件：顶栏的登录 / 账号菜单、首页的登录提示、开通进度仓的卡片、点 Star 的卡片、题目页的状态切换
-import { Button, Card, Checkbox, Dropdown } from "@heroui/react";
+import { Button, Card, Checkbox, Dropdown, Label, type Selection } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { ExternalIcon } from "@/components/icons";
-import { PixelBullet, PixelIcon, PixelTitle } from "@/components/pixel";
+import { ChevronDown, ExternalIcon } from "@/components/icons";
+import { PixelBullet, PixelIcon, PixelTitle, StatusPixel } from "@/components/pixel";
 import { useProgress } from "@/lib/progress";
 import type { StarResult, Status } from "@/lib/types";
 import { STATUS_ORDER } from "@/lib/types";
@@ -83,6 +83,8 @@ const STAR_INFO: Record<string, string> = {
   "Hanwen-Jiang/agent-runtime": "作者的多租户 Agent 运行核心",
   "Hanwen-Jiang/coding-agent": "建在 Agent Runtime 上的在线多租户 coding agent",
   "Hanwen-Jiang/leetcode": "这个网站，以及全部题解和动画的源码",
+  "Timmononon/StoreAgent": "共创者的知识库 AI Agent 平台：RAG 问答、断点续跑、工具调用和效果评测",
+  "Timmononon/my-runtime": "共创者的本地 Python AI Agent 运行时，带工具、记忆和 GitHub 自动化流程",
 };
 
 /** 还没 Star 的仓库和用户的勾选（默认全勾，可以逐个取消）。没登录时列出全部仓库，登录后再点 */
@@ -372,22 +374,44 @@ export function LoginHint() {
   );
 }
 
-/** 题目页：切换这道题的状态，直接提交到进度仓 */
+/**
+ * 题目页标题下面那一行里的「这道题的状态」：平时只占一个小标签，点开是一个单选菜单，选了直接提交到进度仓。
+ * 没登录或进度仓还没开通时只显示状态，不能改。
+ */
 export function StatusPicker({ id }: { id: number }) {
   const { session, ready, statusOf, setStatus, saving, error } = useProgress();
-  if (!ready || !session?.repo) return null;
+  const current = statusOf(id);
+  if (!ready || !session?.repo) return <StatusPixel status={current} />;
+  const busy = saving === id;
+  const pick = (keys: Selection) => {
+    const next = keys === "all" ? null : ([...keys][0] as Status | undefined);
+    if (next && next !== current) setStatus(id, next);
+  };
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <Segment aria-label="这道题的状态" selectedKey={statusOf(id)} size="sm" onSelectionChange={(k) => setStatus(id, String(k) as Status)}>
-        {STATUS_ORDER.map((s) => (
-          <Segment.Item key={s} id={s}>
-            {s}
-          </Segment.Item>
-        ))}
-      </Segment>
-      <span className="text-xs text-muted">
-        {saving === id ? "正在提交到进度仓…" : error ? <span className="text-danger">{error}</span> : <>存在 {session.repo.name}</>}
-      </span>
-    </div>
+    <span className="inline-flex items-center gap-2">
+      <Dropdown>
+        <Dropdown.Trigger
+          aria-label={`这道题的状态：${current}，点击修改`}
+          className="inline-flex h-6 items-center gap-1 rounded-full border border-border px-2.5 outline-none transition-colors hover:border-accent focus-visible:ring-2 focus-visible:ring-accent"
+        >
+          <StatusPixel status={current} />
+          <ChevronDown aria-hidden className="text-muted" height={12} width={12} />
+        </Dropdown.Trigger>
+        <Dropdown.Popover className="min-w-48" placement="bottom start">
+          <Dropdown.Menu aria-label="这道题的状态" disallowEmptySelection selectedKeys={new Set([current])} selectionMode="single" onSelectionChange={pick}>
+            {STATUS_ORDER.map((s) => (
+              <Dropdown.Item key={s} id={s} textValue={s}>
+                <Dropdown.ItemIndicator />
+                <Label><StatusPixel className="text-sm text-foreground" status={s} /></Label>
+              </Dropdown.Item>
+            ))}
+          </Dropdown.Menu>
+          <p className="border-t border-separator px-3 py-2 text-[11px] leading-4 text-muted">
+            保存在 <span className="font-mono">{session.repo.name}</span>
+          </p>
+        </Dropdown.Popover>
+      </Dropdown>
+      {busy ? <span className="text-xs text-muted">保存中…</span> : error ? <span className="text-xs text-danger" title={error}>没保存上</span> : null}
+    </span>
   );
 }

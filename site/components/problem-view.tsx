@@ -13,7 +13,7 @@ import { PracticeWorkbench } from "@/components/practice/workbench";
 import { DemoPlayer } from "@/components/demo/demo-player";
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
-import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel, StatusPixel } from "@/components/pixel";
+import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel } from "@/components/pixel";
 import { SolutionCode } from "@/components/solution-code";
 import { TierChip, TopicChip } from "@/components/tags";
 import { codeIn } from "@/lib/langs";
@@ -241,25 +241,28 @@ function History({ d, mine }: { d: ProblemDetail; mine: Mine }) {
       />
     );
   }
+  // 默认折叠：每份题解一行（写法 + 文件名），点开才显示代码
   return (
-    <Tabs className="w-full" defaultSelectedKey={history[0].file}>
-      <Tabs.ListContainer>
-        <Tabs.List aria-label="历史题解">
-          {history.map((h) => (
-            <Tabs.Tab key={h.file} id={h.file}>
-              {h.label}
-              <Tabs.Indicator />
-            </Tabs.Tab>
-          ))}
-        </Tabs.List>
-      </Tabs.ListContainer>
+    <Accordion allowsMultipleExpanded className="w-full" variant="surface">
       {history.map((h) => (
-        <Tabs.Panel key={h.file} className="flex flex-col gap-2 pt-4" id={h.file}>
-          <span className="font-mono text-xs text-muted">{h.file}</span>
-          <CodePanel code={h.code} label={h.label} lang={h.lang} />
-        </Tabs.Panel>
+        <Accordion.Item key={h.file} id={h.file}>
+          <Accordion.Heading>
+            <Accordion.Trigger>
+              <span className="me-3 shrink-0 rounded-full bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent">{h.label}</span>
+              <span className="min-w-0 flex-1 truncate text-left font-mono text-xs text-muted">{h.file}</span>
+              <Accordion.Indicator>
+                <ChevronDown />
+              </Accordion.Indicator>
+            </Accordion.Trigger>
+          </Accordion.Heading>
+          <Accordion.Panel>
+            <Accordion.Body>
+              <CodePanel code={h.code} label={h.label} lang={h.lang} />
+            </Accordion.Body>
+          </Accordion.Panel>
+        </Accordion.Item>
       ))}
-    </Tabs>
+    </Accordion>
   );
 }
 
@@ -295,55 +298,111 @@ function Attempts({ d, mine }: { d: ProblemDetail; mine: Mine }) {
       />
     );
   }
+  return <AttemptList attempts={attempts} slug={d.slug} />;
+}
+
+/** 一次尝试点开后的内容：笔记、代码、文件路径 */
+function AttemptBody({ a }: { a: Attempt }) {
+  const sections = a.sections.map((sec) => ({ ...sec, text: a.submission ? sec.text.replace(/^https:\/\/leetcode\.cn\/\S+$/gm, "").trim() : sec.text })).filter((sec) => sec.text);
   return (
-    <ol className="flex flex-col">
-      {attempts.map((a, i) => {
-        const st = RESULT_STYLE[a.result];
-        const last = i === attempts.length - 1;
-        return (
-          <li key={a.file} className="relative flex gap-4 pb-6 last:pb-0">
-            <div aria-hidden className="relative flex w-3 shrink-0 justify-center">
-              <span className={clsx("mt-[7px] size-3 rounded-[3px]", st.dot)} />
-              {!last && <span className="absolute top-6 bottom-[-4px] w-px bg-border" />}
+    <div className="flex flex-col gap-3">
+      {sections.length > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl bg-foreground/[0.03] p-4">
+          {sections.map((sec) => (
+            <div key={sec.title} className="flex flex-col gap-1">
+              <span className="text-xs font-semibold text-muted">{sec.title}</span>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed">{sec.text}</p>
             </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={clsx("rounded-full px-2.5 py-0.5 text-xs font-semibold", st.chip)}>{a.result}</span>
-                <span className="font-mono text-xs text-muted">
-                  {a.date}
-                  {a.submittedAt?.slice(11, 16) ? ` ${a.submittedAt.slice(11, 16)}` : ""} · 第 {a.seq} 次
-                </span>
-                {!a.verbatim && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">不是原样提交</span>}
-                {a.submission && (
-                  <a
-                    className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-muted no-underline hover:text-foreground"
-                    href={d.slug ? `https://leetcode.cn/problems/${d.slug}/submissions/${a.submission}/` : `https://leetcode.cn/submissions/detail/${a.submission}/`}
-                    rel="noopener noreferrer"
-                    target="_blank"
-                  >
-                    力扣提交 {a.submission}
-                    <ExternalIcon />
-                  </a>
-                )}
-              </div>
-              {a.sections.length > 0 && (
-                <Card className="gap-3 p-4 sm:p-5">
-                  {a.sections.map((sec) => ({ ...sec, text: a.submission ? sec.text.replace(/^https:\/\/leetcode\.cn\/\S+$/gm, "").trim() : sec.text })).filter((sec) => sec.text).map((sec) => (
-                    <div key={sec.title} className="flex flex-col gap-1">
-                      <span className="text-xs font-semibold text-muted">{sec.title}</span>
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{sec.text}</p>
-                    </div>
-                  ))}
-                </Card>
-              )}
-              {a.code != null && <CodePanel code={a.code} label={`${LANG_NAME[a.lang] ?? a.lang} · ${a.verbatim ? "原样提交" : "不是原样提交"}`} lang={a.lang} />}
-              {a.errors.length > 0 && <p className="text-xs text-danger">这份记录的格式不对：{a.errors.join("；")}</p>}
-              <span className="font-mono text-[11px] text-muted">{a.file}</span>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+          ))}
+        </div>
+      )}
+      {a.code != null && <CodePanel code={a.code} label={`${LANG_NAME[a.lang] ?? a.lang} · ${a.verbatim ? "原样提交" : "不是原样提交"}`} lang={a.lang} />}
+      {a.errors.length > 0 && <p className="text-xs text-danger">这份记录的格式不对：{a.errors.join("；")}</p>}
+      <span className="font-mono text-[11px] text-muted">{a.file}</span>
+    </div>
+  );
+}
+
+const SHOW_RECENT = 5;
+
+/**
+ * 尝试记录默认折叠：上面一行汇总（每次一个色块，从旧到新），下面每次尝试只占一行，点开才看笔记和代码。
+ * 次数多时只列最近几次，更早的点一下再展开。
+ */
+function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | null | undefined }) {
+  const [showAll, setShowAll] = useState(false);
+  const counts = attempts.reduce<Partial<Record<AttemptResult, number>>>((m, a) => ({ ...m, [a.result]: (m[a.result] ?? 0) + 1 }), {});
+  const latest = attempts[attempts.length - 1];
+  const hidden = showAll ? 0 : Math.max(0, attempts.length - SHOW_RECENT);
+  const shown = attempts.slice(hidden);
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 rounded-2xl border border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm">
+          <span className="font-semibold">共 {attempts.length} 次</span>
+          {(Object.keys(RESULT_STYLE) as AttemptResult[]).filter((r) => counts[r]).map((r) => (
+            <span key={r} className="inline-flex items-center gap-1.5 text-xs text-muted">
+              <span aria-hidden className={clsx("size-2 rounded-[2px]", RESULT_STYLE[r].dot)} />
+              {r} {counts[r]}
+            </span>
+          ))}
+          <span className="text-xs text-muted">· 最近一次 {latest.date} {latest.result}</span>
+        </div>
+        {/* 每次一个色块，从旧到新 */}
+        <div aria-hidden className="flex flex-wrap gap-[3px]" title="每次尝试一个色块，从旧到新">
+          {attempts.map((a) => (
+            <span key={a.file} className={clsx("size-2.5 rounded-[2px]", RESULT_STYLE[a.result].dot)} />
+          ))}
+        </div>
+      </div>
+      {hidden > 0 && (
+        <Button className="self-start" size="sm" variant="ghost" onPress={() => setShowAll(true)}>
+          显示更早的 {hidden} 次
+        </Button>
+      )}
+      <Accordion allowsMultipleExpanded className="w-full" variant="surface">
+        {shown.map((a) => {
+          const st = RESULT_STYLE[a.result];
+          return (
+            <Accordion.Item key={a.file} id={a.file}>
+              <Accordion.Heading>
+                <Accordion.Trigger>
+                  <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-left">
+                    <span className={clsx("rounded-full px-2.5 py-0.5 text-xs font-semibold", st.chip)}>{a.result}</span>
+                    <span className="font-mono text-xs text-muted">
+                      {a.date}
+                      {a.submittedAt?.slice(11, 16) ? ` ${a.submittedAt.slice(11, 16)}` : ""} · 第 {a.seq} 次 · {LANG_NAME[a.lang] ?? a.lang}
+                    </span>
+                    {!a.verbatim && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">不是原样提交</span>}
+                  </span>
+                  <Accordion.Indicator>
+                    <ChevronDown />
+                  </Accordion.Indicator>
+                </Accordion.Trigger>
+              </Accordion.Heading>
+              <Accordion.Panel>
+                <Accordion.Body>
+                  <div className="flex flex-col gap-3">
+                    {a.submission && (
+                      <a
+                        className="inline-flex items-center gap-1 self-start rounded-full border border-border px-2 py-0.5 text-xs text-muted no-underline hover:text-foreground"
+                        href={slug ? `https://leetcode.cn/problems/${slug}/submissions/${a.submission}/` : `https://leetcode.cn/submissions/detail/${a.submission}/`}
+                        rel="noopener noreferrer"
+                        target="_blank"
+                      >
+                        力扣提交 {a.submission}
+                        <ExternalIcon />
+                      </a>
+                    )}
+                    <AttemptBody a={a} />
+                  </div>
+                </Accordion.Body>
+              </Accordion.Panel>
+            </Accordion.Item>
+          );
+        })}
+      </Accordion>
+    </div>
   );
 }
 
@@ -426,8 +485,26 @@ function HandwrittenDemo({ src }: { src: string }) {
   );
 }
 
-/** 相关基础：这道题用到的数据结构和算法专题（专题的 related 里有这道题） */
-function LearnLinks({ learn }: { learn: NonNullable<ProblemDetail["learn"]> }) {
+/** 相关基础：这道题用到的数据结构和算法专题（专题的 related 里有这道题）。vertical：侧栏里的竖排列表 */
+function LearnLinks({ learn, vertical = false }: { learn: NonNullable<ProblemDetail["learn"]>; vertical?: boolean }) {
+  if (vertical) {
+    return (
+      <nav aria-label="相关基础" className="flex flex-col gap-1">
+        <span className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">相关基础</span>
+        {learn.map((t) => (
+          <NextLink
+            key={t.slug}
+            className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted no-underline transition-colors hover:bg-surface-secondary hover:text-foreground"
+            href={`/learn/${t.slug}/`}
+            title={`${TOPIC_KIND[t.kind].label}专题：${t.name}`}
+          >
+            <span aria-hidden className={clsx("size-1.5 shrink-0 rounded-[2px]", t.kind === "ds" ? "bg-accent" : "bg-warning")} />
+            {t.name}
+          </NextLink>
+        ))}
+      </nav>
+    );
+  }
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs text-muted">相关基础</span>
@@ -454,7 +531,6 @@ function DemoSection({ d, revealed, onReveal }: { d: ProblemDetail; revealed: bo
 
 export function ProblemView({ id }: { id: number }) {
   const { data: d, error, loading } = useApi<ProblemDetail>(`/api/problem/${id}`);
-  const progressCtx = useProgress();
   const mine = useMine(id);
   // 题解默认盖着；演示旁边「这一步的代码」跟它共用这个开关，换一道题重新盖上
   const [revealed, setRevealed] = useState(false);
@@ -483,7 +559,6 @@ export function ProblemView({ id }: { id: number }) {
   }
 
   const s = d.summary;
-  const { statusOf } = progressCtx;
   const sections = SECTIONS.filter((x) => (x.id === "points" ? d.spec?.points?.length : true));
 
   return (
@@ -507,14 +582,13 @@ export function ProblemView({ id }: { id: number }) {
                 <span className="me-2 font-mono text-muted sm:hidden">{s.id}.</span>
                 {s.name}
               </h1>
-              <div className="flex flex-wrap items-center gap-3">
+              {/* 一行就够：难度、专题、重要程度、这道题的状态（登录后点开就能改）。相关基础挪到了侧栏和题面下面 */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <LevelPixels level={s.level} />
                 <TopicChip topic={s.topic} />
                 <TierChip tier={s.tier} />
-                {progressCtx.ready ? null : <StatusPixel status={statusOf(s.id)} />}
+                <StatusPicker id={s.id} />
               </div>
-              <StatusPicker id={s.id} />
-              {d.learn?.length ? <LearnLinks learn={d.learn} /> : null}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -543,6 +617,8 @@ export function ProblemView({ id }: { id: number }) {
             <Card className="p-5 sm:p-7">
               <PracticeStatement />
             </Card>
+            {/* 侧栏（problem-toc）不显示的宽度下，相关基础放在题面下面；显示规则见 practice.css */}
+            {d.learn?.length ? <div className="problem-learn-inline"><LearnLinks learn={d.learn} /></div> : null}
           </section>
 
           <section className="flex flex-col gap-4">
@@ -626,13 +702,16 @@ export function ProblemView({ id }: { id: number }) {
         </div>
 
         <aside className="problem-toc">
-          <div className="sticky top-24 flex flex-col gap-1">
-            <span className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">本页</span>
-            {sections.map((x) => (
-              <a key={x.id} className="rounded-lg px-3 py-1.5 text-sm text-muted no-underline transition-colors hover:bg-surface-secondary hover:text-foreground" href={`#${x.id}`}>
-                {x.label}
-              </a>
-            ))}
+          <div className="sticky top-24 flex flex-col gap-6">
+            <nav aria-label="本页" className="flex flex-col gap-1">
+              <span className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">本页</span>
+              {sections.map((x) => (
+                <a key={x.id} className="rounded-lg px-3 py-1.5 text-sm text-muted no-underline transition-colors hover:bg-surface-secondary hover:text-foreground" href={`#${x.id}`}>
+                  {x.label}
+                </a>
+              ))}
+            </nav>
+            {d.learn?.length ? <LearnLinks vertical learn={d.learn} /> : null}
           </div>
         </aside>
       </div>

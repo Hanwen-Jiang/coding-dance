@@ -2,6 +2,8 @@
 .problem-original { min-width: 0; }
 .problem-original-sections { display: grid; gap: 40px; }
 .problem-toc { display: none; }
+/* 「相关基础」：侧栏显示时放在侧栏里，其余宽度放在题面下面（两处的显示条件正好相反） */
+.problem-learn-inline { display: block; }
 .practice-sidebar { min-width: 0; margin-top: 40px; }
 .practice-sidebar { --practice-editor-height: clamp(500px, calc(100dvh - 256px), 960px); }
 .practice-editor-column { min-width: 0; }
@@ -80,6 +82,7 @@
 @media (min-width: 1024px) and (max-width: 1199px) {
   .problem-original-sections { grid-template-columns: minmax(0, 1fr) 200px; }
   .problem-toc { display: block; }
+  .problem-learn-inline { display: none; }
 }
 @media (min-width: 1200px) {
   /* Only this problem page leaves the global max-w-6xl container. The homepage is unchanged. */
@@ -100,6 +103,7 @@
   .problem-page-layout { grid-template-columns: 1104px minmax(0, 1fr); }
   .problem-original-sections { grid-template-columns: minmax(0, 1fr) 200px; }
   .problem-toc { display: block; }
+  .problem-learn-inline { display: none; }
 }
 @media (max-width: 767px) {
   .practice-shell--focus {
