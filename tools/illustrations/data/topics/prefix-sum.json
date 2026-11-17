@@ -66,7 +66,7 @@
        }
       },
       "cpp": {
-       "code": "class NumArray {\n    vector<int> pre;                            // pre[i] 是前 i 个数的和\n\npublic:\n    NumArray(vector<int>& nums) {\n        pre.assign(nums.size() + 1, 0);\n        for (int i = 0; i < (int)nums.size(); i++) {\n            pre[i + 1] = pre[i] + nums[i];\n        }\n    }\n\n    int sumRange(int left, int right) {\n        return pre[right + 1] - pre[left];      // 两个前缀和相减\n    }\n};",
+       "code": "class NumArray {\n    vector<int> pre;                            // pre[i] 是前 i 个数的和\n\npublic:\n    NumArray(const vector<int>& nums) {\n        pre.assign(nums.size() + 1, 0);\n        for (int i = 0; i < (int)nums.size(); i++) {\n            pre[i + 1] = pre[i] + nums[i];\n        }\n    }\n\n    int sumRange(int left, int right) {\n        return pre[right + 1] - pre[left];      // 两个前缀和相减\n    }\n};",
        "marks": {
         "init": [
          6

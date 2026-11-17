@@ -328,22 +328,22 @@
        }
       },
       "typescript": {
-       "code": "// TypeScript 没有内置的堆，这里手写一个最小堆（力扣的 TypeScript 环境里可以直接用 MinPriorityQueue）\nclass MinHeap {\n    private a: number[] = [];\n    size(): number {\n        return this.a.length;\n    }\n    peek(): number {\n        return this.a[0];\n    }\n    push(x: number): void {\n        const a = this.a;\n        a.push(x);\n        for (let i = a.length - 1; i > 0 && a[(i - 1) >> 1] > a[i]; i = (i - 1) >> 1) {\n            [a[i], a[(i - 1) >> 1]] = [a[(i - 1) >> 1], a[i]];\n        }\n    }\n    pop(): number {\n        const a = this.a, top = a[0], last = a.pop()!;\n        if (a.length) {\n            a[0] = last;\n            for (let i = 0; ;) {\n                let small = i;\n                for (const c of [2 * i + 1, 2 * i + 2]) {\n                    if (c < a.length && a[c] < a[small]) small = c;\n                }\n                if (small === i) break;\n                [a[i], a[small]] = [a[small], a[i]];\n                i = small;\n            }\n        }\n        return top;\n    }\n}\n\nclass KthLargest {\n    private heap = new MinHeap();               // 最小堆，只留最大的 k 个数\n\n    constructor(private k: number, nums: number[]) {\n        for (const x of nums) {\n            this.add(x);\n        }\n    }\n\n    add(val: number): number {\n        this.heap.push(val);\n        if (this.heap.size() > this.k) {        // 多了一个：最小的那个不可能是前 k 大\n            this.heap.pop();\n        }\n        return this.heap.peek();                // 堆顶就是第 k 大\n    }\n}",
+       "code": "// TypeScript 没有内置的堆，这里手写一个最小堆（力扣的 TypeScript 环境里可以直接用 MinPriorityQueue）\nclass MinHeap {\n    private a: number[] = [];\n    size(): number {\n        return this.a.length;\n    }\n    peek(): number {\n        return this.a[0];\n    }\n    push(x: number): void {\n        const a = this.a;\n        a.push(x);\n        for (let i = a.length - 1; i > 0 && a[(i - 1) >> 1] > a[i]; i = (i - 1) >> 1) {\n            [a[i], a[(i - 1) >> 1]] = [a[(i - 1) >> 1], a[i]];\n        }\n    }\n    pop(): number {\n        const a = this.a, top = a[0], last = a.pop()!;\n        if (a.length) {\n            a[0] = last;\n            for (let i = 0; ;) {\n                let small = i;\n                for (const c of [2 * i + 1, 2 * i + 2]) {\n                    if (c < a.length && a[c] < a[small]) small = c;\n                }\n                if (small === i) break;\n                [a[i], a[small]] = [a[small], a[i]];\n                i = small;\n            }\n        }\n        return top;\n    }\n}\n\nclass KthLargest {\n    private k: number;\n    private heap = new MinHeap();               // 最小堆，只留最大的 k 个数\n\n    constructor(k: number, nums: number[]) {\n        this.k = k;\n        for (const x of nums) {\n            this.add(x);\n        }\n    }\n\n    add(val: number): number {\n        this.heap.push(val);\n        if (this.heap.size() > this.k) {        // 多了一个：最小的那个不可能是前 k 大\n            this.heap.pop();\n        }\n        return this.heap.peek();                // 堆顶就是第 k 大\n    }\n}",
        "marks": {
         "init": [
-         36,
-         39,
-         40
+         37,
+         41,
+         42
         ],
         "push": [
-         45
-        ],
-        "trim": [
-         46,
          47
         ],
-        "top": [
+        "trim": [
+         48,
          49
+        ],
+        "top": [
+         51
         ]
        }
       }
