@@ -195,6 +195,8 @@ export interface SessionInfo {
   /** GitHub「用模板新建仓库」页面 */
   createUrl: string;
   user: { login: string; avatar: string } | null;
+  /** 会员档位（登录后才有）。founder：创始会员，永久最高档；since：第一次授权或建进度仓的日期 */
+  member?: { tier: "free" | "pro"; founder: boolean; since: string | null };
   repo: {
     name: string;
     url: string;
