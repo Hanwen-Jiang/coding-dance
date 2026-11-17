@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { renderViews } from "@/components/demo/render";
 import { StepCode } from "@/components/demo/step-code";
-import { ChevronLeft, ChevronRight, PlayIcon } from "@/components/icons";
+import { ChevronLeft, ChevronRight, EyeIcon, PlayIcon } from "@/components/icons";
 import { LangTabs } from "@/components/lang-picker";
 import { PixelIcon } from "@/components/pixel";
 import { codeIn, langLabel } from "@/lib/langs";
@@ -60,8 +60,12 @@ const PauseIcon = () => (
   </svg>
 );
 
-/** codes：这道题（或专题这一节）的所有代码；演示的每种解法用 method.code 指到其中一段 */
-export function DemoPlayer({ demo, codes = [] }: { demo: Demo; codes?: SpecCode[] }) {
+/**
+ * codes：这道题（或专题这一节）的所有代码；演示的每种解法用 method.code 指到其中一段。
+ * codeRevealed：题目页上题解还没点开时是 false，这一步的代码也盖上遮罩（看得到高亮在哪几行，看不清代码）；
+ * onRevealCode 点开它，题解区也一起点开。不传就是直接显示（专题页没有剧透的问题）。
+ */
+export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode }: { demo: Demo; codes?: SpecCode[]; codeRevealed?: boolean; onRevealCode?: () => void }) {
   // 多种解法共用同一组输入，切换解法时输入不变、从第 0 步重新播放
   const methods: DemoMethod[] = demo.methods?.length ? demo.methods : [{ t: "", note: null, legend: demo.legend, build: demo.build }];
   const [mi, setMi] = useState(0);
@@ -302,7 +306,24 @@ export function DemoPlayer({ demo, codes = [] }: { demo: Demo; codes?: SpecCode[
                 </button>
                 {showCode && <LangTabs label="代码的语言" langs={codeLangs} value={lang} onChange={setPicked} />}
               </div>
-              {showCode && <StepCode active={active} code={text.code} lang={lang} />}
+              {showCode &&
+                (codeRevealed ? (
+                  <StepCode active={active} code={text.code} lang={lang} />
+                ) : (
+                  <div className="relative overflow-hidden rounded-2xl">
+                    <div aria-hidden className="pointer-events-none select-none blur-[5px]">
+                      <StepCode active={active} code={text.code} lang={lang} />
+                    </div>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/30">
+                      <span className="font-pixel text-[11px] tracking-widest text-muted">SPOILER</span>
+                      <Button size="sm" onPress={onRevealCode}>
+                        <EyeIcon />
+                        查看代码
+                      </Button>
+                      <span className="text-xs text-muted">和下面的题解一起显示</span>
+                    </div>
+                  </div>
+                ))}
             </div>
           )}
           {method.legend.length > 0 && (
