@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction maxProfit(prices) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction maxProfit(prices: number[]): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def maxProfit(self, prices: List[int]) -> int:\n        ",
+      "javascript": "/**\n * @param {number[]} prices\n * @return {number}\n */\nvar maxProfit = function(prices) {\n  \n};",
+      "typescript": "function maxProfit(prices: number[]): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -379,6 +379,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "071f5874"
+    ],
+    "javascript": [
+      "39e2fa56"
+    ],
+    "typescript": [
+      "b135e4c8"
     ]
   }
 }

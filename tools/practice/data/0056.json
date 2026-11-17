@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def merge(self, intervals: List[List[int]]) -> List[List[int]]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction merge(intervals) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction merge(intervals: number[][]): number[][] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def merge(self, intervals: List[List[int]]) -> List[List[int]]:\n        ",
+      "javascript": "/**\n * @param {number[][]} intervals\n * @return {number[][]}\n */\nvar merge = function(intervals) {\n  \n};",
+      "typescript": "function merge(intervals: number[][]): number[][] {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -725,6 +725,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "923c9544"
+    ],
+    "javascript": [
+      "c967c0ba"
+    ],
+    "typescript": [
+      "0516efc4"
     ]
   }
 }

@@ -15,9 +15,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def minDistance(self, word1: str, word2: str) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction minDistance(word1, word2) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction minDistance(word1: string, word2: string): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def minDistance(self, word1: str, word2: str) -> int:\n        ",
+      "javascript": "/**\n * @param {string} word1\n * @param {string} word2\n * @return {number}\n */\nvar minDistance = function(word1, word2) {\n  \n};",
+      "typescript": "function minDistance(word1: string, word2: string): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -279,6 +279,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "c51d1641"
+    ],
+    "javascript": [
+      "dd319dae"
+    ],
+    "typescript": [
+      "aea2bd43"
     ]
   }
 }

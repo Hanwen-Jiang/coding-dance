@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def orangesRotting(self, grid: List[List[int]]) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction orangesRotting(grid) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction orangesRotting(grid: number[][]): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def orangesRotting(self, grid: List[List[int]]) -> int:\n        ",
+      "javascript": "/**\n * @param {number[][]} grid\n * @return {number}\n */\nvar orangesRotting = function(grid) {\n  \n};",
+      "typescript": "function orangesRotting(grid: number[][]): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -534,6 +534,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "e8cc0106"
+    ],
+    "javascript": [
+      "b51b376c"
+    ],
+    "typescript": [
+      "62d9c776"
     ]
   }
 }

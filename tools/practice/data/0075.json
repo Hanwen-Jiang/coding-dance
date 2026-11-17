@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def sortColors(self, nums: List[int]) -> None:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction sortColors(nums) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction sortColors(nums: number[]): void {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def sortColors(self, nums: List[int]) -> None:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @return {void}\n */\nvar sortColors = function(nums) {\n  \n};",
+      "typescript": "function sortColors(nums: number[]): void {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -472,6 +472,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "cbfbd412"
+    ],
+    "javascript": [
+      "3fbc73b7"
+    ],
+    "typescript": [
+      "fa33f00e"
     ]
   }
 }

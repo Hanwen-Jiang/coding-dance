@@ -10,8 +10,89 @@ const pyType = (t) => {
   return ({ int: "int", long: "int", double: "float", bool: "bool", string: "str", char: "str", void: "None", ListNode: "Optional[ListNode]", CycleList: "Optional[ListNode]", JoinList: "Optional[ListNode]", NodeIndex: "Optional[ListNode]", TreeNode: "Optional[TreeNode]", TreeRef: "TreeNode", TreeVal: "Optional[TreeNode]", RandomList: "Optional[Node]" })[t] || "Any";
 };
 const outType = (s) => s.ret === "void" ? s.params[s.out || 0] : s.ret;
+const jsDocType = (t) => {
+  const item = itemType(t);
+  if (item) return `${jsDocType(item)}[]`;
+  return ({ int: "number", long: "number", double: "number", bool: "boolean", string: "string", char: "character", void: "void", ListNode: "ListNode", CycleList: "ListNode", JoinList: "ListNode", NodeIndex: "ListNode", TreeNode: "TreeNode", TreeRef: "TreeNode", TreeVal: "TreeNode", RandomList: "_Node" })[t] || "any";
+};
+/** 签名里用到的节点类型：决定模板开头要不要带力扣那段注释掉的节点定义 */
+const nodeKinds = (sig) => {
+  const all = [...(sig.params || []), sig.ret, ...(sig.ctor || []), ...Object.values(sig.methods || {}).flatMap(([ps, r]) => [...ps, r])].filter(Boolean);
+  const base = (t) => itemType(t) ? base(itemType(t)) : t;
+  const kinds = new Set(all.map(base));
+  return {
+    list: ["ListNode", "CycleList", "JoinList", "NodeIndex"].some((k) => kinds.has(k)),
+    tree: ["TreeNode", "TreeRef", "TreeVal"].some((k) => kinds.has(k)),
+    random: kinds.has("RandomList"),
+  };
+};
+const DEFS = {
+  python: {
+    list: "# Definition for singly-linked list.\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\n",
+    tree: "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\n",
+    random: "\"\"\"\n# Definition for a Node.\nclass Node:\n    def __init__(self, x: int, next: 'Node' = None, random: 'Node' = None):\n        self.val = int(x)\n        self.next = next\n        self.random = random\n\"\"\"\n\n",
+  },
+  javascript: {
+    list: "/**\n * Definition for singly-linked list.\n * function ListNode(val, next) {\n *     this.val = (val===undefined ? 0 : val)\n *     this.next = (next===undefined ? null : next)\n * }\n */\n",
+    tree: "/**\n * Definition for a binary tree node.\n * function TreeNode(val, left, right) {\n *     this.val = (val===undefined ? 0 : val)\n *     this.left = (left===undefined ? null : left)\n *     this.right = (right===undefined ? null : right)\n * }\n */\n",
+    random: "/**\n * // Definition for a _Node.\n * function _Node(val, next, random) {\n *    this.val = val;\n *    this.next = next;\n *    this.random = random;\n * };\n */\n\n",
+  },
+  typescript: {
+    list: "/**\n * Definition for singly-linked list.\n * class ListNode {\n *     val: number\n *     next: ListNode | null\n *     constructor(val?: number, next?: ListNode | null) {\n *         this.val = (val===undefined ? 0 : val)\n *         this.next = (next===undefined ? null : next)\n *     }\n * }\n */\n\n",
+    tree: "/**\n * Definition for a binary tree node.\n * class TreeNode {\n *     val: number\n *     left: TreeNode | null\n *     right: TreeNode | null\n *     constructor(val?: number, left?: TreeNode | null, right?: TreeNode | null) {\n *         this.val = (val===undefined ? 0 : val)\n *         this.left = (left===undefined ? null : left)\n *         this.right = (right===undefined ? null : right)\n *     }\n * }\n */\n\n",
+    random: "/**\n * Definition for _Node.\n * class _Node {\n *     val: number\n *     next: _Node | null\n *     random: _Node | null\n *\n *     constructor(val?: number, next?: _Node, random?: _Node) {\n *         this.val = (val===undefined ? 0 : val)\n *         this.next = (next===undefined ? null : next)\n *         this.random = (random===undefined ? null : random)\n *     }\n * }\n */\n\n",
+  },
+};
 
+/**
+ * 力扣模式的起始代码：和力扣网站上一模一样——开头是注释掉的节点定义，方法体留空，
+ * 不加 import（运行环境和力扣一样预先导入了 typing、collections、heapq 等），也不加 raise / throw。
+ */
 function leetcodeTemplate(signature, parameterNames, language, methodNames = {}) {
+  const sig = signature;
+  const names = (types, isConstructor = false) => types.map((_, i) => isConstructor && sig.cls === "LRUCache" ? "capacity" : ["key", "value"][i] || `arg${i + 1}`);
+  const kinds = nodeKinds(sig), defs = DEFS[language];
+  const head = (kinds.random ? defs.random : "") + (kinds.list ? defs.list : "") + (kinds.tree ? defs.tree : "");
+  const methods = Object.entries(sig.methods || {});
+  const ctorNames = names(sig.ctor || [], true);
+  const usage = (comment, prefix) => {
+    let n = 0;
+    const lines = [`${prefix}Your ${sig.cls} object will be instantiated and called as such:`, `${prefix}${comment === "#" ? "obj" : "var obj"} = ${comment === "#" ? "" : "new "}${sig.cls}(${ctorNames.join(", ")})`];
+    for (const [method, [ps, ret]] of methods) {
+      const call = `obj.${language === "python" ? sig.pythonMethods?.[method] || method : method}(${(methodNames[method] || names(ps)).join(",")})`;
+      lines.push(prefix + (ret === "void" ? call : `${comment === "#" ? "" : "var "}param_${++n} = ${call}`));
+    }
+    return lines;
+  };
+  if (language === "python") {
+    if (sig.cls) {
+      return head + `class ${sig.cls}:\n\n    def __init__(self${ctorNames.map((n, i) => `, ${n}: ${pyType(sig.ctor[i])}`).join("")}):\n        \n` + methods.map(([method, [params, ret]]) => {
+        const ps = methodNames[method] || names(params);
+        return `\n    def ${sig.pythonMethods?.[method] || method}(self${params.map((p, i) => `, ${ps[i]}: ${pyType(p)}`).join("")}) -> ${pyType(ret)}:\n        \n`;
+      }).join("") + "\n\n" + usage("#", "# ").join("\n") + "\n";
+    }
+    return head + `class Solution:\n    def ${sig.pythonFn || sig.fn}(self${sig.params.map((t, i) => `, ${parameterNames[i]}: ${pyType(t)}`).join("")}) -> ${pyType(sig.ret)}:\n        `;
+  }
+  const doc = (ps, ns, ret) => (!ps.length && !ret ? "" : `/**\n${ps.map((t, i) => ` * @param {${jsDocType(t)}} ${ns[i]}\n`).join("")}${ret ? ` * @return {${jsDocType(ret)}}\n` : ""} */\n`);
+  const usageBlock = "/**\n" + usage("//", " * ").join("\n") + "\n */\n";
+  if (language === "javascript") {
+    if (sig.cls) {
+      return doc(sig.ctor || [], ctorNames, null) + `var ${sig.cls} = function(${ctorNames.join(", ")}) {\n  \n};\n` + methods.map(([method, [ps, ret]]) => {
+        const ns = methodNames[method] || names(ps);
+        return `\n${doc(ps, ns, ret)}${sig.cls}.prototype.${method} = function(${ns.join(", ")}) {\n  \n};\n`;
+      }).join("") + "\n" + usageBlock;
+    }
+    return head + doc(sig.params, parameterNames, sig.ret) + `var ${sig.fn} = function(${parameterNames.join(", ")}) {\n  \n};`;
+  }
+  const typed = (ps, ns) => ps.map((t, i) => `${ns[i]}: ${tsType(t)}`).join(", ");
+  if (sig.cls) {
+    return `class ${sig.cls} {\n  constructor(${typed(sig.ctor || [], ctorNames)}) {\n    \n  }\n` + methods.map(([method, [ps, ret]]) => `\n  ${method}(${typed(ps, methodNames[method] || names(ps))}): ${tsType(ret)} {\n    \n  }\n`).join("") + "}\n\n" + usageBlock;
+  }
+  return head + `function ${sig.fn}(${typed(sig.params, parameterNames)}): ${tsType(sig.ret)} {\n  \n};`;
+}
+
+/** 上一版的力扣模式起始代码（带 from typing import * 和 raise / throw）。只用来认出没改过的旧草稿，换成新模板 */
+function previousLeetcodeTemplate(signature, parameterNames, language, methodNames = {}) {
   const sig = signature;
   const names = (types, isConstructor = false) => types.map((_, i) => isConstructor && sig.cls === "LRUCache" ? "capacity" : ["key", "value"][i] || `arg${i + 1}`);
   if (language === "python") {
@@ -75,4 +156,4 @@ function starterHash(value) {
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-module.exports = { leetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash, javascriptPrelude, javascriptEpilogue, pythonPrelude, pythonEpilogue };
+module.exports = { leetcodeTemplate, previousLeetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash, javascriptPrelude, javascriptEpilogue, pythonPrelude, pythonEpilogue };

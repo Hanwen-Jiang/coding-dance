@@ -14,9 +14,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def partition(self, s: str) -> List[List[str]]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction partition(s) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction partition(s: string): string[][] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def partition(self, s: str) -> List[List[str]]:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @return {string[][]}\n */\nvar partition = function(s) {\n  \n};",
+      "typescript": "function partition(s: string): string[][] {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -516,6 +516,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "ce8a8591"
+    ],
+    "javascript": [
+      "b1b8e479"
+    ],
+    "typescript": [
+      "ada57a27"
     ]
   }
 }

@@ -14,9 +14,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def letterCombinations(self, digits: str) -> List[str]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction letterCombinations(digits) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction letterCombinations(digits: string): string[] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def letterCombinations(self, digits: str) -> List[str]:\n        ",
+      "javascript": "/**\n * @param {string} digits\n * @return {string[]}\n */\nvar letterCombinations = function(digits) {\n  \n};",
+      "typescript": "function letterCombinations(digits: string): string[] {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -451,6 +451,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "8a2b65ac"
+    ],
+    "javascript": [
+      "eda4473e"
+    ],
+    "typescript": [
+      "a3b31c78"
     ]
   }
 }

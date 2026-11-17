@@ -15,9 +15,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def findAnagrams(self, s: str, p: str) -> List[int]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction findAnagrams(s, p) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction findAnagrams(s: string, p: string): number[] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def findAnagrams(self, s: str, p: str) -> List[int]:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @param {string} p\n * @return {number[]}\n */\nvar findAnagrams = function(s, p) {\n  \n};",
+      "typescript": "function findAnagrams(s: string, p: string): number[] {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -324,6 +324,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "efbf542b"
+    ],
+    "javascript": [
+      "18ffc5b8"
+    ],
+    "typescript": [
+      "2ea83781"
     ]
   }
 }

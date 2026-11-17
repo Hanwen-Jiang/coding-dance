@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def setZeroes(self, matrix: List[List[int]]) -> None:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction setZeroes(matrix) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction setZeroes(matrix: number[][]): void {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def setZeroes(self, matrix: List[List[int]]) -> None:\n        ",
+      "javascript": "/**\n * @param {number[][]} matrix\n * @return {void}\n */\nvar setZeroes = function(matrix) {\n  \n};",
+      "typescript": "function setZeroes(matrix: number[][]): void {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -939,6 +939,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "89f8cfe0"
+    ],
+    "javascript": [
+      "9f37bbf9"
+    ],
+    "typescript": [
+      "6c0a38f4"
     ]
   }
 }

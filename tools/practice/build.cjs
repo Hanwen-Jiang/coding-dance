@@ -7,7 +7,7 @@ const pyJudge = require("../illustrations/judge/langs/python");
 const { parseCode } = require("../illustrations/judge/code");
 const { GEN, makeR } = require("../illustrations/random");
 const descriptions = require("./descriptions.cjs"), boundaries = require("./boundaries.cjs");
-const { leetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash } = require("./templates.cjs");
+const { leetcodeTemplate, previousLeetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash } = require("./templates.cjs");
 const root = path.resolve(__dirname, "../.."), output = path.join(root, "tools/practice/data");
 const pad = (id) => String(id).padStart(4, "0");
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -190,7 +190,9 @@ async function main() {
       const starters = Object.fromEntries(["leetcode", "acm"].map((mode) => [mode, Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, mode === "leetcode" ? leetcodeTemplate(sig, names, language, methodNames) : acmTemplate(sig, names, language)]))]));
       const legacyAcmStarterHashes = Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, starterHash(legacyAcmTemplate(sig, names, language))]));
       const previousAcmStarterHashes = Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, [starterHash(previousAcmTemplate(sig, names, language))]]));
-      const result = { id: s.id, name: s.name, signature: sig, parameterNames: names, starters, legacyAcmStarterHashes, cases, examples, acm: statement(s, sig, names, examples, methodNames), previousAcmStarterHashes };
+      // 上一版力扣模式起始代码的指纹：用户没改过的旧草稿换成新模板
+      const previousLeetcodeStarterHashes = Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, [starterHash(previousLeetcodeTemplate(sig, names, language, methodNames))]]));
+      const result = { id: s.id, name: s.name, signature: sig, parameterNames: names, starters, legacyAcmStarterHashes, cases, examples, acm: statement(s, sig, names, examples, methodNames), previousAcmStarterHashes, previousLeetcodeStarterHashes };
       fs.writeFileSync(path.join(output, pad(s.id) + ".json"), JSON.stringify(result, null, 2) + "\n");
       total += cases.length;
       officialTotal += examples.length;

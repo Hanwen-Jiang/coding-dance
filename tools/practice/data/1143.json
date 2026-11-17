@@ -15,9 +15,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def longestCommonSubsequence(self, text1: str, text2: str) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction longestCommonSubsequence(text1, text2) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction longestCommonSubsequence(text1: string, text2: string): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def longestCommonSubsequence(self, text1: str, text2: str) -> int:\n        ",
+      "javascript": "/**\n * @param {string} text1\n * @param {string} text2\n * @return {number}\n */\nvar longestCommonSubsequence = function(text1, text2) {\n  \n};",
+      "typescript": "function longestCommonSubsequence(text1: string, text2: string): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -296,6 +296,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "e4de6730"
+    ],
+    "javascript": [
+      "01446bbd"
+    ],
+    "typescript": [
+      "ac893dfc"
     ]
   }
 }

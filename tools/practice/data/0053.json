@@ -13,9 +13,9 @@
   ],
   "starters": {
     "leetcode": {
-      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
-      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction maxSubArray(nums) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
-      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction maxSubArray(nums: number[]): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+      "python": "class Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar maxSubArray = function(nums) {\n  \n};",
+      "typescript": "function maxSubArray(nums: number[]): number {\n  \n};"
     },
     "acm": {
       "python": "",
@@ -405,6 +405,17 @@
     ],
     "typescript": [
       "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "367c4808"
+    ],
+    "javascript": [
+      "e2a9d156"
+    ],
+    "typescript": [
+      "4ed1b3c8"
     ]
   }
 }
