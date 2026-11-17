@@ -4,6 +4,16 @@
 .problem-toc { display: none; }
 /* 「相关基础」：侧栏显示时放在侧栏里，其余宽度放在题面下面（两处的显示条件正好相反） */
 .problem-learn-inline { display: block; }
+/*
+ * 「本页」目录和相关基础放在右边还是题面下面，看正文自己有多宽（不看屏幕）：
+ * 练习区拖宽、拖窄、收起，正文变宽变窄，目录跟着出现或收到下面。
+ */
+.problem-original { container: problem-body / inline-size; }
+@container problem-body (min-width: 960px) {
+  .problem-original-sections { grid-template-columns: minmax(0, 1fr) 200px; }
+  .problem-toc { display: block; }
+  .problem-learn-inline { display: none; }
+}
 .practice-sidebar { min-width: 0; margin-top: 40px; }
 .practice-focus-statement { display: none; }
 
@@ -135,48 +145,41 @@
 }
 .practice-statement-example { max-height: none; }
 #practice { scroll-margin-top: 100px; }
-@media (min-width: 1024px) and (max-width: 1199px) {
-  .problem-original-sections { grid-template-columns: minmax(0, 1fr) 200px; }
-  .problem-toc { display: block; }
-  .problem-learn-inline { display: none; }
-}
+/* 正文和练习区之间的竖条（拖动调整练习区宽度）只在桌面并排时有 */
+.practice-dock-handle { display: none; }
 /*
  * 桌面（≥1200）练习区在页面右侧，可以收起（html[data-practice="closed"]，记在浏览器里，layout.tsx 在首屏前就设好）：
  *   展开：题目页撑宽，顶栏也跟着撑宽（内边距 24px，正好和下面正文的左右边缘对齐）；
  *   收起：题目页和首页一样宽（max-w-6xl），顶栏不动，右下角留一个「写代码」按钮召出练习区。
- * 两种状态之间宽度、列宽、间距都有过渡，顶栏的过渡写在 globals.css。
+ * 三列：正文 | 拖动条（24px，就是原来的间距）| 练习区。练习区的宽度是占整行的比例 --practice-dock
+ * （拖动条调，存在浏览器里，layout.tsx 首屏前就设好），再限制在 360px 和「正文至少留 560px」之间；默认 38%。
+ * 收起、展开之间宽度、列宽都有过渡（拖动时关掉），顶栏的过渡写在 globals.css。
  */
 @media (min-width: 1200px) {
   html:not([data-practice="closed"]) body:has(.problem-page-layout) .site-header-inner { max-width: min(1792px, 100vw); }
   .problem-page-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 480px;
+    grid-template-columns: minmax(0, 1fr) 24px clamp(360px, calc(var(--practice-dock, 0.38) * 100%), calc(100% - 584px));
     align-items: start;
-    gap: 24px;
+    column-gap: 0;
     width: min(1744px, calc(100vw - 48px));
     margin-left: calc((100% - min(1744px, calc(100vw - 48px))) / 2);
-    transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1), margin-left 320ms cubic-bezier(0.2, 0.8, 0.2, 1), grid-template-columns 320ms cubic-bezier(0.2, 0.8, 0.2, 1), column-gap 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+    transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1), margin-left 320ms cubic-bezier(0.2, 0.8, 0.2, 1), grid-template-columns 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
-  html[data-practice="closed"] .problem-page-layout { grid-template-columns: minmax(0, 1fr) 0px; column-gap: 0px; width: 100%; margin-left: 0px; }
+  .problem-page-layout > :first-child { grid-column: 1; grid-row: 1; }
+  .problem-page-layout > .practice-dock-handle { grid-column: 2; grid-row: 1; }
+  .problem-page-layout > .practice-sidebar:not(.practice-shell--focus) { grid-column: 3; grid-row: 1; }
+  html[data-practice="closed"] .problem-page-layout { grid-template-columns: minmax(0, 1fr) 0px 0px; width: 100%; margin-left: 0px; }
+  /* 拖动条和练习区一样停在顶栏下面、一样高；平时一个淡淡的把手，鼠标移上去变成强调色 */
+  .practice-dock-handle { display: flex; position: sticky; top: 80px; align-self: start; height: calc(100dvh - 96px); margin-top: 32px; }
+  .practice-dock-handle .practice-resize-grip { height: 56px; }
+  .problem-page-layout:has(> .practice-dock-handle.practice-resize-handle--active) { transition: none; }
+  html:has(.practice-dock-handle.practice-resize-handle--active) { cursor: col-resize; }
   /* 桌面侧栏：跟着页面滚动停在顶栏下面，高度占满剩下的屏幕，里面的编辑器和控制台按比例分 */
   .practice-sidebar:not(.practice-shell--focus) { position: sticky; top: 80px; display: flex; flex-direction: column; height: calc(100dvh - 96px); margin-top: 32px; transition: opacity 200ms ease 120ms, visibility 0s; }
   .practice-sidebar:not(.practice-shell--focus) > .practice-editor-column { flex: 1 1 auto; }
   html[data-practice="closed"] .practice-sidebar:not(.practice-shell--focus) { overflow: hidden; opacity: 0; visibility: hidden; transition: opacity 120ms ease, visibility 0s 120ms; }
-  /* 收起时正文够宽，「本页」目录和相关基础放回右边 */
-  html[data-practice="closed"] .problem-original-sections { grid-template-columns: minmax(0, 1fr) 200px; }
-  html[data-practice="closed"] .problem-toc { display: block; }
-  html[data-practice="closed"] .problem-learn-inline { display: none; }
   html[data-practice="closed"] .practice-launcher { position: fixed; z-index: 60; right: 24px; bottom: 24px; display: flex; }
-}
-@media (min-width: 1500px) {
-  .problem-page-layout { grid-template-columns: minmax(0, 1fr) 540px; }
-}
-@media (min-width: 1800px) {
-  /* 正文固定 1104px，剩下的都给练习区；写成「1fr + 剩余宽度」而不是「1104px + 1fr」，收起和展开之间才能过渡 */
-  .problem-page-layout { grid-template-columns: minmax(0, 1fr) calc(100% - 1128px); }
-  .problem-original-sections { grid-template-columns: minmax(0, 1fr) 200px; }
-  .problem-toc { display: block; }
-  .problem-learn-inline { display: none; }
 }
 @media (min-width: 1200px) and (prefers-reduced-motion: reduce) {
   .problem-page-layout, .practice-sidebar:not(.practice-shell--focus) { transition: none !important; }

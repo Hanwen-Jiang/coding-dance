@@ -249,6 +249,49 @@ try {
   await page.keyboard.press("Escape");
   console.log("✓ Editor hints: full suggests builtins; no-hints only completes existing variables, keeping colors, pairing and indentation");
 
+  // 桌面：正文和练习区之间的竖条拖动调整练习区宽度，记在浏览器里（刷新不跳），方向键也能调，双击恢复默认，收起时不显示
+  {
+    const handle = page.getByRole("separator", { name: "调整练习区宽度", exact: true });
+    const practiceWidth = () => page.locator(".practice-sidebar").evaluate((el) => el.getBoundingClientRect().width);
+    const bodyWidth = () => page.locator(".problem-original").evaluate((el) => el.getBoundingClientRect().width);
+    const settle = () => page.waitForTimeout(450); // 列宽有 320ms 的过渡
+    await page.evaluate(() => window.scrollTo(0, 0));
+    const before = await practiceWidth(), bodyBefore = await bodyWidth();
+    const hb = await handle.boundingBox();
+    await page.mouse.move(hb.x + hb.width / 2, hb.y + hb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(hb.x + hb.width / 2 - 160, hb.y + hb.height / 2, { steps: 8 });
+    await page.mouse.up();
+    const wider = await practiceWidth();
+    assert(Math.abs(wider - before - 160) < 6, `Dragging the divider left widens practice by the drag distance (${before} → ${wider})`);
+    assert(Math.abs(bodyBefore - (await bodyWidth()) - 160) < 6, "…and the problem body gives up the same width");
+    await page.mouse.move(hb.x + hb.width / 2 - 160, hb.y + hb.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(hb.x - 2000, hb.y + hb.height / 2, { steps: 4 });
+    await page.mouse.up();
+    assert((await bodyWidth()) >= 559, `The problem body keeps at least 560px (${await bodyWidth()})`);
+    await handle.dblclick();
+    await settle();
+    assert(Math.abs((await practiceWidth()) - before) < 2, "Double-click restores the default width");
+    await handle.focus();
+    await page.keyboard.press("ArrowLeft");
+    await settle();
+    const keyed = await practiceWidth();
+    assert(keyed > before + 20, `Arrow keys resize too (${before} → ${keyed})`);
+    await page.reload();
+    await waitEditor();
+    assert(Math.abs((await practiceWidth()) - keyed) < 2, "Practice width survives reload without jumping");
+    await page.getByRole("button", { name: "收起练习区", exact: true }).click();
+    await settle();
+    assert.equal(await handle.isVisible(), false, "Divider hides when practice is stowed");
+    await page.getByRole("button", { name: "展开练习区", exact: true }).click();
+    await settle();
+    assert(Math.abs((await practiceWidth()) - keyed) < 2, "Summoning practice brings back the chosen width");
+    await handle.dblclick();
+    await settle();
+    console.log("✓ Desktop divider: drag, min body width, keys, double-click reset, survives reload, hidden when stowed");
+  }
+
   await page.getByRole("button", { name: "进入专注模式", exact: true }).click();
   await page.locator(".practice-shell--focus").waitFor();
   // 专注模式是一整块铺满屏幕的工作区：没有外框，代码卡片也不再套边框
