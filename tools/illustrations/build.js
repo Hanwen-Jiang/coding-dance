@@ -311,6 +311,12 @@ function buildTopics(want) {
     return T;
   });
   for (const s of want) if (!all.some((T) => T.slug === s)) throw new Error(`没有专题 ${s}（topics/${s}.js）`);
+  // related 只能写热题 100 里的题号（网站按它列相关热题、在题目页反查「相关基础」）
+  const hot = new Set(fs.readdirSync(path.join(dir, "specs")).filter((f) => /^\d{4}\.js$/.test(f)).map((f) => Number(f.slice(0, 4))));
+  for (const T of all) {
+    const bad = (T.related || []).filter((id) => !hot.has(id));
+    if (bad.length) throw new Error(`专题 ${T.slug}: related 里的 ${bad.join("、")} 不是热题 100 的题`);
+  }
   let built = 0;
   for (const T of all) {
     if (want.length && !want.includes(T.slug)) continue;

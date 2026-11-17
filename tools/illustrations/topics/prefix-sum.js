@@ -1,7 +1,7 @@
 module.exports = {
   slug: "prefix-sum", name: "数组与前缀和", kind: "ds", order: 1,
   lede: "数组按下标直接访问是 O(1)，但要算「一段区间的和」就得一个个加。提前算好前缀和，任意区间的和都能用两个数相减得到；反过来，差分数组能把「给一段区间都加上 x」变成改两个位置。",
-  related: [560, 238, 53, 437, 303],
+  related: [560, 238, 53, 437],
   sections: [{
     key: "range", t: "前缀和：区间求和",
     body: [

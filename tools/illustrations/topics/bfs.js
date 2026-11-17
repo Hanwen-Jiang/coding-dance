@@ -1,7 +1,7 @@
 module.exports = {
   slug: "bfs", name: "广度优先搜索 BFS", kind: "algo", order: 5,
   lede: "BFS 从起点出发一圈一圈往外扩：先走完所有 1 步能到的点，再走 2 步能到的……用队列就能保证这个顺序。所以在每步代价相同的图上，BFS 第一次走到某个点时，走的就是最短的路。",
-  related: [102, 199, 994, 200, 279, 127],
+  related: [102, 199, 994, 200, 279],
   sections: [{
     key: "shortest", t: "最短步数",
     body: [

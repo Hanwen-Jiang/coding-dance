@@ -1,7 +1,7 @@
 module.exports = {
   slug: "bit-manipulation", name: "位运算", kind: "algo", order: 13,
   lede: "整数在计算机里是一串二进制位，位运算直接对这些位操作：与 &、或 |、异或 ^、取反 ~、左移 <<、右移 >>。几个常用的小技巧：n & (n − 1) 去掉最低位的 1；x ^ x = 0、x ^ 0 = x，相同的数异或会抵消；i >> 1 是 i 去掉最低位，i & 1 是最低位。",
-  related: [136, 78, 338, 191],
+  related: [136, 78, 169, 287],
   sections: [{
     key: "count", t: "数 1 的个数：n & (n − 1)",
     body: [

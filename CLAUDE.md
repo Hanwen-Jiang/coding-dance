@@ -7,7 +7,7 @@
 - `problems/<编号>.<题名>.md`：题目文档，一题一份，含难度、专题、重要程度、原题和图解链接。不写个人状态。
 - `illustrations/<编号>.<题名>.html`：解题思路图解。
 - `studyplan/热题100.md`（按专题的题单）、`studyplan/优先级清单.md`（100 题按重要程度排序，Hot 20 重点 / P0 必做 / P1 重要 / P2 补全 / P3 选做）。网站按这两个文件解析题单和重要程度，改表格格式时要同步改 `site/functions/_lib/repo.ts`。
-- `tools/`：小工具。图解生成器在 `tools/illustrations/`：`specs/`（每题一份 spec，Python 代码写在里面）、`code/<四位题号>/<key>.<后缀>`（其他语言的题解）、`cases/`（判题用例，build 导出）、`judge/`（判题器）、`data/`（导出给网站的数据）。
+- `tools/`：小工具。图解生成器在 `tools/illustrations/`：`specs/`（每题一份 spec，Python 代码写在里面）、`code/<四位题号>/<key>.<后缀>`（其他语言的题解）、`cases/`（判题用例，build 导出）、`judge/`（判题器）、`data/`（导出给网站的数据）。「数据结构与算法基础」专题在 `topics/<slug>.js`，其他语言的代码在 `code/topics/<slug>/`，导出到 `data/topics/` 和 `cases/topics/`。
 - `.github/workflows/verify.yml`：CI。每次 push 重新 build 并核对生成的文件和提交的一致，再把六种语言的每段题解编译、运行、对答案。
 - `site/`：题解网站（Next.js 静态导出 + HeroUI Pro，部署在 Cloudflare Pages 项目 `lc-hot100`，域名 https://leetcode.cgent.link）。网站在运行时通过 GitHub API 读这个仓库，push 之后最多一分钟网站就会更新，不用重新部署。登录的用户的进度和题解从他自己的 `hot100-progress` 仓库读写。
 - `site/lib/sync/`：「从力扣同步」的逻辑（网站 `/sync/` 页面用）：把用户在 leetcode.cn 上的提交记录写进他自己的进度仓。测试在 `site/lib/sync/test/`，在 `site/` 里运行 `npm test`（`node lib/sync/test/sync.test.ts`）。
@@ -28,6 +28,12 @@
 - 每份 spec 的 `codes` 里第一段是标准解法；再放一段 `kind: "elegant"` 的简洁 Python 写法（标准解法本身已经足够简洁时，直接给第一段标 `kind: "elegant"`）。
 - 演示的「随机」输入写在 `tools/illustrations/random.js` 的 `GEN[题号]` 里：返回 `{ args, note, py, cmp }`，规模控制在演示看得过来的范围内，并满足题目约束（有唯一解、数组有序等）。`py` 是用标准解法算同一输入的 Python 表达式（辅助函数在 `random_prelude.py`），build 时每题随机 40 组，演示答案必须和它一致。新增或改动演示的输入格式时要同步改这里。
 - `build.js` 会同时把提示、代码、注意点和演示导出到 `tools/illustrations/data/<编号>.json`，网站读的就是这份数据，所以改完 spec 一定要重新 build 并提交 data 目录。只想更新数据、不跑测试时用 `node tools/illustrations/build.js --data-only`。没装 Python 时可以设 `PYTHON="node <pyodide 运行器>"` 替代。
+- **基础专题**（网站 `/learn/`，22 个：数据结构 9 + 算法 13）：一个专题一份 `tools/illustrations/topics/<slug>.js`，`{ slug, name, kind: "ds" | "algo", order, lede, related: [热题题号…], sections }`。每小节 `{ key, t, body: [段落 HTML], points?, codes, sig, call, cases, gen?, demo? }`：
+  - `codes` 的第一段 key 必须写成小节的 key（判题器按它找 `code/topics/<slug>/<key>.<后缀>`），其余代码的 key 在同一个专题里不能重复（同一个目录）。六种语言都要有、带同样的步骤标记、都要过判题；不对应演示的纯 Python「简洁写法」只有 Python。
+  - `sig` / `cases` 的写法和题目 spec 一样（设计类题也行；C++ 设计类的构造函数和方法参数要写成 `const vector<int>&` 或传值，判题器传进去的是临时对象）。`gen(R)` 是随机输入（`R` 是 `makeR()`），返回 `{ args, note }`，网站的「随机」用它，build 也用它出 10 组判题用例、并随机 20 组核对演示答案和 Python 一致；`call(args)` 把演示的输入变成力扣的参数。
+  - `demo: { method?, legend, presets: [{ label, args, note, expect? }], build, alts? }`：规则和题目 spec 相同（每步写 `at`，写了 `expect` 就核对答案；动态规划照上面的约定画边界、单独做「空间压缩」）。图、拓扑排序、并查集用 `net` 视图（节点排成一圈或按 `pos` 摆，`directed` 画箭头，`badges` 写在节点下方）。
+  - `related` 只能写热题 100 的题号。网站按它列「相关热题」和完成情况，题目页反过来显示「相关基础」。
+  - `node tools/illustrations/build.js --topics`（或写专题的 slug）只处理专题；不带参数的全量 build（CI）题目和专题一起做。加专题时把 slug 加进 `site/lib/topic-slugs.ts`（`/learn/<slug>/` 是静态导出的，build 会核对两边一致），然后重新部署网站；只改专题内容不用部署。
 - 修改已发布的图解时，用题目文档里记录的 artifact 链接原地更新，不要新建一个链接。
 - 做题记录不改这个仓库，都存进自己的进度仓：
   - 每一次值得记的尝试（通过、答案错误、超时、运行出错、思路不成立）都按 `attempts/<四位题号>.<题名>/<YYYY-MM-DD>.<序号>.<结果>.md` 记一份：原样代码（不要改好再存；不是原样时写 `verbatim: false`）、错在哪里、怎么发现的、差在哪一步。写进去的结论先在本地复现一遍。

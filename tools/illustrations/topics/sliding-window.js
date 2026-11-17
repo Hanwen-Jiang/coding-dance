@@ -1,7 +1,7 @@
 module.exports = {
   slug: "sliding-window", name: "滑动窗口", kind: "algo", order: 9,
   lede: "滑动窗口是同向双指针的一种：[left, right] 是一段连续的子数组（子串），右端一格格往右扩，左端在需要时往右收。每个元素最多进窗口一次、出窗口一次，所以是 O(n)。关键是想清楚：窗口里要维护什么，什么时候该收左端。",
-  related: [3, 438, 76, 239, 567, 209],
+  related: [3, 438, 76, 239],
   sections: [{
     key: "variable", t: "不定长窗口：和至少为 target 的最短子数组",
     body: [

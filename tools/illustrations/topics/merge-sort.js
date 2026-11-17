@@ -1,7 +1,7 @@
 module.exports = {
   slug: "merge-sort", name: "归并排序", kind: "algo", order: 3,
   lede: "归并排序先把数组对半分开，两半各自排好，再把两个有序的半段合并成一个。合并只要两个指针各走一遍，所以每一层 O(n)，一共 log n 层，稳定的 O(n log n)。合并的过程里还能顺手数出逆序对。",
-  related: [148, 23, 21, 315],
+  related: [148, 23, 21],
   sections: [{
     key: "sort", t: "归并排序",
     body: [
