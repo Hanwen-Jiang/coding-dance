@@ -7,5 +7,8 @@ export const TOPIC_SLUGS = [
   "stack-queue",
   "heap",
   "binary-tree",
+  "graph",
+  "trie",
+  "union-find",
   "binary-search",
 ];
