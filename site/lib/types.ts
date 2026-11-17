@@ -111,7 +111,7 @@ export interface Attempt {
   code: string | null;
   /** 文件格式不对时的提示（仍然尽量显示） */
   errors: string[];
-  /** 从哪里同步来的，比如 leetcode.cn（手写的记录没有） */
+  /** 从哪里来的：leetcode.cn（从力扣同步）、hot100-site（网站练习里「测试全部」记下的）；手写的记录没有 */
   source: string | null;
   /** 力扣的提交编号（只含数字），有的话可以链接到力扣上的这次提交 */
   submission: string | null;

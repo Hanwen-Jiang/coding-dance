@@ -24,9 +24,11 @@ jobs:
         run: node tools/illustrations/build.js --strict
       - name: 生成的文件要和提交的一致
         run: git diff --exit-code -- tools/illustrations/data tools/illustrations/cases illustrations
-      - name: 同步逻辑的测试
+      - name: 同步和练习记录的测试
         working-directory: site
-        run: node lib/sync/test/sync.test.ts
+        run: |
+          node lib/sync/test/sync.test.ts
+          node lib/practice/test/record.test.ts
 
   practice:
     name: 练习数据和运行器

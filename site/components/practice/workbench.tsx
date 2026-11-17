@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Card, ListBox, Modal, Select, TextArea } from "@heroui/react";
+import { Button, Card, ListBox, Modal, Select, Switch, TextArea } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
@@ -17,6 +17,7 @@ import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from 
 import { runPractice } from "@/lib/practice/runner";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
 import { formatPracticeInput, formatPracticeResult, formatPracticeValue, parsePracticeFields, practiceInputFields, starterHash, type PracticeInputField } from "@/lib/practice/format";
+import { useProgress } from "@/lib/progress";
 
 import "./practice.css";
 
@@ -40,6 +41,26 @@ function readHints(): PracticeHints {
   try { const v = localStorage.getItem(HINTS_KEY); if (v === "full" || v === "none") return v; } catch { /* 存储不可用 */ }
   return "full";
 }
+/** 「测试全部」的结果要不要记进进度仓，存在浏览器里，默认记 */
+const RECORD_KEY = "hot100:practice:record";
+function readRecord() {
+  try { return localStorage.getItem(RECORD_KEY) !== "off"; } catch { return true; }
+}
+/** 题解页上的「我的题解」「尝试记录」听这个事件重新读进度仓 */
+export const RECORDS_CHANGED = "hot100:records-changed";
+type RecordState =
+  | { state: "saving" }
+  | { state: "saved"; url: string; attempt: string; solution: string | null; status: string | null }
+  | { state: "error"; message: string };
+
+/** 一次「测试全部」的结果，按进度仓的规则分类；停止运行的不记 */
+function classifyRun(result: PracticeRunResult, cases: PracticeCase[]) {
+  if (result.cancelled || result.results.length < cases.length) return null;
+  const failed = result.results.filter((r) => !r.passed).sort((a, b) => a.index - b.index);
+  const outcome = !failed.length ? "通过" : failed.some((r) => r.error?.includes("运行超时")) ? "超时" : failed.some((r) => r.error) ? "运行出错" : "答案错误";
+  return { outcome, failed, passed: result.results.length - failed.length };
+}
+
 /**
  * 专注模式里题面的三种状态：split 题面和代码都在；folded 题面收起，只留标题栏（并排时收成一条窄边）；
  * only 只看题面（上下排列时代码区只留顶上那一行工具条）。
@@ -196,6 +217,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<{ result: PracticeRunResult; cases: PracticeCase[]; code: string; unchecked: boolean } | null>(null);
+  // 登录并开通了进度仓时，「测试全部」跑完把结果记进去（尝试记录；全部通过另存题解）
+  const { ready: canRecord, session, refresh } = useProgress();
+  const [recordOn, setRecordOn] = useState(readRecord);
+  const changeRecord = (on: boolean) => { setRecordOn(on); try { localStorage.setItem(RECORD_KEY, on ? "on" : "off"); } catch { /* 这次仍然生效 */ } };
+  const [record, setRecord] = useState<RecordState | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const sequenceRef = useRef(0);
   const codeRef = useRef(code);
@@ -235,8 +261,42 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
     try { localStorage.setItem(draftKey, value); } catch { /* 保留当前编辑内容。 */ }
   };
 
-  const execute = useCallback(async (cases: PracticeCase[], unchecked = false) => {
+  /** 把一次「测试全部」写进进度仓。网页只交代码和结果，文件名和内容由服务端按进度仓的规则生成 */
+  const saveRun = useCallback(async (result: PracticeRunResult, cases: PracticeCase[], snapshot: string, token: number) => {
+    const run = classifyRun(result, cases);
+    if (!run) return;
+    const show = (value: string) => value.length > 300 ? `${value.slice(0, 300)}…` : value;
+    const failures = run.failed.slice(0, 3).map((r) => {
+      const test = cases[r.index];
+      return {
+        label: test?.label || `用例 ${r.index + 1}`,
+        input: mode === "acm" ? test?.stdin ?? "" : test ? formatPracticeInput(problem, test) : "",
+        expected: mode === "acm" ? test?.stdout ?? "" : formatPracticeResult(problem, r.expected),
+        actual: mode === "acm" ? r.stdout : formatPracticeResult(problem, r.actual),
+        ...(r.error ? { error: show(r.error) } : {}),
+      };
+    });
+    setRecord({ state: "saving" });
+    try {
+      const response = await fetch("/api/practice/record", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: problem.id, language, mode, code: snapshot, result: run.outcome, passed: run.passed, total: cases.length, durationMs: Math.round(result.duration), failures }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || `请求失败（${response.status}）`);
+      if (sequenceRef.current !== token) return;
+      setRecord({ state: "saved", url: data.url, attempt: data.attempt, solution: data.solution, status: data.status });
+      window.dispatchEvent(new CustomEvent(RECORDS_CHANGED, { detail: { id: problem.id } }));
+      if (data.status) void refresh(); // 状态变了：顶上的状态和题单跟着更新
+    } catch (e) {
+      if (sequenceRef.current === token) setRecord({ state: "error", message: e instanceof Error ? e.message : String(e) });
+    }
+  }, [language, mode, problem, refresh]);
+
+  const execute = useCallback(async (cases: PracticeCase[], unchecked = false, keep = false) => {
     if (!ready || running || abortRef.current || !cases.length) return;
+    setRecord(null);
     // 模板原样没动（和力扣一样方法体是空的）：不跑，直接提示
     if (codeRef.current.trim() === starter.trim()) {
       setReport(null);
@@ -260,13 +320,16 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
       });
-      if (sequenceRef.current === token) setReport({ result, cases, code: snapshot, unchecked });
+      if (sequenceRef.current === token) {
+        setReport({ result, cases, code: snapshot, unchecked });
+        if (keep && canRecord && recordOn) void saveRun(result, cases, snapshot, token);
+      }
     } catch (e) {
       if (sequenceRef.current === token) setError(e instanceof Error ? e.message : String(e));
     } finally {
       if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
     }
-  }, [language, mode, problem, ready, running, starter]);
+  }, [canRecord, language, mode, problem, ready, recordOn, running, saveRun, starter]);
 
   const runCustom = () => {
     try {
@@ -350,9 +413,15 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="border-t border-separator px-4 py-2 text-[11px] leading-5 text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
       {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
-      <div className="practice-run-controls flex justify-end gap-2 border-y border-separator px-4 py-3">
+      <div className="practice-run-controls flex flex-wrap items-center justify-end gap-2 border-y border-separator px-4 py-3">
+        {canRecord && <Switch className="mr-auto" isSelected={recordOn} onChange={changeRecord} size="sm">
+          <Switch.Content className="flex-row items-center gap-2">
+            <Switch.Control><Switch.Thumb /></Switch.Control>
+            <span className="text-xs text-muted" title={`「测试全部」的结果记进 ${session?.repo?.name ?? "进度仓"}：每次一条尝试记录，全部通过时另存一份题解`}>记进进度仓</span>
+          </Switch.Content>
+        </Switch>}
         <div className="flex gap-2">
-          {running ? <Button onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止运行</Button> : <><Button isDisabled={!ready} onPress={() => void execute(problem.cases)} size="sm" variant="outline">测试全部 · {problem.cases.length}</Button><Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples); }} size="sm"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button></>}
+          {running ? <Button onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止运行</Button> : <><Button isDisabled={!ready} onPress={() => void execute(problem.cases, false, true)} size="sm" variant="outline">测试全部 · {problem.cases.length}</Button><Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples); }} size="sm"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button></>}
         </div>
       </div>
       {panelOpen && <div className="practice-console" data-testid="practice-test-panel">
@@ -373,10 +442,26 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
           {mode === "leetcode" ? <div className="grid gap-3 sm:grid-cols-2">{customFields.map((field, index) => <label className="flex min-w-0 flex-col gap-1.5 font-mono text-xs text-muted" key={field.key}>{field.label}<TextArea aria-label={`自定义参数 ${field.label}`} className="w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomFields((fields) => fields.map((item, i) => i === index ? { ...item, value: event.target.value } : item))} rows={2} value={field.value} variant="secondary" /></label>)}</div> : <label className="flex min-w-0 flex-col gap-1.5 text-xs text-muted">标准输入<TextArea aria-label="自定义输入" className="min-h-28 w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomInput(event.target.value)} rows={5} value={customInput} variant="secondary" /></label>}
           <label className="flex min-w-0 flex-col gap-1.5 text-xs text-muted">{mode === "leetcode" ? "预期结果（JSON，可选）" : "预期标准输出（可选）"}<TextArea aria-label="自定义预期结果" className="w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomExpected(event.target.value)} rows={3} value={customExpected} variant="secondary" /></label>
         </div>}
+        {tab === "results" && !running && record && <RecordLine record={record} />}
         {tab === "results" && (running ? <div className="flex items-center gap-3 rounded-xl border border-border px-4 py-6" role="status"><span aria-hidden className="bullet-blink size-2 shrink-0 rounded-[2px] bg-accent" /><p className="text-xs leading-5 text-muted">{status}</p></div> : report ? <PracticeResults problem={problem} cases={report.cases} key={report.result.duration} mode={mode} result={report.result} stale={report.code !== code} unchecked={report.unchecked} /> : <p className="py-5 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
       </div>
       </div>}
     </Card>
+  );
+}
+
+/** 「测试全部」记进进度仓的结果：写了哪条尝试记录、有没有另存题解、状态改成了什么 */
+function RecordLine({ record }: { record: RecordState }) {
+  if (record.state === "saving") return <p className="text-xs leading-5 text-muted" data-testid="practice-record" role="status">正在记进进度仓…</p>;
+  if (record.state === "error") return <p className="text-xs leading-5 text-warning" data-testid="practice-record" role="status">没记进进度仓：{record.message}</p>;
+  const file = (path: string) => path.split("/").pop();
+  return (
+    <p className="text-xs leading-5 text-muted" data-testid="practice-record" role="status">
+      已记进进度仓：尝试记录 <span className="whitespace-nowrap font-mono text-foreground">{file(record.attempt)}</span>
+      {record.solution && <>，题解另存为 <span className="whitespace-nowrap font-mono text-foreground">{file(record.solution)}</span></>}
+      {record.status && <>，状态改成「{record.status}」</>}
+      {record.url && <> · <a className="text-accent underline-offset-2 hover:underline" href={record.url} rel="noreferrer" target="_blank">查看提交</a></>}
+    </p>
   );
 }
 

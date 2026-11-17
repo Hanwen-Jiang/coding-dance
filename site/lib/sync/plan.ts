@@ -1,7 +1,7 @@
 // 同步的流程：先读力扣上的全部提交和进度仓（唯一的数据源），对账，算出可以写什么（不写任何东西）；
 // 用户勾选、确认后，一次提交写进仓库。
 import {
-  LC_LANG, SKIP_FILE, addSubmissionMeta, cnParts, matchExisting, nextStatus, parseAttemptPath, parseSkip, planProblem, readAttempt, resultOf, writeProgress, writeSkip,
+  LC_LANG, SITE_SOURCE, SKIP_FILE, addSubmissionMeta, cnParts, matchExisting, nextStatus, parseAttemptPath, parseSkip, planProblem, readAttempt, resultOf, writeProgress, writeSkip,
   type NewFile, type Problem, type ProgressEntry, type ProgressFile, type Result, type Skipped, type Sub, type SubWithDetail,
 } from "./core.ts";
 import { isRateLimited, type LeetCode } from "./leetcode.ts";
@@ -137,8 +137,8 @@ export async function buildPlan({ repo, lc, cache = new Map<string, Cached>(), o
       partial = { done: i, total: todo.length, next: t.problem, left: todo.slice(i).reduce((n, x) => n + x.fresh.filter(wanted).length, 0) };
       break;
     }
-    // 手写的记录先和力扣提交对上，对上的只补编号
-    const pairs = matchExisting(t.existing.filter((f) => !f.submission), subs);
+    // 手写的记录先和力扣提交对上，对上的只补编号（网站练习记下的不是力扣提交，不参与）
+    const pairs = matchExisting(t.existing.filter((f) => !f.submission && f.source !== SITE_SOURCE), subs);
     const linked = [...pairs].map(([path, sub]) => ({ path, content: addSubmissionMeta(t.existing.find((f) => f.path === path)!.text, sub), id: String(sub.id) }));
     for (const l of linked) t.known.add(l.id);
     const plan = planProblem({ problem: t.problem, existing: t.existing.map((f) => f.path), known: t.known, subs });

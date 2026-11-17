@@ -67,6 +67,18 @@ export function parseAttemptPath(p: string) {
 }
 export const attemptPath = (problem: Problem, date: string, seq: number, result: Result) => `attempts/${pad(problem.id, 4)}.${problem.name}/${date}.${seq}.${result}.md`;
 
+/** 进度仓题解文件的后缀（和模板仓 check.mjs 的 LANGS 一致） */
+export const SOLUTION_EXT: Record<string, string[]> = {
+  python: ["py"], java: ["java"], go: ["go"], cpp: ["cpp", "cc"], c: ["c"],
+  javascript: ["js"], typescript: ["ts"], rust: ["rs"], kotlin: ["kt"], swift: ["swift"], csharp: ["cs"],
+};
+/** 题解的路径 solutions/<语言>/<四位题号>.<题名>[.<写法>].<后缀>；不符合规则返回 null */
+export function parseSolutionPath(p: string) {
+  const m = p.match(/^solutions\/([a-z]+)\/(\d{4})\.([^/.]+)(?:\.([^/.]+))?\.([a-z]+)$/);
+  if (!m || !SOLUTION_EXT[m[1]]?.includes(m[5])) return null;
+  return { lang: m[1], id: Number(m[2]), name: m[3], variant: m[4] ?? null, ext: m[5] };
+}
+
 const unify = (text: string) => text.replace(/^﻿/, "").replace(/\r\n/g, "\n");
 
 /** 读尝试记录开头 --- 里的设置 */
@@ -94,8 +106,11 @@ function codeOf(text: string) {
 /** 读一条尝试记录里和匹配有关的部分 */
 export function readAttempt(text: string) {
   const meta = frontMatter(text);
-  return { submission: meta.submission || null, submittedAt: meta.submittedAt || null, verbatim: meta.verbatim !== "false", code: codeOf(text) ?? null };
+  return { submission: meta.submission || null, submittedAt: meta.submittedAt || null, source: meta.source || null, verbatim: meta.verbatim !== "false", code: codeOf(text) ?? null };
 }
+
+/** 网站练习里「测试全部」记下的尝试记录：不是力扣提交，同步时不拿它去和力扣提交配对 */
+export const SITE_SOURCE = "hot100-site";
 
 /** 一条尝试记录的格式问题（和 check.mjs、progress.ts 的检查一致）；没问题返回空数组 */
 export function validateAttempt(text: string) {

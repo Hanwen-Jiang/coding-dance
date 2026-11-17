@@ -9,7 +9,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { CodePanel } from "@/components/code-panel";
 import { PracticeProvider, PracticeStatement } from "@/components/practice/context";
-import { PracticeWorkbench } from "@/components/practice/workbench";
+import { PracticeWorkbench, RECORDS_CHANGED } from "@/components/practice/workbench";
 import { DemoPlayer } from "@/components/demo/demo-player";
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
@@ -172,6 +172,13 @@ function useMine(id: number) {
   const canRead = !!user && !!session?.repo?.exists && !!session.repo.accessible;
   const [state, setState] = useState<MineState>({ key: "", history: null, attempts: null, error: null });
   const key = canRead ? `${user}/${id}` : "";
+  // 练习里「测试全部」刚写进了进度仓：重新读一遍，新的尝试记录和题解马上出现
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const onChange = (event: Event) => { if ((event as CustomEvent<{ id: number }>).detail?.id === id) setVersion((v) => v + 1); };
+    window.addEventListener(RECORDS_CHANGED, onChange);
+    return () => window.removeEventListener(RECORDS_CHANGED, onChange);
+  }, [id]);
 
   useEffect(() => {
     if (!canRead) return;
@@ -187,7 +194,7 @@ function useMine(id: number) {
     return () => {
       alive = false;
     };
-  }, [canRead, id, key]);
+  }, [canRead, id, key, version]);
 
   return { loading, session, loginHref, id, state, ready: state.key === key && !!key };
 }
@@ -374,6 +381,7 @@ function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | n
                       {a.submittedAt?.slice(11, 16) ? ` ${a.submittedAt.slice(11, 16)}` : ""} · 第 {a.seq} 次 · {LANG_NAME[a.lang] ?? a.lang}
                     </span>
                     {!a.verbatim && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">不是原样提交</span>}
+                    {a.source === "hot100-site" && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">网站练习</span>}
                   </span>
                   <Accordion.Indicator>
                     <ChevronDown />

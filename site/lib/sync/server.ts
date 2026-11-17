@@ -1,6 +1,6 @@
 // 同步的服务端部分：用用户自己的 GitHub 登录读写他的进度仓。只被 functions/api/sync/* 调用。
 // api 由调用方注入（真实环境是带用户令牌的 fetch，测试里是假的 GitHub），这里不碰会话和 Cookie。
-import { SKIP_FILE, STATUSES, parseAttemptPath, validSkip, validateAttempt } from "./core.ts";
+import { SKIP_FILE, STATUSES, parseAttemptPath, parseSolutionPath, validSkip, validateAttempt } from "./core.ts";
 
 export type Api = (method: string, path: string, body?: unknown) => Promise<{ status: number; json: any }>;
 
@@ -48,8 +48,11 @@ export async function readBlobs(api: Api, repo: string, shas: unknown) {
 
 const MAX_FILES = 600, MAX_FILE = 200_000, MAX_TOTAL = 4_000_000;
 
-/** 同步只能写这三类文件，而且内容要符合进度仓的规则；不符合就整个拒绝，一个字都不写 */
-export function validateWrites(body: unknown) {
+/**
+ * 同步只能写这三类文件，而且内容要符合进度仓的规则；不符合就整个拒绝，一个字都不写。
+ * solutions=true 时还允许写符合规则的题解（只给「练习的测试结果」用，从力扣同步不写题解）。
+ */
+export function validateWrites(body: unknown, { solutions = false } = {}) {
   const b = body as { branch?: unknown; parent?: unknown; baseTree?: unknown; files?: unknown; message?: unknown };
   if (typeof b?.branch !== "string" || !b.branch || b.branch.length > 200) throw new SyncError("参数不对：branch");
   if (typeof b.parent !== "string" || !SHA.test(b.parent) || typeof b.baseTree !== "string" || !SHA.test(b.baseTree)) throw new SyncError("参数不对：parent / baseTree");
@@ -75,6 +78,8 @@ export function validateWrites(body: unknown) {
     } else if (parseAttemptPath(f.path)) {
       const errs = validateAttempt(f.content);
       if (errs.length) throw new SyncError(`${f.path}：${errs[0]}`);
+    } else if (solutions && parseSolutionPath(f.path)) {
+      // 题解就是代码本身，没有格式要求；大小已经在上面限制过
     } else {
       throw new SyncError(`同步不能写 ${f.path}`);
     }
@@ -84,8 +89,8 @@ export function validateWrites(body: unknown) {
 }
 
 /** 一次提交写入：建 tree、建 commit、移动分支（不强推）。分支在这期间被移动过返回 { conflict: true } */
-export async function commitWrites(api: Api, repo: string, body: unknown) {
-  const b = validateWrites(body);
+export async function commitWrites(api: Api, repo: string, body: unknown, options: { solutions?: boolean } = {}) {
+  const b = validateWrites(body, options);
   const tree = await api("POST", `/repos/${repo}/git/trees`, { base_tree: b.baseTree, tree: b.files.map((f) => ({ path: f.path, mode: "100644", type: "blob", content: f.content })) });
   if (tree.status >= 400) throw new SyncError(`GitHub 建 tree 失败（${tree.status}）`, 502);
   const c = await api("POST", `/repos/${repo}/git/commits`, { message: b.message, tree: tree.json.sha, parents: [b.parent] });

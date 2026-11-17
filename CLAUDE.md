@@ -11,7 +11,7 @@
 - `.github/workflows/verify.yml`：CI。每次 push 重新 build 并核对生成的文件和提交的一致，再把六种语言的每段题解编译、运行、对答案。
 - `site/`：题解网站（Next.js 静态导出 + HeroUI Pro，部署在 Cloudflare Pages 项目 `lc-hot100`，域名 https://leetcode.cgent.link）。网站在运行时通过 GitHub API 读这个仓库，push 之后最多一分钟网站就会更新，不用重新部署。登录的用户的进度和题解从他自己的 `hot100-progress` 仓库读写。
 - `ROADMAP.md`：在线练习（浏览器里编译运行六种语言、调试、云端容器、额度和订阅、测试用例设计）的路线图、实测数据和任务清单。做相关工作前先看，认领任务、完成后打勾并补变更记录。
-- `site/lib/sync/`：「从力扣同步」的逻辑（网站 `/sync/` 页面用）：把用户在 leetcode.cn 上的提交记录写进他自己的进度仓。测试在 `site/lib/sync/test/`，在 `site/` 里运行 `npm test`（`node lib/sync/test/sync.test.ts`）。
+- `site/lib/sync/`：「从力扣同步」的逻辑（网站 `/sync/` 页面用）：把用户在 leetcode.cn 上的提交记录写进他自己的进度仓。测试在 `site/lib/sync/test/`，在 `site/` 里运行 `npm test`（同步的 `node lib/sync/test/sync.test.ts` 和练习记录的 `node lib/practice/test/record.test.ts`）。
 
 ## 工作约定
 
@@ -43,6 +43,7 @@
   - 通过后把整理好的写法按 `solutions/<语言>/<四位题号>.<题名>[.<写法>].<后缀>` 存一份。
   - 常用语言存在 `settings.json`（可以没有）：`{ "version": 1, "langs": ["java", "python"] }`，第一个是默认语言。网站右上角的语言菜单会读写它；没登录时存在浏览器里。
   - 从力扣同步来的记录（以及补过编号的手写记录）开头的设置里有 `source: leetcode.cn`、`submission: <提交编号>`、`submittedAt`。手写记录时如果对应某次力扣提交，也照着写上编号，同步时就不会再导入一份。
+  - 网站练习里点「测试全部」（登录、开通了进度仓、没关掉「记进进度仓」开关时）也记一条尝试记录，设置里是 `source: hot100-site`、`submittedAt`，正文是「代码」「网站测试结果」和最多 3 组「没通过的用例」；全部通过时另存题解 `solutions/<语言>/<四位题号>.<题名>.<后缀>`，和已有题解代码一样（`codeKey` 相同）就不存，主文件名被占了就存成 `.2`、`.3`……，已有的题解一个字不动；状态只升不降。文件名和内容由服务端 `site/lib/practice/record.ts` 按规则生成，网页只交代码和运行结果（`/api/practice/record`）。从力扣同步时不拿 `hot100-site` 的记录去和力扣提交配对。测试：`node site/lib/practice/test/record.test.ts`（假 GitHub）、`node tools/practice-ui/record.test.mjs`（真浏览器，要先开本地预览）。
   - 规则以模板仓的 README 为准，模板仓的 `scripts/check.mjs`、网站 `site/functions/_lib/progress.ts` 和 `site/lib/sync/core.ts` 按同一套规则读写文件，改规则时几处一起改（进度仓里的 README 和 check.mjs 是模板的副本，也要同步）。
 - 「从力扣同步」的约定：
   - **进度仓是唯一的数据源**。网站不另存任何数据，每次同步都重新读仓库，按 `submission` 编号判断导入过没有；用户取消勾选的提交记进 `attempts/skip.txt`；状态只升不降。
