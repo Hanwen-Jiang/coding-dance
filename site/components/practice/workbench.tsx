@@ -76,9 +76,33 @@ function usePracticeDock() {
   return [docked, setDocked] as const;
 }
 
+/**
+ * 桌面上练习区占多宽：占整行（题目页的 grid）的比例，拖正文和练习区之间的竖条调整，存在浏览器里。
+ * 写在 <html> 的 --practice-dock 上（practice.css 按它排三列），layout.tsx 首屏前就按存的值设好，刷新时不会先按默认宽度画再跳。
+ * 范围：练习区至少 360px，正文至少留 560px（加上 24px 的拖动条）；CSS 里也用 clamp 兜底。
+ */
+export const DOCK_SIZE_KEY = "hot100:practice:dock-size";
+const DOCK_DEFAULT = 0.38;
+function useDockSize() {
+  const [size, setSize, commit] = useStoredFraction(DOCK_SIZE_KEY, DOCK_DEFAULT, 0.15, 0.8);
+  // 整行有多宽：和 practice.css 的 width: min(1744px, 100vw - 48px) 一致
+  const [row, setRow] = useState(1152);
+  useEffect(() => {
+    const update = () => setRow(Math.min(1744, window.innerWidth - 48));
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+  const min = Math.min(0.5, 360 / row), max = Math.max(min, (row - 584) / row);
+  // 只在用户拖、按键、双击时改 CSS 变量；首屏的值由 layout.tsx 设好，这里不去覆盖
+  const change = useCallback((v: number) => { setSize(v); document.documentElement.style.setProperty("--practice-dock", String(Math.round(v * 1000) / 1000)); }, [setSize]);
+  return { value: Math.min(max, Math.max(min, size)), min, max, change, commit };
+}
+
 export function PracticeWorkbench() {
   const { detail, problem, error, retry, mode, language, select } = usePractice();
   const [docked, setDocked] = usePracticeDock();
+  const dock = useDockSize();
   const desktop = useMedia("(min-width: 1200px)");
   const [focusPhase, setFocusPhase] = useState<"closed" | "open" | "closing">("closed");
   const [statementView, setStatementView] = useState<StatementView>("split");
@@ -137,6 +161,21 @@ export function PracticeWorkbench() {
   const summon = () => { setDocked(true); requestAnimationFrame(() => dockButton.current?.focus({ preventScroll: true })); };
   return (
     <>
+    {/* 正文和练习区之间的竖条：左右拖调整练习区宽度，方向键也行，双击恢复默认（桌面并排、练习区展开时才有） */}
+    <ResizeHandle
+      axis="x"
+      className="practice-dock-handle"
+      container={() => shell.current?.parentElement ?? null}
+      fallback={DOCK_DEFAULT}
+      hidden={!desktop || !docked || active}
+      invert
+      label="调整练习区宽度"
+      max={dock.max}
+      min={dock.min}
+      onChange={dock.change}
+      onCommit={dock.commit}
+      value={dock.value}
+    />
     <aside
       aria-label={active ? "代码专注模式" : "代码练习"}
       aria-modal={active ? true : undefined}
