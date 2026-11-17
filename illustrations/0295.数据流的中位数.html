@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -351,22 +353,24 @@ const SPEC = { presets: [{"label":"示例","args":{"ops":[["add",1],["add",2],["
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : v)), empty: "还没有" },
     ];
     const ins = (arr, x) => { arr.push(x); arr.sort((p, q) => p - q); };
-    snap("开始", "两个堆都是空的。", view(-1), { facts: [["lo", 0], ["hi", 0]] });
+    snap("开始", "两个堆都是空的。", view(-1), { at: "init", facts: [["lo", 0], ["hi", 0]] });
     ops.forEach((o, i) => {
-      let msg;
+      let msg, at;
       if (o[0] === "add") {
+        at = "add";
         const x = o[1]; ins(lo, x); const m1 = lo.pop(); ins(hi, m1);
         msg = `先把 ${x} 放进 lo，再把 lo 里最大的 ${m1} 挪到 hi。`;
-        if (hi.length > lo.length) { const m2 = hi.shift(); ins(lo, m2); msg += `hi 比 lo 多了，把 hi 里最小的 ${m2} 挪回 lo。`; }
+        if (hi.length > lo.length) { const m2 = hi.shift(); ins(lo, m2); msg += `hi 比 lo 多了，把 hi 里最小的 ${m2} 挪回 lo。`; at = ["add", "rebal"]; }
         out.push(null);
       } else {
         const med = lo.length > hi.length ? lo[lo.length - 1] : (lo[lo.length - 1] + hi[0]) / 2;
         out.push(med);
+        at = lo.length > hi.length ? "odd" : "even";
         msg = lo.length > hi.length ? `一共 ${lo.length + hi.length} 个数，是奇数，中位数是 lo 的堆顶 <b>${med}</b>。` : `一共 ${lo.length + hi.length} 个数，是偶数，中位数是两个堆顶的平均 (${lo[lo.length - 1]} + ${hi[0]}) / 2 = <b>${med}</b>。`;
       }
-      snap(name(o), msg, view(i), { facts: [["lo", lo.length], ["hi", hi.length]] });
+      snap(name(o), msg, view(i), { at, facts: [["lo", lo.length], ["hi", hi.length]] });
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { kind: "ok", ans: out.slice(), facts: [["lo", lo.length], ["hi", hi.length]] });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { at: [], kind: "ok", ans: out.slice(), facts: [["lo", lo.length], ["hi", hi.length]] });
   } }
 ] };
 (function () {
@@ -386,7 +390,7 @@ const SPEC = { presets: [{"label":"示例","args":{"ops":[["add",1],["add",2],["
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -401,13 +405,15 @@ const SPEC = { presets: [{"label":"示例","args":{"ops":[["add",1],["add",2],["
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

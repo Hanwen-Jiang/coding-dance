@@ -16,7 +16,11 @@
 
 - 为某道题做的解法图解 / 提示类 artifact，都要把 HTML 源文件存进 `illustrations/`，并在该题的题目文档里加「思路图解」一节，写上本地文件和在线 artifact 链接。存进仓库的文件第一行加 `<meta charset="utf-8">`，保证本地打开不乱码。
 - 图解用 `tools/illustrations/` 生成：每题写一份 `specs/<编号>.js`，运行 `node tools/illustrations/build.js <题号>`。构建会自动核对演示答案并测试页面里的 Python 代码。发布后把链接记进 `tools/illustrations/artifacts.json`，并更新 `illustrations/README.md` 索引。
-- 一道题有几种真正不同的解法时，演示也做几种，网站和图解页上可以切换：spec 自己的 `build` 是第一种（`method` 写它的名字，要和标准解法对应），其余放进 `alts: [{ t, note, legend, build }]`，每种都要在 `codes` 里有对应的代码。所有解法共用 `presets` 和随机输入，build 会逐个核对答案。只是写法不同（切片、内置函数、滚动数组）的不另做。不同解法给出的结果顺序可能不一样时，spec 里加 `cmp: "unordered"`。
+- 一道题有几种真正不同的解法时，演示也做几种，网站和图解页上可以切换：spec 自己的 `build` 是第一种（`method` 写它的名字，要和标准解法对应），其余放进 `alts: [{ t, note, legend, build }]`，每种都要在 `codes` 里有对应的代码。所有解法共用 `presets` 和随机输入，build 会逐个核对答案。只是写法不同（切片、内置函数）的不另做。不同解法给出的结果顺序可能不一样时，spec 里加 `cmp: "unordered"`。
+- **动态规划的演示要讲清边界和空间压缩**：
+  - 边界画出来：转移会读到越界位置的（`dp[i][j-1]` 在 `j = 0`、`dp[i-c]` 在 `c > i`……），在表外多画一圈虚线格子（颜色角色 `x`，行列号用 `rowLabels` / `colLabels` / `labels` 写 -1），写上它当成什么值（计数题 0、求最小 ∞、空串……），读到它的那一步高亮成 `"x e"` 并在说明里讲为什么取这个值；多开一行一列的边界（`dp[0][j]`）和直接给定的 `dp[0]` 也用 `x` 标出来。
+  - 能压缩空间的（二维压成一行、一维压成几个变量）单独做一种演示「空间压缩」（代码 key 一般叫 `roll`，六种语言都要有）：画出一行 dp 里哪些格子已经是这一行（`k`）、哪些还是上一行（`g`），以及被覆盖的值怎么提前存下来（比如编辑距离的 `leftup`）。参考 62、64、72、1143、70、198。
+- 题面里力扣的图片要换成「配图」：spec 写 `figures: { "<图片文件名>": [视图…] }`，视图用 `tools/illustrations/fig.js` 拼（树用力扣的层序数组、链表可以画环和 random 指针、`row` 并排加箭头、`graph` 画 Y 形这类自由形状）。网站显示配图并留「力扣原图」的链接；build 会核对键是题面里真有的图片，`--strict` 时每张图都要有配图。
 - **演示的每一步要指到代码行**。代码行尾写步骤标记：Python `#@tag`，其他语言 `//@tag`（一行可以写几个，逗号分隔；同一个 tag 可以标多行）。演示里每一步 `snap(phase, msg, views, { at: "tag" })`（可以是数组；确实不对应任何代码的步骤写 `at: []`）。build 会去掉标记、导出 tag → 行号，并核对：每一步都有 `at`，写的 tag 在代码里有，各语言的 tag 集合和 Python 一致。演示的其他解法用 `alts[].code = "<key>"` 指到对应的那段代码（`codes[].key`；第一段默认是 `std`）。
 - **官方题解有六种语言**：Python（写在 spec 里）、Java、C++、Go、JavaScript、TypeScript（放 `tools/illustrations/code/<四位题号>/<key>.<java|cpp|go|js|ts>`，内容是能直接提交到力扣的代码，带同样的步骤标记）。演示用到的每段代码六种语言都要有；纯 Python 惯用法的「简洁写法」只有 Python。
 - **每段代码都要过判题**。spec 里写 `sig`（函数名、参数类型、返回类型；设计类题写类和方法，写法见 `judge/util.js`；要按「是不是同一个节点」判的题用 `CycleList`、`JoinList`、`NodeIndex`、`TreeRef`、`TreeVal`、`RandomList` 这几种类型，见 141、142、160、236、138）和 `call(args, H)`（把演示的输入变成力扣的参数列表，`H` 是 `makeR()` 的工具函数），需要的边界用例写在 `cases` 里。build 把用例导出到 `cases/<四位题号>.json`（预设 + `cases` + 10 组固定种子的随机输入，期望输出由 Python 标准解法算出）。`node tools/illustrations/judge/run.js [--lang java,cpp] [题号…]` 逐个编译运行并对答案：本机跑 Python、Go、JavaScript、TypeScript（TypeScript 的 `--strict` 类型检查要设 `TSC=<typescript/bin/tsc 的路径>`），Java 和 C++ 靠 CI。

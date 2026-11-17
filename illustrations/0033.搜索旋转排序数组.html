@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -348,21 +350,21 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[4,5,6,7,0,1,2],"tar
     let lo = 0, hi = nums.length - 1;
     const view = (mid, sorted, hit) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === hit ? "c" : k === mid ? "a" : k < lo || k > hi ? "d" : sorted && k >= sorted[0] && k <= sorted[1] ? "k" : "e" })), ptrs: { lo, mid, hi } }];
     const facts = () => ({ facts: [["target", target], ["lo", lo], ["hi", hi]] });
-    snap("开始", `在 [${nums.join(",")}] 里找 <b>${target}</b>。搜索范围是整个数组。`, view(-1), facts());
+    snap("开始", `在 [${nums.join(",")}] 里找 <b>${target}</b>。搜索范围是整个数组。`, view(-1), { at: "init", ...facts() });
     while (lo <= hi) {
       const mid = (lo + hi) >> 1;
-      if (nums[mid] === target) { snap("找到", `nums[${mid}] = ${nums[mid]}，正好是 target，返回 <b>${mid}</b>。`, view(-2, null, mid), { kind: "ok", ans: mid, ...facts() }); return; }
+      if (nums[mid] === target) { snap("找到", `nums[${mid}] = ${nums[mid]}，正好是 target，返回 <b>${mid}</b>。`, view(-2, null, mid), { at: "found", kind: "ok", ans: mid, ...facts() }); return; }
       if (nums[lo] <= nums[mid]) {
         const inL = nums[lo] <= target && target < nums[mid];
-        snap("左半有序", `nums[lo] = ${nums[lo]} ≤ nums[mid] = ${nums[mid]}，左半 [${lo}..${mid}] 是升序的。${target} ${inL ? "在" : "不在"} [${nums[lo]}, ${nums[mid]}) 里，${inL ? "去左半" : "去右半"}。`, view(mid, [lo, mid]), facts());
+        snap("左半有序", `nums[lo] = ${nums[lo]} ≤ nums[mid] = ${nums[mid]}，左半 [${lo}..${mid}] 是升序的。${target} ${inL ? "在" : "不在"} [${nums[lo]}, ${nums[mid]}) 里，${inL ? "去左半" : "去右半"}。`, view(mid, [lo, mid]), { at: "left", ...facts() });
         if (inL) hi = mid - 1; else lo = mid + 1;
       } else {
         const inR = nums[mid] < target && target <= nums[hi];
-        snap("右半有序", `nums[lo] = ${nums[lo]} &gt; nums[mid] = ${nums[mid]}，断点在左半，右半 [${mid}..${hi}] 是升序的。${target} ${inR ? "在" : "不在"} (${nums[mid]}, ${nums[hi]}] 里，${inR ? "去右半" : "去左半"}。`, view(mid, [mid, hi]), facts());
+        snap("右半有序", `nums[lo] = ${nums[lo]} &gt; nums[mid] = ${nums[mid]}，断点在左半，右半 [${mid}..${hi}] 是升序的。${target} ${inR ? "在" : "不在"} (${nums[mid]}, ${nums[hi]}] 里，${inR ? "去右半" : "去左半"}。`, view(mid, [mid, hi]), { at: "right", ...facts() });
         if (inR) lo = mid + 1; else hi = mid - 1;
       }
     }
-    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，数组里没有 ${target}，返回 <b>-1</b>。`, view(-1), { kind: "warn", ans: -1, ...facts() });
+    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，数组里没有 ${target}，返回 <b>-1</b>。`, view(-1), { at: "miss", kind: "warn", ans: -1, ...facts() });
   } }
 ] };
 (function () {
@@ -382,7 +384,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[4,5,6,7,0,1,2],"tar
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -397,13 +399,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[4,5,6,7,0,1,2],"tar
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

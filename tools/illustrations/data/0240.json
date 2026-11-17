@@ -43,13 +43,402 @@
    "body": "最多走 m + n 步，时间 O(m + n)，空间 O(1)。"
   }
  ],
+ "figures": {
+  "searchgrid2.jpg": [
+   {
+    "t": "grid",
+    "label": "每行从左到右递增，每列从上到下递增。target = 5 在矩阵里",
+    "ax": false,
+    "rows": [
+     [
+      {
+       "v": 1,
+       "cls": ""
+      },
+      {
+       "v": 4,
+       "cls": ""
+      },
+      {
+       "v": 7,
+       "cls": ""
+      },
+      {
+       "v": 11,
+       "cls": ""
+      },
+      {
+       "v": 15,
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": 2,
+       "cls": ""
+      },
+      {
+       "v": 5,
+       "cls": "c"
+      },
+      {
+       "v": 8,
+       "cls": ""
+      },
+      {
+       "v": 12,
+       "cls": ""
+      },
+      {
+       "v": 19,
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": 3,
+       "cls": ""
+      },
+      {
+       "v": 6,
+       "cls": ""
+      },
+      {
+       "v": 9,
+       "cls": ""
+      },
+      {
+       "v": 16,
+       "cls": ""
+      },
+      {
+       "v": 22,
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": 10,
+       "cls": ""
+      },
+      {
+       "v": 13,
+       "cls": ""
+      },
+      {
+       "v": 14,
+       "cls": ""
+      },
+      {
+       "v": 17,
+       "cls": ""
+      },
+      {
+       "v": 24,
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": 18,
+       "cls": ""
+      },
+      {
+       "v": 21,
+       "cls": ""
+      },
+      {
+       "v": 23,
+       "cls": ""
+      },
+      {
+       "v": 26,
+       "cls": ""
+      },
+      {
+       "v": 30,
+       "cls": ""
+      }
+     ]
+    ]
+   }
+  ],
+  "searchgrid.jpg": [
+   {
+    "t": "grid",
+    "label": "target = 20 不在矩阵里",
+    "ax": false,
+    "rows": [
+     [
+      {
+       "v": 1,
+       "cls": ""
+      },
+      {
+       "v": 4,
+       "cls": ""
+      },
+      {
+       "v": 7,
+       "cls": ""
+      },
+      {
+       "v": 11,
+       "cls": ""
+      },
+      {
+       "v": 15,
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": 2,
+       "cls": ""
+      },
+      {
+       "v": 5,
+       "cls": ""
+      },
+      {
+       "v": 8,
+       "cls": ""
+      },
+      {
+       "v": 12,
+       "cls": ""
+      },
+      {
+       "v": 19,
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": 3,
+       "cls": ""
+      },
+      {
+       "v": 6,
+       "cls": ""
+      },
+      {
+       "v": 9,
+       "cls": ""
+      },
+      {
+       "v": 16,
+       "cls": ""
+      },
+      {
+       "v": 22,
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": 10,
+       "cls": ""
+      },
+      {
+       "v": 13,
+       "cls": ""
+      },
+      {
+       "v": 14,
+       "cls": ""
+      },
+      {
+       "v": 17,
+       "cls": ""
+      },
+      {
+       "v": 24,
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": 18,
+       "cls": ""
+      },
+      {
+       "v": 21,
+       "cls": ""
+      },
+      {
+       "v": 23,
+       "cls": ""
+      },
+      {
+       "v": 26,
+       "cls": ""
+      },
+      {
+       "v": 30,
+       "cls": ""
+      }
+     ]
+    ]
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：从右上角走",
    "kind": "elegant",
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def searchMatrix(self, matrix: List[List[int]], target: int) -> bool:\n        i, j = 0, len(matrix[0]) - 1    # 右上角\n        while i < len(matrix) and j >= 0:\n            x = matrix[i][j]\n            if x == target:\n                return True\n            if x > target:\n                j -= 1                  # 这一列都太大\n            else:\n                i += 1                  # 这一行都太小\n        return False"
+   "code": "class Solution:\n    def searchMatrix(self, matrix: List[List[int]], target: int) -> bool:\n        i, j = 0, len(matrix[0]) - 1    # 右上角\n        while i < len(matrix) and j >= 0:\n            x = matrix[i][j]\n            if x == target:\n                return True\n            if x > target:\n                j -= 1                  # 这一列都太大\n            else:\n                i += 1                  # 这一行都太小\n        return False",
+   "marks": {
+    "init": [
+     3
+    ],
+    "cmp": [
+     5
+    ],
+    "found": [
+     6,
+     7
+    ],
+    "left": [
+     8,
+     9
+    ],
+    "down": [
+     11
+    ],
+    "none": [
+     12
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public boolean searchMatrix(int[][] matrix, int target) {\n        int i = 0, j = matrix[0].length - 1;        // 右上角\n        while (i < matrix.length && j >= 0) {\n            int x = matrix[i][j];\n            if (x == target) {\n                return true;\n            }\n            if (x > target) {\n                j--;                                // 这一列都太大\n            } else {\n                i++;                                // 这一行都太小\n            }\n        }\n        return false;\n    }\n}",
+     "marks": {
+      "init": [
+       3
+      ],
+      "cmp": [
+       5
+      ],
+      "found": [
+       6,
+       7
+      ],
+      "left": [
+       9,
+       10
+      ],
+      "down": [
+       12
+      ],
+      "none": [
+       15
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    bool searchMatrix(vector<vector<int>>& matrix, int target) {\n        int i = 0, j = (int)matrix[0].size() - 1;   // 右上角\n        while (i < (int)matrix.size() && j >= 0) {\n            int x = matrix[i][j];\n            if (x == target) {\n                return true;\n            }\n            if (x > target) {\n                j--;                                // 这一列都太大\n            } else {\n                i++;                                // 这一行都太小\n            }\n        }\n        return false;\n    }\n};",
+     "marks": {
+      "init": [
+       4
+      ],
+      "cmp": [
+       6
+      ],
+      "found": [
+       7,
+       8
+      ],
+      "left": [
+       10,
+       11
+      ],
+      "down": [
+       13
+      ],
+      "none": [
+       16
+      ]
+     }
+    },
+    "go": {
+     "code": "func searchMatrix(matrix [][]int, target int) bool {\n\ti, j := 0, len(matrix[0])-1 // 右上角\n\tfor i < len(matrix) && j >= 0 {\n\t\tx := matrix[i][j]\n\t\tif x == target {\n\t\t\treturn true\n\t\t}\n\t\tif x > target {\n\t\t\tj-- // 这一列都太大\n\t\t} else {\n\t\t\ti++ // 这一行都太小\n\t\t}\n\t}\n\treturn false\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "cmp": [
+       4
+      ],
+      "found": [
+       5,
+       6
+      ],
+      "left": [
+       8,
+       9
+      ],
+      "down": [
+       11
+      ],
+      "none": [
+       14
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var searchMatrix = function(matrix, target) {\n    let i = 0, j = matrix[0].length - 1;        // 右上角\n    while (i < matrix.length && j >= 0) {\n        const x = matrix[i][j];\n        if (x === target) {\n            return true;\n        }\n        if (x > target) {\n            j--;                                // 这一列都太大\n        } else {\n            i++;                                // 这一行都太小\n        }\n    }\n    return false;\n};",
+     "marks": {
+      "init": [
+       2
+      ],
+      "cmp": [
+       4
+      ],
+      "found": [
+       5,
+       6
+      ],
+      "left": [
+       8,
+       9
+      ],
+      "down": [
+       11
+      ],
+      "none": [
+       14
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function searchMatrix(matrix: number[][], target: number): boolean {\n    let i = 0, j = matrix[0].length - 1;        // 右上角\n    while (i < matrix.length && j >= 0) {\n        const x = matrix[i][j];\n        if (x === target) {\n            return true;\n        }\n        if (x > target) {\n            j--;                                // 这一列都太大\n        } else {\n            i++;                                // 这一行都太小\n        }\n    }\n    return false;\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "cmp": [
+       4
+      ],
+      "found": [
+       5,
+       6
+      ],
+      "left": [
+       8,
+       9
+      ],
+      "down": [
+       11
+      ],
+      "none": [
+       14
+      ]
+     }
+    }
+   }
   }
  ],
  "demo": {
@@ -91,7 +480,7 @@
     "note": "target = 18"
    }
   ],
-  "build": "build(a, snap) {\n    const M = [[1, 4, 7, 11, 15], [2, 5, 8, 12, 19], [3, 6, 9, 16, 22], [10, 13, 14, 17, 24], [18, 21, 23, 26, 30]], t = a.t;\n    let i = 0, j = M[0].length - 1;\n    const view = (hit) => [{ t: \"grid\", label: \"matrix\", rows: M.map((r, x) => r.map((v, y) => ({ v, cls: x === i && y === j ? (hit ? \"c\" : \"a\") : x < i || y > j ? \"d\" : \"\" }))) }];\n    snap(\"开始\", `要找 <b>${t}</b>。从右上角 ${M[i][j]} 出发：往左数变小，往下数变大。`, view(), { facts: [[\"target\", t]] });\n    while (i < M.length && j >= 0) {\n      const x = M[i][j];\n      if (x === t) { snap(\"找到\", `当前是 ${x}，等于 target。返回 true。`, view(true), { kind: \"ok\", ans: true, facts: [[\"target\", t]] }); return; }\n      if (x > t) { snap(\"往左\", `当前是 ${x}，比 ${t} 大。它下面的数都更大，<b>这一列全部排除</b>，往左走。`, view(), { facts: [[\"target\", t]] }); j--; }\n      else { snap(\"往下\", `当前是 ${x}，比 ${t} 小。它左边的数都更小，<b>这一行全部排除</b>，往下走。`, view(), { facts: [[\"target\", t]] }); i++; }\n    }\n    snap(\"没找到\", `走出了矩阵，所有行和列都被排除。${t} 不在矩阵里，返回 false。`, view(), { kind: \"warn\", ans: false, facts: [[\"target\", t]] });\n  }",
+  "build": "build(a, snap) {\n    const M = [[1, 4, 7, 11, 15], [2, 5, 8, 12, 19], [3, 6, 9, 16, 22], [10, 13, 14, 17, 24], [18, 21, 23, 26, 30]], t = a.t;\n    let i = 0, j = M[0].length - 1;\n    const view = (hit) => [{ t: \"grid\", label: \"matrix\", rows: M.map((r, x) => r.map((v, y) => ({ v, cls: x === i && y === j ? (hit ? \"c\" : \"a\") : x < i || y > j ? \"d\" : \"\" }))) }];\n    snap(\"开始\", `要找 <b>${t}</b>。从右上角 ${M[i][j]} 出发：往左数变小，往下数变大。`, view(), { at: \"init\", facts: [[\"target\", t]] });\n    while (i < M.length && j >= 0) {\n      const x = M[i][j];\n      if (x === t) { snap(\"找到\", `当前是 ${x}，等于 target。返回 true。`, view(true), { at: [\"cmp\", \"found\"], kind: \"ok\", ans: true, facts: [[\"target\", t]] }); return; }\n      if (x > t) { snap(\"往左\", `当前是 ${x}，比 ${t} 大。它下面的数都更大，<b>这一列全部排除</b>，往左走。`, view(), { at: [\"cmp\", \"left\"], facts: [[\"target\", t]] }); j--; }\n      else { snap(\"往下\", `当前是 ${x}，比 ${t} 小。它左边的数都更小，<b>这一行全部排除</b>，往下走。`, view(), { at: [\"cmp\", \"down\"], facts: [[\"target\", t]] }); i++; }\n    }\n    snap(\"没找到\", `走出了矩阵，所有行和列都被排除。${t} 不在矩阵里，返回 false。`, view(), { at: \"none\", kind: \"warn\", ans: false, facts: [[\"target\", t]] });\n  }",
   "methods": [
    {
     "t": "标准解法",
@@ -111,7 +500,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const M = [[1, 4, 7, 11, 15], [2, 5, 8, 12, 19], [3, 6, 9, 16, 22], [10, 13, 14, 17, 24], [18, 21, 23, 26, 30]], t = a.t;\n    let i = 0, j = M[0].length - 1;\n    const view = (hit) => [{ t: \"grid\", label: \"matrix\", rows: M.map((r, x) => r.map((v, y) => ({ v, cls: x === i && y === j ? (hit ? \"c\" : \"a\") : x < i || y > j ? \"d\" : \"\" }))) }];\n    snap(\"开始\", `要找 <b>${t}</b>。从右上角 ${M[i][j]} 出发：往左数变小，往下数变大。`, view(), { facts: [[\"target\", t]] });\n    while (i < M.length && j >= 0) {\n      const x = M[i][j];\n      if (x === t) { snap(\"找到\", `当前是 ${x}，等于 target。返回 true。`, view(true), { kind: \"ok\", ans: true, facts: [[\"target\", t]] }); return; }\n      if (x > t) { snap(\"往左\", `当前是 ${x}，比 ${t} 大。它下面的数都更大，<b>这一列全部排除</b>，往左走。`, view(), { facts: [[\"target\", t]] }); j--; }\n      else { snap(\"往下\", `当前是 ${x}，比 ${t} 小。它左边的数都更小，<b>这一行全部排除</b>，往下走。`, view(), { facts: [[\"target\", t]] }); i++; }\n    }\n    snap(\"没找到\", `走出了矩阵，所有行和列都被排除。${t} 不在矩阵里，返回 false。`, view(), { kind: \"warn\", ans: false, facts: [[\"target\", t]] });\n  }"
+    "build": "build(a, snap) {\n    const M = [[1, 4, 7, 11, 15], [2, 5, 8, 12, 19], [3, 6, 9, 16, 22], [10, 13, 14, 17, 24], [18, 21, 23, 26, 30]], t = a.t;\n    let i = 0, j = M[0].length - 1;\n    const view = (hit) => [{ t: \"grid\", label: \"matrix\", rows: M.map((r, x) => r.map((v, y) => ({ v, cls: x === i && y === j ? (hit ? \"c\" : \"a\") : x < i || y > j ? \"d\" : \"\" }))) }];\n    snap(\"开始\", `要找 <b>${t}</b>。从右上角 ${M[i][j]} 出发：往左数变小，往下数变大。`, view(), { at: \"init\", facts: [[\"target\", t]] });\n    while (i < M.length && j >= 0) {\n      const x = M[i][j];\n      if (x === t) { snap(\"找到\", `当前是 ${x}，等于 target。返回 true。`, view(true), { at: [\"cmp\", \"found\"], kind: \"ok\", ans: true, facts: [[\"target\", t]] }); return; }\n      if (x > t) { snap(\"往左\", `当前是 ${x}，比 ${t} 大。它下面的数都更大，<b>这一列全部排除</b>，往左走。`, view(), { at: [\"cmp\", \"left\"], facts: [[\"target\", t]] }); j--; }\n      else { snap(\"往下\", `当前是 ${x}，比 ${t} 小。它左边的数都更小，<b>这一行全部排除</b>，往下走。`, view(), { at: [\"cmp\", \"down\"], facts: [[\"target\", t]] }); i++; }\n    }\n    snap(\"没找到\", `走出了矩阵，所有行和列都被排除。${t} 不在矩阵里，返回 false。`, view(), { at: \"none\", kind: \"warn\", ans: false, facts: [[\"target\", t]] });\n  }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const t = R.int(0, 31);\n    return { args: { t }, note: `target = ${t}`, py: `Solution().searchMatrix([[1,4,7,11,15],[2,5,8,12,19],[3,6,9,16,22],[10,13,14,17,24],[18,21,23,26,30]], ${t})` };\n  })(R); return { args: r.args, note: r.note }; }"

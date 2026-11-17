@@ -10,13 +10,13 @@ module.exports = {
   codes: [{ t: "标准解法：贪心，按层扩展", code: `
 class Solution:
     def jump(self, nums: List[int]) -> int:
-        jumps, end, far = 0, 0, 0           # end：当前这一跳能到的右端
+        jumps, end, far = 0, 0, 0           # end：当前这一跳能到的右端 #@init
         for i in range(len(nums) - 1):      # 最后一个位置不用再跳
-            far = max(far, i + nums[i])
-            if i == end:                    # 这一层走完了，必须再跳一次
-                jumps += 1
-                end = far
-        return jumps
+            far = max(far, i + nums[i])     #@far,edge
+            if i == end:                    # 这一层走完了，必须再跳一次 #@far,edge
+                jumps += 1                  #@jump
+                end = far                   #@jump
+        return jumps                        #@done
 ` }, { t: "简洁写法：直接按区间跳", kind: "elegant", note: "[lo, hi] 是跳 jumps 次能到的区间，下一层是 [hi + 1, 区间里能跳到的最远处]。", code: `
 class Solution:
     def jump(self, nums: List[int]) -> int:
@@ -34,6 +34,9 @@ assert s.jump([0]) == 0
 assert s.jump([1,2,1,1,1]) == 3
 assert s.jump([1,1,1,1]) == 3
 `,
+  sig: { fn: "jump", params: ["int[]"], ret: "int" },
+  call: (a) => [a.nums],
+  cases: [[[0]], [[2, 3, 0, 1, 4]], [[1, 1, 1, 1]], [[5, 1, 1]], [[1, 2]]],
   legend: [["k", "当前这一跳的区间"], ["a", "当前位置"], ["e", "下一跳能到的新位置"], ["c", "终点"]],
   presets: [
     { label: "示例 1", args: { nums: [2, 3, 1, 1, 4] }, note: "nums = [2,3,1,1,4]", expect: 2 },
@@ -43,16 +46,16 @@ assert s.jump([1,1,1,1]) == 3
     const nums = a.nums, n = nums.length; let jumps = 0, start = 0, end = 0, far = 0;
     const view = (i, fin) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: fin && k === n - 1 ? "c" : k === i ? "a" : k >= start && k <= end ? "k" : k > end && k <= far ? "e" : "" })), ptrs: { i: i >= 0 ? i : null, end: Math.min(end, n - 1), far: far > end ? Math.min(far, n - 1) : null } }];
     const f = () => ({ facts: [["跳数", jumps], ["end", end], ["far", far]] });
-    snap("开始", "跳 0 次能到的只有下标 0，这一层是 [0, 0]。", view(-1), f());
+    snap("开始", "跳 0 次能到的只有下标 0，这一层是 [0, 0]。", view(-1), { at: "init", ...f() });
     for (let i = 0; i < n - 1; i++) {
       far = Math.max(far, i + nums[i]);
       if (i === end) {
-        snap("走到这一层末尾", `站在 ${i}，最远能到 ${i + nums[i]}，far = ${far}。i 已经到了这一层的右端 end = ${end}，必须再跳一次。`, view(i), f());
+        snap("走到这一层末尾", `站在 ${i}，最远能到 ${i + nums[i]}，far = ${far}。i 已经到了这一层的右端 end = ${end}，必须再跳一次。`, view(i), { at: "edge", ...f() });
         jumps++; start = end + 1; end = far;
-        snap("跳一次", `跳数变成 <b>${jumps}</b>。跳 ${jumps} 次能到的新区间是 [${start}, ${Math.min(end, n - 1)}]。`, view(-1), f());
-      } else snap("扩展 far", `站在 ${i}，最远能到 ${i} + ${nums[i]} = ${i + nums[i]}，far = ${far}。还在这一层里，先不跳。`, view(i), f());
+        snap("跳一次", `跳数变成 <b>${jumps}</b>。跳 ${jumps} 次能到的新区间是 [${start}, ${Math.min(end, n - 1)}]。`, view(-1), { at: "jump", ...f() });
+      } else snap("扩展 far", `站在 ${i}，最远能到 ${i} + ${nums[i]} = ${i + nums[i]}，far = ${far}。还在这一层里，先不跳。`, view(i), { at: "far", ...f() });
     }
-    snap("完成", `终点 ${n - 1} 在第 ${jumps} 跳的区间里，最少跳 <b>${jumps}</b> 次。`, view(-1, true), { kind: "ok", ans: jumps, ...f() });
+    snap("完成", `终点 ${n - 1} 在第 ${jumps} 跳的区间里，最少跳 <b>${jumps}</b> 次。`, view(-1, true), { at: "done", kind: "ok", ans: jumps, ...f() });
   },
   points: [
     { t: "循环到 n - 2", body: "<code>range(len(nums) - 1)</code>。终点本身不需要再起跳。" },

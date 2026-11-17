@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -241,7 +243,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw k"></i>能凑出</span><span><i class="sw c"></i>这一轮新能凑出的</span><span><i class="sw e"></i>目标 target</span></div>
+        <div class="legend" id="legend"><span><i class="sw k"></i>能凑出</span><span><i class="sw c"></i>这一轮新能凑出的</span><span><i class="sw e"></i>目标 target</span><span><i class="sw x"></i>边界</span></div>
       </div>
     </div>
   </section>
@@ -323,23 +325,24 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,5,11,5]},"note":"
     const nums = R.arr(R.int(3, 6), 1, 8);
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().canPartition(${R.py(nums)})` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "0-1 背包", note: null, legend: [["k","能凑出"],["c","这一轮新能凑出的"],["e","目标 target"]], build(a, snap) {
+{ t: "0-1 背包", note: null, legend: [["k","能凑出"],["c","这一轮新能凑出的"],["e","目标 target"],["x","边界"]], build(a, snap) {
     const nums = a.nums, total = nums.reduce((s, x) => s + x, 0);
-    if (total % 2) { snap("总和是奇数", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, [{ t: "array", label: "nums", items: nums, ptrs: {} }], { kind: "warn", ans: false, facts: [["总和", total]] }); return; }
+    if (total % 2) { snap("总和是奇数", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, [{ t: "array", label: "nums", items: nums, ptrs: {} }], { at: "odd", kind: "warn", ans: false, facts: [["总和", total]] }); return; }
     const T = total / 2; let dp = Array(T + 1).fill(false); dp[0] = true;
     const view = (xi, fresh) => [
       { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === xi ? "a" : k < xi ? "d" : "" })), ptrs: {} },
-      { t: "array", label: `dp[j]：能不能凑出和 j（target = ${T}）`, items: dp.map((v, j) => ({ v: v ? "✓" : "", cls: fresh.includes(j) ? "c" : v ? "k" : j === T ? "e" : "" })), ptrs: { target: T } },
+      // dp[0] 是边界（虚线）：什么都不选，和为 0。j < x 时 dp[j - x] 的下标是负数，越界，所以内层循环只到 x 为止
+      { t: "array", label: `dp[j]：能不能凑出和 j（target = ${T}，虚线 dp[0] 是边界）`, items: dp.map((v, j) => ({ v: v ? "✓" : "", cls: fresh.includes(j) ? "c" : j === 0 ? "x k" : v ? "k" : j === T ? "e" : "" })), ptrs: { target: T } },
     ];
-    snap("开始", `总和 ${total}，目标是挑出和为 <b>${T}</b> 的一些数。dp[0] = ✓：什么都不选，和为 0。`, view(-1, []), { facts: [["总和", total], ["target", T]] });
+    snap("边界", `总和 ${total}，目标是挑出和为 <b>${T}</b> 的一些数。dp[0] = ✓ 是边界：什么都不选，和就是 0。<br>加入数 x 时，j < x 的 dp[j − x] 下标是负数，越界了，这些 j 本来也凑不进 x，所以内层循环只走到 j = x 为止。`, view(-1, []), { at: "init", facts: [["总和", total], ["target", T]] });
     for (let k = 0; k < nums.length; k++) {
       const x = nums[k], nd = dp.slice(), fresh = [];
       for (let j = T; j >= x; j--) if (!dp[j] && dp[j - x]) { nd[j] = true; fresh.push(j); }
       dp = nd;
-      snap(`加入 ${x}`, fresh.length ? `原来能凑出的和都加上 ${x}，新能凑出 ${fresh.slice().reverse().join("、")}。` + (dp[T] ? `其中有 ${T}，找到了。` : "") : `加上 ${x} 后没有新的和（超过 ${T} 的不用管）。`, view(k, fresh), { facts: [["总和", total], ["target", T]] });
-      if (dp[T]) { snap("完成", `能凑出 ${T}，可以分成两份，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, facts: [["总和", total], ["target", T]] }); return; }
+      snap(`加入 ${x}`, fresh.length ? `原来能凑出的和都加上 ${x}，新能凑出 ${fresh.slice().reverse().join("、")}。` + (dp[T] ? `其中有 ${T}，找到了。` : "") : `加上 ${x} 后没有新的和（超过 ${T} 的不用管）。`, view(k, fresh), { at: "add", facts: [["总和", total], ["target", T]] });
+      if (dp[T]) { snap("完成", `能凑出 ${T}，可以分成两份，返回 <b>true</b>。（代码里不提前返回，剩下的数加完后 dp[target] 仍然是 true。）`, view(-1, []), { at: "done", kind: "ok", ans: true, facts: [["总和", total], ["target", T]] }); return; }
     }
-    snap("完成", `所有数都加完了，还是凑不出 ${T}，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, facts: [["总和", total], ["target", T]] });
+    snap("完成", `所有数都加完了，还是凑不出 ${T}，返回 <b>false</b>。`, view(-1, []), { at: "done", kind: "warn", ans: false, facts: [["总和", total], ["target", T]] });
   } },
 { t: "位运算", note: "和简洁写法一样：把 dp 数组压成一个整数 bits，第 j 位是 1 表示能凑出和 j。加入 x 就是所有能凑出的和都加上 x：bits | (bits << x)。", legend: [["a","正在加入的数"],["k","1：能凑出"],["c","这一轮新变成 1 的位"],["e","目标 total / 2"]], build(a, snap) {
       const nums = a.nums, total = nums.reduce((s, x) => s + x, 0), T = total % 2 ? null : total / 2;
@@ -348,17 +351,17 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,5,11,5]},"note":"
         { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === xi ? "a" : k < xi ? "d" : "" })) },
         { t: "array", label: "bits（下标 j 就是第 j 位，最左边是最低位）", items: bits.map((b, j) => ({ v: b, cls: fresh.includes(j) ? "c" : b ? "k" : j === T ? "e" : "" })), ptrs: T === null ? {} : { target: T } },
       ];
-      const f = () => ({ facts: [["总和", total], ["target", T === null ? "—" : T]] });
-      snap("开始", "bits = 1，只有第 0 位是 1：什么都不选，和为 0。", view(-1, []), f());
+      const f = (at) => ({ at, facts: [["总和", total], ["target", T === null ? "—" : T]] });
+      snap("开始", "bits = 1，只有第 0 位是 1：什么都不选，和为 0。", view(-1, []), f("init"));
       nums.forEach((x, k) => {
         const nb = bits.slice(), fresh = [];
         for (let j = total; j >= x; j--) if (bits[j - x] && !bits[j]) { nb[j] = 1; fresh.push(j); }
         bits = nb;
-        snap(`加入 ${x}`, `bits << ${x}：每个能凑出的和都加上 ${x}，再和原来的 bits 按位或。` + (fresh.length ? `新能凑出 ${fresh.slice().reverse().join("、")}。` : "没有新的和。"), view(k, fresh), f());
+        snap(`加入 ${x}`, `bits << ${x}：每个能凑出的和都加上 ${x}，再和原来的 bits 按位或。` + (fresh.length ? `新能凑出 ${fresh.slice().reverse().join("、")}。` : "没有新的和。"), view(k, fresh), f("add"));
       });
-      if (T === null) snap("完成", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f() });
-      else if (bits[T]) snap("完成", `第 ${T} 位是 1，能凑出总和的一半，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, ...f() });
-      else snap("完成", `第 ${T} 位是 0，凑不出总和的一半，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f() });
+      if (T === null) snap("完成", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f("done") });
+      else if (bits[T]) snap("完成", `第 ${T} 位是 1，能凑出总和的一半，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, ...f("done") });
+      else snap("完成", `第 ${T} 位是 0，凑不出总和的一半，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f("done") });
     } }
 ] };
 (function () {
@@ -378,7 +381,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,5,11,5]},"note":"
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -393,13 +396,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,5,11,5]},"note":"
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

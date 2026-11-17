@@ -10,13 +10,13 @@ module.exports = {
   codes: [{ t: "标准解法：动态规划", code: `
 class Solution:
     def numSquares(self, n: int) -> int:
-        dp = [0] + [float("inf")] * n       # dp[i]：和为 i 最少几个平方数
-        for i in range(1, n + 1):
-            j = 1
-            while j * j <= i:
-                dp[i] = min(dp[i], dp[i - j * j] + 1)   # 最后一个数取 j²
-                j += 1
-        return dp[n]
+        dp = [0] + [float("inf")] * n       # dp[i]：和为 i 最少几个平方数 #@init
+        for i in range(1, n + 1):           #@each
+            j = 1                           #@each
+            while j * j <= i:               #@each
+                dp[i] = min(dp[i], dp[i - j * j] + 1)   # 最后一个数取 j² #@each
+                j += 1                      #@each
+        return dp[n]                        #@done
 ` }, { t: "简洁写法：min 生成式", kind: "elegant", code: `
 from math import isqrt
 
@@ -42,6 +42,9 @@ class Solution:
             return 2
         return 3
 ` }],
+  sig: { fn: "numSquares", params: ["int"], ret: "int" },
+  call: (a) => [a.n],
+  cases: [[1], [2], [7], [100], [9999]],
   pytest: `
 s = Solution()
 assert s.numSquares(12) == 3
@@ -51,22 +54,26 @@ assert s.numSquares(7) == 4
 assert s.numSquares(43) == 3
 assert [s.numSquares(i) for i in range(1, 30)] == [1,2,3,1,2,3,4,2,1,2,3,3,2,3,4,1,2,2,3,2,3,3,4,3,1,2,3,4,2]
 `,
-  legend: [["a", "正在算的"], ["e", "候选 dp[i − j²]"], ["c", "取到最小的那个"]],
+  legend: [["a", "正在算的"], ["e", "候选 dp[i − j²]"], ["c", "取到最小的那个"], ["x", "边界"]],
   presets: [
     { label: "n = 12", args: { n: 12 }, note: "n = 12", expect: 3 },
     { label: "n = 13", args: { n: 13 }, note: "n = 13", expect: 2 },
   ],
   build(a, snap) {
     const n = a.n, dp = Array(n + 1).fill(null); dp[0] = 0;
-    const view = (i, cands, best, fin) => [{ t: "array", label: "dp[i]：和为 i 最少几个平方数", items: dp.map((v, k) => ({ v, cls: fin && k === n ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", "dp[0] = 0：和为 0 不需要任何数。", view(-1, [], -1));
+    // dp[0] 是边界（虚线）：直接给定。j² ≤ i 保证了 i − j² 不会是负数，不会越界
+    const view = (i, cands, best, fin) => [{ t: "array", label: "dp[i]：和为 i 最少几个平方数（虚线 dp[0] 是边界）", items: dp.map((v, k) => {
+      const c = fin && k === n ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? "e" : "";
+      return { v, cls: k === 0 ? (c ? "x " + c : "x") : c };
+    }), ptrs: { i: i >= 0 ? i : null } }];
+    snap("边界", "dp[0] = 0：和为 0 不需要任何数，这是边界。i 本身是平方数时，最后一个数取 i 自己，剩下 dp[0] = 0，答案是 1。<br>循环条件 j² ≤ i 保证 i − j² 不会是负数，不会越界。", view(-1, [], -1), { at: "init" });
     for (let i = 1; i <= n; i++) {
       const cs = []; let best = Infinity, bk = -1, parts = [];
       for (let j = 1; j * j <= i; j++) { const k = i - j * j; cs.push(k); parts.push(`${j * j}：dp[${k}] + 1 = ${dp[k] + 1}`); if (dp[k] + 1 < best) { best = dp[k] + 1; bk = k; } }
       dp[i] = best;
-      snap(`dp[${i}]`, `最后一个数可以是 ${parts.join("；")}。最小的是 <b>${best}</b>。`, view(i, cs, bk), { facts: [["dp[" + i + "]", best]] });
+      snap(`dp[${i}]`, `最后一个数可以是 ${parts.join("；")}。最小的是 <b>${best}</b>。`, view(i, cs, bk), { at: "each", facts: [["dp[" + i + "]", best]] });
     }
-    snap("完成", `和为 ${n} 最少需要 <b>${dp[n]}</b> 个完全平方数。`, view(-1, [], -1, true), { kind: "ok", ans: dp[n] });
+    snap("完成", `和为 ${n} 最少需要 <b>${dp[n]}</b> 个完全平方数。`, view(-1, [], -1, true), { at: "done", kind: "ok", ans: dp[n] });
   },
   points: [
     { t: "初始化成无穷大", body: "dp[1..n] 初始化成 inf，取 min 才有意义。dp[0] = 0 是唯一的起点。" },

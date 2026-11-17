@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -333,15 +335,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"ababcbacadefegdehijhkl
       { t: "array", label: "s", items: s.split("").map((c, k) => { const g = segOf(k); return { v: c, cls: g >= 0 ? (g % 2 ? "g" : "k") : k === i ? "a" : i >= 0 && k === last[s[i]] ? "b" : k >= start && k <= end && i >= 0 ? "e" : "" }; }), ptrs: { i: i >= 0 ? i : null, end: i >= 0 ? end : null } },
       { t: "chips", label: "片段长度", items: res.slice(), empty: "还没有" },
     ];
-    snap("开始", `先记下每个字母最后出现的位置，比如 '${s[0]}' 最后在 ${last[s[0]]}。然后从左往右走。`, view(-1));
+    snap("开始", `先记下每个字母最后出现的位置，比如 '${s[0]}' 最后在 ${last[s[0]]}。然后从左往右走。`, view(-1), { at: "init" });
     for (let i = 0; i < s.length; i++) {
       const old = end; end = Math.max(end, last[s[i]]);
       if (i === end) {
-        snap("切一刀", `'${s[i]}' 最后出现在 ${last[s[i]]}。走到了 end = ${end}，这一段 [${start}, ${end}] 里的字母都不会再出现了，切下来，长度 <b>${end - start + 1}</b>。`, view(i), { kind: "ok", facts: [["start", start], ["end", end]] });
+        snap("切一刀", `'${s[i]}' 最后出现在 ${last[s[i]]}。走到了 end = ${end}，这一段 [${start}, ${end}] 里的字母都不会再出现了，切下来，长度 <b>${end - start + 1}</b>。`, view(i), { at: ["grow", "cut"], kind: "ok", facts: [["start", start], ["end", end]] });
         res.push(end - start + 1); segs.push([start, end]); start = i + 1;
-      } else snap(end > old ? "撑大边界" : "继续", `'${s[i]}' 最后出现在 ${last[s[i]]}。` + (end > old ? `片段至少要到 ${end}，end 从 ${old} 变成 <b>${end}</b>。` : `没有超过 end = ${end}。`), view(i), { facts: [["start", start], ["end", end]] });
+      } else snap(end > old ? "撑大边界" : "继续", `'${s[i]}' 最后出现在 ${last[s[i]]}。` + (end > old ? `片段至少要到 ${end}，end 从 ${old} 变成 <b>${end}</b>。` : `没有超过 end = ${end}。`), view(i), { at: "grow", facts: [["start", start], ["end", end]] });
     }
-    snap("完成", `一共切成 ${res.length} 段，长度是 [${res.join(",")}]。`, view(-1), { kind: "ok", ans: res.slice() });
+    snap("完成", `一共切成 ${res.length} 段，长度是 [${res.join(",")}]。`, view(-1), { at: "done", kind: "ok", ans: res.slice() });
   } }
 ] };
 (function () {
@@ -361,7 +363,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"ababcbacadefegdehijhkl
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -376,13 +378,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"ababcbacadefegdehijhkl
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

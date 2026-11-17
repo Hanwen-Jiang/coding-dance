@@ -1,7 +1,14 @@
+const F = require("../fig");
+
 module.exports = {
   id: 234, name: "回文链表", title: "回文链表图解", level: "简单", topic: "链表",
   h1: "回文链表，把后半段反转过来再比",
   lede: "链表不能从后往前走。先用快慢指针找到中点，把后半段原地反转，然后一头一尾同时往中间走，逐个比较。这样只用常数的额外空间。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "pal1linked-list.jpg": [F.list([1, 2, 2, 1], { label: "正着读、倒着读都是 1 2 2 1", cls: (v, i) => (i === 0 || i === 3 ? "e" : "g") })],
+    "pal2linked-list.jpg": [F.list([1, 2], { label: "倒着读是 2 1，不是回文" })],
+  },
   hints: [
     { t: "最直接的做法", body: ["把所有值复制到一个数组里，再用两个下标从两端往中间比。时间 <code>O(n)</code>，空间 <code>O(n)</code>。", "进阶要求空间 <code>O(1)</code>，就不能用数组。"] },
     { t: "找中点", body: ["<code>slow</code> 一次走一步，<code>fast</code> 一次走两步。<code>fast</code> 走到头时，<code>slow</code> 正好在中间。"] },
@@ -10,19 +17,19 @@ module.exports = {
   codes: [{ t: "标准解法：快慢指针 + 反转后半段", code: `
 class Solution:
     def isPalindrome(self, head: Optional[ListNode]) -> bool:
-        slow = fast = head
-        while fast and fast.next:       # 找中点
-            slow = slow.next
-            fast = fast.next.next
-        prev = None
-        while slow:                     # 反转后半段
-            slow.next, prev, slow = prev, slow, slow.next
-        left, right = head, prev
-        while right:                    # 两头往中间比
-            if left.val != right.val:
-                return False
-            left, right = left.next, right.next
-        return True
+        slow = fast = head              #@init
+        while fast and fast.next:       # 找中点 #@mid
+            slow = slow.next            #@mid
+            fast = fast.next.next       #@mid
+        prev = None                     #@rev
+        while slow:                     # 反转后半段 #@rev
+            slow.next, prev, slow = prev, slow, slow.next   #@rev
+        left, right = head, prev        #@cmp
+        while right:                    # 两头往中间比 #@cmp
+            if left.val != right.val:   #@cmp,bad
+                return False            #@bad
+            left, right = left.next, right.next     #@cmp
+        return True                     #@done
 ` }, { t: "简洁写法：转成列表（O(n) 空间）", kind: "elegant", note: "把值取出来，和反过来的自己比。不满足进阶的 O(1) 空间。", code: `
 class Solution:
     def isPalindrome(self, head: Optional[ListNode]) -> bool:
@@ -40,6 +47,9 @@ assert s.isPalindrome(L([1,2,3,2,1])) is True
 assert s.isPalindrome(L([1])) is True
 assert s.isPalindrome(L([1,2,3,3,1])) is False
 `,
+  sig: { fn: "isPalindrome", params: ["ListNode"], ret: "bool" },
+  call: (a) => [a.v],
+  cases: [[[1]], [[1, 2]], [[1, 1]], [[1, 0, 0]], [[9, 9, 9, 9, 9]]],
   legend: [["a", "slow / left"], ["b", "fast / right"], ["k", "比较过，相等"], ["w", "不相等"]],
   presets: [
     { label: "示例 1", args: { v: [1, 2, 2, 1] }, note: "head = [1,2,2,1]", expect: true },
@@ -50,23 +60,23 @@ assert s.isPalindrome(L([1,2,3,3,1])) is False
     const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null)), st = v.map(() => "");
     let slow = 0, fast = 0;
     const view = (ptrs, ca, cb) => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === ca ? "a" : i === cb ? "b" : st[i] })), next: next.slice(), ptrs }];
-    snap("找中点", "slow 和 fast 都从头出发。slow 每次走一步，fast 每次走两步。", view({ slow, fast }, slow, fast));
+    snap("找中点", "slow 和 fast 都从头出发。slow 每次走一步，fast 每次走两步。", view({ slow, fast }, slow, fast), { at: "init" });
     while (fast !== null && fast + 1 < n) {
       slow++; fast = fast + 2 < n ? fast + 2 : null;
-      snap("找中点", fast === null ? `slow 走到 ${v[slow]}，fast 走出了链表。` : `slow 走到 ${v[slow]}，fast 走到 ${v[fast]}。`, view({ slow, fast }, slow, fast));
+      snap("找中点", fast === null ? `slow 走到 ${v[slow]}，fast 走出了链表。` : `slow 走到 ${v[slow]}，fast 走到 ${v[fast]}。`, view({ slow, fast }, slow, fast), { at: "mid" });
     }
     const mid = slow;
     for (let i = mid; i < n; i++) next[i] = i === mid ? null : i - 1;
-    snap("反转后半段", `fast 到头了，slow 停在 ${v[mid]}，这里就是后半段的起点。把从它开始的后半段反转，箭头全部掉头。`, view({ slow: mid }, mid));
+    snap("反转后半段", `fast 到头了，slow 停在 ${v[mid]}，这里就是后半段的起点。把从它开始的后半段反转，箭头全部掉头。`, view({ slow: mid }, mid), { at: "rev" });
     let l = 0, r = n - 1, ok = true;
     while (r >= mid) {
       const same = v[l] === v[r];
       st[l] = st[r] = same ? "k" : "w";
-      snap(same ? "比较" : "不相等", `left 是 ${v[l]}，right 是 ${v[r]}，` + (same ? "相等，两边各往中间走一步。" : "<b>不相等</b>，不是回文。"), view({ left: l, right: r }), same ? {} : { kind: "warn" });
+      snap(same ? "比较" : "不相等", `left 是 ${v[l]}，right 是 ${v[r]}，` + (same ? "相等，两边各往中间走一步。" : "<b>不相等</b>，不是回文。"), view({ left: l, right: r }), same ? { at: "cmp" } : { at: "bad", kind: "warn" });
       if (!same) { ok = false; break; }
       l++; r--;
     }
-    snap("完成", ok ? "后半段走完了，每一对都相等。是回文链表，返回 true。" : "发现一对不相等的值，返回 false。", view({}), { kind: ok ? "ok" : "warn", ans: ok });
+    snap("完成", ok ? "后半段走完了，每一对都相等。是回文链表，返回 true。" : "发现一对不相等的值，返回 false。", view({}), { at: ok ? "done" : "bad", kind: ok ? "ok" : "warn", ans: ok });
   },
   points: [
     { t: "奇数个节点", body: "中间那个节点会被算进后半段，和自己前面的节点比较完就结束，不影响结果。" },

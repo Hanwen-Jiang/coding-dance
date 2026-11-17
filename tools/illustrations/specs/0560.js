@@ -10,14 +10,14 @@ module.exports = {
   codes: [{ t: "标准解法：前缀和 + 哈希表", code: `
 class Solution:
     def subarraySum(self, nums: List[int], k: int) -> int:
-        count = defaultdict(int)
-        count[0] = 1                    # 空前缀
-        pre = res = 0
-        for x in nums:
-            pre += x
-            res += count[pre - k]       # 先查
-            count[pre] += 1             # 再存
-        return res
+        count = defaultdict(int)        #@init
+        count[0] = 1                    # 空前缀 #@init
+        pre = res = 0                   #@init
+        for x in nums:                  #@query
+            pre += x                    #@query
+            res += count[pre - k]       # 先查 #@query
+            count[pre] += 1             # 再存 #@store
+        return res                      #@done
 ` }, { t: "简洁写法：accumulate + Counter", kind: "elegant", note: "accumulate 依次给出每个前缀和，Counter 查不到的键默认是 0。", code: `
 from itertools import accumulate
 
@@ -36,6 +36,9 @@ assert s.subarraySum([1,2,3], 3) == 2
 assert s.subarraySum([1,-1,0], 0) == 3
 assert s.subarraySum([3,4,7,2,-3,1,4,2], 7) == 4
 `,
+  sig: { fn: "subarraySum", params: ["int[]", "int"], ret: "int" },
+  call: (a) => [a.nums, a.k],
+  cases: [[[1, 1, 1], 2], [[1], 0], [[1, -1, 0], 0], [[0, 0, 0], 0]],
   legend: [["a", "当前的数"], ["d", "已经加进前缀和"], ["k", "查到的前缀和"]],
   presets: [
     { label: "示例 2", args: { nums: [1, 2, 3], k: 3 }, note: "nums = [1,2,3], k = 3", expect: 2 },
@@ -48,16 +51,16 @@ assert s.subarraySum([3,4,7,2,-3,1,4,2], 7) == 4
       { t: "chips", label: "哈希表 count（前缀和 → 出现次数）", items: [...count].map(([s, c]) => ({ v: `${s} → ${c}`, cls: s === hitKey ? "k" : "" })) },
     ];
     const facts = () => [["k", k], ["前缀和", pre], ["答案", res]];
-    snap("开始", "哈希表里先放 0 → 1：一个数都不取时前缀和是 0，出现了 1 次。", view(-1), { facts: facts() });
+    snap("开始", "哈希表里先放 0 → 1：一个数都不取时前缀和是 0，出现了 1 次。", view(-1), { at: "init", facts: facts() });
     nums.forEach((x, i) => {
       pre += x;
       const need = pre - k, c = count.get(need) || 0;
       res += c;
-      snap("先查", `加上 ${x}，前缀和变成 ${pre}。需要找之前等于 ${pre} − ${k} = <b>${need}</b> 的前缀和，` + (c ? `有 ${c} 个，说明有 ${c} 段以这里结尾的子数组和为 ${k}，答案加 ${c}。` : "没有。"), view(i, c ? need : undefined), { kind: c ? "ok" : "", facts: facts() });
+      snap("先查", `加上 ${x}，前缀和变成 ${pre}。需要找之前等于 ${pre} − ${k} = <b>${need}</b> 的前缀和，` + (c ? `有 ${c} 个，说明有 ${c} 段以这里结尾的子数组和为 ${k}，答案加 ${c}。` : "没有。"), view(i, c ? need : undefined), { at: "query", kind: c ? "ok" : "", facts: facts() });
       count.set(pre, (count.get(pre) || 0) + 1);
-      snap("再存", `把当前前缀和 ${pre} 的出现次数加 1。`, view(i), { facts: facts() });
+      snap("再存", `把当前前缀和 ${pre} 的出现次数加 1。`, view(i), { at: "store", facts: facts() });
     });
-    snap("完成", `一共有 <b>${res}</b> 段子数组的和等于 ${k}。`, view(nums.length), { kind: "ok", ans: res, facts: facts() });
+    snap("完成", `一共有 <b>${res}</b> 段子数组的和等于 ${k}。`, view(nums.length), { at: "done", kind: "ok", ans: res, facts: facts() });
   },
   points: [
     { t: "别忘了 count[0] = 1", body: "没有它，从下标 0 开始的子数组（前缀本身等于 k）会被漏掉。" },

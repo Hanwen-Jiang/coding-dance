@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -321,12 +323,12 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[4,1,2,1,2]},"note":
     const bin = (x) => x.toString(2).padStart(w, "0");
     let res = 0;
     const view = (i) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k < i ? "d" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", "res 从 0 开始，依次和每个数做异或。", view(-1), { facts: [["res", res], ["二进制", bin(res)]] });
+    snap("开始", "res 从 0 开始，依次和每个数做异或。", view(-1), { at: "init", facts: [["res", res], ["二进制", bin(res)]] });
     nums.forEach((x, i) => {
       const old = res; res ^= x;
-      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，也就是 ${old} ^ ${x} = ${res}。`, view(i), { facts: [["res", res], ["二进制", bin(res)]] });
+      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，也就是 ${old} ^ ${x} = ${res}。`, view(i), { at: "xor", facts: [["res", res], ["二进制", bin(res)]] });
     });
-    snap("完成", `成对的数都抵消了，剩下 <b>${res}</b>。`, view(-1), { kind: "ok", ans: res, facts: [["res", res], ["二进制", bin(res)]] });
+    snap("完成", `成对的数都抵消了，剩下 <b>${res}</b>。`, view(-1), { at: "done", kind: "ok", ans: res, facts: [["res", res], ["二进制", bin(res)]] });
   } }
 ] };
 (function () {
@@ -346,7 +348,7 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[4,1,2,1,2]},"note":
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -361,13 +363,15 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[4,1,2,1,2]},"note":
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

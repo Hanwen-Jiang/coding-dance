@@ -10,27 +10,30 @@ module.exports = {
   codes: [{ t: "标准解法：在较短的数组上二分切口", kind: "elegant", code: `
 class Solution:
     def findMedianSortedArrays(self, nums1: List[int], nums2: List[int]) -> float:
-        if len(nums1) > len(nums2):
-            nums1, nums2 = nums2, nums1         # 保证在短的数组上二分
-        m, n = len(nums1), len(nums2)
-        half = (m + n + 1) // 2                 # 左半边一共要有多少个数
-        lo, hi = 0, m
-        while True:
-            i = (lo + hi) // 2                  # nums1 左边取 i 个
-            j = half - i                        # nums2 左边取 j 个
-            l1 = nums1[i - 1] if i > 0 else float("-inf")
-            r1 = nums1[i] if i < m else float("inf")
-            l2 = nums2[j - 1] if j > 0 else float("-inf")
-            r2 = nums2[j] if j < n else float("inf")
-            if l1 > r2:
-                hi = i - 1                      # nums1 切得太靠右
-            elif l2 > r1:
-                lo = i + 1                      # nums1 切得太靠左
-            else:
-                if (m + n) % 2:
-                    return float(max(l1, l2))
-                return (max(l1, l2) + min(r1, r2)) / 2
+        if len(nums1) > len(nums2):           #@init
+            nums1, nums2 = nums2, nums1         # 保证在短的数组上二分 #@init
+        m, n = len(nums1), len(nums2)           #@init
+        half = (m + n + 1) // 2                 # 左半边一共要有多少个数 #@init
+        lo, hi = 0, m                           #@init
+        while True:                             #@cut
+            i = (lo + hi) // 2                  # nums1 左边取 i 个 #@cut
+            j = half - i                        # nums2 左边取 j 个 #@cut
+            l1 = nums1[i - 1] if i > 0 else float("-inf")  #@cut
+            r1 = nums1[i] if i < m else float("inf")       #@cut
+            l2 = nums2[j - 1] if j > 0 else float("-inf")  #@cut
+            r2 = nums2[j] if j < n else float("inf")       #@cut
+            if l1 > r2:                         #@right
+                hi = i - 1                      # nums1 切得太靠右 #@right
+            elif l2 > r1:                       #@left
+                lo = i + 1                      # nums1 切得太靠左 #@left
+            else:                               #@found
+                if (m + n) % 2:                 #@done
+                    return float(max(l1, l2))   #@done
+                return (max(l1, l2) + min(r1, r2)) / 2  #@done
 ` }],
+  sig: { fn: "findMedianSortedArrays", params: ["int[]", "int[]"], ret: "double" },
+  call: (a) => [a.A, a.B],
+  cases: [[[], [1]], [[2], []], [[1, 3], [2]], [[1, 2], [3, 4]], [[0, 0], [0, 0]], [[1, 2, 3, 4, 5], [6]]],
   pytest: `
 s = Solution()
 assert s.findMedianSortedArrays([1,3], [2]) == 2.0
@@ -56,18 +59,18 @@ for _ in range(500):
     const row = (label, arr, cut, hot) => ({ t: "array", label, items: arr.map((v, t) => ({ v, cls: hot && (t === cut - 1 || t === cut) ? "a" : t < cut ? "e" : "w" })), ptrs: cut > 0 ? { "切口 ▸": cut - 1 } : { "◂ 切口": 0 } });
     const view = (i, j, hot) => [row("nums1（较短的数组，在它上面二分）", A, i, hot), row("nums2", B, j, hot)];
     let lo = 0, hi = m;
-    snap("开始", `一共 ${m + n} 个数，左半边要有 <b>${half}</b> 个。在 nums1 上二分切口位置 i，nums2 的切口 j = ${half} − i 跟着确定。`, [{ t: "array", label: "nums1（较短的数组，在它上面二分）", items: A }, { t: "array", label: "nums2", items: B }], { facts: [["half", half], ["lo", lo], ["hi", hi]] });
+    snap("开始", `一共 ${m + n} 个数，左半边要有 <b>${half}</b> 个。在 nums1 上二分切口位置 i，nums2 的切口 j = ${half} − i 跟着确定。`, [{ t: "array", label: "nums1（较短的数组，在它上面二分）", items: A }, { t: "array", label: "nums2", items: B }], { at: "init", facts: [["half", half], ["lo", lo], ["hi", hi]] });
     for (;;) {
       const i = (lo + hi) >> 1, j = half - i;
       const l1 = i > 0 ? A[i - 1] : -Infinity, r1 = i < m ? A[i] : Infinity, l2 = j > 0 ? B[j - 1] : -Infinity, r2 = j < n ? B[j] : Infinity;
       const facts = [["i", i], ["j", j], ["lo", lo], ["hi", hi]];
       const head = `i = (${lo} + ${hi}) // 2 = ${i}，j = ${half} − ${i} = ${j}。切口两侧：nums1 是 ${f(l1)} | ${f(r1)}，nums2 是 ${f(l2)} | ${f(r2)}。`;
-      if (l1 > r2) { snap("切得太靠右", head + `nums1 左边的 ${f(l1)} 大于 nums2 右边的 ${f(r2)}，左半边混进了太大的数。<b>i 要变小</b>。`, view(i, j, true), { kind: "warn", facts }); hi = i - 1; }
-      else if (l2 > r1) { snap("切得太靠左", head + `nums2 左边的 ${f(l2)} 大于 nums1 右边的 ${f(r1)}。<b>i 要变大</b>。`, view(i, j, true), { kind: "warn", facts }); lo = i + 1; }
+      if (l1 > r2) { snap("切得太靠右", head + `nums1 左边的 ${f(l1)} 大于 nums2 右边的 ${f(r2)}，左半边混进了太大的数。<b>i 要变小</b>。`, view(i, j, true), { at: ["cut", "right"], kind: "warn", facts }); hi = i - 1; }
+      else if (l2 > r1) { snap("切得太靠左", head + `nums2 左边的 ${f(l2)} 大于 nums1 右边的 ${f(r1)}。<b>i 要变大</b>。`, view(i, j, true), { at: ["cut", "left"], kind: "warn", facts }); lo = i + 1; }
       else {
         const lm = Math.max(l1, l2), rm = Math.min(r1, r2), odd = (m + n) % 2 === 1, ans = odd ? lm : (lm + rm) / 2;
-        snap("切对了", head + `${f(l1)} ≤ ${f(r2)} 且 ${f(l2)} ≤ ${f(r1)}，左半边的数都不大于右半边。`, view(i, j, true), { kind: "ok", facts });
-        snap("完成", odd ? `总数是奇数，中位数是左半边的最大值 max(${f(l1)}, ${f(l2)}) = <b>${ans}</b>。` : `总数是偶数，中位数是左半边最大值 ${lm} 和右半边最小值 ${rm} 的平均：<b>${ans}</b>。`, view(i, j, false), { kind: "ok", ans, facts: [["中位数", ans]] });
+        snap("切对了", head + `${f(l1)} ≤ ${f(r2)} 且 ${f(l2)} ≤ ${f(r1)}，左半边的数都不大于右半边。`, view(i, j, true), { at: ["cut", "found"], kind: "ok", facts });
+        snap("完成", odd ? `总数是奇数，中位数是左半边的最大值 max(${f(l1)}, ${f(l2)}) = <b>${ans}</b>。` : `总数是偶数，中位数是左半边最大值 ${lm} 和右半边最小值 ${rm} 的平均：<b>${ans}</b>。`, view(i, j, false), { at: "done", kind: "ok", ans, facts: [["中位数", ans]] });
         return;
       }
     }

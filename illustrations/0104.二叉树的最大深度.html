@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -316,18 +318,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[3,9,20,null,null,15,7]
     const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
     const dep = {}, stack = [];
     const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : id in dep ? "c" : stack.includes(+id) ? "e" : ""; const b = {}; for (const id in dep) b[id] = "深度 " + dep[id]; return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: b }]; };
-    snap("开始", "每个节点下方会标出它这棵子树的深度。空节点的深度是 0。", view(-1));
+    snap("开始", "每个节点下方会标出它这棵子树的深度。空节点的深度是 0。", view(-1), { at: "base" });
     const dfs = (id) => {
       const nd = N[id]; stack.push(id);
-      if (nd.l !== null || nd.r !== null) snap("进入", `进入 ${nd.v}，先分别问左右子树的深度。`, view(id));
+      if (nd.l !== null || nd.r !== null) snap("进入", `进入 ${nd.v}，先分别问左右子树的深度。`, view(id), { at: "down" });
       const L = nd.l !== null ? dfs(nd.l) : 0, R = nd.r !== null ? dfs(nd.r) : 0;
       dep[id] = Math.max(L, R) + 1;
-      snap("算出深度", nd.l === null && nd.r === null ? `${nd.v} 是叶子，左右都是空（深度 0），所以它的深度是 0 + 1 = <b>1</b>。` : `${nd.v}：左子树深度 ${L}，右子树深度 ${R}。取较大的再加 1，得到 <b>${dep[id]}</b>。`, view(id));
+      snap("算出深度", nd.l === null && nd.r === null ? `${nd.v} 是叶子，左右都是空（深度 0），所以它的深度是 0 + 1 = <b>1</b>。` : `${nd.v}：左子树深度 ${L}，右子树深度 ${R}。取较大的再加 1，得到 <b>${dep[id]}</b>。`, view(id), { at: "depth" });
       stack.pop();
       return dep[id];
     };
     const ans = dfs(0);
-    snap("完成", `根节点的深度是 <b>${ans}</b>，这就是整棵树的最大深度。`, view(-1), { kind: "ok", ans });
+    snap("完成", `根节点的深度是 <b>${ans}</b>，这就是整棵树的最大深度。`, view(-1), { at: "depth", kind: "ok", ans });
   } }
 ] };
 (function () {
@@ -347,7 +349,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[3,9,20,null,null,15,7]
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -362,13 +364,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[3,9,20,null,null,15,7]
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

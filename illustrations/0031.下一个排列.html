@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -330,25 +332,25 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
 { t: "标准解法", note: null, legend: [["a","第 i 位"],["b","要换上来的 j"],["e","右边的降序段"],["c","改好的部分"]], build(a, snap) {
     const nums = a.nums.slice(), n = nums.length;
     const view = (cls, ptrs) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: cls(k) })), ptrs: ptrs || {} }];
-    snap("开始", `要找比 [${nums.join(",")}] 大的排列里最小的那个。先从右往左找第一个比右边小的数。`, view(() => ""));
+    snap("开始", `要找比 [${nums.join(",")}] 大的排列里最小的那个。先从右往左找第一个比右边小的数。`, view(() => ""), { at: "init" });
     let i = n - 2;
     while (i >= 0 && nums[i] >= nums[i + 1]) {
-      snap("找下降", `nums[${i}] = ${nums[i]} ≥ nums[${i + 1}] = ${nums[i + 1]}，还在降序段里，继续往左。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }));
+      snap("找下降", `nums[${i}] = ${nums[i]} ≥ nums[${i + 1}] = ${nums[i + 1]}，还在降序段里，继续往左。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }), { at: "findi" });
       i--;
     }
     if (i >= 0) {
-      snap("找到 i", `nums[${i}] = ${nums[i]} &lt; nums[${i + 1}] = ${nums[i + 1]}。右边 [${nums.slice(i + 1).join(",")}] 是降序，已经最大了，要动的是第 <b>${i}</b> 位。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }));
+      snap("找到 i", `nums[${i}] = ${nums[i]} &lt; nums[${i + 1}] = ${nums[i + 1]}。右边 [${nums.slice(i + 1).join(",")}] 是降序，已经最大了，要动的是第 <b>${i}</b> 位。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }), { at: "found" });
       let j = n - 1;
       while (nums[j] <= nums[i]) j--;
-      snap("找 j", `在右段里从右往左找，第一个比 ${nums[i]} 大的是 nums[${j}] = <b>${nums[j]}</b>，它是右段里比 ${nums[i]} 大的最小的数。`, view((k) => (k === i ? "a" : k === j ? "b" : k > i ? "e" : ""), { i, j }));
+      snap("找 j", `在右段里从右往左找，第一个比 ${nums[i]} 大的是 nums[${j}] = <b>${nums[j]}</b>，它是右段里比 ${nums[i]} 大的最小的数。`, view((k) => (k === i ? "a" : k === j ? "b" : k > i ? "e" : ""), { i, j }), { at: "findj" });
       [nums[i], nums[j]] = [nums[j], nums[i]];
-      snap("交换", `交换后第 ${i} 位变成 ${nums[i]}，排列变大了。右段 [${nums.slice(i + 1).join(",")}] 仍然是降序。`, view((k) => (k === i ? "c" : k > i ? "e" : ""), { i }));
+      snap("交换", `交换后第 ${i} 位变成 ${nums[i]}，排列变大了。右段 [${nums.slice(i + 1).join(",")}] 仍然是降序。`, view((k) => (k === i ? "c" : k > i ? "e" : ""), { i }), { at: "swap" });
     } else {
-      snap("整体降序", "一直找到最左边都没有下降的位置，说明已经是最大的排列。把整个数组反转，回到最小的排列。", view(() => "e"));
+      snap("整体降序", "一直找到最左边都没有下降的位置，说明已经是最大的排列。把整个数组反转，回到最小的排列。", view(() => "e"), { at: "found" });
     }
     let l = i + 1, r = n - 1;
     while (l < r) { [nums[l], nums[r]] = [nums[r], nums[l]]; l++; r--; }
-    snap("反转右段", `把第 ${i + 1} 位之后反转成升序，让右边尽量小。结果是 <b>[${nums.join(",")}]</b>。`, view((k) => (k > i ? "c" : "")), { kind: "ok", ans: nums.slice() });
+    snap("反转右段", `把第 ${i + 1} 位之后反转成升序，让右边尽量小。结果是 <b>[${nums.join(",")}]</b>。`, view((k) => (k > i ? "c" : "")), { at: "rev", kind: "ok", ans: nums.slice() });
   } }
 ] };
 (function () {
@@ -368,7 +370,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -383,13 +385,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

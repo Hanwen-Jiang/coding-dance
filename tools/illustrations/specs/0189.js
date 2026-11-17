@@ -12,15 +12,15 @@ class Solution:
     def rotate(self, nums: List[int], k: int) -> None:
         def reverse(i, j):
             while i < j:
-                nums[i], nums[j] = nums[j], nums[i]
-                i += 1
-                j -= 1
+                nums[i], nums[j] = nums[j], nums[i] #@swap
+                i += 1                  #@swap
+                j -= 1                  #@swap
 
-        n = len(nums)
-        k %= n
-        reverse(0, n - 1)               # 整体翻转
-        reverse(0, k - 1)               # 翻转前 k 个
-        reverse(k, n - 1)               # 翻转剩下的
+        n = len(nums)                   #@init
+        k %= n                          #@init
+        reverse(0, n - 1)               # 整体翻转 #@all
+        reverse(0, k - 1)               # 翻转前 k 个 #@front
+        reverse(k, n - 1)               # 翻转剩下的 #@back
 ` }, { t: "简洁写法：切片拼接", kind: "elegant", note: "后 k 个挪到前面。k 可能比 n 大，先取模。nums[:] 赋值是原地修改，但切片会用 O(n) 临时空间。", code: `
 class Solution:
     def rotate(self, nums: List[int], k: int) -> None:
@@ -31,6 +31,10 @@ class Solution:
 for a, k, e in [([1,2,3,4,5,6,7],3,[5,6,7,1,2,3,4]), ([-1,-100,3,99],2,[3,99,-1,-100]), ([1,2],5,[2,1]), ([1],0,[1])]:
     Solution().rotate(a, k); assert a == e
 `,
+  // 原地修改：判题看调用之后的 nums
+  sig: { fn: "rotate", params: ["int[]", "int"], ret: "void", out: 0 },
+  call: (a) => [a.nums, a.k],
+  cases: [[[1], 0], [[1], 5], [[1, 2], 5], [[-1, -100, 3, 99], 2], [[1, 2, 3], 3]],
   legend: [["e", "正在翻转的范围"], ["a", "正在交换的两个数"], ["c", "已经到位"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 2, 3, 4, 5, 6, 7], k: 3 }, note: "nums = [1,2,3,4,5,6,7], k = 3", expect: [5, 6, 7, 1, 2, 3, 4] },
@@ -39,20 +43,20 @@ for a, k, e in [([1,2,3,4,5,6,7],3,[5,6,7,1,2,3,4]), ([-1,-100,3,99],2,[3,99,-1,
   build(a, snap) {
     const n = a.nums.slice(), len = n.length, k = a.k % len; let doneTo = -1;
     const view = (lo, hi, i, j) => [{ t: "array", label: "nums", items: n.map((v, t) => ({ v, cls: t === i || t === j ? "a" : t >= lo && t <= hi ? "e" : t <= doneTo ? "c" : "" })), ptrs: i === undefined ? {} : { i, j } }];
-    snap("开始", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : "。") + `目标是把最后 ${k} 个数搬到最前面。`, view(-1, -1), { facts: [["k % n", k]] });
-    const rev = (lo, hi, name) => {
-      snap(name, `${name}：翻转下标 ${lo} 到 ${hi} 这一段。`, view(lo, hi), { facts: [["k % n", k]] });
+    snap("开始", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : "。") + `目标是把最后 ${k} 个数搬到最前面。`, view(-1, -1), { at: "init", facts: [["k % n", k]] });
+    const rev = (lo, hi, name, tag) => {
+      snap(name, `${name}：翻转下标 ${lo} 到 ${hi} 这一段。`, view(lo, hi), { at: tag, facts: [["k % n", k]] });
       for (let i = lo, j = hi; i < j; i++, j--) {
         [n[i], n[j]] = [n[j], n[i]];
-        snap(name, `交换下标 ${i} 和 ${j}，两边往中间靠。`, view(lo, hi, i, j), { facts: [["k % n", k]] });
+        snap(name, `交换下标 ${i} 和 ${j}，两边往中间靠。`, view(lo, hi, i, j), { at: [tag, "swap"], facts: [["k % n", k]] });
       }
     };
-    rev(0, len - 1, "整体翻转");
-    if (k > 1) rev(0, k - 1, "翻转前 k 个");
+    rev(0, len - 1, "整体翻转", "all");
+    if (k > 1) rev(0, k - 1, "翻转前 k 个", "front");
     doneTo = k - 1;
-    if (len - k > 1) rev(k, len - 1, "翻转剩下的");
+    if (len - k > 1) rev(k, len - 1, "翻转剩下的", "back");
     doneTo = len - 1;
-    snap("完成", `三次翻转后得到 [${n.join(", ")}]。`, view(-1, -1), { kind: "ok", ans: n, facts: [["k % n", k]] });
+    snap("完成", `三次翻转后得到 [${n.join(", ")}]。`, view(-1, -1), { at: [], kind: "ok", ans: n, facts: [["k % n", k]] });
   },
   points: [
     { t: "先取余", body: "不取余的话，k 大于 n 时 <code>reverse(0, k - 1)</code> 会越界。" },

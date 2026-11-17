@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -340,22 +342,22 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"3[a]2[bc]"},"note":"s 
       { t: "array", label: "s", items: s.split("").map((c, j) => ({ v: c, cls: j === i ? "a" : j < i ? "d" : "" })), ptrs: { i: i >= 0 && i < s.length ? i : null } },
       { t: "chips", label: "栈（存档：前缀, 次数）", items: stack.map(([p, t]) => `("${p}", ${t})`), empty: "空" },
     ];
-    const f = () => ({ facts: [["cur", `"${cur}"`], ["k", k]] });
-    snap("开始", "cur 是正在拼的字符串，k 是正在读的数字。", view(-1), f());
+    const f = (at) => ({ at, facts: [["cur", `"${cur}"`], ["k", k]] });
+    snap("开始", "cur 是正在拼的字符串，k 是正在读的数字。", view(-1), f("init"));
     for (let i = 0; i < s.length; i++) {
       const c = s[i];
-      if (/\d/.test(c)) { k = k * 10 + +c; snap("数字", `读到数字 ${c}，k = <b>${k}</b>。`, view(i), f()); }
-      else if (c === "[") { stack.push([cur, k]); snap("存档", `遇到 [，把括号外的前缀 "${cur}" 和次数 ${k} 压栈，cur 清空，开始拼括号里的内容。`, view(i), f()); cur = ""; k = 0; }
-      else if (c === "]") { const [p, t] = stack.pop(), old = cur; cur = p + cur.repeat(t); snap("展开", `遇到 ]，弹出存档 ("${p}", ${t})。括号里是 "${old}"，重复 ${t} 次接到 "${p}" 后面，cur = <b>"${cur}"</b>。`, view(i), f()); }
-      else { cur += c; snap("字母", `字母 ${c} 直接接到 cur 后面。`, view(i), f()); }
+      if (/\d/.test(c)) { k = k * 10 + +c; snap("数字", `读到数字 ${c}，k = <b>${k}</b>。`, view(i), f("digit")); }
+      else if (c === "[") { stack.push([cur, k]); snap("存档", `遇到 [，把括号外的前缀 "${cur}" 和次数 ${k} 压栈，cur 清空，开始拼括号里的内容。`, view(i), f("push")); cur = ""; k = 0; }
+      else if (c === "]") { const [p, t] = stack.pop(), old = cur; cur = p + cur.repeat(t); snap("展开", `遇到 ]，弹出存档 ("${p}", ${t})。括号里是 "${old}"，重复 ${t} 次接到 "${p}" 后面，cur = <b>"${cur}"</b>。`, view(i), f("pop")); }
+      else { cur += c; snap("字母", `字母 ${c} 直接接到 cur 后面。`, view(i), f("letter")); }
     }
-    snap("完成", `解码结果是 <b>"${cur}"</b>。`, view(s.length), { kind: "ok", ans: cur, ...f() });
+    snap("完成", `解码结果是 <b>"${cur}"</b>。`, view(s.length), { kind: "ok", ans: cur, ...f("done") });
   } },
 { t: "反复展开最内层", note: "和简洁写法一样：「数字[纯字母]」里面没有别的括号，一定是最内层。每一轮把所有最内层的括号展开，直到没有括号为止。", legend: [["a","这一轮要展开的最内层"]], build(a, snap) {
       let s = a.s, round = 0;
       const view = (hl) => [{ t: "array", label: "s", items: [...s].map((c, i) => ({ v: c, cls: hl.has(i) ? "a" : "" })) }];
-      const f = () => ({ facts: [["轮数", round], ["长度", s.length]] });
-      snap("开始", "正则 <code>(\\d+)\\[([a-z]*)\\]</code> 匹配「数字[纯字母]」，它一定是最内层的括号。", view(new Set()), f());
+      const f = (at) => ({ at, facts: [["轮数", round], ["长度", s.length]] });
+      snap("开始", "正则 <code>(\\d+)\\[([a-z]*)\\]</code> 匹配「数字[纯字母]」，它一定是最内层的括号。", view(new Set()), f("init"));
       while (s.includes("[")) {
         round++;
         const re = /(\d+)\[([a-z]*)\]/g, hl = new Set(), parts = [];
@@ -364,11 +366,11 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"3[a]2[bc]"},"note":"s 
           for (let k = m.index; k < m.index + m[0].length; k++) hl.add(k);
           parts.push(`${m[0]} 展开成 "${m[2].repeat(+m[1])}"`);
         }
-        snap(`第 ${round} 轮`, `找到 ${parts.length} 个最内层：${parts.join("，")}。`, view(hl), f());
+        snap(`第 ${round} 轮`, `找到 ${parts.length} 个最内层：${parts.join("，")}。`, view(hl), f("round"));
         s = s.replace(/(\d+)\[([a-z]*)\]/g, (_, k, t) => t.repeat(+k));
-        snap(`第 ${round} 轮完`, `替换后 s = "${s}"。` + (s.includes("[") ? "还有括号，原来的外层现在变成了最内层，再来一轮。" : "没有括号了。"), view(new Set()), f());
+        snap(`第 ${round} 轮完`, `替换后 s = "${s}"。` + (s.includes("[") ? "还有括号，原来的外层现在变成了最内层，再来一轮。" : "没有括号了。"), view(new Set()), f("expand"));
       }
-      snap("完成", `解码结果是 <b>"${s}"</b>。`, view(new Set()), { kind: "ok", ans: s, ...f() });
+      snap("完成", `解码结果是 <b>"${s}"</b>。`, view(new Set()), { kind: "ok", ans: s, ...f("done") });
     } }
 ] };
 (function () {
@@ -388,7 +390,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"3[a]2[bc]"},"note":"s 
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -403,13 +405,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"3[a]2[bc]"},"note":"s 
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

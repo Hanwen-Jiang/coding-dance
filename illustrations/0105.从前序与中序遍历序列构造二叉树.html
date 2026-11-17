@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -345,12 +347,12 @@ const SPEC = { presets: [{"label":"示例 1","args":{"pre":[3,9,20,15,7],"ino":[
         Object.keys(N).length ? { t: "tree", nodes: N, root: 0, cls } : { t: "note", label: "树", html: "还没有节点" },
       ];
     };
-    snap("开始", "前序的第一个数是整棵树的根。", view(-1, -1, -1, -1, -1, 0, -1));
+    snap("开始", "先用哈希表记下每个值在中序里的下标。前序的第一个数是整棵树的根。", view(-1, -1, -1, -1, -1, 0, -1), { at: "init" });
     const build = (pl, pr, il, ir, id, par, side) => {
       if (pl === pr) return;
       const v = P[pl], k = idx[v], ls = k - il;
       N[id] = { v, l: null, r: null }; if (par !== null) N[par][side] = id;
-      snap(`根 ${v}`, `这一段前序的第一个是 <b>${v}</b>，它是根。在中序里它在下标 ${k}，左边 ${ls} 个数是左子树${ls ? `（${I.slice(il, k).join(",")}）` : "（空）"}，右边 ${ir - k - 1} 个是右子树${ir - k - 1 ? `（${I.slice(k + 1, ir).join(",")}）` : "（空）"}。`, view(pl, pr, il, ir, k, ls, id));
+      snap(`根 ${v}`, `这一段前序的第一个是 <b>${v}</b>，它是根。在中序里它在下标 ${k}，左边 ${ls} 个数是左子树${ls ? `（${I.slice(il, k).join(",")}）` : "（空）"}，右边 ${ir - k - 1} 个是右子树${ir - k - 1 ? `（${I.slice(k + 1, ir).join(",")}）` : "（空）"}。两段分别递归建左右子树。`, view(pl, pr, il, ir, k, ls, id), { at: ["root", "sub"] });
       build(pl + 1, pl + 1 + ls, il, k, 2 * id + 1, id, "l");
       build(pl + 1 + ls, pr, k + 1, ir, 2 * id + 2, id, "r");
     };
@@ -358,7 +360,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"pre":[3,9,20,15,7],"ino":[
     const out = [], q = [0];
     while (q.length) { const id = q.shift(); if (id === null || !N[id]) { out.push(null); continue; } out.push(N[id].v); q.push(N[id].l, N[id].r); }
     while (out.length && out[out.length - 1] === null) out.pop();
-    snap("完成", `树建好了，按层序写出来是 [${out.map((v) => (v === null ? "null" : v)).join(",")}]。`, view(-1, -1, -1, -1, -1, 0, -1), { kind: "ok", ans: out });
+    snap("完成", `树建好了，按层序写出来是 [${out.map((v) => (v === null ? "null" : v)).join(",")}]。`, view(-1, -1, -1, -1, -1, 0, -1), { at: "done", kind: "ok", ans: out });
   } }
 ] };
 (function () {
@@ -378,7 +380,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"pre":[3,9,20,15,7],"ino":[
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -393,13 +395,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"pre":[3,9,20,15,7],"ino":[
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

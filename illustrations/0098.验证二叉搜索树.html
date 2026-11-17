@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -346,19 +348,19 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[2,1,3]},"note":"root =
     const st = {}, rng = {};
     const f = (x) => (x === -Infinity ? "−∞" : x === Infinity ? "+∞" : x);
     const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur && !st[id] ? "a" : st[id] || ""; return [{ t: "tree", nodes: N, root: 0, cls, badges: rng }]; };
-    snap("开始", "每个节点下方会标出它允许的范围。根节点没有限制。", view(-1));
+    snap("开始", "每个节点下方会标出它允许的范围。根节点没有限制。", view(-1), { at: "start" });
     const check = (id, lo, hi, why) => {
       const nd = N[id]; rng[id] = `(${f(lo)}, ${f(hi)})`;
       const ok = lo < nd.v && nd.v < hi;
       st[id] = ok ? "c" : "w";
-      snap(ok ? "在范围内" : "超出范围", `${nd.v}${why}，允许的范围是 (${f(lo)}, ${f(hi)})。` + (ok ? `${nd.v} 在范围内。` : `<b>${nd.v} 不在范围内</b>，这不是二叉搜索树。`), view(id), ok ? {} : { kind: "warn" });
+      snap(ok ? "在范围内" : "超出范围", `${nd.v}${why}，允许的范围是 (${f(lo)}, ${f(hi)})。` + (ok ? `${nd.v} 在范围内，接着带着收紧的范围去检查左右子树。` : `<b>${nd.v} 不在范围内</b>，这不是二叉搜索树。`), view(id), ok ? { at: ["range", "down"] } : { at: ["range", "bad"], kind: "warn" });
       if (!ok) return false;
       if (nd.l !== null && !check(nd.l, lo, nd.v, ` 在 ${nd.v} 的左边，上界收紧成 ${nd.v}`)) return false;
       if (nd.r !== null && !check(nd.r, nd.v, hi, ` 在 ${nd.v} 的右边，下界收紧成 ${nd.v}`)) return false;
       return true;
     };
     const ans = check(0, -Infinity, Infinity, " 是根节点");
-    snap("完成", ans ? "所有节点都在各自的范围内，是合法的二叉搜索树。" : "有节点超出了祖先给它的范围，返回 false。", view(-1), { kind: ans ? "ok" : "warn", ans });
+    snap("完成", ans ? "所有节点都在各自的范围内，是合法的二叉搜索树。" : "有节点超出了祖先给它的范围，返回 false。", view(-1), { at: "start", kind: ans ? "ok" : "warn", ans });
   } },
 { t: "中序要严格递增", note: "和「另一种写法」一样：二叉搜索树的中序遍历一定严格递增。按中序走一遍，每个节点都和前一个比，一旦不比前一个大就不是。", legend: [["a","中序刚轮到的节点"],["c","比前一个大"],["w","不比前一个大"]], build(a, snap) {
       const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
@@ -369,7 +371,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[2,1,3]},"note":"root =
         for (const id in N) cls[id] = +id === cur && st[id] !== "w" ? "a" : st[id] || "";
         return [{ t: "tree", nodes: N, root: 0, cls, badges: { ...order } }, { t: "chips", label: "中序序列（必须严格递增）", items: seq.map((v, i) => ({ v, cls: bad && i === seq.length - 1 ? "w" : "c" })), empty: "还没有" }];
       };
-      snap("开始", "按中序（左 → 自己 → 右）走一遍，每个节点都和前一个比较。prev 一开始是 −∞。", view(-1), { facts: [["prev", "−∞"]] });
+      snap("开始", "按中序（左 → 自己 → 右）走一遍，每个节点都和前一个比较。prev 一开始是 −∞。", view(-1), { at: "init", facts: [["prev", "−∞"]] });
       const inorder = (id) => {
         if (id === null || bad) return;
         const nd = N[id];
@@ -378,15 +380,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[2,1,3]},"note":"root =
         seq.push(nd.v); order[id] = "第 " + seq.length;
         if (nd.v <= prev) {
           st[id] = "w"; bad = true;
-          snap("不是递增", `中序轮到 ${nd.v}，前一个是 ${prev}，${nd.v} 不比它大。中序不是严格递增，返回 false。`, view(id), { kind: "warn", facts: [["prev", f(prev)]] });
+          snap("不是递增", `中序轮到 ${nd.v}，前一个是 ${prev}，${nd.v} 不比它大。中序不是严格递增，返回 false。`, view(id), { at: "bad", kind: "warn", facts: [["prev", f(prev)]] });
           return;
         }
         const old = prev; prev = nd.v; st[id] = "c";
-        snap("比前一个大", `中序轮到 ${nd.v}，比前一个 ${f(old)} 大。prev 更新成 ${nd.v}。`, view(id), { facts: [["prev", prev]] });
+        snap("比前一个大", `中序轮到 ${nd.v}，比前一个 ${f(old)} 大。prev 更新成 ${nd.v}。`, view(id), { at: "ok", facts: [["prev", prev]] });
         inorder(nd.r);
       };
       inorder(0);
-      snap("完成", bad ? "中序序列不是严格递增的，不是二叉搜索树。" : `中序序列 [${seq.join(", ")}] 严格递增，是合法的二叉搜索树。`, view(-1), { kind: bad ? "warn" : "ok", ans: !bad, facts: [["prev", f(prev)]] });
+      snap("完成", bad ? "中序序列不是严格递增的，不是二叉搜索树。" : `中序序列 [${seq.join(", ")}] 严格递增，是合法的二叉搜索树。`, view(-1), { at: "done", kind: bad ? "warn" : "ok", ans: !bad, facts: [["prev", f(prev)]] });
     } }
 ] };
 (function () {
@@ -406,7 +408,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[2,1,3]},"note":"root =
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -421,13 +423,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[2,1,3]},"note":"root =
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

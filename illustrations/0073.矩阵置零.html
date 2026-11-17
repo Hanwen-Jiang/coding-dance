@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -339,18 +341,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,1,1],[1,0,1],[1,1,1
     const view = (ci, cj) => [{ t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : cls[i][j] || (i === 0 || j === 0 ? "e" : "") }))) }];
     const row0 = M[0].includes(0), col0 = M.some((r) => r[0] === 0);
     const facts = () => [["row0", row0 ? "有 0" : "没有"], ["col0", col0 ? "有 0" : "没有"]];
-    snap("先记住第一行和第一列", `第一行和第一列马上要用来写记号，先看它们原来有没有 0：第一行${row0 ? "有" : "没有"}，第一列${col0 ? "有" : "没有"}。`, view(), { facts: facts() });
+    snap("先记住第一行和第一列", `第一行和第一列马上要用来写记号，先看它们原来有没有 0：第一行${row0 ? "有" : "没有"}，第一列${col0 ? "有" : "没有"}。`, view(), { at: "first", facts: facts() });
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) if (M[i][j] === 0) {
       M[i][0] = 0; M[0][j] = 0; cls[i][0] = "w"; cls[0][j] = "w";
-      snap("做记号", `matrix[${i}][${j}] 是 0。在这一行的开头 matrix[${i}][0] 和这一列的开头 matrix[0][${j}] 各写一个 0 作为记号。`, view(i, j), { facts: facts() });
+      snap("做记号", `matrix[${i}][${j}] 是 0。在这一行的开头 matrix[${i}][0] 和这一列的开头 matrix[0][${j}] 各写一个 0 作为记号。`, view(i, j), { at: "mark", facts: facts() });
     }
     let changed = 0;
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) if (M[i][0] === 0 || M[0][j] === 0) { if (M[i][j] !== 0) changed++; M[i][j] = 0; cls[i][j] = "c"; }
-    snap("按记号清零", `再扫一遍里面的格子：所在行的开头或所在列的开头是 0，就清零。`, view(), { facts: facts() });
+    snap("按记号清零", `再扫一遍里面的格子：所在行的开头或所在列的开头是 0，就清零。`, view(), { at: "clear", facts: facts() });
     if (row0) for (let j = 0; j < n; j++) { M[0][j] = 0; cls[0][j] = "c"; }
     if (col0) for (let i = 0; i < m; i++) { M[i][0] = 0; cls[i][0] = "c"; }
-    snap("最后处理第一行和第一列", (row0 ? "第一行原来有 0，整行清零。" : "第一行原来没有 0，保持不动。") + (col0 ? "第一列原来有 0，整列清零。" : "第一列原来没有 0，保持不动。"), view(), { facts: facts() });
-    snap("完成", "所有该清零的行和列都处理完了。", view(), { kind: "ok", ans: M, facts: facts() });
+    snap("最后处理第一行和第一列", (row0 ? "第一行原来有 0，整行清零。" : "第一行原来没有 0，保持不动。") + (col0 ? "第一列原来有 0，整列清零。" : "第一列原来没有 0，保持不动。"), view(), { at: "edge", facts: facts() });
+    snap("完成", "所有该清零的行和列都处理完了。", view(), { at: [], kind: "ok", ans: M, facts: facts() });
   } },
 { t: "记下行和列", note: "和简洁写法一样：先扫一遍，把含 0 的行号和列号分别放进两个集合，再统一清零。好写，但要 O(m + n) 额外空间。", legend: [["a","找到的 0"],["e","要清零的行和列"],["c","被清零的格子"]], build(a, snap) {
       const M = a.m.map((r) => r.slice()), m = M.length, n = M[0].length, rows = new Set(), cols = new Set(), cls = M.map((r) => r.map(() => ""));
@@ -360,14 +362,14 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,1,1],[1,0,1],[1,1,1
         { t: "chips", label: "rows：要清零的行", items: sorted(rows), empty: "空" },
         { t: "chips", label: "cols：要清零的列", items: sorted(cols), empty: "空" },
       ];
-      snap("开始", "先只看不改：找出所有 0，记下它们所在的行和列。", view(-1, -1));
+      snap("开始", "先只看不改：找出所有 0，记下它们所在的行和列。", view(-1, -1), { at: [] });
       for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (M[i][j] === 0) {
         rows.add(i); cols.add(j);
-        snap("记下", `matrix[${i}][${j}] 是 0，记下第 ${i} 行和第 ${j} 列。`, view(i, j));
+        snap("记下", `matrix[${i}][${j}] 是 0，记下第 ${i} 行和第 ${j} 列。`, view(i, j), { at: "find" });
       }
       for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (rows.has(i) || cols.has(j)) { M[i][j] = 0; cls[i][j] = "c"; }
-      snap("统一清零", `再扫一遍：行号在 rows 里，或者列号在 cols 里，就清零。`, view(-1, -1));
-      snap("完成", "所有该清零的行和列都处理完了。", view(-1, -1), { kind: "ok", ans: M });
+      snap("统一清零", `再扫一遍：行号在 rows 里，或者列号在 cols 里，就清零。`, view(-1, -1), { at: "clear" });
+      snap("完成", "所有该清零的行和列都处理完了。", view(-1, -1), { at: [], kind: "ok", ans: M });
     } }
 ] };
 (function () {
@@ -387,7 +389,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,1,1],[1,0,1],[1,1,1
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -402,13 +404,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,1,1],[1,0,1],[1,1,1
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

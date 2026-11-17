@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -319,15 +321,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[0,1,0,3,12]},"note"
 { t: "标准解法", note: null, legend: [["c","已排好的非零数"],["a","i 正在看的数"],["w","j 和 i 之间的 0"]], build(a, snap) {
     const n = a.nums.slice(); let j = 0;
     const view = (i) => [{ t: "array", label: "nums", items: n.map((v, t) => ({ v, cls: t < j ? "c" : t === i ? "a" : t < i ? "w" : "" })), ptrs: { j, i: i < n.length ? i : null } }];
-    snap("开始", "j 指向下一个非零数该放的位置，i 从左往右扫描。", view(-1));
+    snap("开始", "j 指向下一个非零数该放的位置，i 从左往右扫描。", view(-1), { at: "init" });
     for (let i = 0; i < n.length; i++) {
       if (n[i] !== 0) {
         const same = i === j, x = n[i];
         [n[i], n[j]] = [n[j], n[i]]; j++;
-        snap("交换", same ? `nums[${i}] = ${x} 非零，i 和 j 在同一格，原地不动，j 右移。` : `nums[${i}] = ${x} 非零，和 j 位置的 0 交换，${x} 到了前面，j 右移。`, view(i));
-      } else snap("跳过", `nums[${i}] 是 0，不处理，i 继续往前。j 留在原地等下一个非零数。`, view(i), { kind: "warn" });
+        snap("交换", same ? `nums[${i}] = ${x} 非零，i 和 j 在同一格，原地不动，j 右移。` : `nums[${i}] = ${x} 非零，和 j 位置的 0 交换，${x} 到了前面，j 右移。`, view(i), { at: "swap" });
+      } else snap("跳过", `nums[${i}] 是 0，不处理，i 继续往前。j 留在原地等下一个非零数。`, view(i), { at: "scan", kind: "warn" });
     }
-    snap("完成", `扫描结束。j 左边是所有非零数，顺序没变；右边全是 0。`, view(n.length), { kind: "ok", ans: n });
+    snap("完成", `扫描结束。j 左边是所有非零数，顺序没变；右边全是 0。`, view(n.length), { at: [], kind: "ok", ans: n });
   } }
 ] };
 (function () {
@@ -347,7 +349,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[0,1,0,3,12]},"note"
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -362,13 +364,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[0,1,0,3,12]},"note"
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

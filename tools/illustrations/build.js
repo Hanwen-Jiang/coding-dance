@@ -43,6 +43,8 @@ const exportData = (S) => {
   fs.writeFileSync(path.join(dataDir, `${pad4(S.id)}.json`), JSON.stringify({
     id: S.id, name: S.name, level: S.level, topic: S.topic, h1: S.h1, lede: S.lede, handwritten: !!S.handwritten,
     hints: S.hints, points: S.points,
+    // 题面配图：图片文件名 → 视图（fig.js），网站用它替换题面里力扣的图片
+    ...(S.figures ? { figures: S.figures } : {}),
     codes: exportCodes(codesOf(S.codes, pad4(S.id))),
     // 逐步演示：网站上的播放器会执行 build 生成每一步，渲染方式和 engine.js 一致
     demo: S.handwritten ? null : {
@@ -75,6 +77,25 @@ function checkAt(S, entries, m, steps, where, mustMark = strict) {
     if (s.at == null) throw new Error(`${S.id} [${m.t}] ${where}: 第 ${k} 步「${s.phase}」没有写 at`);
     for (const t of [].concat(s.at)) if (!marks[t]) throw new Error(`${S.id} [${m.t}] ${where}: 第 ${k} 步「${s.phase}」的 at "${t}" 在代码里没有对应的标记`);
   });
+}
+/**
+ * 题面配图：figures 的键要是题面里真有的图片（problems/images/<四位题号>/ 下的文件名）；
+ * 每张图都要有配图（还没配的题 --strict 时报错，否则只提示）。
+ */
+function checkFigures(S) {
+  const doc = fs.readdirSync(path.join(dir, "../../problems")).find((f) => f.startsWith(pad4(S.id) + ".") && f.endsWith(".md"));
+  const md = doc ? fs.readFileSync(path.join(dir, "../../problems", doc), "utf8") : "";
+  const imgs = [...md.matchAll(/src="images\/\d{4}\/([^"]+)"/g)].map((m) => m[1]);
+  const figs = S.figures || {};
+  for (const k of Object.keys(figs)) {
+    if (!imgs.includes(k)) throw new Error(`${S.id}: figures 里的「${k}」不是题面里的图片（题面里有：${imgs.join("、") || "没有图"}）`);
+    if (!Array.isArray(figs[k]) || !figs[k].length) throw new Error(`${S.id}: figures「${k}」要是非空的视图数组`);
+  }
+  const missing = imgs.filter((f) => !figs[f]);
+  if (missing.length) {
+    if (strict) throw new Error(`${S.id}: 题面里这些图还没有配图：${missing.join("、")}`);
+    console.log(`  （${S.id} 题面里还有 ${missing.length} 张图没换成配图：${missing.join("、")}）`);
+  }
 }
 /** 固定种子的随机数：导出判题用例时用，同一份 spec 每次导出的用例都一样 */
 const mulberry32 = (a) => () => { let t = (a += 0x6d2b79f5); t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -193,6 +214,7 @@ if (wantSpecs) for (const f of fs.readdirSync(path.join(dir, "specs")).sort()) {
       code: parseCode(S.codes[0].code).code, file: path.join(casesDir, `${pad4(S.id)}.json`),
     });
   } else if (strict) throw new Error(`${S.id}: 还没有写 sig`);
+  checkFigures(S);
   exportData(S);
   if (S.handwritten) { n++; console.log("ok", S.id, S.name, "(handwritten, tests only)"); continue; }
   const det = (lvl, t, body) => `      <details>\n        <summary><span class="lvl">${lvl}</span>${t}<span class="peek">点开</span></summary>\n        <div class="hint-body">\n${body}\n        </div>\n      </details>`;

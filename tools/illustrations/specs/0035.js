@@ -10,14 +10,14 @@ module.exports = {
   codes: [{ t: "标准解法：二分查找", code: `
 class Solution:
     def searchInsert(self, nums: List[int], target: int) -> int:
-        lo, hi = 0, len(nums)               # 左闭右开 [lo, hi)
-        while lo < hi:
-            mid = (lo + hi) // 2
-            if nums[mid] < target:
-                lo = mid + 1                # mid 及左边都太小
-            else:
-                hi = mid                    # mid 可能就是答案
-        return lo
+        lo, hi = 0, len(nums)               # 左闭右开 [lo, hi) #@init
+        while lo < hi:                      #@small,big
+            mid = (lo + hi) // 2            #@small,big
+            if nums[mid] < target:          #@small
+                lo = mid + 1                # mid 及左边都太小 #@small
+            else:                           #@big
+                hi = mid                    # mid 可能就是答案 #@big
+        return lo                           #@done
 ` }, { t: "简洁写法：bisect_left", kind: "elegant", code: `
 from bisect import bisect_left
 
@@ -25,6 +25,9 @@ class Solution:
     def searchInsert(self, nums: List[int], target: int) -> int:
         return bisect_left(nums, target)
 ` }],
+  sig: { fn: "searchInsert", params: ["int[]", "int"], ret: "int" },
+  call: (a) => [a.nums, a.target],
+  cases: [[[1], 0], [[1], 1], [[1], 2], [[1, 3, 5, 6], 7], [[1, 3, 5, 6], 0]],
   pytest: `
 s = Solution()
 assert s.searchInsert([1,3,5,6], 5) == 2
@@ -44,14 +47,14 @@ assert s.searchInsert([1], 1) == 0
     let lo = 0, hi = n;
     const view = (mid, ans) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === ans ? "c" : k === mid ? "a" : k < lo ? "d" : k >= hi ? "k" : "e" })), ptrs: { lo, mid, hi: hi < n ? hi : null } }];
     const f = () => ({ facts: [["target", target], ["lo", lo], ["hi", hi]] });
-    snap("开始", `找第一个 ≥ ${target} 的下标。区间是 [0, ${n})，右端开着，因为可能要插在最后。`, view(-1), f());
+    snap("开始", `找第一个 ≥ ${target} 的下标。区间是 [0, ${n})，右端开着，因为可能要插在最后。`, view(-1), { at: "init", ...f() });
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (nums[mid] < target) { snap("太小", `nums[${mid}] = ${nums[mid]} &lt; ${target}，答案在 mid 右边，lo = ${mid + 1}。`, view(mid), f()); lo = mid + 1; }
-      else { snap("够大", `nums[${mid}] = ${nums[mid]} ≥ ${target}，mid 可能就是答案，hi = ${mid}。`, view(mid), f()); hi = mid; }
+      if (nums[mid] < target) { snap("太小", `nums[${mid}] = ${nums[mid]} &lt; ${target}，答案在 mid 右边，lo = ${mid + 1}。`, view(mid), { at: "small", ...f() }); lo = mid + 1; }
+      else { snap("够大", `nums[${mid}] = ${nums[mid]} ≥ ${target}，mid 可能就是答案，hi = ${mid}。`, view(mid), { at: "big", ...f() }); hi = mid; }
     }
     const msg = lo === n ? `所有数都比 ${target} 小，插在末尾，返回 <b>${n}</b>。` : nums[lo] === target ? `nums[${lo}] 就是 ${target}，返回 <b>${lo}</b>。` : `数组里没有 ${target}，它应该插在下标 <b>${lo}</b>，也就是 ${nums[lo]} 前面。`;
-    snap("完成", `lo = hi = ${lo}。` + msg, view(-1, lo), { kind: "ok", ans: lo, ...f() });
+    snap("完成", `lo = hi = ${lo}。` + msg, view(-1, lo), { at: "done", kind: "ok", ans: lo, ...f() });
   },
   points: [
     { t: "hi 从 n 开始", body: "target 比所有数都大时，答案是 n。hi 从 n-1 开始就会漏掉这种情况。" },

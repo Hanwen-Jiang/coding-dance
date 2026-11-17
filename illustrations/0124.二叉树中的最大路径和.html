@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -337,7 +339,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,3]},"note":"root =
     const sub = (id) => { const out = [id]; let c = id; while (true) { const nd = N[c], gl = nd.l !== null ? Math.max(badges[nd.l], 0) : 0, gr = nd.r !== null ? Math.max(badges[nd.r], 0) : 0; const nx = gl >= gr ? (gl > 0 ? nd.l : null) : nd.r; if (nx === null) break; out.push(nx); c = nx; } return out; };
     const view = (cur, fin) => { const cls = {}; for (const id in N) cls[id] = fin && bestSet.includes(+id) ? "k" : +id === cur ? "a" : done.has(+id) ? "c" : stack.includes(+id) ? "e" : ""; return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: { ...badges } }]; };
     const f = () => ({ facts: [["目前最大", best === -Infinity ? "−∞" : best]] });
-    snap("开始", "后序遍历：先算左右子树往下的链，再算自己。", view(-1), f());
+    snap("开始", "后序遍历：先算左右子树往下的链，再算自己。", view(-1), { at: "init", ...f() });
     const gain = (id) => {
       if (id === null || !N[id]) return 0;
       stack.push(id);
@@ -345,11 +347,11 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,3]},"note":"root =
       const through = v + l + r, up = v + Math.max(l, r);
       if (through > best) { best = through; bestSet = [id]; if (l > 0) bestSet.push(...sub(N[id].l)); if (r > 0) bestSet.push(...sub(N[id].r)); }
       badges[id] = up; done.add(id); stack.pop();
-      snap(`节点 ${v}`, `左链 ${l}，右链 ${r}（负的按 0 算）。以 ${v} 为最高点的路径和是 ${v} + ${l} + ${r} = <b>${through}</b>。往上交 ${v} + max(${l}, ${r}) = ${up}。`, view(id), f());
+      snap(`节点 ${v}`, `左链 ${l}，右链 ${r}（负的按 0 算）。以 ${v} 为最高点的路径和是 ${v} + ${l} + ${r} = <b>${through}</b>。往上交 ${v} + max(${l}, ${r}) = ${up}。`, view(id), { at: "node", ...f() });
       return up;
     };
     gain(0);
-    snap("完成", `最大路径和是 <b>${best}</b>。`, view(-1, true), { kind: "ok", ans: best, ...f() });
+    snap("完成", `最大路径和是 <b>${best}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: best, ...f() });
   } }
 ] };
 (function () {
@@ -369,7 +371,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,3]},"note":"root =
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -384,13 +386,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,3]},"note":"root =
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -314,15 +316,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[1,8,6,2,5,4,8,3,7]},"n
 { t: "标准解法", note: null, legend: [["a","当前的两块板"],["c","目前最大的一对"],["d","已经排除"]], build(a, snap) {
     const h = a.h; let l = 0, r = h.length - 1, best = 0, bp = [-1, -1];
     const view = (done) => [{ t: "bars", label: "height", items: h.map((v, i) => ({ v, cls: !done && (i === l || i === r) ? "a" : i === bp[0] || i === bp[1] ? "c" : i < l || i > r ? "d" : "" })), ptrs: done ? {} : { l, r } }];
-    snap("开始", "l 在最左，r 在最右，这是最宽的容器。", view(), { facts: [["最大面积", 0]] });
+    snap("开始", "l 在最左，r 在最右，这是最宽的容器。", view(), { at: "init", facts: [["最大面积", 0]] });
     while (l < r) {
       const area = Math.min(h[l], h[r]) * (r - l), up = area > best;
       if (up) { best = area; bp = [l, r]; }
       const moveL = h[l] < h[r];
-      snap("计算", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? "比之前大，更新最大面积。" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? "和左边一样高" : "是短板"}，r 左移。`), view(), { facts: [["最大面积", best], ["当前面积", area]] });
+      snap("计算", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? "比之前大，更新最大面积。" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? "和左边一样高" : "是短板"}，r 左移。`), view(), { at: ["area", "move"], facts: [["最大面积", best], ["当前面积", area]] });
       if (moveL) l++; else r--;
     }
-    snap("完成", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { kind: "ok", ans: best, facts: [["最大面积", best]] });
+    snap("完成", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { at: "done", kind: "ok", ans: best, facts: [["最大面积", best]] });
   } }
 ] };
 (function () {
@@ -342,7 +344,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[1,8,6,2,5,4,8,3,7]},"n
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -357,13 +359,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[1,8,6,2,5,4,8,3,7]},"n
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

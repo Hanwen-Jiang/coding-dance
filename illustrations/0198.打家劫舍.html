@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -201,14 +203,14 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         </div>
       </details>
       <details>
-        <summary><span class="lvl">代码</span>简洁写法：两个变量滚动<span class="peek">点开</span></summary>
+        <summary><span class="lvl">代码</span>简洁写法：两个变量滚动（空间压缩）<span class="peek">点开</span></summary>
         <div class="hint-body">
-          <p>prev 是 dp[i-2]，cur 是 dp[i-1]。</p>
+          <p>prev 是 dp[i-2]，cur 是 dp[i-1]。一开始两个都是 0：cur 是 dp[0]（没有房子），prev 是越界的 dp[-1]，也当成 0。空间 O(1)。</p>
 <pre class="code">class Solution:
     def rob(self, nums: List[int]) -&gt; int:
-        prev = cur = 0
+        prev = cur = 0                      <span class="cmt"># dp[-1]（越界）和 dp[0]（没有房子），都是 0</span>
         for x in nums:
-            prev, cur = cur, max(cur, prev + x)
+            prev, cur = cur, max(cur, prev + x)     <span class="cmt"># 不偷：cur；偷：prev + x</span>
         return cur</pre>
         </div>
       </details>
@@ -219,7 +221,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
     <h2 id="h-demo">逐步演示</h2>
     <div class="stage">
       <div class="panel">
-        <div class="toolbar" hidden><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
+        <div class="toolbar"><span class="input-note">解法</span><div class="seg" id="methods" role="group" aria-label="选择解法"></div></div>
         <div class="input-note" id="mnote" hidden></div>
         <div class="toolbar"><div class="seg" id="presets" role="group" aria-label="选择示例"></div></div>
         <div class="input-note" id="inote"></div>
@@ -239,7 +241,7 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>正在算的</span><span><i class="sw e"></i>用到的两项</span><span><i class="sw b"></i>第 i 间房</span><span><i class="sw c"></i>答案</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在算的</span><span><i class="sw e"></i>用到的两项</span><span><i class="sw b"></i>第 i 间房</span><span><i class="sw x"></i>边界：直接给定，不用算</span><span><i class="sw c"></i>答案</span></div>
       </div>
     </div>
   </section>
@@ -321,21 +323,48 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,1]},"note":"n
     const nums = R.arr(R.int(4, 8), 0, 9);
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().rob(${R.py(nums)})` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "标准解法", note: null, legend: [["a","正在算的"],["e","用到的两项"],["b","第 i 间房"],["c","答案"]], build(a, snap) {
+{ t: "标准解法", note: null, legend: [["a","正在算的"],["e","用到的两项"],["b","第 i 间房"],["x","边界：直接给定，不用算"],["c","答案"]], build(a, snap) {
     const nums = a.nums, n = nums.length, dp = Array(n + 1).fill(null);
     dp[0] = 0; dp[1] = nums[0];
     const view = (i, fin) => [
       { t: "array", label: "nums（第 1 间到第 n 间）", idxFrom: 1, items: nums.map((v, k) => ({ v, cls: k === i - 1 ? "b" : "" })), ptrs: {} },
-      { t: "array", label: "dp[i]：前 i 间最多偷多少", items: dp.map((v, k) => ({ v, cls: fin && k === n ? "c" : k === i ? "a" : i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
+      // dp[0]、dp[1] 是边界（虚线）：直接给定，公式从 dp[2] 开始才用
+      { t: "array", label: "dp[i]：前 i 间最多偷多少", items: dp.map((v, k) => {
+        const used = i >= 0 && (k === i - 1 || k === i - 2);
+        return { v, cls: fin && k === n ? "c" : k === i ? "a" : k < 2 ? (used ? "x e" : "x") : used ? "e" : "" };
+      }), ptrs: { i: i >= 0 ? i : null } },
     ];
-    snap("开始", `dp[0] = 0（没有房子），dp[1] = ${nums[0]}（只有第 1 间，偷了）。`, view(-1));
+    snap("边界", `dp[0] = 0：一间房都没有，偷不到钱。dp[1] = ${nums[0]}：只有第 1 间，偷了最多。<br>dp 多开一位（dp[0]），算 dp[2] 时用到的 dp[i − 2] 才不会越界。`, view(-1), { at: "init" });
     for (let i = 2; i <= n; i++) {
       const no = dp[i - 1], yes = dp[i - 2] + nums[i - 1];
       dp[i] = Math.max(no, yes);
-      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? "，偷" : "，不偷"}。`, view(i), { facts: [["不偷", no], ["偷", yes]] });
+      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? "，偷" : "，不偷"}。`, view(i), { at: "step", facts: [["不偷", no], ["偷", yes]] });
     }
-    snap("完成", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { kind: "ok", ans: dp[n] });
-  } }
+    snap("完成", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: dp[n] });
+  } },
+{ t: "两个变量滚动（空间压缩）", note: "算 dp[i] 只用到 dp[i − 1] 和 dp[i − 2]，所以只用两个变量：prev 是 dp[i − 2]，cur 是 dp[i − 1]。一开始 cur 是 dp[0] = 0（没有房子），prev 是越界的 dp[−1]，也当成 0：这样第 1 间房也能用同一个公式。", legend: [["b","这一间房"],["e","prev"],["a","cur"],["d","已经丢掉、不再保存的"],["x","越界或边界"]], build(a, snap) {
+      const nums = a.nums, n = nums.length, vals = [0, 0];   // vals[p + 1] 是 dp[p]，dp[-1] 也当成 0
+      let k = 0;                                              // 下一间要处理的房子（下标）；cur 是 dp[k]，prev 是 dp[k - 1]
+      const view = (fin) => [
+        { t: "array", label: "nums（第 1 间到第 n 间）", idxFrom: 1, items: nums.map((v, t) => ({ v, cls: t === k - 1 && !fin ? "b" : t < k - 1 ? "d" : "" })) },
+        {
+          t: "array", label: "dp（灰色是已经丢掉的，代码里只存 prev、cur 两个数；-1 是越界）", labels: Array.from({ length: n + 2 }, (_, t) => t - 1),
+          items: Array.from({ length: n + 2 }, (_, t) => {
+            const p = t - 1;
+            return { v: t < vals.length ? vals[t] : "", cls: fin && p === n ? "c" : p === k ? "a" : p === k - 1 ? (p <= 0 ? "x e" : "e") : p < k - 1 ? (p <= 0 ? "x d" : "d") : p <= 0 ? "x" : "" };
+          }),
+          ptrs: { prev: k, cur: k + 1 },
+        },
+        { t: "chips", label: "代码里只有这两个变量", items: [{ v: `prev = ${vals[k]}（dp[${k - 1}]）`, cls: "e" }, { v: `cur = ${vals[k + 1]}（dp[${k}]）`, cls: "a" }] },
+      ];
+      snap("开始", "prev、cur 一开始都是 0：cur 是 dp[0]（没有房子），prev 是 dp[−1]，越界了，也当成 0（前 −1 间房当然也偷不到钱）。", view(false), { at: "init" });
+      for (const x of nums) {
+        const no = vals[k + 1], yes = vals[k] + x;
+        vals.push(Math.max(no, yes)); k++;
+        snap(`第 ${k} 间`, `不偷第 ${k} 间：cur = ${no}；偷：prev + ${x} = ${yes}。新的 cur = <b>${Math.max(no, yes)}</b>（dp[${k}]），prev 变成原来的 cur（dp[${k - 1}]）。`, view(false), { at: "step" });
+      }
+      snap("完成", `cur = dp[${n}] = <b>${vals[n + 1]}</b>。只用了两个变量，空间 O(1)。`, view(true), { at: "done", kind: "ok", ans: vals[n + 1] });
+    } }
 ] };
 (function () {
   const $ = (id) => document.getElementById(id);
@@ -354,7 +383,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,1]},"note":"n
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -369,13 +398,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,1]},"note":"n
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

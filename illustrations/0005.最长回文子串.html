@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -350,44 +352,48 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"babad"},"note":"s = \"
     const s = a.s, n = s.length; let bs = 0, be = 0;
     const view = (cl, cr, l, r, sl, sr) => [{ t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t === sl || t === sr ? "b" : t >= cl && t <= cr ? "a" : t >= l && t <= r ? "e" : "" })), ptrs: { l: sl >= 0 ? sl : null, r: sr < n ? sr : null } }];
     const best = () => [["最长", s.slice(bs, be + 1)]];
-    snap("开始", `每个字符、每两个字符之间的缝都是一个中心，一共 ${2 * n - 1} 个。逐个试。`, [{ t: "array", label: "s", items: [...s] }], { facts: best() });
+    snap("开始", `每个字符、每两个字符之间的缝都是一个中心，一共 ${2 * n - 1} 个。逐个试。`, [{ t: "array", label: "s", items: [...s] }], { at: "init", facts: best() });
     for (let i = 0; i < n; i++) for (const even of [false, true]) {
       let l = i, r = even ? i + 1 : i;
       if (r >= n) continue;
       const cl = l, cr = r;
-      if (s[l] !== s[r]) { snap("这个中心不行", `中心是 ${s[l]} 和 ${s[r]} 之间的缝。两边的字符不相等，这里没有偶数长度的回文。`, view(-1, -1, -1, -1, l, r), { kind: "warn", facts: best() }); continue; }
+      if (s[l] !== s[r]) { snap("这个中心不行", `中心是 ${s[l]} 和 ${s[r]} 之间的缝。两边的字符不相等，这里没有偶数长度的回文。`, view(-1, -1, -1, -1, l, r), { at: "miss", kind: "warn", facts: best() }); continue; }
       while (l >= 0 && r < n && s[l] === s[r]) { l--; r++; }
       const pl = l + 1, pr = r - 1, up = pr - pl > be - bs;
       if (up) { bs = pl; be = pr; }
       const why = l < 0 || r >= n ? "再往外就出界了" : `再往外是 ${s[l]} 和 ${s[r]}，不相等`;
-      snap(up ? "更新最长" : "扩展", `中心是${even ? ` ${s[cl]} 和 ${s[cr]} 之间的缝` : `字符 ${s[cl]}（下标 ${cl}）`}。向两边扩，得到 <b>"${s.slice(pl, pr + 1)}"</b>，${why}。` + (up ? "它比之前的都长，记下来。" : `没有超过当前最长的 "${s.slice(bs, be + 1)}"。`), view(cl, cr, pl, pr, l, r), { kind: up ? "ok" : "", facts: best() });
+      snap(up ? "更新最长" : "扩展", `中心是${even ? ` ${s[cl]} 和 ${s[cr]} 之间的缝` : `字符 ${s[cl]}（下标 ${cl}）`}。向两边扩，得到 <b>"${s.slice(pl, pr + 1)}"</b>，${why}。` + (up ? "它比之前的都长，记下来。" : `没有超过当前最长的 "${s.slice(bs, be + 1)}"。`), view(cl, cr, pl, pr, l, r), { at: up ? ["grow", "update"] : "grow", kind: up ? "ok" : "", facts: best() });
     }
-    snap("完成", `所有中心都试过了，最长回文子串是 <b>"${s.slice(bs, be + 1)}"</b>。`, [{ t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t >= bs && t <= be ? "c" : "" })) }], { kind: "ok", ans: s.slice(bs, be + 1), facts: best() });
+    snap("完成", `所有中心都试过了，最长回文子串是 <b>"${s.slice(bs, be + 1)}"</b>。`, [{ t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t >= bs && t <= be ? "c" : "" })) }], { at: "done", kind: "ok", ans: s.slice(bs, be + 1), facts: best() });
   } },
-{ t: "动态规划", note: "dp[l][r] 表示 s[l..r] 是不是回文。按长度从短到长填表：两端相等，并且去掉两端后还是回文，这一段才是回文。", legend: [["a","正在填的格子 / 这一段的两端"],["k","要参考的 dp[l+1][r−1]"],["e","是回文"],["c","目前最长的回文"],["d","用不到（l > r）"]], build(a, snap) {
+{ t: "动态规划", note: "dp[l][r] 表示 s[l..r] 是不是回文。按长度从短到长填表：两端相等，并且去掉两端后还是回文，这一段才是回文。", legend: [["a","正在填的格子 / 这一段的两端"],["k","要参考的 dp[l+1][r−1]"],["e","是回文"],["c","目前最长的回文"],["d","用不到（l > r）"],["x","越过对角线：空串，当成回文"]], build(a, snap) {
       const s = a.s, n = s.length, dp = Array.from({ length: n }, () => Array(n).fill(null));
       let start = 0, size = 1;
       const view = (L, R, dep) => [
         { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t === L || t === R ? "a" : L >= 0 && t > L && t < R ? "e" : "" })), ptrs: { l: L >= 0 ? L : null, r: R >= 0 ? R : null } },
-        { t: "grid", label: "dp[l][r]（行是 l，列是 r）", rows: dp.map((row, i) => row.map((v, j) => ({
-          v: j < i || v === null ? "" : v ? "✓" : "✗",
-          cls: i === L && j === R ? "a" : dep && dep[0] === i && dep[1] === j ? "k" : j < i ? "d" : v && i === start && j === start + size - 1 ? "c" : v ? "e" : "",
-        }))) },
+        // 对角线下面（l > r）是空串：长度 2 的子串去掉两端就落到这里，越过了对角线，当成回文（虚线）
+        { t: "grid", label: "dp[l][r]（行是 l，列是 r；对角线下面 l > r 是空串）", rows: dp.map((row, i) => row.map((v, j) => {
+          const isDep = dep && dep[0] === i && dep[1] === j;
+          return {
+            v: isDep && j < i ? "空" : j < i || v === null ? "" : v ? "✓" : "✗",
+            cls: i === L && j === R ? "a" : isDep ? (j < i ? "x k" : "k") : j < i ? "d" : v && i === start && j === start + size - 1 ? "c" : v ? "e" : "",
+          };
+        })) },
       ];
       const f = () => ({ facts: [["最长", s.slice(start, start + size)]] });
       for (let i = 0; i < n; i++) dp[i][i] = true;
-      snap("长度 1", `长度为 1 的子串都是回文，对角线先全填 ✓。目前最长的是 "${s[0]}"。`, view(-1, -1, null), f());
+      snap("长度 1", `长度为 1 的子串都是回文，对角线先全填 ✓。目前最长的是 "${s[0]}"。`, view(-1, -1, null), { at: ["init", "fill"], ...f() });
       for (let len = 2; len <= n; len++) for (let l = 0; l + len - 1 < n; l++) {
         const r = l + len - 1, eq = s[l] === s[r], ok = eq && (len === 2 || dp[l + 1][r - 1]);
         dp[l][r] = ok;
         const up = ok && len > size;
         if (up) { start = l; size = len; }
         const why = !eq ? `两端 '${s[l]}' 和 '${s[r]}' 不相等，不是回文。`
-          : len === 2 ? `两个字符都是 '${s[l]}'，是回文。`
+          : len === 2 ? `两个字符都是 '${s[l]}'。去掉两端后是空串：dp[${l + 1}][${r - 1}] 的 l > r，落在对角线下面（虚线），这个格子没有填过。空串算回文，所以代码里 length ≤ 2 时直接不看它，这一段是回文。`
           : `两端都是 '${s[l]}'，再看去掉两端的 dp[${l + 1}][${r - 1}]：${dp[l + 1][r - 1] ? "是回文，所以这一段也是" : "不是回文，所以这一段也不是"}。`;
-        snap(up ? "更新最长" : `长度 ${len}`, `s[${l}..${r}] = "${s.slice(l, r + 1)}"：${why}` + (up ? "比之前的都长，记下来。" : ""), view(l, r, eq && len > 2 ? [l + 1, r - 1] : null), { kind: up ? "ok" : "", ...f() });
+        snap(up ? "更新最长" : `长度 ${len}`, `s[${l}..${r}] = "${s.slice(l, r + 1)}"：${why}` + (up ? "比之前的都长，记下来。" : ""), view(l, r, eq ? [l + 1, r - 1] : null), { at: up ? ["fill", "update"] : "fill", kind: up ? "ok" : "", ...f() });
       }
-      snap("完成", `表填完了，最长回文子串是 <b>"${s.slice(start, start + size)}"</b>。`, view(-1, -1, null), { kind: "ok", ans: s.slice(start, start + size), ...f() });
+      snap("完成", `表填完了，最长回文子串是 <b>"${s.slice(start, start + size)}"</b>。`, view(-1, -1, null), { at: "done", kind: "ok", ans: s.slice(start, start + size), ...f() });
     } }
 ] };
 (function () {
@@ -407,7 +413,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"babad"},"note":"s = \"
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -422,13 +428,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"babad"},"note":"s = \"
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

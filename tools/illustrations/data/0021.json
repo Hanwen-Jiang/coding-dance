@@ -41,19 +41,387 @@
    "body": "时间 O(m + n)，空间 O(1)，没有新建节点，只是改指针。"
   }
  ],
+ "figures": {
+  "merge_ex1.jpg": [
+   {
+    "t": "list",
+    "label": "l1",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": "e"
+     },
+     {
+      "v": 2,
+      "cls": "e"
+     },
+     {
+      "v": 4,
+      "cls": "e"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     null
+    ],
+    "showNil": true
+   },
+   {
+    "t": "list",
+    "label": "l2",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": "g"
+     },
+     {
+      "v": 3,
+      "cls": "g"
+     },
+     {
+      "v": 4,
+      "cls": "g"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     null
+    ],
+    "showNil": true
+   },
+   {
+    "t": "list",
+    "label": "合并后（颜色表示来自哪条链表）",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": "e"
+     },
+     {
+      "v": 1,
+      "cls": "g"
+     },
+     {
+      "v": 2,
+      "cls": "e"
+     },
+     {
+      "v": 3,
+      "cls": "g"
+     },
+     {
+      "v": 4,
+      "cls": "e"
+     },
+     {
+      "v": 4,
+      "cls": "g"
+     }
+    ],
+    "next": [
+     1,
+     2,
+     3,
+     4,
+     5,
+     null
+    ],
+    "showNil": true
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：迭代 + 哑节点",
    "kind": null,
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        dummy = cur = ListNode()\n        while list1 and list2:\n            if list1.val <= list2.val:\n                cur.next, list1 = list1, list1.next\n            else:\n                cur.next, list2 = list2, list2.next\n            cur = cur.next\n        cur.next = list1 or list2       # 剩下的整段接上\n        return dummy.next"
+   "code": "class Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        dummy = cur = ListNode()\n        while list1 and list2:\n            if list1.val <= list2.val:\n                cur.next, list1 = list1, list1.next\n            else:\n                cur.next, list2 = list2, list2.next\n            cur = cur.next\n        cur.next = list1 or list2       # 剩下的整段接上\n        return dummy.next",
+   "marks": {
+    "init": [
+     3
+    ],
+    "take1": [
+     5,
+     6,
+     9
+    ],
+    "take2": [
+     5,
+     7,
+     8,
+     9
+    ],
+    "rest": [
+     10
+    ],
+    "done": [
+     11
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {\n        ListNode dummy = new ListNode(), cur = dummy;\n        while (list1 != null && list2 != null) {\n            if (list1.val <= list2.val) {\n                cur.next = list1;\n                list1 = list1.next;\n            } else {\n                cur.next = list2;\n                list2 = list2.next;\n            }\n            cur = cur.next;\n        }\n        cur.next = list1 != null ? list1 : list2;       // 剩下的整段接上\n        return dummy.next;\n    }\n}",
+     "marks": {
+      "init": [
+       3
+      ],
+      "take1": [
+       5,
+       6,
+       7,
+       12
+      ],
+      "take2": [
+       5,
+       8,
+       9,
+       10,
+       12
+      ],
+      "rest": [
+       14
+      ],
+      "done": [
+       15
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {\n        ListNode dummy, *cur = &dummy;\n        while (list1 && list2) {\n            if (list1->val <= list2->val) {\n                cur->next = list1;\n                list1 = list1->next;\n            } else {\n                cur->next = list2;\n                list2 = list2->next;\n            }\n            cur = cur->next;\n        }\n        cur->next = list1 ? list1 : list2;              // 剩下的整段接上\n        return dummy.next;\n    }\n};",
+     "marks": {
+      "init": [
+       4
+      ],
+      "take1": [
+       6,
+       7,
+       8,
+       13
+      ],
+      "take2": [
+       6,
+       9,
+       10,
+       11,
+       13
+      ],
+      "rest": [
+       15
+      ],
+      "done": [
+       16
+      ]
+     }
+    },
+    "go": {
+     "code": "func mergeTwoLists(list1 *ListNode, list2 *ListNode) *ListNode {\n\tdummy := &ListNode{}\n\tcur := dummy\n\tfor list1 != nil && list2 != nil {\n\t\tif list1.Val <= list2.Val {\n\t\t\tcur.Next = list1\n\t\t\tlist1 = list1.Next\n\t\t} else {\n\t\t\tcur.Next = list2\n\t\t\tlist2 = list2.Next\n\t\t}\n\t\tcur = cur.Next\n\t}\n\tif list1 != nil { // 剩下的整段接上\n\t\tcur.Next = list1\n\t} else {\n\t\tcur.Next = list2\n\t}\n\treturn dummy.Next\n}",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "take1": [
+       5,
+       6,
+       7,
+       12
+      ],
+      "take2": [
+       5,
+       8,
+       9,
+       10,
+       12
+      ],
+      "rest": [
+       14,
+       15,
+       16,
+       17
+      ],
+      "done": [
+       19
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var mergeTwoLists = function(list1, list2) {\n    const dummy = new ListNode();\n    let cur = dummy;\n    while (list1 && list2) {\n        if (list1.val <= list2.val) {\n            cur.next = list1;\n            list1 = list1.next;\n        } else {\n            cur.next = list2;\n            list2 = list2.next;\n        }\n        cur = cur.next;\n    }\n    cur.next = list1 || list2;                  // 剩下的整段接上\n    return dummy.next;\n};",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "take1": [
+       5,
+       6,
+       7,
+       12
+      ],
+      "take2": [
+       5,
+       8,
+       9,
+       10,
+       12
+      ],
+      "rest": [
+       14
+      ],
+      "done": [
+       15
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function mergeTwoLists(list1: ListNode | null, list2: ListNode | null): ListNode | null {\n    const dummy = new ListNode();\n    let cur = dummy;\n    while (list1 && list2) {\n        if (list1.val <= list2.val) {\n            cur.next = list1;\n            list1 = list1.next;\n        } else {\n            cur.next = list2;\n            list2 = list2.next;\n        }\n        cur = cur.next;\n    }\n    cur.next = list1 || list2;                  // 剩下的整段接上\n    return dummy.next;\n}",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "take1": [
+       5,
+       6,
+       7,
+       12
+      ],
+      "take2": [
+       5,
+       8,
+       9,
+       10,
+       12
+      ],
+      "rest": [
+       14
+      ],
+      "done": [
+       15
+      ]
+     }
+    }
+   }
   },
   {
    "t": "简洁写法：递归",
    "kind": "elegant",
    "note": "让 list1 始终指向较小的头，它的后面接上「剩下部分的合并结果」。",
-   "code": "class Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        if not list1 or not list2:\n            return list1 or list2\n        if list1.val > list2.val:\n            list1, list2 = list2, list1\n        list1.next = self.mergeTwoLists(list1.next, list2)\n        return list1"
+   "key": "rec",
+   "code": "class Solution:\n    def mergeTwoLists(self, list1: Optional[ListNode], list2: Optional[ListNode]) -> Optional[ListNode]:\n        if not list1 or not list2:\n            return list1 or list2\n        if list1.val > list2.val:\n            list1, list2 = list2, list1\n        list1.next = self.mergeTwoLists(list1.next, list2)\n        return list1",
+   "marks": {
+    "base": [
+     3,
+     4
+    ],
+    "pick": [
+     5,
+     6,
+     7
+    ],
+    "back": [
+     7,
+     8
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public ListNode mergeTwoLists(ListNode list1, ListNode list2) {\n        if (list1 == null || list2 == null) {\n            return list1 != null ? list1 : list2;\n        }\n        if (list1.val > list2.val) {                    // 让 list1 指向较小的头\n            ListNode t = list1;\n            list1 = list2;\n            list2 = t;\n        }\n        list1.next = mergeTwoLists(list1.next, list2);\n        return list1;\n    }\n}",
+     "marks": {
+      "base": [
+       3,
+       4
+      ],
+      "pick": [
+       6,
+       7,
+       8,
+       9,
+       11
+      ],
+      "back": [
+       11,
+       12
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    ListNode* mergeTwoLists(ListNode* list1, ListNode* list2) {\n        if (!list1 || !list2) {\n            return list1 ? list1 : list2;\n        }\n        if (list1->val > list2->val) {                  // 让 list1 指向较小的头\n            swap(list1, list2);\n        }\n        list1->next = mergeTwoLists(list1->next, list2);\n        return list1;\n    }\n};",
+     "marks": {
+      "base": [
+       4,
+       5
+      ],
+      "pick": [
+       7,
+       8,
+       10
+      ],
+      "back": [
+       10,
+       11
+      ]
+     }
+    },
+    "go": {
+     "code": "func mergeTwoLists(list1 *ListNode, list2 *ListNode) *ListNode {\n\tif list1 == nil {\n\t\treturn list2\n\t}\n\tif list2 == nil {\n\t\treturn list1\n\t}\n\tif list1.Val > list2.Val { // 让 list1 指向较小的头\n\t\tlist1, list2 = list2, list1\n\t}\n\tlist1.Next = mergeTwoLists(list1.Next, list2)\n\treturn list1\n}",
+     "marks": {
+      "base": [
+       2,
+       3,
+       5,
+       6
+      ],
+      "pick": [
+       8,
+       9,
+       11
+      ],
+      "back": [
+       11,
+       12
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var mergeTwoLists = function(list1, list2) {\n    if (!list1 || !list2) {\n        return list1 || list2;\n    }\n    if (list1.val > list2.val) {                // 让 list1 指向较小的头\n        [list1, list2] = [list2, list1];\n    }\n    list1.next = mergeTwoLists(list1.next, list2);\n    return list1;\n};",
+     "marks": {
+      "base": [
+       2,
+       3
+      ],
+      "pick": [
+       5,
+       6,
+       8
+      ],
+      "back": [
+       8,
+       9
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function mergeTwoLists(list1: ListNode | null, list2: ListNode | null): ListNode | null {\n    if (!list1 || !list2) {\n        return list1 || list2;\n    }\n    if (list1.val > list2.val) {                // 让 list1 指向较小的头\n        [list1, list2] = [list2, list1];\n    }\n    list1.next = mergeTwoLists(list1.next, list2);\n    return list1;\n}",
+     "marks": {
+      "base": [
+       2,
+       3
+      ],
+      "pick": [
+       5,
+       6,
+       8
+      ],
+      "back": [
+       8,
+       9
+      ]
+     }
+    }
+   }
   }
  ],
  "demo": {
@@ -106,7 +474,7 @@
     "note": "list1 = [2,6,7,9], list2 = [1,3]"
    }
   ],
-  "build": "build(a, snap) {\n    const { x, y } = a, out = []; let i = 0, j = 0;\n    const lv = (label, arr, p, name) => ({ t: \"list\", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? \"d\" : t === p ? \"a\" : \"\" })), ptrs: { [name]: p < arr.length ? p : null } });\n    const view = (done) => [lv(\"list1\", x, i, \"list1\"), lv(\"list2\", y, j, \"list2\"), { t: \"list\", label: \"结果（接在 dummy 后面）\", nodes: [{ v: \"D\", cls: \"d\" }, ...out.map((v) => ({ v, cls: \"k\" }))], showNil: !!done, ptrs: { cur: out.length } }];\n    snap(\"开始\", \"两个指针分别指着两个链表的头。结果链表先只有一个哑节点 D。\", view());\n    while (i < x.length && j < y.length) {\n      if (x[i] <= y[j]) { out.push(x[i]); snap(\"接上 list1 的头\", `比较 ${x[i]} 和 ${y[j]}：${x[i]} ${x[i] === y[j] ? \"不比它大\" : \"更小\"}，把 list1 的 ${x[i]} 接到结果后面，list1 往前走。`, (i++, view())); }\n      else { out.push(y[j]); snap(\"接上 list2 的头\", `比较 ${x[i]} 和 ${y[j]}：${y[j]} 更小，把 list2 的 ${y[j]} 接到结果后面，list2 往前走。`, (j++, view())); }\n    }\n    const rest = i < x.length ? x.slice(i) : y.slice(j), which = i < x.length ? \"list1\" : \"list2\";\n    out.push(...rest); i = x.length; j = y.length;\n    snap(\"接上剩下的\", rest.length ? `一个链表走完了。${which} 剩下的 [${rest.join(\", \")}] 本来就有序，整段接上。` : \"两个链表同时走完。\", view(true));\n    snap(\"完成\", `返回 dummy.next，也就是 [${out.join(\", \")}]。`, view(true), { kind: \"ok\", ans: out });\n  }",
+  "build": "build(a, snap) {\n    const { x, y } = a, out = []; let i = 0, j = 0;\n    const lv = (label, arr, p, name) => ({ t: \"list\", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? \"d\" : t === p ? \"a\" : \"\" })), ptrs: { [name]: p < arr.length ? p : null } });\n    const view = (done) => [lv(\"list1\", x, i, \"list1\"), lv(\"list2\", y, j, \"list2\"), { t: \"list\", label: \"结果（接在 dummy 后面）\", nodes: [{ v: \"D\", cls: \"d\" }, ...out.map((v) => ({ v, cls: \"k\" }))], showNil: !!done, ptrs: { cur: out.length } }];\n    snap(\"开始\", \"两个指针分别指着两个链表的头。结果链表先只有一个哑节点 D。\", view(), { at: \"init\" });\n    while (i < x.length && j < y.length) {\n      if (x[i] <= y[j]) { out.push(x[i]); snap(\"接上 list1 的头\", `比较 ${x[i]} 和 ${y[j]}：${x[i]} ${x[i] === y[j] ? \"不比它大\" : \"更小\"}，把 list1 的 ${x[i]} 接到结果后面，list1 往前走。`, (i++, view()), { at: \"take1\" }); }\n      else { out.push(y[j]); snap(\"接上 list2 的头\", `比较 ${x[i]} 和 ${y[j]}：${y[j]} 更小，把 list2 的 ${y[j]} 接到结果后面，list2 往前走。`, (j++, view()), { at: \"take2\" }); }\n    }\n    const rest = i < x.length ? x.slice(i) : y.slice(j), which = i < x.length ? \"list1\" : \"list2\";\n    out.push(...rest); i = x.length; j = y.length;\n    snap(\"接上剩下的\", rest.length ? `一个链表走完了。${which} 剩下的 [${rest.join(\", \")}] 本来就有序，整段接上。` : \"两个链表同时走完。\", view(true), { at: \"rest\" });\n    snap(\"完成\", `返回 dummy.next，也就是 [${out.join(\", \")}]。`, view(true), { at: \"done\", kind: \"ok\", ans: out });\n  }",
   "methods": [
    {
     "t": "迭代",
@@ -126,7 +494,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const { x, y } = a, out = []; let i = 0, j = 0;\n    const lv = (label, arr, p, name) => ({ t: \"list\", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? \"d\" : t === p ? \"a\" : \"\" })), ptrs: { [name]: p < arr.length ? p : null } });\n    const view = (done) => [lv(\"list1\", x, i, \"list1\"), lv(\"list2\", y, j, \"list2\"), { t: \"list\", label: \"结果（接在 dummy 后面）\", nodes: [{ v: \"D\", cls: \"d\" }, ...out.map((v) => ({ v, cls: \"k\" }))], showNil: !!done, ptrs: { cur: out.length } }];\n    snap(\"开始\", \"两个指针分别指着两个链表的头。结果链表先只有一个哑节点 D。\", view());\n    while (i < x.length && j < y.length) {\n      if (x[i] <= y[j]) { out.push(x[i]); snap(\"接上 list1 的头\", `比较 ${x[i]} 和 ${y[j]}：${x[i]} ${x[i] === y[j] ? \"不比它大\" : \"更小\"}，把 list1 的 ${x[i]} 接到结果后面，list1 往前走。`, (i++, view())); }\n      else { out.push(y[j]); snap(\"接上 list2 的头\", `比较 ${x[i]} 和 ${y[j]}：${y[j]} 更小，把 list2 的 ${y[j]} 接到结果后面，list2 往前走。`, (j++, view())); }\n    }\n    const rest = i < x.length ? x.slice(i) : y.slice(j), which = i < x.length ? \"list1\" : \"list2\";\n    out.push(...rest); i = x.length; j = y.length;\n    snap(\"接上剩下的\", rest.length ? `一个链表走完了。${which} 剩下的 [${rest.join(\", \")}] 本来就有序，整段接上。` : \"两个链表同时走完。\", view(true));\n    snap(\"完成\", `返回 dummy.next，也就是 [${out.join(\", \")}]。`, view(true), { kind: \"ok\", ans: out });\n  }"
+    "build": "build(a, snap) {\n    const { x, y } = a, out = []; let i = 0, j = 0;\n    const lv = (label, arr, p, name) => ({ t: \"list\", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? \"d\" : t === p ? \"a\" : \"\" })), ptrs: { [name]: p < arr.length ? p : null } });\n    const view = (done) => [lv(\"list1\", x, i, \"list1\"), lv(\"list2\", y, j, \"list2\"), { t: \"list\", label: \"结果（接在 dummy 后面）\", nodes: [{ v: \"D\", cls: \"d\" }, ...out.map((v) => ({ v, cls: \"k\" }))], showNil: !!done, ptrs: { cur: out.length } }];\n    snap(\"开始\", \"两个指针分别指着两个链表的头。结果链表先只有一个哑节点 D。\", view(), { at: \"init\" });\n    while (i < x.length && j < y.length) {\n      if (x[i] <= y[j]) { out.push(x[i]); snap(\"接上 list1 的头\", `比较 ${x[i]} 和 ${y[j]}：${x[i]} ${x[i] === y[j] ? \"不比它大\" : \"更小\"}，把 list1 的 ${x[i]} 接到结果后面，list1 往前走。`, (i++, view()), { at: \"take1\" }); }\n      else { out.push(y[j]); snap(\"接上 list2 的头\", `比较 ${x[i]} 和 ${y[j]}：${y[j]} 更小，把 list2 的 ${y[j]} 接到结果后面，list2 往前走。`, (j++, view()), { at: \"take2\" }); }\n    }\n    const rest = i < x.length ? x.slice(i) : y.slice(j), which = i < x.length ? \"list1\" : \"list2\";\n    out.push(...rest); i = x.length; j = y.length;\n    snap(\"接上剩下的\", rest.length ? `一个链表走完了。${which} 剩下的 [${rest.join(\", \")}] 本来就有序，整段接上。` : \"两个链表同时走完。\", view(true), { at: \"rest\" });\n    snap(\"完成\", `返回 dummy.next，也就是 [${out.join(\", \")}]。`, view(true), { at: \"done\", kind: \"ok\", ans: out });\n  }"
    },
    {
     "t": "递归",
@@ -149,7 +517,8 @@
       "已经接好的部分"
      ]
     ],
-    "build": "build(a, snap) {\n      const { x, y } = a, calls = []; let i = 0, j = 0, tail = [];\n      const lv = (label, arr, p, name) => ({ t: \"list\", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? \"d\" : t === p ? \"a\" : \"\" })), ptrs: { [name]: p < arr.length ? p : null } });\n      const view = () => [lv(\"list1\", x, i, \"list1\"), lv(\"list2\", y, j, \"list2\"),\n        { t: \"chips\", label: \"递归调用栈（右边是最里层；写的是这一层选中的节点）\", items: calls.map((v, t) => ({ v: `选了 ${v}`, cls: t === calls.length - 1 ? \"a\" : \"e\" })), empty: \"空\" },\n        { t: \"chips\", label: \"已经接好的部分\", items: tail.map((v) => ({ v, cls: \"k\" })), empty: \"还没有\" }];\n      snap(\"开始\", \"每一层只做一件事：两个头里挑小的，它的 next 等于「剩下部分的合并结果」。\", view());\n      while (i < x.length && j < y.length) {\n        const eq = x[i] === y[j], fromX = x[i] <= y[j], pick = fromX ? x[i] : y[j], cmp = `${x[i]} 和 ${y[j]}`;\n        calls.push(pick);\n        if (fromX) i++; else j++;\n        snap(\"递归进入\", `比较两个头 ${cmp}，` + (eq ? `一样大，取 list1 的 ${pick}` : `${fromX ? \"list1\" : \"list2\"} 的 ${pick} 更小`) + `。这一层返回 ${pick}，它后面接什么，交给下一层去合并。`, view());\n      }\n      tail = i < x.length ? x.slice(i) : y.slice(j);\n      const which = i < x.length ? \"list2\" : \"list1\";\n      i = x.length; j = y.length;\n      snap(\"到底\", tail.length ? `${which} 已经空了，这一层直接返回另一个链表剩下的 [${tail.join(\", \")}]。` : \"两个链表都空了，返回空。\", view());\n      while (calls.length) {\n        const v = calls[calls.length - 1], old = tail.slice();\n        tail = [v, ...tail];\n        snap(\"返回\", `回到选了 ${v} 的那一层：${v}.next 接上下一层返回的${old.length ? ` [${old.join(\", \")}]` : \"空链表\"}，再把 ${v} 返回给上一层。`, view());\n        calls.pop();\n      }\n      snap(\"完成\", `递归全部返回，结果是 [${tail.join(\", \")}]。`, view(), { kind: \"ok\", ans: tail });\n    }"
+    "code": "rec",
+    "build": "build(a, snap) {\n      const { x, y } = a, calls = []; let i = 0, j = 0, tail = [];\n      const lv = (label, arr, p, name) => ({ t: \"list\", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? \"d\" : t === p ? \"a\" : \"\" })), ptrs: { [name]: p < arr.length ? p : null } });\n      const view = () => [lv(\"list1\", x, i, \"list1\"), lv(\"list2\", y, j, \"list2\"),\n        { t: \"chips\", label: \"递归调用栈（右边是最里层；写的是这一层选中的节点）\", items: calls.map((v, t) => ({ v: `选了 ${v}`, cls: t === calls.length - 1 ? \"a\" : \"e\" })), empty: \"空\" },\n        { t: \"chips\", label: \"已经接好的部分\", items: tail.map((v) => ({ v, cls: \"k\" })), empty: \"还没有\" }];\n      snap(\"开始\", \"每一层只做一件事：两个头里挑小的，它的 next 等于「剩下部分的合并结果」。\", view(), { at: [] });\n      while (i < x.length && j < y.length) {\n        const eq = x[i] === y[j], fromX = x[i] <= y[j], pick = fromX ? x[i] : y[j], cmp = `${x[i]} 和 ${y[j]}`;\n        calls.push(pick);\n        if (fromX) i++; else j++;\n        snap(\"递归进入\", `比较两个头 ${cmp}，` + (eq ? `一样大，取 list1 的 ${pick}` : `${fromX ? \"list1\" : \"list2\"} 的 ${pick} 更小`) + `。这一层返回 ${pick}，它后面接什么，交给下一层去合并。`, view(), { at: \"pick\" });\n      }\n      tail = i < x.length ? x.slice(i) : y.slice(j);\n      const which = i < x.length ? \"list2\" : \"list1\";\n      i = x.length; j = y.length;\n      snap(\"到底\", tail.length ? `${which} 已经空了，这一层直接返回另一个链表剩下的 [${tail.join(\", \")}]。` : \"两个链表都空了，返回空。\", view(), { at: \"base\" });\n      while (calls.length) {\n        const v = calls[calls.length - 1], old = tail.slice();\n        tail = [v, ...tail];\n        snap(\"返回\", `回到选了 ${v} 的那一层：${v}.next 接上下一层返回的${old.length ? ` [${old.join(\", \")}]` : \"空链表\"}，再把 ${v} 返回给上一层。`, view(), { at: \"back\" });\n        calls.pop();\n      }\n      snap(\"完成\", `递归全部返回，结果是 [${tail.join(\", \")}]。`, view(), { at: \"back\", kind: \"ok\", ans: tail });\n    }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const x = R.sorted(R.arr(R.int(0, 5), 1, 9)), y = R.sorted(R.arr(R.int(1, 5), 1, 9));\n    return { args: { x, y }, note: `list1 = ${R.fmt(x)}, list2 = ${R.fmt(y)}`, py: `toL(Solution().mergeTwoLists(L(${R.py(x)}), L(${R.py(y)})))` };\n  })(R); return { args: r.args, note: r.note }; }"

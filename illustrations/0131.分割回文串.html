@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -341,20 +343,20 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"aab"},"note":"s = \"aa
         { t: "chips", label: "已收集的方案", items: res.map((r) => r.join(" | ")), empty: "还没有" },
       ];
     };
-    snap("开始", `把 "${s}" 切成若干段，每段都是回文。先决定第一段切多长。`, view(0, 0, ""));
+    snap("开始", `把 "${s}" 切成若干段，每段都是回文。先决定第一段切多长。`, view(0, 0, ""), { at: "init" });
     const dfs = (start) => {
-      if (start === s.length) { res.push(path.slice()); snap("切完了", `切到了末尾，得到一种方案：<b>${path.join(" | ")}</b>。`, view(s.length, s.length, "", true), { kind: "ok", facts: [["方案数", res.length]] }); return; }
+      if (start === s.length) { res.push(path.slice()); snap("切完了", `切到了末尾，得到一种方案：<b>${path.join(" | ")}</b>。`, view(s.length, s.length, "", true), { at: "collect", kind: "ok", facts: [["方案数", res.length]] }); return; }
       for (let end = start + 1; end <= s.length; end++) {
         const piece = s.slice(start, end), ok = piece === piece.split("").reverse().join("");
-        if (!ok) { snap("跳过", `"${piece}" 倒过来是 "${piece.split("").reverse().join("")}"，不是回文，不能这样切。`, view(start, end, "w"), { kind: "warn", facts: [["方案数", res.length]] }); continue; }
-        snap("切一刀", `"${piece}" 是回文，切下来放进 path，接着从下标 ${end} 开始切剩下的${end < s.length ? ` "${s.slice(end)}"` : ""}。`, view(start, end, "a"), { facts: [["方案数", res.length]] });
+        if (!ok) { snap("跳过", `"${piece}" 倒过来是 "${piece.split("").reverse().join("")}"，不是回文，不能这样切。`, view(start, end, "w"), { at: "try", kind: "warn", facts: [["方案数", res.length]] }); continue; }
+        snap("切一刀", `"${piece}" 是回文，切下来放进 path，接着从下标 ${end} 开始切剩下的${end < s.length ? ` "${s.slice(end)}"` : ""}。`, view(start, end, "a"), { at: "cut", facts: [["方案数", res.length]] });
         path.push(piece);
         dfs(end);
         path.pop();
       }
     };
     dfs(0);
-    snap("完成", `所有切法都试过了，一共 <b>${res.length}</b> 种方案。`, view(s.length, s.length, ""), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["方案数", res.length]] });
+    snap("完成", `所有切法都试过了，一共 <b>${res.length}</b> 种方案。`, view(s.length, s.length, ""), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["方案数", res.length]] });
   } }
 ] };
 (function () {
@@ -374,7 +376,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"aab"},"note":"s = \"aa
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -389,13 +391,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"aab"},"note":"s = \"aa
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -339,26 +341,26 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[4,2,1,3]},"note":"head
     const segs = [a.v.slice()]; let mark = {};
     const f = (s) => `[${s.join(", ")}]`;
     const view = () => [{ t: "chips", label: "当前的各段（从左到右是它们在链表里的顺序）", items: segs.map((s, i) => ({ v: f(s), cls: mark[i] || "" })) }];
-    snap("开始", "整个链表是一段。超过一个节点的段都要继续拆。", view());
+    snap("开始", "整个链表是一段。超过一个节点的段都要继续拆。", view(), { at: "base" });
     const sort = (i) => {
       const s = segs[i];
       if (s.length <= 1) return;
       const h = Math.ceil(s.length / 2), L = s.slice(0, h), R = s.slice(h);
       mark = { [i]: "a" };
-      snap("找中点", `${f(s)} 有 ${s.length} 个节点。快慢指针找到中点，准备从中间断开。`, view());
+      snap("找中点", `${f(s)} 有 ${s.length} 个节点。快慢指针找到中点，准备从中间断开。`, view(), { at: "mid" });
       segs.splice(i, 1, L, R); mark = { [i]: "e", [i + 1]: "e" };
-      snap("断开", `断成 ${f(L)} 和 ${f(R)}，两半分别去排序。`, view());
+      snap("断开", `断成 ${f(L)} 和 ${f(R)}，两半分别去排序。`, view(), { at: ["cut", "rec"] });
       sort(i); sort(i + 1);
       const x = segs[i], y = segs[i + 1], m = []; let p = 0, q = 0;
       while (p < x.length && q < y.length) m.push(x[p] <= y[q] ? x[p++] : y[q++]);
       m.push(...x.slice(p), ...y.slice(q));
       mark = { [i]: "a", [i + 1]: "a" };
-      snap("准备合并", `${f(x)} 和 ${f(y)} 都已经有序，用合并两个有序链表的方法合起来。`, view());
+      snap("准备合并", `${f(x)} 和 ${f(y)} 都已经有序，用合并两个有序链表的方法合起来。`, view(), { at: "rec" });
       segs.splice(i, 2, m); mark = { [i]: "k" };
-      snap("合并", `每次取两个头里较小的那个，得到 ${f(m)}。`, view());
+      snap("合并", `每次取两个头里较小的那个，得到 ${f(m)}。`, view(), { at: "merge" });
     };
     sort(0); mark = { 0: "k" };
-    snap("完成", `所有段都合并回一条链表：${f(segs[0])}。`, view(), { kind: "ok", ans: segs[0] });
+    snap("完成", `所有段都合并回一条链表：${f(segs[0])}。`, view(), { at: "done", kind: "ok", ans: segs[0] });
   } }
 ] };
 (function () {
@@ -378,7 +380,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[4,2,1,3]},"note":"head
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -393,13 +395,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[4,2,1,3]},"note":"head
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

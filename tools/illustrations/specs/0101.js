@@ -1,7 +1,14 @@
+const F = require("../fig");
+
 module.exports = {
   id: 101, name: "对称二叉树", title: "对称二叉树图解", level: "简单", topic: "二叉树",
   h1: "对称二叉树，两个指针照镜子一样走",
   lede: "判断一棵树是否左右对称，就是判断它的左子树和右子树是不是互为镜像。用两个指针同时往下走：一个往左时另一个往右，一个往右时另一个往左，每一步都比较两个节点。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "1698026966-JDYPDU-image.png": [F.tree([1, 2, 2, 3, 4, 4, 3], { label: "左右两边互为镜像", cls: (v, i) => ([1, 3, 4].includes(i) ? "e" : i ? "g" : "") })],
+    "1698027008-nPFLbM-image.png": [F.tree([1, 2, 2, null, 3, null, 3], { label: "两个 3 都在右边，不是镜像", cls: (v, i) => (i === 1 || i === 4 ? "e" : i ? "g" : "") })],
+  },
   hints: [
     { t: "换成比较两棵树", body: ["整棵树对称 ⇔ 根节点的左子树和右子树互为镜像。", "所以需要一个比较两个节点的函数 <code>check(a, b)</code>。"] },
     { t: "两个节点互为镜像的条件", body: ["两个都是空：是镜像。", "只有一个是空，或者值不相等：不是。", "值相等：还要看 <code>a 的左</code> 和 <code>b 的右</code> 是否镜像，<code>a 的右</code> 和 <code>b 的左</code> 是否镜像。"] },
@@ -11,12 +18,12 @@ module.exports = {
 class Solution:
     def isSymmetric(self, root: Optional[TreeNode]) -> bool:
         def check(a, b):
-            if not a and not b:
-                return True
-            if not a or not b or a.val != b.val:
-                return False
-            return check(a.left, b.right) and check(a.right, b.left)
-        return check(root.left, root.right)
+            if not a and not b:         #@both
+                return True             #@both
+            if not a or not b or a.val != b.val:    #@diff
+                return False            #@diff
+            return check(a.left, b.right) and check(a.right, b.left)   #@same
+        return check(root.left, root.right)     #@start
 ` }, { t: "简洁写法：a is b 处理空节点", kind: "elegant", note: "两个里至少有一个是空时，只有两个都空才对称，正好是 a is b。", code: `
 class Solution:
     def isSymmetric(self, root: Optional[TreeNode]) -> bool:
@@ -33,6 +40,9 @@ assert s.isSymmetric(T([1,2,2,None,3,None,3])) is False
 assert s.isSymmetric(T([1])) is True
 assert s.isSymmetric(T([1,2,3])) is False
 `,
+  sig: { fn: "isSymmetric", params: ["TreeNode"], ret: "bool" },
+  call: (a, H) => [H.toLc(a.t)],
+  cases: [[[1]], [[1, 2, 3]], [[1, 2, 2, 2, null, 2]], [[1, 0]]],
   legend: [["a", "左边的指针 a"], ["b", "右边的指针 b"], ["k", "这一对比较通过"], ["w", "这一对不对称"]],
   presets: [
     { label: "示例 1", args: { t: [1, 2, 2, 3, 4, 4, 3] }, note: "root = [1,2,2,3,4,4,3]", expect: true },
@@ -43,17 +53,17 @@ assert s.isSymmetric(T([1,2,3])) is False
     const st = {};
     const view = (x, y) => { const cls = {}; for (const id in N) cls[id] = +id === x ? "a" : +id === y ? "b" : st[id] || ""; return [{ t: "tree", nodes: N, root: 0, cls }]; };
     const nm = (id) => (id === null ? "空" : N[id].v);
-    snap("开始", "a 从根的左孩子出发，b 从根的右孩子出发。", view(-1, -1));
+    snap("开始", "a 从根的左孩子出发，b 从根的右孩子出发。", view(-1, -1), { at: "start" });
     const check = (x, y, where) => {
-      if (x === null && y === null) { snap("都是空", `${where}：两边都是空，对称。`, view(-1, -1)); return true; }
-      if (x === null || y === null) { if (x !== null) st[x] = "w"; if (y !== null) st[y] = "w"; snap("不对称", `${where}：一边是 ${nm(x)}，另一边是 ${nm(y)}。只有一边有节点，<b>不对称</b>。`, view(x, y), { kind: "warn" }); return false; }
-      if (N[x].v !== N[y].v) { st[x] = st[y] = "w"; snap("不对称", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值不相等，<b>不对称</b>。`, view(x, y), { kind: "warn" }); return false; }
-      snap("值相等", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值相等。接着比较外侧的一对，再比较内侧的一对。`, view(x, y));
+      if (x === null && y === null) { snap("都是空", `${where}：两边都是空，对称。`, view(-1, -1), { at: "both" }); return true; }
+      if (x === null || y === null) { if (x !== null) st[x] = "w"; if (y !== null) st[y] = "w"; snap("不对称", `${where}：一边是 ${nm(x)}，另一边是 ${nm(y)}。只有一边有节点，<b>不对称</b>。`, view(x, y), { at: "diff", kind: "warn" }); return false; }
+      if (N[x].v !== N[y].v) { st[x] = st[y] = "w"; snap("不对称", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值不相等，<b>不对称</b>。`, view(x, y), { at: "diff", kind: "warn" }); return false; }
+      snap("值相等", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值相等。接着比较外侧的一对，再比较内侧的一对。`, view(x, y), { at: "same" });
       st[x] = st[y] = "k";
       return check(N[x].l, N[y].r, `${N[x].v} 的左 和 ${N[y].v} 的右（外侧）`) && check(N[x].r, N[y].l, `${N[x].v} 的右 和 ${N[y].v} 的左（内侧）`);
     };
     const ans = check(N[0].l, N[0].r, "根的左孩子和右孩子");
-    snap("完成", ans ? "所有成对的节点都比较通过，这棵树是对称的。" : "发现一对不对称的节点，后面不用再比，返回 false。", view(-1, -1), { kind: ans ? "ok" : "warn", ans });
+    snap("完成", ans ? "所有成对的节点都比较通过，这棵树是对称的。" : "发现一对不对称的节点，后面不用再比，返回 false。", view(-1, -1), { at: "start", kind: ans ? "ok" : "warn", ans });
   },
   points: [
     { t: "先判空再比值", body: "先处理两个都为空、只有一个为空的情况，之后才能放心访问 <code>.val</code>。" },

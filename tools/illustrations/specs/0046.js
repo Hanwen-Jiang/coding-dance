@@ -10,23 +10,23 @@ module.exports = {
   codes: [{ t: "标准解法：回溯 + used 数组", code: `
 class Solution:
     def permute(self, nums: List[int]) -> List[List[int]]:
-        res, path, used = [], [], [False] * len(nums)
+        res, path, used = [], [], [False] * len(nums)   #@init
 
         def dfs():
-            if len(path) == len(nums):
-                res.append(path[:])
-                return
+            if len(path) == len(nums):      #@collect
+                res.append(path[:])         #@collect
+                return                      #@collect
             for i, x in enumerate(nums):
                 if used[i]:
                     continue
-                used[i] = True
-                path.append(x)
+                used[i] = True              #@choose
+                path.append(x)              #@choose
                 dfs()
                 path.pop()                  # 撤销选择
                 used[i] = False
 
-        dfs()
-        return res
+        dfs()                               #@init
+        return res                          #@done
 ` }, { t: "简洁写法：第一位选谁 + 剩下的全排列", kind: "elegant", note: "先定第一位是 x，再把剩下的数全排列，拼在 x 后面。", code: `
 class Solution:
     def permute(self, nums: List[int]) -> List[List[int]]:
@@ -43,6 +43,10 @@ assert s.permute([0,1]) == [[0,1],[1,0]]
 assert s.permute([1]) == [[1]]
 assert len(s.permute([1,2,3,4,5])) == 120
 `,
+  // 各语言都按下标从小到大挑数，得到的顺序和 Python 一样，所以按顺序比
+  sig: { fn: "permute", params: ["int[]"], ret: "List<List<int>>" },
+  call: (a) => [a.nums],
+  cases: [[[1]], [[0, 1]], [[5, -1, 3, 0]]],
   legend: [["a", "这一步选的数"], ["d", "已经用掉"], ["c", "填满了"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 2, 3] }, note: "nums = [1,2,3]", expect: [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]] },
@@ -55,19 +59,19 @@ assert len(s.permute([1,2,3,4,5])) == 120
       { t: "array", label: "path（正在填的排列）", items: Array.from({ length: n }, (_, k) => ({ v: k < path.length ? path[k] : "", cls: k < path.length ? (done ? "c" : k === path.length - 1 && cur >= 0 ? "a" : "e") : "" })), idx: true },
       { t: "chips", label: "已收集", items: res.map((r) => `[${r.join(",")}]`), empty: "还没有" },
     ];
-    snap("开始", `有 ${n} 个空位，从左往右填。每一位从还没用过的数里挑。`, view(-1));
+    snap("开始", `有 ${n} 个空位，从左往右填。每一位从还没用过的数里挑。`, view(-1), { at: "init" });
     const dfs = () => {
-      if (path.length === n) { res.push(path.slice()); snap("收集", `${n} 个位置都填好了，得到 <b>[${path.join(",")}]</b>。`, view(-1, true), { kind: "ok", facts: [["已收集", res.length]] }); return; }
+      if (path.length === n) { res.push(path.slice()); snap("收集", `${n} 个位置都填好了，得到 <b>[${path.join(",")}]</b>。`, view(-1, true), { at: "collect", kind: "ok", facts: [["已收集", res.length]] }); return; }
       for (let i = 0; i < n; i++) {
         if (used[i]) continue;
         used[i] = true; path.push(nums[i]);
-        snap("填第 " + path.length + " 位", `第 ${path.length} 位填 <b>${nums[i]}</b>，把它标记成用过。`, view(i), { facts: [["已收集", res.length]] });
+        snap("填第 " + path.length + " 位", `第 ${path.length} 位填 <b>${nums[i]}</b>，把它标记成用过。`, view(i), { at: "choose", facts: [["已收集", res.length]] });
         dfs();
         path.pop(); used[i] = false;
       }
     };
     dfs();
-    snap("完成", `一共 ${res.length} 个排列，正好是 ${n}! 个。`, view(-1), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
+    snap("完成", `一共 ${res.length} 个排列，正好是 ${n}! 个。`, view(-1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
   },
   points: [
     { t: "撤销要成对", body: "<code>used[i] = True</code> 和 <code>path.append</code> 是一对，递归回来后两个都要撤销。" },

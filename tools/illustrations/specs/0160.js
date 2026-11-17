@@ -1,7 +1,26 @@
+const F = require("../fig");
+// 题面配图：A、B 独有的部分右对齐，后面接同一份公共部分（Y 形）
+const Y = (a, b, c, label) => F.graph([
+  ...a.map((v, i) => ({ id: "a" + i, v, x: i + Math.max(0, b.length - a.length), y: 0 })),
+  ...b.map((v, i) => ({ id: "b" + i, v, x: i + Math.max(0, a.length - b.length), y: 2 })),
+  ...c.map((v, i) => ({ id: "c" + i, v, x: Math.max(a.length, b.length) + i, y: 1, cls: "k" })),
+], [
+  ...a.slice(1).map((_, i) => ["a" + i, "a" + (i + 1)]), ...(c.length && a.length ? [["a" + (a.length - 1), "c0"]] : []),
+  ...b.slice(1).map((_, i) => ["b" + i, "b" + (i + 1)]), ...(c.length && b.length ? [["b" + (b.length - 1), "c0"]] : []),
+  ...c.slice(1).map((_, i) => ["c" + i, "c" + (i + 1)]),
+], { labels: [{ x: -1, y: 0, text: "A" }, { x: -1, y: 2, text: "B" }], label });
+
 module.exports = {
   id: 160, name: "相交链表", title: "相交链表图解", level: "简单", topic: "链表",
   h1: "相交链表，走完自己的路再走对方的路",
   lede: "两个链表长度不同，所以两个指针同时出发不会同时到达交点。让每个指针走完自己的链表后，接着从对方的头开始走。这样两个指针走的总长度相同，会同时到达交点。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "160_statement.png": [Y(["a1", "a2"], ["b1", "b2", "b3"], ["c1", "c2", "c3"], "两个链表从 c1 开始相交，后面的节点是同一份")],
+    "160_example_1_1.png": [Y([4, 1], [5, 6, 1], [8, 4, 5], "从值为 8 的节点开始相交（A、B 里前面的 1 是两个不同的节点）")],
+    "160_example_2.png": [Y([1, 9, 1], [3], [2, 4], "从值为 2 的节点开始相交")],
+    "160_example_3.png": [Y([2, 6, 4], [1, 5], [], "两个链表不相交")],
+  },
   hints: [
     { t: "为什么直接走不行", body: ["如果两个链表在交点之前的长度一样，两个指针同时走就会同时到交点。", "问题是前面的长度可能不同，要想办法把这个差距抹掉。"] },
     { t: "把两段路拼起来", body: ["设 A 独有的部分长 <code>a</code>，B 独有的部分长 <code>b</code>，公共部分长 <code>c</code>。", "指针 pa 走 A 再走 B：<code>a + c + b</code> 步到交点。指针 pb 走 B 再走 A：<code>b + c + a</code> 步到交点。两者相等。"] },

@@ -19,11 +19,14 @@ function ptrMap(ptrs?: Record<string, number | null | undefined>) {
   return m;
 }
 
+/** 下标那一行写什么：labels 可以逐个指定（比如越界的格子写 -1），否则从 idxFrom（默认 0）开始数 */
+const idxLabel = (v: View, i: number) => (v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i);
+
 function vArray(v: View) {
   const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
   const cols = (v.items as unknown[]).map(norm).map((it, i) =>
     `<div class="dm-cc"><div class="dm-cell ${roles(it.cls)}">${show(it.v)}</div>` +
-    (v.idx === false ? "" : `<div class="dm-ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+    (v.idx === false ? "" : `<div class="dm-ci">${idxLabel(v, i)}</div>`) +
     (hasP ? `<div class="dm-cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
   return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-arr">${cols}</div></div></div>`;
 }
@@ -42,13 +45,63 @@ function vBars(v: View) {
   return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-arr">${cols}</div></div></div>`;
 }
 
+/** 网格：rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号 */
 function vGrid(v: View) {
-  const n = v.rows[0].length;
-  let h = `<span class="dm-ax"></span>` + v.rows[0].map((_: unknown, j: number) => `<span class="dm-ax">${j}</span>`).join("");
+  const n = v.rows[0].length, ax = v.ax !== false;
+  const rl = (i: number) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j: number) => (v.colLabels ? show(v.colLabels[j]) : j);
+  let h = ax ? `<span class="dm-ax"></span>` + v.rows[0].map((_: unknown, j: number) => `<span class="dm-ax">${cl(j)}</span>`).join("") : "";
   (v.rows as unknown[][]).forEach((r, i) => {
-    h += `<span class="dm-ax">${i}</span>` + r.map(norm).map((it) => `<div class="dm-cell ${roles(it.cls)}">${show(it.v)}</div>`).join("");
+    h += (ax ? `<span class="dm-ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="dm-cell ${roles(it.cls)}">${show(it.v)}</div>`).join("");
   });
-  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+  const cols = (ax ? "minmax(18px,auto) " : "") + `repeat(${n},40px)`;
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-grid" style="grid-template-columns:${cols}">${h}</div></div></div>`;
+}
+
+/** 几张图并排，中间用 sep（默认 →）隔开。题面配图里「变换前 → 变换后」用 */
+function vRow(v: View) {
+  const parts = (v.items as View[]).map((x) => `<div class="dm-ri">${renderViews([x])}</div>`);
+  return `<div class="dm-v">${lab(v)}<div class="dm-row">${parts.join(`<div class="dm-sep">${E(v.sep ?? "→")}</div>`)}</div></div>`;
+}
+
+/**
+ * 自由摆放的节点和箭头：nodes [{ id, v, x, y, cls, shape: "rect" | "circle" }]，坐标是格子数；
+ * edges [{ from, to, cls, bend }]，bend 让箭头弯一点（正负决定往哪边弯）；labels [{ x, y, text }]。
+ * 链表、树画不出来的形状（相交链表的 Y 形）用它。
+ */
+function vGraph(v: View) {
+  const UX = v.ux || 62, UY = v.uy || 58, BW = 40, BH = 32, R = 17, id = "dmgh" + uid++;
+  const nodes = v.nodes as { id: string | number; v: unknown; x: number; y: number; cls?: string; shape?: string }[];
+  const labels = (v.labels || []) as { x: number; y: number; text: string }[];
+  const xs = [...nodes.map((n) => n.x), ...labels.map((l) => l.x)], ys = [...nodes.map((n) => n.y), ...labels.map((l) => l.y)];
+  const x0 = Math.min(...xs), y0 = Math.min(...ys), PAD = 28;
+  const px = (x: number) => PAD + 20 + (x - x0) * UX, py = (y: number) => PAD + (y - y0) * UY;
+  const W = PAD * 2 + 40 + (Math.max(...xs) - x0) * UX, H = PAD * 2 + (Math.max(...ys) - y0) * UY;
+  const by: Record<string, (typeof nodes)[number]> = {};
+  nodes.forEach((n) => (by[String(n.id)] = n));
+  // 从中心沿方向 (dx, dy) 走到节点边上的距离
+  const reach = (n: (typeof nodes)[number], dx: number, dy: number) =>
+    n.shape === "circle" ? R : Math.min(dx ? BW / 2 / Math.abs(dx) : Infinity, dy ? BH / 2 / Math.abs(dy) : Infinity);
+  let s = `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
+  for (const e of (v.edges || []) as { from: string | number; to: string | number; cls?: string; bend?: number }[]) {
+    const a = by[String(e.from)], b = by[String(e.to)];
+    if (!a || !b) continue;
+    const ax = px(a.x), ay = py(a.y), bx = px(b.x), by2 = py(b.y), len = Math.hypot(bx - ax, by2 - ay) || 1;
+    const dx = (bx - ax) / len, dy = (by2 - ay) / len, ra = reach(a, dx, dy), rb = reach(b, dx, dy) + 2;
+    const sx = ax + dx * ra, sy = ay + dy * ra, ex = bx - dx * rb, ey = by2 - dy * rb;
+    if (e.bend) {
+      const cx = (sx + ex) / 2 - dy * e.bend * UY, cy = (sy + ey) / 2 + dx * e.bend * UY;
+      s += `<path class="edge ${e.cls || ""}" marker-end="url(#${id})" d="M${sx} ${sy} Q${cx} ${cy} ${ex} ${ey}"></path>`;
+    } else s += `<line class="edge ${e.cls || ""}" marker-end="url(#${id})" x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
+  }
+  for (const n of nodes) {
+    const cx = px(n.x), cy = py(n.y), c = first(n.cls);
+    s += n.shape === "circle"
+      ? `<circle class="n ${roles(n.cls)}" cx="${cx}" cy="${cy}" r="${R}"></circle>`
+      : `<rect class="n ${roles(n.cls)}" x="${cx - BW / 2}" y="${cy - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
+    s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx}" y="${cy}">${show(n.v)}</text>`;
+  }
+  for (const l of labels) s += `<text class="pt" x="${px(l.x)}" y="${py(l.y)}">${E(l.text)}</text>`;
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:100%"><g>${s}</g></svg></div></div>`;
 }
 
 function vChips(v: View) {
@@ -131,11 +184,12 @@ function vTree(v: View) {
 }
 
 /**
- * 图：nodes 是节点（{ v, cls }），edges 是 [起点下标, 终点下标, 边的样式?]（样式：on 高亮 / warm 虚线 / dim 变淡）。
- * directed 为真时画箭头；pos 是每个节点的 [列, 行]（可以是小数），不给时节点排成一圈。badges 是节点下方的小标签。
+ * 网络图（基础专题里的图、拓扑排序、并查集用）：nodes 是节点（{ v, cls }），edges 是 [起点下标, 终点下标, 边的样式?]
+ * （样式：on 高亮 / warm 虚线 / dim 变淡）。directed 为真时画箭头；pos 是每个节点的 [列, 行]（可以是小数），
+ * 不给时节点排成一圈。badges 是节点下方的小标签。要自由摆放、带弯曲箭头的图用上面的 graph。
  */
-function vGraph(v: View) {
-  const nodes = (v.nodes as unknown[]).map(norm), n = nodes.length, RAD = 17, id = "dmgh" + uid++;
+function vNet(v: View) {
+  const nodes = (v.nodes as unknown[]).map(norm), n = nodes.length, RAD = 17, id = "dmnet" + uid++;
   let pos: [number, number][];
   let W: number, H: number;
   if (v.pos) {
@@ -175,7 +229,9 @@ const R: Record<string, (v: View) => string> = {
   chips: vChips,
   list: vList,
   tree: vTree,
+  row: vRow,
   graph: vGraph,
+  net: vNet,
   note: (v) => `<div class="dm-v">${lab(v)}<div class="dm-note">${v.html}</div></div>`,
 };
 

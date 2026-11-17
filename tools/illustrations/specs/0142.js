@@ -1,7 +1,15 @@
+const F = require("../fig");
+
 module.exports = {
   id: 142, name: "环形链表 II", title: "环形链表 II 图解", level: "中等", topic: "链表",
   h1: "环形链表 II，相遇之后再从头走一遍",
   lede: "先用快慢指针找到相遇点。然后让一个指针回到头节点，两个指针都改成一次走一步，它们再次相遇的地方就是环的入口。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "circularlinkedlist.png": [F.list([3, 2, 0, -4], { label: "pos = 1：环的入口是下标 1 的节点", cycle: 1, cls: (v, i) => (i === 1 ? "c" : "") })],
+    "circularlinkedlist_test2.png": [F.list([1, 2], { label: "pos = 0：环的入口是头节点", cycle: 0, cls: (v, i) => (i === 0 ? "c" : "") })],
+    "circularlinkedlist_test3.png": [F.list([1], { label: "pos = -1：没有环，返回空" })],
+  },
   hints: [
     { t: "第一步和 141 一样", body: ["快慢指针相遇，说明有环。但相遇点一般不是入口。"] },
     { t: "算一下走了多远", body: ["设头节点到入口的距离是 <code>a</code>，入口到相遇点是 <code>b</code>，相遇点再走回入口是 <code>c</code>。", "相遇时 slow 走了 <code>a + b</code>，fast 走了它的两倍，同时 fast 比 slow 多绕了若干整圈。", "所以 <code>a + b</code> 等于若干整圈的长度，也就是 <code>a = c + 若干整圈</code>。"] },

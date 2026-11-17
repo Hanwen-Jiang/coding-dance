@@ -10,19 +10,19 @@ module.exports = {
   codes: [{ t: "标准解法：大顶堆 + 小顶堆", code: `
 class MedianFinder:
     def __init__(self):
-        self.lo = []                        # 大顶堆（存相反数），较小的一半
-        self.hi = []                        # 小顶堆，较大的一半
+        self.lo = []                        # 大顶堆（存相反数），较小的一半 #@init
+        self.hi = []                        # 小顶堆，较大的一半 #@init
 
     def addNum(self, num: int) -> None:
-        heapq.heappush(self.lo, -num)
-        heapq.heappush(self.hi, -heapq.heappop(self.lo))    # lo 的最大值挪到 hi
-        if len(self.hi) > len(self.lo):                     # 保持 lo 不比 hi 少
-            heapq.heappush(self.lo, -heapq.heappop(self.hi))
+        heapq.heappush(self.lo, -num)       #@add
+        heapq.heappush(self.hi, -heapq.heappop(self.lo))    # lo 的最大值挪到 hi #@add
+        if len(self.hi) > len(self.lo):                     # 保持 lo 不比 hi 少 #@add,rebal
+            heapq.heappush(self.lo, -heapq.heappop(self.hi))    #@rebal
 
     def findMedian(self) -> float:
-        if len(self.lo) > len(self.hi):
-            return -self.lo[0]
-        return (-self.lo[0] + self.hi[0]) / 2
+        if len(self.lo) > len(self.hi):     #@odd,even
+            return -self.lo[0]              #@odd
+        return (-self.lo[0] + self.hi[0]) / 2   #@even
 ` }, { t: "简洁写法：heappushpop", kind: "elegant", note: "heappushpop 先压入再弹出最小值，一步完成「过一遍另一个堆」。两个堆一样多时新数最终进 lo，否则进 hi。", code: `
 class MedianFinder:
     def __init__(self):
@@ -39,6 +39,9 @@ class MedianFinder:
             return -self.lo[0]
         return (self.hi[0] - self.lo[0]) / 2
 ` }],
+  sig: { cls: "MedianFinder", ctor: [], methods: { addNum: [["int"], "void"], findMedian: [[], "double"] } },
+  call: (a) => [["MedianFinder", ...a.ops.map((o) => (o[0] === "add" ? "addNum" : "findMedian"))], [[], ...a.ops.map((o) => (o[0] === "add" ? [o[1]] : []))]],
+  cases: [[["MedianFinder", "addNum", "findMedian"], [[], [-1], []]], [["MedianFinder", "addNum", "addNum", "findMedian", "addNum", "findMedian", "addNum", "findMedian"], [[], [-1], [-2], [], [-3], [], [100000], []]]],
   pytest: `
 m = MedianFinder()
 m.addNum(1); m.addNum(2)
@@ -67,22 +70,24 @@ for i, x in enumerate(data):
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : v)), empty: "还没有" },
     ];
     const ins = (arr, x) => { arr.push(x); arr.sort((p, q) => p - q); };
-    snap("开始", "两个堆都是空的。", view(-1), { facts: [["lo", 0], ["hi", 0]] });
+    snap("开始", "两个堆都是空的。", view(-1), { at: "init", facts: [["lo", 0], ["hi", 0]] });
     ops.forEach((o, i) => {
-      let msg;
+      let msg, at;
       if (o[0] === "add") {
+        at = "add";
         const x = o[1]; ins(lo, x); const m1 = lo.pop(); ins(hi, m1);
         msg = `先把 ${x} 放进 lo，再把 lo 里最大的 ${m1} 挪到 hi。`;
-        if (hi.length > lo.length) { const m2 = hi.shift(); ins(lo, m2); msg += `hi 比 lo 多了，把 hi 里最小的 ${m2} 挪回 lo。`; }
+        if (hi.length > lo.length) { const m2 = hi.shift(); ins(lo, m2); msg += `hi 比 lo 多了，把 hi 里最小的 ${m2} 挪回 lo。`; at = ["add", "rebal"]; }
         out.push(null);
       } else {
         const med = lo.length > hi.length ? lo[lo.length - 1] : (lo[lo.length - 1] + hi[0]) / 2;
         out.push(med);
+        at = lo.length > hi.length ? "odd" : "even";
         msg = lo.length > hi.length ? `一共 ${lo.length + hi.length} 个数，是奇数，中位数是 lo 的堆顶 <b>${med}</b>。` : `一共 ${lo.length + hi.length} 个数，是偶数，中位数是两个堆顶的平均 (${lo[lo.length - 1]} + ${hi[0]}) / 2 = <b>${med}</b>。`;
       }
-      snap(name(o), msg, view(i), { facts: [["lo", lo.length], ["hi", hi.length]] });
+      snap(name(o), msg, view(i), { at, facts: [["lo", lo.length], ["hi", hi.length]] });
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { kind: "ok", ans: out.slice(), facts: [["lo", lo.length], ["hi", hi.length]] });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { at: [], kind: "ok", ans: out.slice(), facts: [["lo", lo.length], ["hi", hi.length]] });
   },
   points: [
     { t: "先过一遍另一个堆", body: "新数不能直接放进少的那个堆，要先经过另一个堆，才能保证 lo 的最大值 ≤ hi 的最小值。" },

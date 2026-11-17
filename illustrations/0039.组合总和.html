@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -340,19 +342,19 @@ const SPEC = { presets: [{"label":"示例 1","args":{"c":[2,3,6,7],"target":7},"
       { t: "chips", label: "path", items: path.slice(), empty: "空" },
       { t: "chips", label: "已收集的组合", items: res.map((r) => `[${r.join(",")}]`), empty: "还没有" },
     ];
-    snap("开始", `从 [${c.join(",")}] 里选数凑出 ${target}，每个数可以选多次。`, view(-1, -1), { facts: [["还差", target]] });
+    snap("开始", `从 [${c.join(",")}] 里选数凑出 ${target}，每个数可以选多次。`, view(-1, -1), { at: "init", facts: [["还差", target]] });
     const dfs = (start, remain) => {
-      if (remain === 0) { res.push(path.slice()); snap("凑够了", `path = [${path.join(",")}]，和正好是 ${target}，收集。`, view(-1, -1), { kind: "ok", facts: [["还差", 0]] }); return; }
+      if (remain === 0) { res.push(path.slice()); snap("凑够了", `path = [${path.join(",")}]，和正好是 ${target}，收集。`, view(-1, -1), { at: "found", kind: "ok", facts: [["还差", 0]] }); return; }
       for (let i = start; i < c.length; i++) {
-        if (c[i] > remain) { snap("剪枝", `还差 ${remain}，但 ${c[i]} 已经比它大了。后面的数只会更大，这一层到此为止。`, view(start, i, "w"), { kind: "warn", facts: [["还差", remain]] }); break; }
+        if (c[i] > remain) { snap("剪枝", `还差 ${remain}，但 ${c[i]} 已经比它大了。后面的数只会更大，这一层到此为止。`, view(start, i, "w"), { at: "prune", kind: "warn", facts: [["还差", remain]] }); break; }
         path.push(c[i]);
-        snap("选", `选 ${c[i]}，还差 ${remain} − ${c[i]} = <b>${remain - c[i]}</b>。下一层还从下标 ${i} 开始，${c[i]} 还能再选。`, view(start, i, "a"), { facts: [["还差", remain - c[i]]] });
+        snap("选", `选 ${c[i]}，还差 ${remain} − ${c[i]} = <b>${remain - c[i]}</b>。下一层还从下标 ${i} 开始，${c[i]} 还能再选。`, view(start, i, "a"), { at: "pick", facts: [["还差", remain - c[i]]] });
         dfs(i, remain - c[i]);
         path.pop();
       }
     };
     dfs(0, target);
-    snap("完成", `一共找到 ${res.length} 个组合：${res.map((r) => `[${r.join(",")}]`).join("、")}。`, view(-1, -1), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["组合数", res.length]] });
+    snap("完成", `一共找到 ${res.length} 个组合：${res.map((r) => `[${r.join(",")}]`).join("、")}。`, view(-1, -1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["组合数", res.length]] });
   } },
 { t: "选或不选", note: "和简洁写法一样：对第 i 个数只有两种决定：再选一次它（i 不动），或者以后都不选它（i + 1）。两条分支返回的组合拼起来就是答案。", legend: [["a","选它"],["b","不选它了"],["w","超过 target"],["d","已经决定不选的数"]], build(a, snap) {
       const c = a.c, target = a.target, path = [], found = [];
@@ -365,22 +367,22 @@ const SPEC = { presets: [{"label":"示例 1","args":{"c":[2,3,6,7],"target":7},"
       const dfs = (i, remain) => {
         if (remain === 0) {
           found.push(path.slice());
-          snap("凑够了", `还差 0：这条分支选的 [${path.join(",")}] 正好凑出 ${target}。返回 [[]]，回去的路上每一层把自己选的数加在前面。`, view(-1, ""), { kind: "ok", ...f(0) });
+          snap("凑够了", `还差 0：这条分支选的 [${path.join(",")}] 正好凑出 ${target}。返回 [[]]，回去的路上每一层把自己选的数加在前面。`, view(-1, ""), { at: "found", kind: "ok", ...f(0) });
           return [[]];
         }
-        if (remain < 0) { snap("超了", `还差 ${remain}，已经超过 target 了，这条分支返回空。`, view(i, "w"), { kind: "warn", ...f(remain) }); return []; }
-        if (i === c.length) { snap("没得选了", `所有数都决定过了，还差 ${remain}，这条分支返回空。`, view(i, ""), { kind: "warn", ...f(remain) }); return []; }
+        if (remain < 0) { snap("超了", `还差 ${remain}，已经超过 target 了，这条分支返回空。`, view(i, "w"), { at: "empty", kind: "warn", ...f(remain) }); return []; }
+        if (i === c.length) { snap("没得选了", `所有数都决定过了，还差 ${remain}，这条分支返回空。`, view(i, ""), { at: "empty", kind: "warn", ...f(remain) }); return []; }
         const x = c[i];
         path.push(x);
-        snap("选", `考虑 ${x}，还差 ${remain}。先走「再选一次 ${x}」：还差 ${remain - x}，下一层还停在 ${x}。`, view(i, "a"), f(remain - x));
+        snap("选", `考虑 ${x}，还差 ${remain}。先走「再选一次 ${x}」：还差 ${remain - x}，下一层还停在 ${x}。`, view(i, "a"), { at: "take", ...f(remain - x) });
         const A = dfs(i, remain - x).map((r) => [x, ...r]);
         path.pop();
-        snap("不选", `「选 ${x}」这条分支走完了。再走「以后都不选 ${x}」：还差 ${remain}，看下一个数。`, view(i, "b"), f(remain));
+        snap("不选", `「选 ${x}」这条分支走完了。再走「以后都不选 ${x}」：还差 ${remain}，看下一个数。`, view(i, "b"), { at: "skip", ...f(remain) });
         return A.concat(dfs(i + 1, remain));
       };
-      snap("开始", `从 [${c.join(",")}] 里选数凑出 ${target}。每一层只对一个数做决定。`, view(-1, ""), f(target));
+      snap("开始", `从 [${c.join(",")}] 里选数凑出 ${target}。每一层只对一个数做决定。`, view(-1, ""), { at: "start", ...f(target) });
       const res = dfs(0, target);
-      snap("完成", `两种决定都试完了，一共 ${res.length} 个组合${res.length ? "：" + res.map((r) => `[${r.join(",")}]`).join("、") : ""}。`, view(-1, ""), { kind: "ok", ans: res, facts: [["组合数", res.length]] });
+      snap("完成", `两种决定都试完了，一共 ${res.length} 个组合${res.length ? "：" + res.map((r) => `[${r.join(",")}]`).join("、") : ""}。`, view(-1, ""), { at: "start", kind: "ok", ans: res, facts: [["组合数", res.length]] });
     } }
 ] };
 (function () {
@@ -400,7 +402,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"c":[2,3,6,7],"target":7},"
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -415,13 +417,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"c":[2,3,6,7],"target":7},"
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

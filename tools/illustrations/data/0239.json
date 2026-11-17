@@ -49,7 +49,154 @@
    "kind": "elegant",
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:\n        q, res = deque(), []            # q 存下标，对应的值递减\n        for i, x in enumerate(nums):\n            while q and nums[q[-1]] <= x:\n                q.pop()                 # 队尾比新数小，没用了\n            q.append(i)\n            if q[0] <= i - k:\n                q.popleft()             # 队头滑出窗口\n            if i >= k - 1:\n                res.append(nums[q[0]])\n        return res"
+   "code": "class Solution:\n    def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:\n        q, res = deque(), []            # q 存下标，对应的值递减\n        for i, x in enumerate(nums):\n            while q and nums[q[-1]] <= x:\n                q.pop()                 # 队尾比新数小，没用了\n            q.append(i)\n            if q[0] <= i - k:\n                q.popleft()             # 队头滑出窗口\n            if i >= k - 1:\n                res.append(nums[q[0]])\n        return res",
+   "marks": {
+    "init": [
+     3
+    ],
+    "push": [
+     5,
+     6,
+     7
+    ],
+    "expire": [
+     8,
+     9
+    ],
+    "record": [
+     10,
+     11
+    ],
+    "done": [
+     12
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public int[] maxSlidingWindow(int[] nums, int k) {\n        Deque<Integer> q = new ArrayDeque<>();          // q 存下标，对应的值递减\n        int[] res = new int[nums.length - k + 1];\n        for (int i = 0; i < nums.length; i++) {\n            while (!q.isEmpty() && nums[q.peekLast()] <= nums[i]) {\n                q.pollLast();                           // 队尾比新数小，没用了\n            }\n            q.offerLast(i);\n            if (q.peekFirst() <= i - k) {\n                q.pollFirst();                          // 队头滑出窗口\n            }\n            if (i >= k - 1) {\n                res[i - k + 1] = nums[q.peekFirst()];\n            }\n        }\n        return res;\n    }\n}",
+     "marks": {
+      "init": [
+       3,
+       4
+      ],
+      "push": [
+       6,
+       7,
+       9
+      ],
+      "expire": [
+       10,
+       11
+      ],
+      "record": [
+       13,
+       14
+      ],
+      "done": [
+       17
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    vector<int> maxSlidingWindow(vector<int>& nums, int k) {\n        deque<int> q;                                   // q 存下标，对应的值递减\n        vector<int> res;\n        for (int i = 0; i < (int)nums.size(); i++) {\n            while (!q.empty() && nums[q.back()] <= nums[i]) {\n                q.pop_back();                           // 队尾比新数小，没用了\n            }\n            q.push_back(i);\n            if (q.front() <= i - k) {\n                q.pop_front();                          // 队头滑出窗口\n            }\n            if (i >= k - 1) {\n                res.push_back(nums[q.front()]);\n            }\n        }\n        return res;\n    }\n};",
+     "marks": {
+      "init": [
+       4,
+       5
+      ],
+      "push": [
+       7,
+       8,
+       10
+      ],
+      "expire": [
+       11,
+       12
+      ],
+      "record": [
+       14,
+       15
+      ],
+      "done": [
+       18
+      ]
+     }
+    },
+    "go": {
+     "code": "func maxSlidingWindow(nums []int, k int) []int {\n\tq, res := []int{}, []int{} // q 存下标，对应的值递减\n\tfor i, x := range nums {\n\t\tfor len(q) > 0 && nums[q[len(q)-1]] <= x {\n\t\t\tq = q[:len(q)-1] // 队尾比新数小，没用了\n\t\t}\n\t\tq = append(q, i)\n\t\tif q[0] <= i-k {\n\t\t\tq = q[1:] // 队头滑出窗口\n\t\t}\n\t\tif i >= k-1 {\n\t\t\tres = append(res, nums[q[0]])\n\t\t}\n\t}\n\treturn res\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "push": [
+       4,
+       5,
+       7
+      ],
+      "expire": [
+       8,
+       9
+      ],
+      "record": [
+       11,
+       12
+      ],
+      "done": [
+       15
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var maxSlidingWindow = function(nums, k) {\n    const q = [], res = [];                     // q 存下标，对应的值递减；q[head] 是队头\n    let head = 0;\n    for (let i = 0; i < nums.length; i++) {\n        while (q.length > head && nums[q[q.length - 1]] <= nums[i]) {\n            q.pop();                            // 队尾比新数小，没用了\n        }\n        q.push(i);\n        if (q[head] <= i - k) {\n            head++;                             // 队头滑出窗口\n        }\n        if (i >= k - 1) {\n            res.push(nums[q[head]]);\n        }\n    }\n    return res;\n};",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "push": [
+       5,
+       6,
+       8
+      ],
+      "expire": [
+       9,
+       10
+      ],
+      "record": [
+       12,
+       13
+      ],
+      "done": [
+       16
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function maxSlidingWindow(nums: number[], k: number): number[] {\n    const q: number[] = [], res: number[] = []; // q 存下标，对应的值递减；q[head] 是队头\n    let head = 0;\n    for (let i = 0; i < nums.length; i++) {\n        while (q.length > head && nums[q[q.length - 1]] <= nums[i]) {\n            q.pop();                            // 队尾比新数小，没用了\n        }\n        q.push(i);\n        if (q[head] <= i - k) {\n            head++;                             // 队头滑出窗口\n        }\n        if (i >= k - 1) {\n            res.push(nums[q[head]]);\n        }\n    }\n    return res;\n}",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "push": [
+       5,
+       6,
+       8
+      ],
+      "expire": [
+       9,
+       10
+      ],
+      "record": [
+       12,
+       13
+      ],
+      "done": [
+       16
+      ]
+     }
+    }
+   }
   }
  ],
  "demo": {
@@ -105,7 +252,7 @@
     "note": "nums = [9,8,7,6,5], k = 2"
    }
   ],
-  "build": "build(a, snap) {\n    const { nums, k } = a, q = [], res = [];\n    const view = (i) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, j) => ({ v, cls: j === i ? \"a\" : q.length && j === q[0] ? \"c\" : q.includes(j) ? \"w\" : j <= i && j > i - k ? \"e\" : \"\" })), ptrs: { i: i >= 0 && i < nums.length ? i : null } },\n      { t: \"chips\", label: \"单调队列（左边是队头，写的是 下标:值）\", items: q.map((j, t) => ({ v: `${j}:${nums[j]}`, cls: t === 0 ? \"c\" : \"w\" })) },\n      { t: \"chips\", label: \"结果\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `窗口大小 k = ${k}。队列存下标，保证对应的值从队头到队尾递减。`, view(-1));\n    nums.forEach((x, i) => {\n      const popped = [];\n      while (q.length && nums[q[q.length - 1]] <= x) popped.push(nums[q.pop()]);\n      q.push(i);\n      let msg = `新数 ${x} 进来。` + (popped.length ? `队尾的 ${popped.join(\"、\")} 不比它大，又比它先离开窗口，<b>全部弹出</b>。` : \"队尾没有比它小的数。\") + `把 ${x} 放到队尾。`;\n      if (q[0] <= i - k) { msg += `队头 ${nums[q[0]]}（下标 ${q[0]}）已经滑出窗口，弹出。`; q.shift(); }\n      if (i >= k - 1) { res.push(nums[q[0]]); msg += `窗口 [${i - k + 1}, ${i}] 的最大值是队头 <b>${nums[q[0]]}</b>。`; }\n      else msg += \"窗口还没满，先不记结果。\";\n      snap(i >= k - 1 ? \"记录最大值\" : \"填充窗口\", msg, view(i));\n    });\n    snap(\"完成\", `结果是 [${res.join(\", \")}]。每个下标最多进队一次、出队一次。`, view(nums.length + k), { kind: \"ok\", ans: res });\n  }",
+  "build": "build(a, snap) {\n    const { nums, k } = a, q = [], res = [];\n    const view = (i) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, j) => ({ v, cls: j === i ? \"a\" : q.length && j === q[0] ? \"c\" : q.includes(j) ? \"w\" : j <= i && j > i - k ? \"e\" : \"\" })), ptrs: { i: i >= 0 && i < nums.length ? i : null } },\n      { t: \"chips\", label: \"单调队列（左边是队头，写的是 下标:值）\", items: q.map((j, t) => ({ v: `${j}:${nums[j]}`, cls: t === 0 ? \"c\" : \"w\" })) },\n      { t: \"chips\", label: \"结果\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `窗口大小 k = ${k}。队列存下标，保证对应的值从队头到队尾递减。`, view(-1), { at: \"init\" });\n    nums.forEach((x, i) => {\n      const popped = [], at = [\"push\"];\n      while (q.length && nums[q[q.length - 1]] <= x) popped.push(nums[q.pop()]);\n      q.push(i);\n      let msg = `新数 ${x} 进来。` + (popped.length ? `队尾的 ${popped.join(\"、\")} 不比它大，又比它先离开窗口，<b>全部弹出</b>。` : \"队尾没有比它小的数。\") + `把 ${x} 放到队尾。`;\n      if (q[0] <= i - k) { msg += `队头 ${nums[q[0]]}（下标 ${q[0]}）已经滑出窗口，弹出。`; q.shift(); at.push(\"expire\"); }\n      if (i >= k - 1) { res.push(nums[q[0]]); msg += `窗口 [${i - k + 1}, ${i}] 的最大值是队头 <b>${nums[q[0]]}</b>。`; at.push(\"record\"); }\n      else msg += \"窗口还没满，先不记结果。\";\n      snap(i >= k - 1 ? \"记录最大值\" : \"填充窗口\", msg, view(i), { at });\n    });\n    snap(\"完成\", `结果是 [${res.join(\", \")}]。每个下标最多进队一次、出队一次。`, view(nums.length + k), { at: \"done\", kind: \"ok\", ans: res });\n  }",
   "methods": [
    {
     "t": "标准解法",
@@ -129,7 +276,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const { nums, k } = a, q = [], res = [];\n    const view = (i) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, j) => ({ v, cls: j === i ? \"a\" : q.length && j === q[0] ? \"c\" : q.includes(j) ? \"w\" : j <= i && j > i - k ? \"e\" : \"\" })), ptrs: { i: i >= 0 && i < nums.length ? i : null } },\n      { t: \"chips\", label: \"单调队列（左边是队头，写的是 下标:值）\", items: q.map((j, t) => ({ v: `${j}:${nums[j]}`, cls: t === 0 ? \"c\" : \"w\" })) },\n      { t: \"chips\", label: \"结果\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `窗口大小 k = ${k}。队列存下标，保证对应的值从队头到队尾递减。`, view(-1));\n    nums.forEach((x, i) => {\n      const popped = [];\n      while (q.length && nums[q[q.length - 1]] <= x) popped.push(nums[q.pop()]);\n      q.push(i);\n      let msg = `新数 ${x} 进来。` + (popped.length ? `队尾的 ${popped.join(\"、\")} 不比它大，又比它先离开窗口，<b>全部弹出</b>。` : \"队尾没有比它小的数。\") + `把 ${x} 放到队尾。`;\n      if (q[0] <= i - k) { msg += `队头 ${nums[q[0]]}（下标 ${q[0]}）已经滑出窗口，弹出。`; q.shift(); }\n      if (i >= k - 1) { res.push(nums[q[0]]); msg += `窗口 [${i - k + 1}, ${i}] 的最大值是队头 <b>${nums[q[0]]}</b>。`; }\n      else msg += \"窗口还没满，先不记结果。\";\n      snap(i >= k - 1 ? \"记录最大值\" : \"填充窗口\", msg, view(i));\n    });\n    snap(\"完成\", `结果是 [${res.join(\", \")}]。每个下标最多进队一次、出队一次。`, view(nums.length + k), { kind: \"ok\", ans: res });\n  }"
+    "build": "build(a, snap) {\n    const { nums, k } = a, q = [], res = [];\n    const view = (i) => [\n      { t: \"array\", label: \"nums\", items: nums.map((v, j) => ({ v, cls: j === i ? \"a\" : q.length && j === q[0] ? \"c\" : q.includes(j) ? \"w\" : j <= i && j > i - k ? \"e\" : \"\" })), ptrs: { i: i >= 0 && i < nums.length ? i : null } },\n      { t: \"chips\", label: \"单调队列（左边是队头，写的是 下标:值）\", items: q.map((j, t) => ({ v: `${j}:${nums[j]}`, cls: t === 0 ? \"c\" : \"w\" })) },\n      { t: \"chips\", label: \"结果\", items: res.slice(), empty: \"还没有\" },\n    ];\n    snap(\"开始\", `窗口大小 k = ${k}。队列存下标，保证对应的值从队头到队尾递减。`, view(-1), { at: \"init\" });\n    nums.forEach((x, i) => {\n      const popped = [], at = [\"push\"];\n      while (q.length && nums[q[q.length - 1]] <= x) popped.push(nums[q.pop()]);\n      q.push(i);\n      let msg = `新数 ${x} 进来。` + (popped.length ? `队尾的 ${popped.join(\"、\")} 不比它大，又比它先离开窗口，<b>全部弹出</b>。` : \"队尾没有比它小的数。\") + `把 ${x} 放到队尾。`;\n      if (q[0] <= i - k) { msg += `队头 ${nums[q[0]]}（下标 ${q[0]}）已经滑出窗口，弹出。`; q.shift(); at.push(\"expire\"); }\n      if (i >= k - 1) { res.push(nums[q[0]]); msg += `窗口 [${i - k + 1}, ${i}] 的最大值是队头 <b>${nums[q[0]]}</b>。`; at.push(\"record\"); }\n      else msg += \"窗口还没满，先不记结果。\";\n      snap(i >= k - 1 ? \"记录最大值\" : \"填充窗口\", msg, view(i), { at });\n    });\n    snap(\"完成\", `结果是 [${res.join(\", \")}]。每个下标最多进队一次、出队一次。`, view(nums.length + k), { at: \"done\", kind: \"ok\", ans: res });\n  }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const nums = R.arr(R.int(5, 9), -3, 9), k = R.int(1, Math.min(4, nums.length));\n    return { args: { nums, k }, note: `nums = ${R.fmt(nums)}, k = ${k}`, py: `Solution().maxSlidingWindow(${R.py(nums)}, ${k})` };\n  })(R); return { args: r.args, note: r.note }; }"

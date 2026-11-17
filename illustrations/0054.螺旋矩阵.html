@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -343,27 +345,27 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
     ];
     const facts = () => [["top", top], ["bottom", bottom], ["left", left], ["right", right]];
     const walk = (cells) => { for (const r of seen) for (let j = 0; j < r.length; j++) if (r[j] === 2) r[j] = 1; for (const [i, j] of cells) { seen[i][j] = 2; res.push(M[i][j]); } };
-    snap("开始", "四个边界围住整个矩阵。", view(), { facts: facts() });
+    snap("开始", "四个边界围住整个矩阵。", view(), { at: "init", facts: facts() });
     while (top <= bottom && left <= right) {
       let c = []; for (let j = left; j <= right; j++) c.push([top, j]);
       walk(c); top++;
-      snap("上边：左 → 右", `沿着上边界从左走到右，然后 top 下移到 ${top}。`, view(), { facts: facts() });
+      snap("上边：左 → 右", `沿着上边界从左走到右，然后 top 下移到 ${top}。`, view(), { at: "top", facts: facts() });
       c = []; for (let i = top; i <= bottom; i++) c.push([i, right]);
       walk(c); right--;
-      snap("右边：上 → 下", c.length ? `沿着右边界从上走到下，然后 right 左移到 ${right}。` : `右边已经没有格子可走，right 左移到 ${right}。`, view(), { facts: facts() });
+      snap("右边：上 → 下", c.length ? `沿着右边界从上走到下，然后 right 左移到 ${right}。` : `右边已经没有格子可走，right 左移到 ${right}。`, view(), { at: "right", facts: facts() });
       if (top <= bottom) {
         c = []; for (let j = right; j >= left; j--) c.push([bottom, j]);
         walk(c); bottom--;
-        snap("下边：右 → 左", c.length ? `top ≤ bottom，还有行。沿着下边界从右走到左，然后 bottom 上移到 ${bottom}。` : `下边没有格子可走，bottom 上移到 ${bottom}。`, view(), { facts: facts() });
-      } else snap("跳过下边", "top 已经大于 bottom，没有剩余的行了。跳过下边，否则会把刚才那一行倒着再走一遍。", view(), { kind: "warn", facts: facts() });
+        snap("下边：右 → 左", c.length ? `top ≤ bottom，还有行。沿着下边界从右走到左，然后 bottom 上移到 ${bottom}。` : `下边没有格子可走，bottom 上移到 ${bottom}。`, view(), { at: "bottom", facts: facts() });
+      } else snap("跳过下边", "top 已经大于 bottom，没有剩余的行了。跳过下边，否则会把刚才那一行倒着再走一遍。", view(), { at: "skipb", kind: "warn", facts: facts() });
       if (left <= right) {
         c = []; for (let i = bottom; i >= top; i--) c.push([i, left]);
         walk(c); left++;
-        snap("左边：下 → 上", c.length ? `left ≤ right，还有列。沿着左边界从下走到上，然后 left 右移到 ${left}。` : `左边没有格子可走，left 右移到 ${left}。`, view(), { facts: facts() });
-      } else snap("跳过左边", "left 已经大于 right，没有剩余的列了，跳过左边。", view(), { kind: "warn", facts: facts() });
+        snap("左边：下 → 上", c.length ? `left ≤ right，还有列。沿着左边界从下走到上，然后 left 右移到 ${left}。` : `左边没有格子可走，left 右移到 ${left}。`, view(), { at: "left", facts: facts() });
+      } else snap("跳过左边", "left 已经大于 right，没有剩余的列了，跳过左边。", view(), { at: "skipl", kind: "warn", facts: facts() });
     }
     walk([]);
-    snap("完成", `边界交错，所有格子都走过了。结果是 [${res.join(", ")}]。`, view(), { kind: "ok", ans: res, facts: facts() });
+    snap("完成", `边界交错，所有格子都走过了。结果是 [${res.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: res, facts: facts() });
   } },
 { t: "取第一行再旋转", note: "和简洁写法一样：螺旋的第一段永远是第一行。拿走它，把剩下的部分逆时针转 90°，原来的最右一列就成了新的第一行。重复到矩阵为空。", legend: [["a","这一步拿走的第一行"]], build(a, snap) {
       let M = a.m.map((r) => r.slice()), round = 0;
@@ -372,17 +374,17 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
         M.length ? { t: "grid", label: "matrix（剩下的部分）", rows: M.map((r, i) => r.map((v) => ({ v, cls: hl && i === 0 ? "a" : "" }))) } : { t: "note", label: "matrix", html: "空" },
         { t: "chips", label: "结果", items: res.slice(), empty: "还没有" },
       ];
-      snap("开始", "每一轮：拿走第一行接到结果后面，再把剩下的逆时针转 90°。", view(false));
+      snap("开始", "每一轮：拿走第一行接到结果后面，再把剩下的逆时针转 90°。", view(false), { at: "init" });
       while (M.length) {
         round++;
-        snap("拿走第一行", `第一行是 [${M[0].join(", ")}]，接到结果后面。`, view(true));
+        snap("拿走第一行", `第一行是 [${M[0].join(", ")}]，接到结果后面。`, view(true), { at: "take" });
         res.push(...M.shift());
         if (!M.length) break;
         const col = M.map((r) => r[r.length - 1]);
         M = M[0].map((_, j) => M.map((r) => r[j])).reverse();
-        snap("逆时针转 90°", `剩下的部分逆时针转 90°：zip(*matrix) 把列变成行，再 [::-1] 倒过来。原来最右边一列 [${col.join(", ")}] 现在是第一行。`, view(false));
+        snap("逆时针转 90°", `剩下的部分逆时针转 90°：zip(*matrix) 把列变成行，再 [::-1] 倒过来。原来最右边一列 [${col.join(", ")}] 现在是第一行。`, view(false), { at: "turn" });
       }
-      snap("完成", `矩阵拿空了，结果是 [${res.join(", ")}]。`, view(false), { kind: "ok", ans: res });
+      snap("完成", `矩阵拿空了，结果是 [${res.join(", ")}]。`, view(false), { at: "done", kind: "ok", ans: res });
     } }
 ] };
 (function () {
@@ -402,7 +404,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -417,13 +419,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"m":[[1,2,3],[4,5,6],[7,8,9
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

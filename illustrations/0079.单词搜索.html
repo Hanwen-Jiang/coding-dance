@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -360,25 +362,25 @@ const SPEC = { presets: [{"label":"示例 1","args":{"board":["ABCE","SFCS","ADE
       { t: "grid", label: "board", rows: B.map((r, i) => r.map((v, j) => { const on = path.some(([x, y]) => x === i && y === j); return { v, cls: done && on ? "c" : cur && cur[0] === i && cur[1] === j ? "a" : on ? "e" : "" }; })) },
       { t: "array", label: "word", items: word.split("").map((ch, k) => ({ v: ch, cls: k < path.length ? (done ? "c" : "e") : "" })), ptrs: { k: path.length < word.length ? path.length : null } },
     ];
-    snap("开始", `在网格里找单词 <b>${word}</b>。每个格子都当一次起点，相邻是指上下左右。`, view(null));
+    snap("开始", `在网格里找单词 <b>${word}</b>。每个格子都当一次起点，相邻是指上下左右。`, view(null), { at: "init" });
     const dfs = (i, j, k) => {
       path.push([i, j]);
       if (k === word.length - 1) return true;
-      snap("匹配", `(${i},${j}) 是 ${word[k]}，对上了 word[${k}]。占住它，去相邻格子找 <b>${word[k + 1]}</b>。`, view([i, j]), { facts: [["已匹配", `${k + 1} / ${word.length}`]] });
+      snap("匹配", `(${i},${j}) 是 ${word[k]}，对上了 word[${k}]。占住它，去相邻格子找 <b>${word[k + 1]}</b>。`, view([i, j]), { at: "match", facts: [["已匹配", `${k + 1} / ${word.length}`]] });
       for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {
         if (x < 0 || y < 0 || x >= m || y >= n || path.some(([p, q]) => p === x && q === y) || B[x][y] !== word[k + 1]) continue;
         if (dfs(x, y, k + 1)) return true;
       }
       path.pop();
-      snap("回退", `(${i},${j}) 周围没有能接上的 ${word[k + 1]}，这条路走不通。去掉它的标记，退回上一步。`, view(path.length ? path[path.length - 1] : null), { kind: "warn", facts: [["已匹配", `${k} / ${word.length}`]] });
+      snap("回退", `(${i},${j}) 周围没有能接上的 ${word[k + 1]}，这条路走不通。去掉它的标记，退回上一步。`, view(path.length ? path[path.length - 1] : null), { at: "back", kind: "warn", facts: [["已匹配", `${k} / ${word.length}`]] });
       return false;
     };
     for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
       if (B[i][j] !== word[0]) continue;
-      snap("起点", `(${i},${j}) 是 ${word[0]}，从这里出发试试。`, view([i, j]));
-      if (dfs(i, j, 0)) { snap("找到", `最后一个字母也对上了，路径是 ${path.map(([x, y]) => `(${x},${y})`).join(" → ")}。返回 <b>true</b>。`, view(null, true), { kind: "ok", ans: true, facts: [["已匹配", `${word.length} / ${word.length}`]] }); return; }
+      snap("起点", `(${i},${j}) 是 ${word[0]}，从这里出发试试。`, view([i, j]), { at: "start" });
+      if (dfs(i, j, 0)) { snap("找到", `最后一个字母也对上了，路径是 ${path.map(([x, y]) => `(${x},${y})`).join(" → ")}。返回 <b>true</b>。`, view(null, true), { at: ["found", "yes"], kind: "ok", ans: true, facts: [["已匹配", `${word.length} / ${word.length}`]] }); return; }
     }
-    snap("找不到", `所有起点都试过了，拼不出 ${word}，返回 <b>false</b>。`, view(null), { kind: "warn", ans: false });
+    snap("找不到", `所有起点都试过了，拼不出 ${word}，返回 <b>false</b>。`, view(null), { at: "no", kind: "warn", ans: false });
   } }
 ] };
 (function () {
@@ -398,7 +400,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"board":["ABCE","SFCS","ADE
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -413,13 +415,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"board":["ABCE","SFCS","ADE
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -344,17 +346,17 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,2,3,4,4,3]},"note"
     const st = {};
     const view = (x, y) => { const cls = {}; for (const id in N) cls[id] = +id === x ? "a" : +id === y ? "b" : st[id] || ""; return [{ t: "tree", nodes: N, root: 0, cls }]; };
     const nm = (id) => (id === null ? "空" : N[id].v);
-    snap("开始", "a 从根的左孩子出发，b 从根的右孩子出发。", view(-1, -1));
+    snap("开始", "a 从根的左孩子出发，b 从根的右孩子出发。", view(-1, -1), { at: "start" });
     const check = (x, y, where) => {
-      if (x === null && y === null) { snap("都是空", `${where}：两边都是空，对称。`, view(-1, -1)); return true; }
-      if (x === null || y === null) { if (x !== null) st[x] = "w"; if (y !== null) st[y] = "w"; snap("不对称", `${where}：一边是 ${nm(x)}，另一边是 ${nm(y)}。只有一边有节点，<b>不对称</b>。`, view(x, y), { kind: "warn" }); return false; }
-      if (N[x].v !== N[y].v) { st[x] = st[y] = "w"; snap("不对称", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值不相等，<b>不对称</b>。`, view(x, y), { kind: "warn" }); return false; }
-      snap("值相等", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值相等。接着比较外侧的一对，再比较内侧的一对。`, view(x, y));
+      if (x === null && y === null) { snap("都是空", `${where}：两边都是空，对称。`, view(-1, -1), { at: "both" }); return true; }
+      if (x === null || y === null) { if (x !== null) st[x] = "w"; if (y !== null) st[y] = "w"; snap("不对称", `${where}：一边是 ${nm(x)}，另一边是 ${nm(y)}。只有一边有节点，<b>不对称</b>。`, view(x, y), { at: "diff", kind: "warn" }); return false; }
+      if (N[x].v !== N[y].v) { st[x] = st[y] = "w"; snap("不对称", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值不相等，<b>不对称</b>。`, view(x, y), { at: "diff", kind: "warn" }); return false; }
+      snap("值相等", `${where}：a 是 ${N[x].v}，b 是 ${N[y].v}，值相等。接着比较外侧的一对，再比较内侧的一对。`, view(x, y), { at: "same" });
       st[x] = st[y] = "k";
       return check(N[x].l, N[y].r, `${N[x].v} 的左 和 ${N[y].v} 的右（外侧）`) && check(N[x].r, N[y].l, `${N[x].v} 的右 和 ${N[y].v} 的左（内侧）`);
     };
     const ans = check(N[0].l, N[0].r, "根的左孩子和右孩子");
-    snap("完成", ans ? "所有成对的节点都比较通过，这棵树是对称的。" : "发现一对不对称的节点，后面不用再比，返回 false。", view(-1, -1), { kind: ans ? "ok" : "warn", ans });
+    snap("完成", ans ? "所有成对的节点都比较通过，这棵树是对称的。" : "发现一对不对称的节点，后面不用再比，返回 false。", view(-1, -1), { at: "start", kind: ans ? "ok" : "warn", ans });
   } }
 ] };
 (function () {
@@ -374,7 +376,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,2,3,4,4,3]},"note"
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -389,13 +391,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,2,3,4,4,3]},"note"
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -325,20 +327,20 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,4,5,6,7],"k":
 { t: "标准解法", note: null, legend: [["e","正在翻转的范围"],["a","正在交换的两个数"],["c","已经到位"]], build(a, snap) {
     const n = a.nums.slice(), len = n.length, k = a.k % len; let doneTo = -1;
     const view = (lo, hi, i, j) => [{ t: "array", label: "nums", items: n.map((v, t) => ({ v, cls: t === i || t === j ? "a" : t >= lo && t <= hi ? "e" : t <= doneTo ? "c" : "" })), ptrs: i === undefined ? {} : { i, j } }];
-    snap("开始", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : "。") + `目标是把最后 ${k} 个数搬到最前面。`, view(-1, -1), { facts: [["k % n", k]] });
-    const rev = (lo, hi, name) => {
-      snap(name, `${name}：翻转下标 ${lo} 到 ${hi} 这一段。`, view(lo, hi), { facts: [["k % n", k]] });
+    snap("开始", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : "。") + `目标是把最后 ${k} 个数搬到最前面。`, view(-1, -1), { at: "init", facts: [["k % n", k]] });
+    const rev = (lo, hi, name, tag) => {
+      snap(name, `${name}：翻转下标 ${lo} 到 ${hi} 这一段。`, view(lo, hi), { at: tag, facts: [["k % n", k]] });
       for (let i = lo, j = hi; i < j; i++, j--) {
         [n[i], n[j]] = [n[j], n[i]];
-        snap(name, `交换下标 ${i} 和 ${j}，两边往中间靠。`, view(lo, hi, i, j), { facts: [["k % n", k]] });
+        snap(name, `交换下标 ${i} 和 ${j}，两边往中间靠。`, view(lo, hi, i, j), { at: [tag, "swap"], facts: [["k % n", k]] });
       }
     };
-    rev(0, len - 1, "整体翻转");
-    if (k > 1) rev(0, k - 1, "翻转前 k 个");
+    rev(0, len - 1, "整体翻转", "all");
+    if (k > 1) rev(0, k - 1, "翻转前 k 个", "front");
     doneTo = k - 1;
-    if (len - k > 1) rev(k, len - 1, "翻转剩下的");
+    if (len - k > 1) rev(k, len - 1, "翻转剩下的", "back");
     doneTo = len - 1;
-    snap("完成", `三次翻转后得到 [${n.join(", ")}]。`, view(-1, -1), { kind: "ok", ans: n, facts: [["k % n", k]] });
+    snap("完成", `三次翻转后得到 [${n.join(", ")}]。`, view(-1, -1), { at: [], kind: "ok", ans: n, facts: [["k % n", k]] });
   } }
 ] };
 (function () {
@@ -358,7 +360,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,4,5,6,7],"k":
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -373,13 +375,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3,4,5,6,7],"k":
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

@@ -42,13 +42,405 @@
    "body": "每个起点最多往 3 个方向分叉（不能回头），时间 O(m·n·3ᴸ)，L 是单词长度。"
   }
  ],
+ "figures": {
+  "word2.jpg": [
+   {
+    "t": "grid",
+    "label": "ABCCED：A → B → C → C → E → D",
+    "ax": false,
+    "rows": [
+     [
+      {
+       "v": "A",
+       "cls": "e"
+      },
+      {
+       "v": "B",
+       "cls": "e"
+      },
+      {
+       "v": "C",
+       "cls": "e"
+      },
+      {
+       "v": "E",
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": "S",
+       "cls": ""
+      },
+      {
+       "v": "F",
+       "cls": ""
+      },
+      {
+       "v": "C",
+       "cls": "e"
+      },
+      {
+       "v": "S",
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": "A",
+       "cls": ""
+      },
+      {
+       "v": "D",
+       "cls": "e"
+      },
+      {
+       "v": "E",
+       "cls": "e"
+      },
+      {
+       "v": "E",
+       "cls": ""
+      }
+     ]
+    ]
+   }
+  ],
+  "word-1.jpg": [
+   {
+    "t": "grid",
+    "label": "SEE：S → E → E",
+    "ax": false,
+    "rows": [
+     [
+      {
+       "v": "A",
+       "cls": ""
+      },
+      {
+       "v": "B",
+       "cls": ""
+      },
+      {
+       "v": "C",
+       "cls": ""
+      },
+      {
+       "v": "E",
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": "S",
+       "cls": ""
+      },
+      {
+       "v": "F",
+       "cls": ""
+      },
+      {
+       "v": "C",
+       "cls": ""
+      },
+      {
+       "v": "S",
+       "cls": "e"
+      }
+     ],
+     [
+      {
+       "v": "A",
+       "cls": ""
+      },
+      {
+       "v": "D",
+       "cls": ""
+      },
+      {
+       "v": "E",
+       "cls": "e"
+      },
+      {
+       "v": "E",
+       "cls": "e"
+      }
+     ]
+    ]
+   }
+  ],
+  "word3.jpg": [
+   {
+    "t": "grid",
+    "label": "ABCB：走完 A → B → C 后要回到 B，但它已经用过了，同一个格子不能用两次",
+    "ax": false,
+    "rows": [
+     [
+      {
+       "v": "A",
+       "cls": "e"
+      },
+      {
+       "v": "B",
+       "cls": "w"
+      },
+      {
+       "v": "C",
+       "cls": "e"
+      },
+      {
+       "v": "E",
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": "S",
+       "cls": ""
+      },
+      {
+       "v": "F",
+       "cls": ""
+      },
+      {
+       "v": "C",
+       "cls": ""
+      },
+      {
+       "v": "S",
+       "cls": ""
+      }
+     ],
+     [
+      {
+       "v": "A",
+       "cls": ""
+      },
+      {
+       "v": "D",
+       "cls": ""
+      },
+      {
+       "v": "E",
+       "cls": ""
+      },
+      {
+       "v": "E",
+       "cls": ""
+      }
+     ]
+    ]
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：回溯 + 原地标记",
    "kind": null,
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def exist(self, board: List[List[str]], word: str) -> bool:\n        m, n = len(board), len(board[0])\n\n        def dfs(i, j, k):\n            if board[i][j] != word[k]:\n                return False\n            if k == len(word) - 1:\n                return True\n            board[i][j] = \"#\"                   # 占住这个格子\n            for x, y in (i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1):\n                if 0 <= x < m and 0 <= y < n and dfs(x, y, k + 1):\n                    board[i][j] = word[k]\n                    return True\n            board[i][j] = word[k]               # 回溯：还原\n            return False\n\n        for i in range(m):\n            for j in range(n):\n                if dfs(i, j, 0):\n                    return True\n        return False"
+   "code": "class Solution:\n    def exist(self, board: List[List[str]], word: str) -> bool:\n        m, n = len(board), len(board[0])\n\n        def dfs(i, j, k):\n            if board[i][j] != word[k]:\n                return False\n            if k == len(word) - 1:\n                return True\n            board[i][j] = \"#\"                   # 占住这个格子\n            for x, y in (i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1):\n                if 0 <= x < m and 0 <= y < n and dfs(x, y, k + 1):\n                    board[i][j] = word[k]\n                    return True\n            board[i][j] = word[k]               # 回溯：还原\n            return False\n\n        for i in range(m):\n            for j in range(n):\n                if dfs(i, j, 0):\n                    return True\n        return False",
+   "marks": {
+    "init": [
+     3
+    ],
+    "match": [
+     6,
+     10,
+     11,
+     12
+    ],
+    "found": [
+     8,
+     9
+    ],
+    "back": [
+     15,
+     16
+    ],
+    "start": [
+     18,
+     19,
+     20
+    ],
+    "yes": [
+     21
+    ],
+    "no": [
+     22
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    private static final int[][] DIRS = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};\n    private char[][] board;\n    private String word;\n    private int m, n;\n\n    public boolean exist(char[][] board, String word) {\n        this.board = board;\n        this.word = word;\n        m = board.length;\n        n = board[0].length;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (dfs(i, j, 0)) {\n                    return true;\n                }\n            }\n        }\n        return false;\n    }\n\n    private boolean dfs(int i, int j, int k) {\n        if (board[i][j] != word.charAt(k)) {\n            return false;\n        }\n        if (k == word.length() - 1) {\n            return true;\n        }\n        board[i][j] = '#';                          // 占住这个格子\n        for (int[] d : DIRS) {\n            int x = i + d[0], y = j + d[1];\n            if (x >= 0 && x < m && y >= 0 && y < n && dfs(x, y, k + 1)) {\n                board[i][j] = word.charAt(k);\n                return true;\n            }\n        }\n        board[i][j] = word.charAt(k);               // 回溯：还原\n        return false;\n    }\n}",
+     "marks": {
+      "init": [
+       10,
+       11
+      ],
+      "start": [
+       12,
+       13,
+       14
+      ],
+      "yes": [
+       15
+      ],
+      "no": [
+       19
+      ],
+      "match": [
+       23,
+       29,
+       30,
+       31,
+       32
+      ],
+      "found": [
+       26,
+       27
+      ],
+      "back": [
+       37,
+       38
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    bool exist(vector<vector<char>>& board, string word) {\n        int m = board.size(), n = board[0].size();\n        function<bool(int, int, int)> dfs = [&](int i, int j, int k) {\n            if (board[i][j] != word[k]) {\n                return false;\n            }\n            if (k == (int)word.size() - 1) {\n                return true;\n            }\n            board[i][j] = '#';                      // 占住这个格子\n            int dirs[4][2] = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};\n            for (auto& d : dirs) {\n                int x = i + d[0], y = j + d[1];\n                if (x >= 0 && x < m && y >= 0 && y < n && dfs(x, y, k + 1)) {\n                    board[i][j] = word[k];\n                    return true;\n                }\n            }\n            board[i][j] = word[k];                  // 回溯：还原\n            return false;\n        };\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (dfs(i, j, 0)) {\n                    return true;\n                }\n            }\n        }\n        return false;\n    }\n};",
+     "marks": {
+      "init": [
+       4
+      ],
+      "match": [
+       6,
+       12,
+       14,
+       15,
+       16
+      ],
+      "found": [
+       9,
+       10
+      ],
+      "back": [
+       21,
+       22
+      ],
+      "start": [
+       24,
+       25,
+       26
+      ],
+      "yes": [
+       27
+      ],
+      "no": [
+       31
+      ]
+     }
+    },
+    "go": {
+     "code": "func exist(board [][]byte, word string) bool {\n\tm, n := len(board), len(board[0])\n\tvar dfs func(i, j, k int) bool\n\tdfs = func(i, j, k int) bool {\n\t\tif board[i][j] != word[k] {\n\t\t\treturn false\n\t\t}\n\t\tif k == len(word)-1 {\n\t\t\treturn true\n\t\t}\n\t\tboard[i][j] = '#'                                              // 占住这个格子\n\t\tfor _, d := range [][2]int{{1, 0}, {-1, 0}, {0, 1}, {0, -1}} {\n\t\t\tx, y := i+d[0], j+d[1]\n\t\t\tif x >= 0 && x < m && y >= 0 && y < n && dfs(x, y, k+1) {\n\t\t\t\tboard[i][j] = word[k]\n\t\t\t\treturn true\n\t\t\t}\n\t\t}\n\t\tboard[i][j] = word[k] // 回溯：还原\n\t\treturn false\n\t}\n\tfor i := 0; i < m; i++ {\n\t\tfor j := 0; j < n; j++ {\n\t\t\tif dfs(i, j, 0) {\n\t\t\t\treturn true\n\t\t\t}\n\t\t}\n\t}\n\treturn false\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "match": [
+       5,
+       11,
+       12,
+       13,
+       14
+      ],
+      "found": [
+       8,
+       9
+      ],
+      "back": [
+       19,
+       20
+      ],
+      "start": [
+       22,
+       23,
+       24
+      ],
+      "yes": [
+       25
+      ],
+      "no": [
+       29
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var exist = function(board, word) {\n    const m = board.length, n = board[0].length;\n    const dfs = (i, j, k) => {\n        if (board[i][j] !== word[k]) {\n            return false;\n        }\n        if (k === word.length - 1) {\n            return true;\n        }\n        board[i][j] = \"#\";                          // 占住这个格子\n        for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {\n            if (x >= 0 && x < m && y >= 0 && y < n && dfs(x, y, k + 1)) {\n                board[i][j] = word[k];\n                return true;\n            }\n        }\n        board[i][j] = word[k];                      // 回溯：还原\n        return false;\n    };\n    for (let i = 0; i < m; i++) {\n        for (let j = 0; j < n; j++) {\n            if (dfs(i, j, 0)) {\n                return true;\n            }\n        }\n    }\n    return false;\n};",
+     "marks": {
+      "init": [
+       2
+      ],
+      "match": [
+       4,
+       10,
+       11,
+       12
+      ],
+      "found": [
+       7,
+       8
+      ],
+      "back": [
+       17,
+       18
+      ],
+      "start": [
+       20,
+       21,
+       22
+      ],
+      "yes": [
+       23
+      ],
+      "no": [
+       27
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function exist(board: string[][], word: string): boolean {\n    const m = board.length, n = board[0].length;\n    const dfs = (i: number, j: number, k: number): boolean => {\n        if (board[i][j] !== word[k]) {\n            return false;\n        }\n        if (k === word.length - 1) {\n            return true;\n        }\n        board[i][j] = \"#\";                          // 占住这个格子\n        for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {\n            if (x >= 0 && x < m && y >= 0 && y < n && dfs(x, y, k + 1)) {\n                board[i][j] = word[k];\n                return true;\n            }\n        }\n        board[i][j] = word[k];                      // 回溯：还原\n        return false;\n    };\n    for (let i = 0; i < m; i++) {\n        for (let j = 0; j < n; j++) {\n            if (dfs(i, j, 0)) {\n                return true;\n            }\n        }\n    }\n    return false;\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "match": [
+       4,
+       10,
+       11,
+       12
+      ],
+      "found": [
+       7,
+       8
+      ],
+      "back": [
+       17,
+       18
+      ],
+      "start": [
+       20,
+       21,
+       22
+      ],
+      "yes": [
+       23
+      ],
+      "no": [
+       27
+      ]
+     }
+    }
+   }
   },
   {
    "t": "简洁写法：any 串起四个方向",
@@ -99,7 +491,7 @@
     "note": "word = \"ABCB\""
    }
   ],
-  "build": "build(a, snap) {\n    const B = a.board.map((r) => r.split(\"\")), word = a.word, m = B.length, n = B[0].length, path = [];\n    const view = (cur, done) => [\n      { t: \"grid\", label: \"board\", rows: B.map((r, i) => r.map((v, j) => { const on = path.some(([x, y]) => x === i && y === j); return { v, cls: done && on ? \"c\" : cur && cur[0] === i && cur[1] === j ? \"a\" : on ? \"e\" : \"\" }; })) },\n      { t: \"array\", label: \"word\", items: word.split(\"\").map((ch, k) => ({ v: ch, cls: k < path.length ? (done ? \"c\" : \"e\") : \"\" })), ptrs: { k: path.length < word.length ? path.length : null } },\n    ];\n    snap(\"开始\", `在网格里找单词 <b>${word}</b>。每个格子都当一次起点，相邻是指上下左右。`, view(null));\n    const dfs = (i, j, k) => {\n      path.push([i, j]);\n      if (k === word.length - 1) return true;\n      snap(\"匹配\", `(${i},${j}) 是 ${word[k]}，对上了 word[${k}]。占住它，去相邻格子找 <b>${word[k + 1]}</b>。`, view([i, j]), { facts: [[\"已匹配\", `${k + 1} / ${word.length}`]] });\n      for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {\n        if (x < 0 || y < 0 || x >= m || y >= n || path.some(([p, q]) => p === x && q === y) || B[x][y] !== word[k + 1]) continue;\n        if (dfs(x, y, k + 1)) return true;\n      }\n      path.pop();\n      snap(\"回退\", `(${i},${j}) 周围没有能接上的 ${word[k + 1]}，这条路走不通。去掉它的标记，退回上一步。`, view(path.length ? path[path.length - 1] : null), { kind: \"warn\", facts: [[\"已匹配\", `${k} / ${word.length}`]] });\n      return false;\n    };\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      if (B[i][j] !== word[0]) continue;\n      snap(\"起点\", `(${i},${j}) 是 ${word[0]}，从这里出发试试。`, view([i, j]));\n      if (dfs(i, j, 0)) { snap(\"找到\", `最后一个字母也对上了，路径是 ${path.map(([x, y]) => `(${x},${y})`).join(\" → \")}。返回 <b>true</b>。`, view(null, true), { kind: \"ok\", ans: true, facts: [[\"已匹配\", `${word.length} / ${word.length}`]] }); return; }\n    }\n    snap(\"找不到\", `所有起点都试过了，拼不出 ${word}，返回 <b>false</b>。`, view(null), { kind: \"warn\", ans: false });\n  }",
+  "build": "build(a, snap) {\n    const B = a.board.map((r) => r.split(\"\")), word = a.word, m = B.length, n = B[0].length, path = [];\n    const view = (cur, done) => [\n      { t: \"grid\", label: \"board\", rows: B.map((r, i) => r.map((v, j) => { const on = path.some(([x, y]) => x === i && y === j); return { v, cls: done && on ? \"c\" : cur && cur[0] === i && cur[1] === j ? \"a\" : on ? \"e\" : \"\" }; })) },\n      { t: \"array\", label: \"word\", items: word.split(\"\").map((ch, k) => ({ v: ch, cls: k < path.length ? (done ? \"c\" : \"e\") : \"\" })), ptrs: { k: path.length < word.length ? path.length : null } },\n    ];\n    snap(\"开始\", `在网格里找单词 <b>${word}</b>。每个格子都当一次起点，相邻是指上下左右。`, view(null), { at: \"init\" });\n    const dfs = (i, j, k) => {\n      path.push([i, j]);\n      if (k === word.length - 1) return true;\n      snap(\"匹配\", `(${i},${j}) 是 ${word[k]}，对上了 word[${k}]。占住它，去相邻格子找 <b>${word[k + 1]}</b>。`, view([i, j]), { at: \"match\", facts: [[\"已匹配\", `${k + 1} / ${word.length}`]] });\n      for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {\n        if (x < 0 || y < 0 || x >= m || y >= n || path.some(([p, q]) => p === x && q === y) || B[x][y] !== word[k + 1]) continue;\n        if (dfs(x, y, k + 1)) return true;\n      }\n      path.pop();\n      snap(\"回退\", `(${i},${j}) 周围没有能接上的 ${word[k + 1]}，这条路走不通。去掉它的标记，退回上一步。`, view(path.length ? path[path.length - 1] : null), { at: \"back\", kind: \"warn\", facts: [[\"已匹配\", `${k} / ${word.length}`]] });\n      return false;\n    };\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      if (B[i][j] !== word[0]) continue;\n      snap(\"起点\", `(${i},${j}) 是 ${word[0]}，从这里出发试试。`, view([i, j]), { at: \"start\" });\n      if (dfs(i, j, 0)) { snap(\"找到\", `最后一个字母也对上了，路径是 ${path.map(([x, y]) => `(${x},${y})`).join(\" → \")}。返回 <b>true</b>。`, view(null, true), { at: [\"found\", \"yes\"], kind: \"ok\", ans: true, facts: [[\"已匹配\", `${word.length} / ${word.length}`]] }); return; }\n    }\n    snap(\"找不到\", `所有起点都试过了，拼不出 ${word}，返回 <b>false</b>。`, view(null), { at: \"no\", kind: \"warn\", ans: false });\n  }",
   "methods": [
    {
     "t": "标准解法",
@@ -119,7 +511,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const B = a.board.map((r) => r.split(\"\")), word = a.word, m = B.length, n = B[0].length, path = [];\n    const view = (cur, done) => [\n      { t: \"grid\", label: \"board\", rows: B.map((r, i) => r.map((v, j) => { const on = path.some(([x, y]) => x === i && y === j); return { v, cls: done && on ? \"c\" : cur && cur[0] === i && cur[1] === j ? \"a\" : on ? \"e\" : \"\" }; })) },\n      { t: \"array\", label: \"word\", items: word.split(\"\").map((ch, k) => ({ v: ch, cls: k < path.length ? (done ? \"c\" : \"e\") : \"\" })), ptrs: { k: path.length < word.length ? path.length : null } },\n    ];\n    snap(\"开始\", `在网格里找单词 <b>${word}</b>。每个格子都当一次起点，相邻是指上下左右。`, view(null));\n    const dfs = (i, j, k) => {\n      path.push([i, j]);\n      if (k === word.length - 1) return true;\n      snap(\"匹配\", `(${i},${j}) 是 ${word[k]}，对上了 word[${k}]。占住它，去相邻格子找 <b>${word[k + 1]}</b>。`, view([i, j]), { facts: [[\"已匹配\", `${k + 1} / ${word.length}`]] });\n      for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {\n        if (x < 0 || y < 0 || x >= m || y >= n || path.some(([p, q]) => p === x && q === y) || B[x][y] !== word[k + 1]) continue;\n        if (dfs(x, y, k + 1)) return true;\n      }\n      path.pop();\n      snap(\"回退\", `(${i},${j}) 周围没有能接上的 ${word[k + 1]}，这条路走不通。去掉它的标记，退回上一步。`, view(path.length ? path[path.length - 1] : null), { kind: \"warn\", facts: [[\"已匹配\", `${k} / ${word.length}`]] });\n      return false;\n    };\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      if (B[i][j] !== word[0]) continue;\n      snap(\"起点\", `(${i},${j}) 是 ${word[0]}，从这里出发试试。`, view([i, j]));\n      if (dfs(i, j, 0)) { snap(\"找到\", `最后一个字母也对上了，路径是 ${path.map(([x, y]) => `(${x},${y})`).join(\" → \")}。返回 <b>true</b>。`, view(null, true), { kind: \"ok\", ans: true, facts: [[\"已匹配\", `${word.length} / ${word.length}`]] }); return; }\n    }\n    snap(\"找不到\", `所有起点都试过了，拼不出 ${word}，返回 <b>false</b>。`, view(null), { kind: \"warn\", ans: false });\n  }"
+    "build": "build(a, snap) {\n    const B = a.board.map((r) => r.split(\"\")), word = a.word, m = B.length, n = B[0].length, path = [];\n    const view = (cur, done) => [\n      { t: \"grid\", label: \"board\", rows: B.map((r, i) => r.map((v, j) => { const on = path.some(([x, y]) => x === i && y === j); return { v, cls: done && on ? \"c\" : cur && cur[0] === i && cur[1] === j ? \"a\" : on ? \"e\" : \"\" }; })) },\n      { t: \"array\", label: \"word\", items: word.split(\"\").map((ch, k) => ({ v: ch, cls: k < path.length ? (done ? \"c\" : \"e\") : \"\" })), ptrs: { k: path.length < word.length ? path.length : null } },\n    ];\n    snap(\"开始\", `在网格里找单词 <b>${word}</b>。每个格子都当一次起点，相邻是指上下左右。`, view(null), { at: \"init\" });\n    const dfs = (i, j, k) => {\n      path.push([i, j]);\n      if (k === word.length - 1) return true;\n      snap(\"匹配\", `(${i},${j}) 是 ${word[k]}，对上了 word[${k}]。占住它，去相邻格子找 <b>${word[k + 1]}</b>。`, view([i, j]), { at: \"match\", facts: [[\"已匹配\", `${k + 1} / ${word.length}`]] });\n      for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {\n        if (x < 0 || y < 0 || x >= m || y >= n || path.some(([p, q]) => p === x && q === y) || B[x][y] !== word[k + 1]) continue;\n        if (dfs(x, y, k + 1)) return true;\n      }\n      path.pop();\n      snap(\"回退\", `(${i},${j}) 周围没有能接上的 ${word[k + 1]}，这条路走不通。去掉它的标记，退回上一步。`, view(path.length ? path[path.length - 1] : null), { at: \"back\", kind: \"warn\", facts: [[\"已匹配\", `${k} / ${word.length}`]] });\n      return false;\n    };\n    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n      if (B[i][j] !== word[0]) continue;\n      snap(\"起点\", `(${i},${j}) 是 ${word[0]}，从这里出发试试。`, view([i, j]), { at: \"start\" });\n      if (dfs(i, j, 0)) { snap(\"找到\", `最后一个字母也对上了，路径是 ${path.map(([x, y]) => `(${x},${y})`).join(\" → \")}。返回 <b>true</b>。`, view(null, true), { at: [\"found\", \"yes\"], kind: \"ok\", ans: true, facts: [[\"已匹配\", `${word.length} / ${word.length}`]] }); return; }\n    }\n    snap(\"找不到\", `所有起点都试过了，拼不出 ${word}，返回 <b>false</b>。`, view(null), { at: \"no\", kind: \"warn\", ans: false });\n  }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const rows = 3, cols = 4, B = Array.from({ length: rows }, () => R.word(cols, \"ABCDE\"));\n    let word;\n    if (R.chance(0.6)) {\n      // 在网格里随机走一条不重复的路，保证能找到\n      let i = R.int(0, rows - 1), j = R.int(0, cols - 1);\n      const seen = new Set([`${i},${j}`]);\n      word = B[i][j];\n      const len = R.int(3, 5);\n      while (word.length < len) {\n        const nb = [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]].filter(([x, y]) => x >= 0 && y >= 0 && x < rows && y < cols && !seen.has(`${x},${y}`));\n        if (!nb.length) break;\n        [i, j] = R.pick(nb);\n        seen.add(`${i},${j}`);\n        word += B[i][j];\n      }\n    } else word = R.word(R.int(3, 4), \"ABCDE\");\n    return { args: { board: B, word }, note: `board = ${R.fmt(B)}, word = \"${word}\"`, py: `Solution().exist([list(r) for r in ${R.py(B)}], \"${word}\")` };\n  })(R); return { args: r.args, note: r.note }; }"

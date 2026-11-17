@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -331,19 +333,19 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
       { t: "chips", label: "path", items: path.slice(), empty: "空" },
       { t: "chips", label: "已收集的子集", items: res.map((r, k) => ({ v: `[${r.join(",")}]`, cls: k === res.length - 1 && pick < 0 ? "c" : "" })), empty: "还没有" },
     ];
-    snap("开始", "从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。", view(-1, -1));
+    snap("开始", "从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。", view(-1, -1), { at: "init" });
     const dfs = (start) => {
       res.push(path.slice());
-      snap("收集", `进入 dfs(${start})，先收集 <b>[${path.join(",")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : "后面没有数可挑了，返回。"), view(start, -1), { facts: [["已收集", res.length]] });
+      snap("收集", `进入 dfs(${start})，先收集 <b>[${path.join(",")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : "后面没有数可挑了，返回。"), view(start, -1), { at: "collect", facts: [["已收集", res.length]] });
       for (let i = start; i < nums.length; i++) {
         path.push(nums[i]);
-        snap("放入", `把 ${nums[i]} 放进 path，变成 [${path.join(",")}]，然后进入 dfs(${i + 1})。`, view(start, i), { facts: [["已收集", res.length]] });
+        snap("放入", `把 ${nums[i]} 放进 path，变成 [${path.join(",")}]，然后进入 dfs(${i + 1})。`, view(start, i), { at: "pick", facts: [["已收集", res.length]] });
         dfs(i + 1);
         path.pop();
       }
     };
     dfs(0);
-    snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
+    snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
   } },
 { t: "逐个加入", note: "和简洁写法一样：从只有空集开始。每来一个数 x，已有的每个子集都可以选择加上 x，于是子集个数翻一倍。", legend: [["a","正在加入的数"],["c","这一轮新生成的子集"]], build(a, snap) {
       const nums = a.nums; let res = [[]], fresh = 0;
@@ -351,14 +353,14 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
         { t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i === k ? "a" : i < k ? "d" : "" })) },
         { t: "chips", label: "res", items: res.map((r, i) => ({ v: `[${r.join(",")}]`, cls: i >= res.length - fresh ? "c" : "" })) },
       ];
-      snap("开始", "res 里只有一个空集。", view(-1), { facts: [["子集个数", 1]] });
+      snap("开始", "res 里只有一个空集。", view(-1), { at: "init", facts: [["子集个数", 1]] });
       nums.forEach((x, k) => {
         const add = res.map((s) => [...s, x]);
         res = res.concat(add); fresh = add.length;
-        snap(`加入 ${x}`, `已有的 ${add.length} 个子集每个都加上 ${x}，得到 ${add.map((s) => `[${s.join(",")}]`).join("、")}，接在 res 后面。子集个数翻倍成 ${res.length}。`, view(k), { facts: [["子集个数", res.length]] });
+        snap(`加入 ${x}`, `已有的 ${add.length} 个子集每个都加上 ${x}，得到 ${add.map((s) => `[${s.join(",")}]`).join("、")}，接在 res 后面。子集个数翻倍成 ${res.length}。`, view(k), { at: "add", facts: [["子集个数", res.length]] });
       });
       fresh = 0;
-      snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(nums.length), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["子集个数", res.length]] });
+      snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(nums.length), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["子集个数", res.length]] });
     } }
 ] };
 (function () {
@@ -378,7 +380,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -393,13 +395,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

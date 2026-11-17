@@ -43,6 +43,76 @@
    "body": "时间 O(n)，空间 O(1)。"
   }
  ],
+ "figures": {
+  "circularlinkedlist.png": [
+   {
+    "t": "list",
+    "label": "pos = 1：环的入口是下标 1 的节点",
+    "nodes": [
+     {
+      "v": 3,
+      "cls": ""
+     },
+     {
+      "v": 2,
+      "cls": "c"
+     },
+     {
+      "v": 0,
+      "cls": ""
+     },
+     {
+      "v": -4,
+      "cls": ""
+     }
+    ],
+    "next": [
+     1,
+     2,
+     3,
+     1
+    ],
+    "showNil": false
+   }
+  ],
+  "circularlinkedlist_test2.png": [
+   {
+    "t": "list",
+    "label": "pos = 0：环的入口是头节点",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": "c"
+     },
+     {
+      "v": 2,
+      "cls": ""
+     }
+    ],
+    "next": [
+     1,
+     0
+    ],
+    "showNil": false
+   }
+  ],
+  "circularlinkedlist_test3.png": [
+   {
+    "t": "list",
+    "label": "pos = -1：没有环，返回空",
+    "nodes": [
+     {
+      "v": 1,
+      "cls": ""
+     }
+    ],
+    "next": [
+     null
+    ],
+    "showNil": true
+   }
+  ]
+ },
  "codes": [
   {
    "t": "标准解法：快慢指针，相遇后从头再走",

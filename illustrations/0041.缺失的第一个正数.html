@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -325,19 +327,19 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[3,4,-1,1]},"note":"
 { t: "标准解法", note: null, legend: [["a","当前位置"],["b","要换过去的位置"],["c","坐对了：nums[i] = i + 1"],["w","第一个坐错的位置"]], build(a, snap) {
     const n = a.nums.slice(), len = n.length;
     const view = (i, j, bad) => [{ t: "array", label: "nums（下标 i 上应该坐 i + 1）", items: n.map((v, t) => ({ v, cls: t === bad ? "w" : t === i ? "a" : t === j ? "b" : v === t + 1 ? "c" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", `n = ${len}，答案只可能在 1 到 ${len + 1} 之间。规则：数 x 应该放在下标 x − 1。`, view(-1));
+    snap("开始", `n = ${len}，答案只可能在 1 到 ${len + 1} 之间。规则：数 x 应该放在下标 x − 1。`, view(-1), { at: "init" });
     for (let i = 0; i < len; i++) {
       while (n[i] >= 1 && n[i] <= len && n[n[i] - 1] !== n[i]) {
         const j = n[i] - 1, x = n[i];
-        snap("交换", `nums[${i}] = ${x}，它应该在下标 ${j}，那里现在是 ${n[j]}。把 ${x} 换过去。`, view(i, j));
+        snap("交换", `nums[${i}] = ${x}，它应该在下标 ${j}，那里现在是 ${n[j]}。把 ${x} 换过去。`, view(i, j), { at: "swap" });
         [n[i], n[j]] = [n[j], n[i]];
       }
       const x = n[i];
-      snap("不用动", x === i + 1 ? `nums[${i}] = ${x}，已经坐对了。` : x < 1 || x > len ? `nums[${i}] = ${x} 不在 1 到 ${len} 之间，没有它的座位，留在这里。` : `nums[${i}] = ${x}，它的座位（下标 ${x - 1}）上已经有一个 ${x} 了，是重复的，留在这里。`, view(i), { kind: x === i + 1 ? "" : "warn" });
+      snap("不用动", x === i + 1 ? `nums[${i}] = ${x}，已经坐对了。` : x < 1 || x > len ? `nums[${i}] = ${x} 不在 1 到 ${len} 之间，没有它的座位，留在这里。` : `nums[${i}] = ${x}，它的座位（下标 ${x - 1}）上已经有一个 ${x} 了，是重复的，留在这里。`, view(i), { at: "stay", kind: x === i + 1 ? "" : "warn" });
     }
     let ans = len + 1, bad = -1;
     for (let i = 0; i < len; i++) if (n[i] !== i + 1) { ans = i + 1; bad = i; break; }
-    snap("完成", bad >= 0 ? `从左往右找第一个坐错的位置：下标 ${bad} 上应该是 ${bad + 1}，实际是 ${n[bad]}。缺失的第一个正数是 <b>${ans}</b>。` : `每个位置都坐对了，1 到 ${len} 都在，答案是 <b>${ans}</b>。`, view(-1, -1, bad), { kind: "ok", ans });
+    snap("完成", bad >= 0 ? `从左往右找第一个坐错的位置：下标 ${bad} 上应该是 ${bad + 1}，实际是 ${n[bad]}。缺失的第一个正数是 <b>${ans}</b>。` : `每个位置都坐对了，1 到 ${len} 都在，答案是 <b>${ans}</b>。`, view(-1, -1, bad), { at: bad >= 0 ? "scan" : ["scan", "done"], kind: "ok", ans });
   } }
 ] };
 (function () {
@@ -357,7 +359,7 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[3,4,-1,1]},"note":"
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -372,13 +374,15 @@ const SPEC = { presets: [{"label":"示例 2","args":{"nums":[3,4,-1,1]},"note":"
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

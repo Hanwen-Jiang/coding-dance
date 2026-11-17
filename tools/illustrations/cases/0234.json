@@ -1,0 +1,23 @@
+{
+ "sig": {"fn":"isPalindrome","params":["ListNode"],"ret":"bool"},
+ "cases": [
+  {"in":[[1,2,2,1]],"out":true},
+  {"in":[[1,2,3,2,1]],"out":true},
+  {"in":[[1,2,3,3,1]],"out":false},
+  {"in":[[1]],"out":true},
+  {"in":[[1,2]],"out":false},
+  {"in":[[1,1]],"out":true},
+  {"in":[[1,0,0]],"out":false},
+  {"in":[[9,9,9,9,9]],"out":true},
+  {"in":[[4,4]],"out":true},
+  {"in":[[1,1,5,3,5]],"out":false},
+  {"in":[[4,4,1,4,4]],"out":true},
+  {"in":[[4,4,5]],"out":false},
+  {"in":[[1,4,2,1,2]],"out":false},
+  {"in":[[3,5,3]],"out":true},
+  {"in":[[4,2,4,4]],"out":false},
+  {"in":[[4,1,4,4,4]],"out":false},
+  {"in":[[4,5,1,1,4]],"out":false},
+  {"in":[[1,2,5,5,5,5,2,1]],"out":true}
+ ]
+}

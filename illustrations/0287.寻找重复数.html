@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -333,18 +335,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,3,4,2,2]},"note":
       { t: "array", label: "nums（下标 i 指向下标 nums[i]）", items: nums.map((v, k) => ({ v, cls: meet && k === slow ? "c" : k === slow ? "a" : k === fast ? "b" : "" })), ptrs: { slow, fast } },
       { t: "chips", label: "从 0 出发走过的路", items: (() => { const out = [0]; let p = 0; for (let t = 0; t < nums.length + 2; t++) { p = nums[p]; out.push(p); } return out.map(String); })() },
     ];
-    snap("开始", `把下标当节点：0 → ${nums[0]} → ${nums[nums[0]]} → …，一定会进入一个环。slow、fast 都从 0 出发。`, view(false), { facts: [["slow", slow], ["fast", fast]] });
+    snap("开始", `把下标当节点：0 → ${nums[0]} → ${nums[nums[0]]} → …，一定会进入一个环。slow、fast 都从 0 出发。`, view(false), { at: "init", facts: [["slow", slow], ["fast", fast]] });
     do {
       slow = nums[slow]; fast = nums[nums[fast]];
-      snap(slow === fast ? "相遇" : "快慢指针", slow === fast ? `slow 和 fast 在下标 ${slow} 相遇，说明有环。` : `slow 走一步到 ${slow}，fast 走两步到 ${fast}。`, view(slow === fast), { kind: slow === fast ? "ok" : "", facts: [["slow", slow], ["fast", fast]] });
+      snap(slow === fast ? "相遇" : "快慢指针", slow === fast ? `slow 和 fast 在下标 ${slow} 相遇，说明有环。` : `slow 走一步到 ${slow}，fast 走两步到 ${fast}。`, view(slow === fast), { at: slow === fast ? ["run", "meet"] : "run", kind: slow === fast ? "ok" : "", facts: [["slow", slow], ["fast", fast]] });
     } while (slow !== fast);
     slow = 0;
-    snap("回到起点", "slow 回到起点 0，fast 留在相遇点。接下来两个指针每次都只走一步。", view(false), { facts: [["slow", slow], ["fast", fast]] });
+    snap("回到起点", "slow 回到起点 0，fast 留在相遇点。接下来两个指针每次都只走一步。", view(false), { at: "reset", facts: [["slow", slow], ["fast", fast]] });
     while (slow !== fast) {
       slow = nums[slow]; fast = nums[fast];
-      snap(slow === fast ? "入口" : "同速走", slow === fast ? `两个指针在 ${slow} 再次相遇，这就是环的入口，也就是重复的数。` : `slow 到 ${slow}，fast 到 ${fast}。`, view(slow === fast), { facts: [["slow", slow], ["fast", fast]] });
+      snap(slow === fast ? "入口" : "同速走", slow === fast ? `两个指针在 ${slow} 再次相遇，这就是环的入口，也就是重复的数。` : `slow 到 ${slow}，fast 到 ${fast}。`, view(slow === fast), { at: "walk", facts: [["slow", slow], ["fast", fast]] });
     }
-    snap("完成", `重复的数是 <b>${slow}</b>。`, view(true), { kind: "ok", ans: slow, facts: [["slow", slow], ["fast", fast]] });
+    snap("完成", `重复的数是 <b>${slow}</b>。`, view(true), { at: "done", kind: "ok", ans: slow, facts: [["slow", slow], ["fast", fast]] });
   } },
 { t: "对值二分", note: "和简洁写法一样：设重复的数是 d。数一数 nums 里 ≤ x 的有几个：x &lt; d 时不会超过 x，x ≥ d 时一定超过 x。二分找第一个超过的 x。", legend: [["a","mid"],["e","nums 里 ≤ mid 的数"],["d","已经排除的值"],["c","答案"]], build(a, snap) {
       const nums = a.nums, n = nums.length; let lo = 0, hi = n;
@@ -353,18 +355,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,3,4,2,2]},"note":
         { t: "array", label: "候选的值 x（0 到 n − 1）", items: Array.from({ length: n }, (_, x) => ({ v: x, cls: x === ans ? "c" : x === mid ? "a" : x < lo || x >= hi ? "d" : "" })), idx: false, ptrs: { lo, hi: hi < n ? hi : null, mid: mid >= 0 ? mid : null } },
       ];
       const f = (c) => ({ facts: [["lo", lo], ["hi", hi], ["≤ mid 的个数", c === undefined ? "—" : c]] });
-      snap("开始", `值都在 1 到 ${n - 1} 之间。1 到 x 只有 x 个不同的值，如果 nums 里 ≤ x 的数超过 x 个，1 到 x 里一定有重复。在 [${lo}, ${hi}) 里二分。`, view(-1, -1), f());
+      snap("开始", `值都在 1 到 ${n - 1} 之间。1 到 x 只有 x 个不同的值，如果 nums 里 ≤ x 的数超过 x 个，1 到 x 里一定有重复。在 [${lo}, ${hi}) 里二分。`, view(-1, -1), { at: "init", ...f() });
       while (lo < hi) {
         const mid = (lo + hi) >> 1, c = nums.filter((v) => v <= mid).length;
         if (c > mid) {
           hi = mid;
-          snap("往左", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，比 ${mid} 多，重复的数 ≤ ${mid}。hi = ${mid}。`, view(mid, -1), f(c));
+          snap("往左", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，比 ${mid} 多，重复的数 ≤ ${mid}。hi = ${mid}。`, view(mid, -1), { at: "left", ...f(c) });
         } else {
           lo = mid + 1;
-          snap("往右", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，没有超过 ${mid}，重复的数比 ${mid} 大。lo = ${mid + 1}。`, view(mid, -1), f(c));
+          snap("往右", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，没有超过 ${mid}，重复的数比 ${mid} 大。lo = ${mid + 1}。`, view(mid, -1), { at: "right", ...f(c) });
         }
       }
-      snap("完成", `lo = hi = ${lo}，它是第一个「≤ x 的数超过 x 个」的值，重复的数是 <b>${lo}</b>。时间 O(n log n)。`, view(-1, lo), { kind: "ok", ans: lo, ...f() });
+      snap("完成", `lo = hi = ${lo}，它是第一个「≤ x 的数超过 x 个」的值，重复的数是 <b>${lo}</b>。时间 O(n log n)。`, view(-1, lo), { at: "done", kind: "ok", ans: lo, ...f() });
     } }
 ] };
 (function () {
@@ -384,7 +386,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,3,4,2,2]},"note":
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -399,13 +401,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,3,4,2,2]},"note":
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

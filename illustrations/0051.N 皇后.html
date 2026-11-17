@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -346,21 +348,21 @@ const SPEC = { presets: [{"label":"n = 4","args":{"n":4},"note":"n = 4"},{"label
       return { v: "", cls: r >= q.length && hit(r, c) ? "d" : "" };
     })) }];
     const f = () => ({ facts: [["已放", `${q.length} / ${n}`], ["找到", res.length]] });
-    snap("开始", `在 ${n}×${n} 的棋盘上放 ${n} 个皇后。从第 0 行开始，一行放一个。`, view(), f());
+    snap("开始", `在 ${n}×${n} 的棋盘上放 ${n} 个皇后。从第 0 行开始，一行放一个。`, view(), { at: "init", ...f() });
     const dfs = (r) => {
-      if (r === n) { res.push(q.map((c) => ".".repeat(c) + "Q" + ".".repeat(n - c - 1))); snap("找到", `${n} 行都放好了，记下这种摆法（第 ${res.length} 种）。`, view(true), { kind: "ok", ...f() }); return; }
+      if (r === n) { res.push(q.map((c) => ".".repeat(c) + "Q" + ".".repeat(n - c - 1))); snap("找到", `${n} 行都放好了，记下这种摆法（第 ${res.length} 种）。`, view(true), { at: "found", kind: "ok", ...f() }); return; }
       let any = false;
       for (let c = 0; c < n; c++) {
         if (hit(r, c)) continue;
         any = true; q.push(c);
-        snap(`第 ${r} 行`, `第 ${r} 行第 ${c} 列没有被攻击，放一个皇后。灰色是它和上面的皇后能攻击到的格子。`, view(), f());
+        snap(`第 ${r} 行`, `第 ${r} 行第 ${c} 列没有被攻击，放一个皇后。灰色是它和上面的皇后能攻击到的格子。`, view(), { at: "place", ...f() });
         dfs(r + 1);
         q.pop();
       }
-      if (r > 0) snap("回溯", `第 ${r} 行${any ? "剩下的列都试过了" : "每一列都被攻击了，放不下"}。拿掉第 ${r - 1} 行的皇后，换下一列试。`, view(), { kind: "warn", ...f() });
+      if (r > 0) snap("回溯", `第 ${r} 行${any ? "剩下的列都试过了" : "每一列都被攻击了，放不下"}。拿掉第 ${r - 1} 行的皇后，换下一列试。`, view(), { at: "back", kind: "warn", ...f() });
     };
     dfs(0);
-    snap("完成", `所有摆法都试过了，一共 <b>${res.length}</b> 种。`, view(), { kind: "ok", ans: res.map((x) => x.slice()), ...f() });
+    snap("完成", `所有摆法都试过了，一共 <b>${res.length}</b> 种。`, view(), { at: "done", kind: "ok", ans: res.map((x) => x.slice()), ...f() });
   } }
 ] };
 (function () {
@@ -380,7 +382,7 @@ const SPEC = { presets: [{"label":"n = 4","args":{"n":4},"note":"n = 4"},{"label
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -395,13 +397,15 @@ const SPEC = { presets: [{"label":"n = 4","args":{"n":4},"note":"n = 4"},{"label
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

@@ -10,24 +10,24 @@ module.exports = {
   codes: [{ t: "标准解法：回溯", code: `
 class Solution:
     def subsets(self, nums: List[int]) -> List[List[int]]:
-        res, path = [], []
+        res, path = [], []              #@init
 
         def dfs(start):
-            res.append(path[:])             # 每个节点都是一个子集
+            res.append(path[:])             # 每个节点都是一个子集 #@collect
             for i in range(start, len(nums)):
-                path.append(nums[i])
-                dfs(i + 1)                  # 下一个只能从后面选
+                path.append(nums[i])        #@pick
+                dfs(i + 1)                  # 下一个只能从后面选 #@pick
                 path.pop()
 
-        dfs(0)
-        return res
-` }, { t: "简洁写法：逐个加入", kind: "elegant", note: "已有的每个子集都可以选择再加上 x，于是每处理一个数，子集个数翻一倍。", code: `
+        dfs(0)                          #@init
+        return res                      #@done
+` }, { t: "简洁写法：逐个加入", key: "iter", kind: "elegant", note: "已有的每个子集都可以选择再加上 x，于是每处理一个数，子集个数翻一倍。", code: `
 class Solution:
     def subsets(self, nums: List[int]) -> List[List[int]]:
-        res = [[]]
+        res = [[]]                          #@init
         for x in nums:
-            res += [s + [x] for s in res]
-        return res
+            res += [s + [x] for s in res]   #@add
+        return res                          #@done
 ` }],
   pytest: `
 s = Solution()
@@ -36,6 +36,9 @@ assert norm(s.subsets([1,2,3])) == norm([[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3
 assert norm(s.subsets([0])) == [[],[0]]
 assert len(s.subsets(list(range(10)))) == 1024
 `,
+  sig: { fn: "subsets", params: ["int[]"], ret: "List<List<int>>", cmp: "unordered" },
+  call: (a) => [a.nums],
+  cases: [[[9, 0, -3, 4, 7]]],
   method: "回溯",
   cmp: "unordered",
   legend: [["a", "刚放进来的数"], ["e", "这一层可以选的范围"], ["c", "收集的子集"]],
@@ -50,22 +53,23 @@ assert len(s.subsets(list(range(10)))) == 1024
       { t: "chips", label: "path", items: path.slice(), empty: "空" },
       { t: "chips", label: "已收集的子集", items: res.map((r, k) => ({ v: `[${r.join(",")}]`, cls: k === res.length - 1 && pick < 0 ? "c" : "" })), empty: "还没有" },
     ];
-    snap("开始", "从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。", view(-1, -1));
+    snap("开始", "从空集开始。每进入一层递归，先把当前的 path 当成一个子集收集起来。", view(-1, -1), { at: "init" });
     const dfs = (start) => {
       res.push(path.slice());
-      snap("收集", `进入 dfs(${start})，先收集 <b>[${path.join(",")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : "后面没有数可挑了，返回。"), view(start, -1), { facts: [["已收集", res.length]] });
+      snap("收集", `进入 dfs(${start})，先收集 <b>[${path.join(",")}]</b>。` + (start < nums.length ? `接着从下标 ${start} 往后挑一个数。` : "后面没有数可挑了，返回。"), view(start, -1), { at: "collect", facts: [["已收集", res.length]] });
       for (let i = start; i < nums.length; i++) {
         path.push(nums[i]);
-        snap("放入", `把 ${nums[i]} 放进 path，变成 [${path.join(",")}]，然后进入 dfs(${i + 1})。`, view(start, i), { facts: [["已收集", res.length]] });
+        snap("放入", `把 ${nums[i]} 放进 path，变成 [${path.join(",")}]，然后进入 dfs(${i + 1})。`, view(start, i), { at: "pick", facts: [["已收集", res.length]] });
         dfs(i + 1);
         path.pop();
       }
     };
     dfs(0);
-    snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
+    snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(-1, -1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
   },
   alts: [{
     t: "逐个加入",
+    code: "iter",
     note: "和简洁写法一样：从只有空集开始。每来一个数 x，已有的每个子集都可以选择加上 x，于是子集个数翻一倍。",
     legend: [["a", "正在加入的数"], ["c", "这一轮新生成的子集"]],
     build(a, snap) {
@@ -74,14 +78,14 @@ assert len(s.subsets(list(range(10)))) == 1024
         { t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i === k ? "a" : i < k ? "d" : "" })) },
         { t: "chips", label: "res", items: res.map((r, i) => ({ v: `[${r.join(",")}]`, cls: i >= res.length - fresh ? "c" : "" })) },
       ];
-      snap("开始", "res 里只有一个空集。", view(-1), { facts: [["子集个数", 1]] });
+      snap("开始", "res 里只有一个空集。", view(-1), { at: "init", facts: [["子集个数", 1]] });
       nums.forEach((x, k) => {
         const add = res.map((s) => [...s, x]);
         res = res.concat(add); fresh = add.length;
-        snap(`加入 ${x}`, `已有的 ${add.length} 个子集每个都加上 ${x}，得到 ${add.map((s) => `[${s.join(",")}]`).join("、")}，接在 res 后面。子集个数翻倍成 ${res.length}。`, view(k), { facts: [["子集个数", res.length]] });
+        snap(`加入 ${x}`, `已有的 ${add.length} 个子集每个都加上 ${x}，得到 ${add.map((s) => `[${s.join(",")}]`).join("、")}，接在 res 后面。子集个数翻倍成 ${res.length}。`, view(k), { at: "add", facts: [["子集个数", res.length]] });
       });
       fresh = 0;
-      snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(nums.length), { kind: "ok", ans: res.map((r) => r.slice()), facts: [["子集个数", res.length]] });
+      snap("完成", `一共 ${res.length} 个子集，正好是 2^${nums.length}。`, view(nums.length), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["子集个数", res.length]] });
     },
   }],
   points: [

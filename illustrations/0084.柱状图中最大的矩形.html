@@ -143,7 +143,9 @@ svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
 .point p { color: var(--muted); font-size: 14px; }
 @media (prefers-reduced-motion: reduce) { .cell, svg.g2 .n { transition: none; } }
 
-/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 */
+/* 颜色角色：a 当前 / b 对比 / c 完成或命中 / d 已排除 / e 范围内 / g 另一组 / x 越界或边界（虚线，可以和别的角色叠加） */
+.x { border-style: dashed; border-color: var(--muted); background: transparent; color: var(--muted); font-style: italic; }
+svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
 .a { background: var(--accent); color: var(--surface); border-color: var(--accent); }
 .b { background: var(--warm); color: var(--surface); border-color: var(--warm); }
 .c { background: var(--ok); color: var(--surface); border-color: var(--ok); }
@@ -329,17 +331,17 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[2,1,5,6,2,3]},"note":"
     const H = [0, ...a.h, 0], stack = []; let best = 0, bestR = null;
     const view = (i, top, rect) => [{ t: "bars", label: "heights（两头是哨兵 0）", items: H.map((v, k) => ({ v, cls: k === top ? "b" : k === i ? "a" : rect && k > rect[0] && k < rect[1] ? "w" : bestR && k > bestR[0] && k < bestR[1] && !rect ? "c" : stack.includes(k) ? "e" : (k === 0 || k === H.length - 1) ? "d" : "" })), ptrs: { i: i >= 0 ? i : null } },
       { t: "chips", label: "栈（存下标，右边是栈顶）", items: stack.map((k) => `${k}:${H[k]}`), empty: "空" }];
-    snap("开始", "两头各加一根高度为 0 的哨兵柱子。栈里存下标，对应高度递增。", view(-1, -1), { facts: [["最大面积", best]] });
+    snap("开始", "两头各加一根高度为 0 的哨兵柱子。栈里存下标，对应高度递增。", view(-1, -1), { at: "init", facts: [["最大面积", best]] });
     for (let i = 0; i < H.length; i++) {
       while (stack.length && H[stack[stack.length - 1]] > H[i]) {
         const top = stack.pop(), left = stack[stack.length - 1], area = H[top] * (i - left - 1);
         const better = area > best; if (better) { best = area; bestR = [left, i]; }
-        snap("结算", `${H[i]} 比栈顶的 ${H[top]} 矮，以 ${H[top]} 为高的矩形右边到不了 ${i}，左边到不了新栈顶 ${left}。宽 ${i - left - 1}，面积 <b>${area}</b>${better ? "，是目前最大的" : ""}。`, view(i, top, [left, i]), { facts: [["最大面积", best]] });
+        snap("结算", `${H[i]} 比栈顶的 ${H[top]} 矮，以 ${H[top]} 为高的矩形右边到不了 ${i}，左边到不了新栈顶 ${left}。宽 ${i - left - 1}，面积 <b>${area}</b>${better ? "，是目前最大的" : ""}。`, view(i, top, [left, i]), { at: "pop", facts: [["最大面积", best]] });
       }
       stack.push(i);
-      if (i > 0 && i < H.length - 1) snap("压栈", `${H[i]} 不比栈顶矮，压栈。`, view(i, -1), { facts: [["最大面积", best]] });
+      if (i > 0 && i < H.length - 1) snap("压栈", `${H[i]} 不比栈顶矮，压栈。`, view(i, -1), { at: "push", facts: [["最大面积", best]] });
     }
-    snap("完成", `最大矩形面积是 <b>${best}</b>。`, view(-1, -1), { kind: "ok", ans: best, facts: [["最大面积", best]] });
+    snap("完成", `最大矩形面积是 <b>${best}</b>。`, view(-1, -1), { at: "done", kind: "ok", ans: best, facts: [["最大面积", best]] });
   } }
 ] };
 (function () {
@@ -359,7 +361,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[2,1,5,6,2,3]},"note":"
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
       `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
-      (v.idx === false ? "" : `<div class="ci">${v.idxFrom ? i + v.idxFrom : i}</div>`) +
+      (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
       (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
@@ -374,13 +376,15 @@ const SPEC = { presets: [{"label":"示例 1","args":{"h":[2,1,5,6,2,3]},"note":"
       `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
+  // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
   function vGrid(v) {
-    const n = v.rows[0].length;
-    let h = `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${j}</span>`).join("");
+    const n = v.rows[0].length, ax = v.ax !== false;
+    const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
+    let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += `<span class="ax">${i}</span>` + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
     });
-    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:18px repeat(${n},40px)">${h}</div></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
   function vChips(v) {
     const items = v.items.map(norm);

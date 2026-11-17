@@ -10,23 +10,26 @@ module.exports = {
   codes: [{ t: "标准解法：0-1 背包", code: `
 class Solution:
     def canPartition(self, nums: List[int]) -> bool:
-        total = sum(nums)
-        if total % 2:
-            return False
-        target = total // 2
-        dp = [True] + [False] * target      # dp[j]：能不能凑出和 j
-        for x in nums:
-            for j in range(target, x - 1, -1):  # 倒序：每个数只用一次
-                dp[j] = dp[j] or dp[j - x]
-        return dp[target]
-` }, { t: "简洁写法：位运算", kind: "elegant", note: "bits 的第 j 位是 1 表示能凑出和 j。加入 x 就是把所有能凑出的和都加上 x：bits | (bits << x)。", code: `
+        total = sum(nums)                   #@init,odd
+        if total % 2:                       #@odd
+            return False                    #@odd
+        target = total // 2                 #@init
+        dp = [True] + [False] * target      # dp[j]：能不能凑出和 j #@init
+        for x in nums:                      #@add
+            for j in range(target, x - 1, -1):  # 倒序：每个数只用一次 #@add
+                dp[j] = dp[j] or dp[j - x]  #@add
+        return dp[target]                   #@done
+` }, { t: "简洁写法：位运算", key: "bits", kind: "elegant", note: "bits 的第 j 位是 1 表示能凑出和 j。加入 x 就是把所有能凑出的和都加上 x：bits | (bits << x)。", code: `
 class Solution:
     def canPartition(self, nums: List[int]) -> bool:
-        total, bits = sum(nums), 1
-        for x in nums:
-            bits |= bits << x
-        return total % 2 == 0 and (bits >> (total // 2)) & 1 == 1
+        total, bits = sum(nums), 1          #@init
+        for x in nums:                      #@add
+            bits |= bits << x               #@add
+        return total % 2 == 0 and (bits >> (total // 2)) & 1 == 1   #@done
 ` }],
+  sig: { fn: "canPartition", params: ["int[]"], ret: "bool" },
+  call: (a) => [a.nums],
+  cases: [[[1]], [[2, 2]], [[1, 2, 5]], [[100, 100]], [[3, 3, 3, 4, 5]], [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 100]]],
   pytest: `
 s = Solution()
 assert s.canPartition([1,5,11,5]) is True
@@ -37,7 +40,7 @@ assert s.canPartition([1]) is False
 assert s.canPartition([100]*200) is True
 `,
   method: "0-1 背包",
-  legend: [["k", "能凑出"], ["c", "这一轮新能凑出的"], ["e", "目标 target"]],
+  legend: [["k", "能凑出"], ["c", "这一轮新能凑出的"], ["e", "目标 target"], ["x", "边界"]],
   presets: [
     { label: "示例 1", args: { nums: [1, 5, 11, 5] }, note: "nums = [1,5,11,5]", expect: true },
     { label: "凑不出", args: { nums: [1, 2, 5] }, note: "nums = [1,2,5]", expect: false },
@@ -45,24 +48,26 @@ assert s.canPartition([100]*200) is True
   ],
   build(a, snap) {
     const nums = a.nums, total = nums.reduce((s, x) => s + x, 0);
-    if (total % 2) { snap("总和是奇数", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, [{ t: "array", label: "nums", items: nums, ptrs: {} }], { kind: "warn", ans: false, facts: [["总和", total]] }); return; }
+    if (total % 2) { snap("总和是奇数", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, [{ t: "array", label: "nums", items: nums, ptrs: {} }], { at: "odd", kind: "warn", ans: false, facts: [["总和", total]] }); return; }
     const T = total / 2; let dp = Array(T + 1).fill(false); dp[0] = true;
     const view = (xi, fresh) => [
       { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === xi ? "a" : k < xi ? "d" : "" })), ptrs: {} },
-      { t: "array", label: `dp[j]：能不能凑出和 j（target = ${T}）`, items: dp.map((v, j) => ({ v: v ? "✓" : "", cls: fresh.includes(j) ? "c" : v ? "k" : j === T ? "e" : "" })), ptrs: { target: T } },
+      // dp[0] 是边界（虚线）：什么都不选，和为 0。j < x 时 dp[j - x] 的下标是负数，越界，所以内层循环只到 x 为止
+      { t: "array", label: `dp[j]：能不能凑出和 j（target = ${T}，虚线 dp[0] 是边界）`, items: dp.map((v, j) => ({ v: v ? "✓" : "", cls: fresh.includes(j) ? "c" : j === 0 ? "x k" : v ? "k" : j === T ? "e" : "" })), ptrs: { target: T } },
     ];
-    snap("开始", `总和 ${total}，目标是挑出和为 <b>${T}</b> 的一些数。dp[0] = ✓：什么都不选，和为 0。`, view(-1, []), { facts: [["总和", total], ["target", T]] });
+    snap("边界", `总和 ${total}，目标是挑出和为 <b>${T}</b> 的一些数。dp[0] = ✓ 是边界：什么都不选，和就是 0。<br>加入数 x 时，j < x 的 dp[j − x] 下标是负数，越界了，这些 j 本来也凑不进 x，所以内层循环只走到 j = x 为止。`, view(-1, []), { at: "init", facts: [["总和", total], ["target", T]] });
     for (let k = 0; k < nums.length; k++) {
       const x = nums[k], nd = dp.slice(), fresh = [];
       for (let j = T; j >= x; j--) if (!dp[j] && dp[j - x]) { nd[j] = true; fresh.push(j); }
       dp = nd;
-      snap(`加入 ${x}`, fresh.length ? `原来能凑出的和都加上 ${x}，新能凑出 ${fresh.slice().reverse().join("、")}。` + (dp[T] ? `其中有 ${T}，找到了。` : "") : `加上 ${x} 后没有新的和（超过 ${T} 的不用管）。`, view(k, fresh), { facts: [["总和", total], ["target", T]] });
-      if (dp[T]) { snap("完成", `能凑出 ${T}，可以分成两份，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, facts: [["总和", total], ["target", T]] }); return; }
+      snap(`加入 ${x}`, fresh.length ? `原来能凑出的和都加上 ${x}，新能凑出 ${fresh.slice().reverse().join("、")}。` + (dp[T] ? `其中有 ${T}，找到了。` : "") : `加上 ${x} 后没有新的和（超过 ${T} 的不用管）。`, view(k, fresh), { at: "add", facts: [["总和", total], ["target", T]] });
+      if (dp[T]) { snap("完成", `能凑出 ${T}，可以分成两份，返回 <b>true</b>。（代码里不提前返回，剩下的数加完后 dp[target] 仍然是 true。）`, view(-1, []), { at: "done", kind: "ok", ans: true, facts: [["总和", total], ["target", T]] }); return; }
     }
-    snap("完成", `所有数都加完了，还是凑不出 ${T}，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, facts: [["总和", total], ["target", T]] });
+    snap("完成", `所有数都加完了，还是凑不出 ${T}，返回 <b>false</b>。`, view(-1, []), { at: "done", kind: "warn", ans: false, facts: [["总和", total], ["target", T]] });
   },
   alts: [{
     t: "位运算",
+    code: "bits",
     note: "和简洁写法一样：把 dp 数组压成一个整数 bits，第 j 位是 1 表示能凑出和 j。加入 x 就是所有能凑出的和都加上 x：bits | (bits << x)。",
     legend: [["a", "正在加入的数"], ["k", "1：能凑出"], ["c", "这一轮新变成 1 的位"], ["e", "目标 total / 2"]],
     build(a, snap) {
@@ -72,17 +77,17 @@ assert s.canPartition([100]*200) is True
         { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === xi ? "a" : k < xi ? "d" : "" })) },
         { t: "array", label: "bits（下标 j 就是第 j 位，最左边是最低位）", items: bits.map((b, j) => ({ v: b, cls: fresh.includes(j) ? "c" : b ? "k" : j === T ? "e" : "" })), ptrs: T === null ? {} : { target: T } },
       ];
-      const f = () => ({ facts: [["总和", total], ["target", T === null ? "—" : T]] });
-      snap("开始", "bits = 1，只有第 0 位是 1：什么都不选，和为 0。", view(-1, []), f());
+      const f = (at) => ({ at, facts: [["总和", total], ["target", T === null ? "—" : T]] });
+      snap("开始", "bits = 1，只有第 0 位是 1：什么都不选，和为 0。", view(-1, []), f("init"));
       nums.forEach((x, k) => {
         const nb = bits.slice(), fresh = [];
         for (let j = total; j >= x; j--) if (bits[j - x] && !bits[j]) { nb[j] = 1; fresh.push(j); }
         bits = nb;
-        snap(`加入 ${x}`, `bits << ${x}：每个能凑出的和都加上 ${x}，再和原来的 bits 按位或。` + (fresh.length ? `新能凑出 ${fresh.slice().reverse().join("、")}。` : "没有新的和。"), view(k, fresh), f());
+        snap(`加入 ${x}`, `bits << ${x}：每个能凑出的和都加上 ${x}，再和原来的 bits 按位或。` + (fresh.length ? `新能凑出 ${fresh.slice().reverse().join("、")}。` : "没有新的和。"), view(k, fresh), f("add"));
       });
-      if (T === null) snap("完成", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f() });
-      else if (bits[T]) snap("完成", `第 ${T} 位是 1，能凑出总和的一半，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, ...f() });
-      else snap("完成", `第 ${T} 位是 0，凑不出总和的一半，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f() });
+      if (T === null) snap("完成", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f("done") });
+      else if (bits[T]) snap("完成", `第 ${T} 位是 1，能凑出总和的一半，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, ...f("done") });
+      else snap("完成", `第 ${T} 位是 0，凑不出总和的一半，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f("done") });
     },
   }],
   points: [

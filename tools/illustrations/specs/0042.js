@@ -1,7 +1,13 @@
+const F = require("../fig");
+
 module.exports = {
   id: 42, name: "接雨水", title: "接雨水图解", level: "困难", topic: "双指针",
   h1: "接雨水，每一格能接多少只看两边最高的柱子",
   lede: "某一格上方的水位，等于它左边最高柱子和右边最高柱子里较矮的那个。用两个指针从两端往中间走，哪边的最高值更小，哪边那一格的水量就已经能确定。",
+  // 题面配图：替换题面里力扣的图片（fig.js）
+  figures: {
+    "rainwatertrap.png": [F.bars([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1], { label: "灰色是柱子，蓝色是接住的雨水，一共 6 个单位", water: [0, 0, 1, 0, 1, 2, 1, 0, 0, 1, 0, 0] })],
+  },
   hints: [
     { t: "先只看一格", body: ["下标 <code>i</code> 这一格能接的水 = <code>min(左边最高, 右边最高) − height[i]</code>。", "水位由两边最高的柱子里矮的那个决定，再减掉这一格自己的高度。"] },
     { t: "朴素做法", body: ["预先算出每个位置的左边最高 <code>leftMax[i]</code> 和右边最高 <code>rightMax[i]</code>，再逐格相加。时间 <code>O(n)</code>，空间 <code>O(n)</code>。"] },

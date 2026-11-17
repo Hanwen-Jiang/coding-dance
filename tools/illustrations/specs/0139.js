@@ -39,7 +39,7 @@ assert s.wordBreak("catsandog", ["cats","dog","sand","and","cat"]) is False
 assert s.wordBreak("a", ["b"]) is False
 assert s.wordBreak("aaaaaaaaaaaaaaaaaaaaaaaaaaaaab", ["a","aa","aaa","aaaa"]) is False
 `,
-  legend: [["e", "能拆的前缀"], ["a", "最后一个词 s[j:i]"], ["c", "dp 为真"]],
+  legend: [["e", "能拆的前缀"], ["a", "最后一个词 s[j:i]"], ["c", "dp 为真"], ["x", "边界：空串"]],
   presets: [
     { label: "示例 1", args: { s: "leetcode", words: ["leet", "code"] }, note: "s = \"leetcode\", wordDict = [\"leet\",\"code\"]", expect: true },
     { label: "示例 3", args: { s: "catsandog", words: ["cats", "dog", "sand", "and", "cat"] }, note: "s = \"catsandog\", wordDict = [\"cats\",\"dog\",\"sand\",\"and\",\"cat\"]", expect: false },
@@ -48,9 +48,10 @@ assert s.wordBreak("aaaaaaaaaaaaaaaaaaaaaaaaaaaaab", ["a","aa","aaa","aaaa"]) is
     const s = a.s, W = new Set(a.words), n = s.length, dp = Array(n + 1).fill(false); dp[0] = true;
     const view = (i, j) => [
       { t: "array", label: "s", items: s.split("").map((c, k) => ({ v: c, cls: j >= 0 && k >= j && k < i ? "a" : j >= 0 && k < j ? "e" : "" })), ptrs: {} },
-      { t: "array", label: "dp[i]：前 i 个字符能不能拆", items: dp.map((v, k) => ({ v: v ? "✓" : "✗", cls: k === i ? (v ? "c" : "w") : v ? "k" : "d" })), ptrs: { i: i >= 0 ? i : null } },
+      // dp[0] 是边界（虚线）：空串不用拆，直接给 ✓。整个前缀本身就是一个词时，靠它接上
+      { t: "array", label: "dp[i]：前 i 个字符能不能拆（虚线 dp[0] 是边界）", items: dp.map((v, k) => ({ v: v ? "✓" : "✗", cls: k === i ? (v ? "c" : "w") : k === 0 ? (j === 0 ? "x e" : "x k") : v ? "k" : "d" })), ptrs: { i: i >= 0 ? i : null } },
     ];
-    snap("开始", `字典是 {${a.words.join(", ")}}。dp[0] = ✓：空串不用拆。`, view(-1, -1), { at: "init" });
+    snap("边界", `字典是 {${a.words.join(", ")}}。dp[0] = ✓ 是边界：前 0 个字符是空串，什么都不用拆。<br>它的用处：如果整个前缀 s[0:i] 本身就是一个词，最后一个词从 j = 0 开始，要靠 dp[0] = ✓ 才能接上。`, view(-1, -1), { at: "init" });
     for (let i = 1; i <= n; i++) {
       let hit = -1;
       for (let j = 0; j < i; j++) if (dp[j] && W.has(s.slice(j, i))) { hit = j; break; }
