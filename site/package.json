@@ -10,7 +10,7 @@
     "preview:local": "node ../tools/dev/preview.mjs",
     "dev:resources": "node ../tools/dev/resource-api.mjs",
     "test:dev-resources": "node ../tools/dev/resource-api.test.mjs",
-    "test": "node lib/sync/test/sync.test.ts",
+    "test": "node lib/sync/test/sync.test.ts && node functions/_lib/test/sso.test.ts",
     "deploy": "npm run build && wrangler pages deploy out",
     "prepare:practice": "node ../tools/practice-runtime/prepare.mjs",
     "generate:practice": "node ../tools/practice/build.cjs",

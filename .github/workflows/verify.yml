@@ -27,6 +27,9 @@ jobs:
       - name: 同步逻辑的测试
         working-directory: site
         run: node lib/sync/test/sync.test.ts
+      - name: 多域名登录的测试
+        working-directory: site
+        run: node functions/_lib/test/sso.test.ts
 
   practice:
     name: 练习数据和运行器

@@ -19,3 +19,12 @@ STAR_REPOS = "Hanwen-Jiang/agent-runtime,Hanwen-Jiang/coding-agent,Hanwen-Jiang/
 FOUNDER_CUTOFF = "2026-11-18T00:00:00+08:00"
 # GitHub App 的 slug（https://github.com/apps/<slug>），建好 App 后填上
 GITHUB_APP_SLUG = "hot-100"
+# 网站的几个域名（都是这个 Pages 项目的自定义域名）。第一个是「登录域名」：GitHub App 的回调地址只登记了它，
+# 登录、授权都在它上面走，再把会话同步到其余域名；退出时一起退出。换登录域名要先在 GitHub App 设置里加它的回调地址。
+# 原理和安全考虑见 functions/_lib/sso.ts，测试 functions/_lib/test/sso.test.ts
+SITE_ORIGINS = "https://leetcode.cgent.link,https://codexdance.cn,https://codingdance.cn"
+
+# 同一次登录在几个域名上共用一套 GitHub 令牌；refresh token 只能用一次，换新后把新令牌（加密）存在这里给别的域名取
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "d99da5d8e67e48be9621d39cd59859ac"
