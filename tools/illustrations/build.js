@@ -102,12 +102,14 @@ const mulberry32 = (a) => () => { let t = (a += 0x6d2b79f5); t = Math.imul(t ^ (
 /**
  * 导出判题用例：预设 + spec 里手写的 cases + 10 组固定种子的随机输入，期望输出用标准解法（Python）算。
  * call(args) 把演示的输入变成力扣的参数列表；gen 是随机输入的生成函数。
+ * 文件里的 fixed 是前面几组「不是随机的」（预设和手写的边界用例，去重之后），练习区的「精简边界测试」就用这几组。
  */
 function exportCases({ name, label, sig, call, presets, extra, gen, seed, code, file }) {
   const inputs = [], seen = new Set(), H = makeR(); // call 的第二个参数是 makeR() 的工具函数，比如 H.toLc 把堆下标的树转成力扣的层序数组
   const add = (x) => { const k = JSON.stringify(x); if (!seen.has(k)) { seen.add(k); inputs.push(JSON.parse(k)); } };
   for (const p of presets || []) add(call(p.args, H));
   for (const c of extra || []) add(c);
+  const fixed = inputs.length;
   if (gen) {
     const orig = Math.random;
     Math.random = mulberry32(seed);
@@ -116,7 +118,7 @@ function exportCases({ name, label, sig, call, presets, extra, gen, seed, code, 
   const outs = pyJudge.runSync({ name, sig: normSig(sig), cases: inputs, code }, path.join(os.tmpdir(), "lc-judge", String(process.pid), "build"));
   outs.forEach((o, i) => { if (o && typeof o === "object" && !Array.isArray(o) && "__error" in o) throw new Error(`${label}: 标准解法跑判题用例出错：${JSON.stringify(inputs[i])} → ${o.__error}`); });
   fs.mkdirSync(path.dirname(file), { recursive: true });
-  fs.writeFileSync(file, `{\n "sig": ${JSON.stringify(sig)},\n "cases": [\n${inputs.map((x, i) => "  " + JSON.stringify({ in: x, out: outs[i] })).join(",\n")}\n ]\n}\n`);
+  fs.writeFileSync(file, `{\n "sig": ${JSON.stringify(sig)},\n "fixed": ${fixed},\n "cases": [\n${inputs.map((x, i) => "  " + JSON.stringify({ in: x, out: outs[i] })).join(",\n")}\n ]\n}\n`);
 }
 const runBuild = (build, args) => {
   const steps = [];

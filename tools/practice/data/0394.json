@@ -34,6 +34,7 @@
         "3[a]2[bc]"
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": "aaabcbc",
       "stdin": "3[a]2[bc]\n",
       "stdout": "aaabcbc\n",
@@ -49,6 +50,7 @@
         "3[a2[c]]"
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": "accaccacc",
       "stdin": "3[a2[c]]\n",
       "stdout": "accaccacc\n",
@@ -64,6 +66,7 @@
         "2[abc]3[cd]ef"
       ],
       "label": "示例 3",
+      "quick": true,
       "expected": "abcabccdcdcdef",
       "stdin": "2[abc]3[cd]ef\n",
       "stdout": "abcabccdcdcdef\n",
@@ -79,6 +82,7 @@
         "abc3[cd]xyz"
       ],
       "label": "示例 4",
+      "quick": true,
       "expected": "abccdcdcdxyz",
       "stdin": "abc3[cd]xyz\n",
       "stdout": "abccdcdcdxyz\n",
@@ -94,6 +98,7 @@
         "10[a]"
       ],
       "label": "仓库判题用例 5",
+      "quick": true,
       "expected": "aaaaaaaaaa",
       "stdin": "10[a]\n",
       "stdout": "aaaaaaaaaa\n"
@@ -103,6 +108,7 @@
         "3[z]2[2[y]pq4[2[jk]e1[f]]]ef"
       ],
       "label": "仓库判题用例 6",
+      "quick": true,
       "expected": "zzzyypqjkjkefjkjkefjkjkefjkjkefyypqjkjkefjkjkefjkjkefjkjkefef",
       "stdin": "3[z]2[2[y]pq4[2[jk]e1[f]]]ef\n",
       "stdout": "zzzyypqjkjkefjkjkefjkjkefjkjkefyypqjkjkefjkjkefjkjkefjkjkefef\n"
@@ -112,6 +118,7 @@
         "abc"
       ],
       "label": "仓库判题用例 7",
+      "quick": true,
       "expected": "abc",
       "stdin": "abc\n",
       "stdout": "abc\n"
@@ -211,6 +218,7 @@
         "1[a]"
       ],
       "label": "边界用例 1",
+      "quick": true,
       "expected": "a",
       "stdin": "1[a]\n",
       "stdout": "a\n"

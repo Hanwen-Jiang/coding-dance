@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"hasPathSum","params":["TreeNode","int"],"ret":"bool"},
+ "fixed": 5,
  "cases": [
   {"in":[[5,4,8,11,null,13,4,7,2,null,null,null,1],22],"out":true},
   {"in":[[1,2,3],5],"out":false},

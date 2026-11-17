@@ -11,12 +11,14 @@ import { CodePanel } from "@/components/code-panel";
 import { PracticeProvider, PracticeStatement } from "@/components/practice/context";
 import { PracticeWorkbench } from "@/components/practice/workbench";
 import { DemoPlayer } from "@/components/demo/demo-player";
-import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
+import { AlertIcon, BulbIcon, ChevronDown, ChevronLeft, ChevronRight, CodeIcon, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
 import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel } from "@/components/pixel";
 import { SolutionCode } from "@/components/solution-code";
 import { TierChip, TopicChip } from "@/components/tags";
 import { codeIn } from "@/lib/langs";
+import { useCodingLayout } from "@/lib/practice/dock";
+import { PRACTICE_SAVED_EVENT } from "@/lib/practice/save-queue";
 import { usePrefs } from "@/lib/prefs";
 import { useProgress } from "@/lib/progress";
 import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec } from "@/lib/types";
@@ -173,6 +175,14 @@ function useMine(id: number) {
   const [state, setState] = useState<MineState>({ key: "", history: null, attempts: null, error: null });
   const key = canRead ? `${user}/${id}` : "";
 
+  // 练习区把这道题的尝试记录、题解写进进度仓后，重新读一次
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const onSaved = (e: Event) => { if ((e as CustomEvent<{ id: number }>).detail?.id === id) setVersion((v) => v + 1); };
+    window.addEventListener(PRACTICE_SAVED_EVENT, onSaved);
+    return () => window.removeEventListener(PRACTICE_SAVED_EVENT, onSaved);
+  }, [id]);
+
   useEffect(() => {
     if (!canRead) return;
     let alive = true;
@@ -187,7 +197,7 @@ function useMine(id: number) {
     return () => {
       alive = false;
     };
-  }, [canRead, id, key]);
+  }, [canRead, id, key, version]);
 
   return { loading, session, loginHref, id, state, ready: state.key === key && !!key };
 }
@@ -373,6 +383,7 @@ function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | n
                       {a.date}
                       {a.submittedAt?.slice(11, 16) ? ` ${a.submittedAt.slice(11, 16)}` : ""} · 第 {a.seq} 次 · {LANG_NAME[a.lang] ?? a.lang}
                     </span>
+                    {a.source === "practice" && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted" title="在本站题目页的练习区「测试全部」记的，结果按本站的用例判">网站练习</span>}
                     {!a.verbatim && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">不是原样提交</span>}
                   </span>
                   <Accordion.Indicator>
@@ -406,9 +417,10 @@ function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | n
   );
 }
 
-/** 和真实页面同样布局的骨架，数据到了原地淡入 */
+/** 和真实页面同样布局的骨架，数据到了原地淡入。外面也套 problem-page-layout：换题时页面和顶栏的宽度不会先缩回去再撑开 */
 function Loading() {
   return (
+    <div className="problem-page-layout">
     <div className="flex flex-col gap-8 pt-8" aria-busy>
       <div className="flex flex-col gap-4">
         <Skel className="h-4 w-36" />
@@ -431,6 +443,7 @@ function Loading() {
           <PixelLoader label="LOADING" />
         </div>
       </div>
+    </div>
     </div>
   );
 }
@@ -529,6 +542,145 @@ function DemoSection({ d, revealed, onReveal }: { d: ProblemDetail; revealed: bo
   return <p className="text-sm text-muted">这道题还没有动画演示。</p>;
 }
 
+/*
+ * 「写代码」的布局（桌面上练习区展开时）：一切为写代码服务。
+ * 题面一直在；提示、动画、题解、易错点、我的题解、尝试记录都收成题面上方一排入口（滚动时停在顶栏下面），
+ * 用到时点一下，在题目这一栏上弹出一块面板（和右边的编辑器一样高、一样钉在原处），编辑器始终看得见；
+ * 面板顶上能直接换到别的、能关掉（Esc 也行）。练习区收起、或者手机上，回到从上往下读的布局。
+ */
+type StudyKey = "hints" | "demo" | "solution" | "points" | "history" | "attempts";
+type StudyEntry = { key: StudyKey; label: string; title: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactNode; count?: number; mine?: boolean };
+
+function studyEntries(d: ProblemDetail, mine: Mine): StudyEntry[] {
+  const counted = (n: number | undefined) => (mine.ready ? n : undefined);
+  return [
+    { key: "hints", label: "提示", title: "分层提示", icon: BulbIcon, count: d.spec?.hints?.length || undefined },
+    { key: "demo", label: "动画", title: "动画演示", icon: PlayIcon },
+    { key: "solution", label: "题解", title: "题解", icon: EyeIcon },
+    ...(d.spec?.points?.length ? [{ key: "points" as const, label: "易错点", title: "写代码时注意", icon: AlertIcon, count: d.spec.points.length }] : []),
+    { key: "history", label: "我的题解", title: "我的历史题解", icon: CodeIcon, mine: true, count: counted(mine.state.history?.length) },
+    { key: "attempts", label: "尝试记录", title: "尝试记录", icon: HistoryIcon, mine: true, count: counted(mine.state.attempts?.length) },
+  ];
+}
+
+/** 一排入口：点一下弹出对应的面板，再点一下（或点面板的关闭）收起 */
+function StudyBar({ entries, open, onOpen, label = true }: { entries: StudyEntry[]; open: StudyKey | null; onOpen: (key: StudyKey | null) => void; label?: boolean }) {
+  return (
+    <div aria-label="提示、演示、题解和我的记录" className="problem-study-entries" role="toolbar">
+      {label && <span className="me-1 shrink-0 text-xs text-muted">卡住了？</span>}
+      {entries.map((e, i) => (
+        <Button
+          aria-pressed={open === e.key}
+          className={clsx("problem-study-entry", e.mine && !entries[i - 1]?.mine && "problem-study-entry--mine", open === e.key && "is-open")}
+          key={e.key}
+          onPress={() => onOpen(open === e.key ? null : e.key)}
+          size="sm"
+          variant="ghost"
+        >
+          <e.icon aria-hidden />
+          {e.label}
+          {e.count ? <span className="problem-study-count">{e.count}</span> : null}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
+/** 提示一层一层给：先只给第一层，「再给一点提示」才往下 */
+function HintSteps({ spec }: { spec: Spec }) {
+  const [shown, setShown] = useState(1);
+  const hints = spec.hints;
+  return (
+    <div className="flex flex-col gap-3">
+      {hints.slice(0, shown).map((h, i) => (
+        <Card className="gap-2 p-4" key={i}>
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 font-mono text-xs font-semibold text-accent">提示 {i + 1}</span>
+            <span className="text-sm font-semibold">{h.t}</span>
+          </div>
+          <div className="hint-text flex flex-col gap-2 text-[15px] leading-7 text-muted">
+            {h.body.map((p, k) => <p dangerouslySetInnerHTML={{ __html: p }} key={k} />)}
+          </div>
+        </Card>
+      ))}
+      {shown < hints.length ? (
+        <Button className="self-start" onPress={() => setShown(shown + 1)} size="sm" variant="secondary">
+          <BulbIcon />再给一点提示（{shown + 1} / {hints.length}）
+        </Button>
+      ) : (
+        <p className="text-xs text-muted">提示就这些了；还卡着可以看看动画演示。</p>
+      )}
+    </div>
+  );
+}
+
+/** 弹出的面板：盖在题目这一栏上，和编辑器一样钉在顶栏下面；打开过的几块留在里面（演示走到第几步、题解看到哪都还在） */
+function StudySheet({ d, mine, entries, open, onOpen, revealed, onReveal }: {
+  d: ProblemDetail; mine: Mine; entries: StudyEntry[]; open: StudyKey | null; onOpen: (key: StudyKey | null) => void; revealed: boolean; onReveal: () => void;
+}) {
+  const [visited, setVisited] = useState<Set<StudyKey>>(() => new Set());
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    setVisited((v) => (v.has(open) ? v : new Set(v).add(open)));
+    heading.current?.focus({ preventScroll: true });
+    // Esc 关面板；在编辑器里按的 Esc（关补全之类）不算
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented || (e.target as Element | null)?.closest?.(".cm-editor, [role=dialog]")) return;
+      onOpen(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onOpen]);
+  if (!open && !visited.size) return null;
+  const current = entries.find((e) => e.key === open);
+  const body = (key: StudyKey) => {
+    switch (key) {
+      case "hints": return d.spec?.hints?.length ? <HintSteps key={d.summary.id} spec={d.spec} /> : <p className="text-sm text-muted">这道题还没有提示。</p>;
+      case "demo": return (
+        <div className="flex flex-col gap-3">
+          {d.illustrationUrl && d.spec?.demo ? <a className="self-end text-xs text-muted no-underline hover:text-accent" href={d.illustrationUrl} rel="noopener" target="_blank">单独打开 ↗</a> : null}
+          <DemoSection d={d} onReveal={onReveal} revealed={revealed} />
+        </div>
+      );
+      case "solution": return d.spec?.codes?.length ? <Solutions key={d.summary.id} onReveal={onReveal} revealed={revealed} spec={d.spec} /> : <p className="text-sm text-muted">这道题还没有题解。</p>;
+      case "points": return (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {d.spec!.points.map((p, i) => (
+            <Card className="gap-1.5 p-4" key={i}>
+              <div className="text-sm font-semibold">{p.t}</div>
+              <p className="hint-text text-sm leading-6 text-muted" dangerouslySetInnerHTML={{ __html: p.body }} />
+            </Card>
+          ))}
+        </div>
+      );
+      case "history": return <History d={d} mine={mine} />;
+      case "attempts": return <Attempts d={d} mine={mine} />;
+    }
+  };
+  return (
+    <section aria-label={current ? current.title : "学习面板"} className="problem-sheet" data-open={open ? "true" : undefined} hidden={!open}>
+      <div className="problem-sheet-head">
+        <h2 className="flex min-w-0 items-center gap-2 text-base font-bold outline-none" ref={heading} tabIndex={-1}>
+          {current && <current.icon aria-hidden />}
+          <span className="truncate">{current?.title}</span>
+        </h2>
+        <StudyBar entries={entries} label={false} onOpen={onOpen} open={open} />
+        <Button aria-label="关闭面板" className="ms-auto shrink-0" isIconOnly onPress={() => onOpen(null)} size="sm" variant="ghost"><CloseIcon /></Button>
+      </div>
+      <div className="problem-sheet-body">
+        {entries.map((e) => visited.has(e.key) || e.key === open ? (
+          <div hidden={e.key !== open} key={e.key}>{body(e.key)}</div>
+        ) : null)}
+      </div>
+    </section>
+  );
+}
+
+function CloseIcon() {
+  return <svg aria-hidden fill="none" height="16" stroke="currentColor" strokeLinecap="round" strokeWidth="1.6" viewBox="0 0 16 16" width="16"><path d="M4 4l8 8M12 4l-8 8" /></svg>;
+}
+
 export function ProblemView({ id }: { id: number }) {
   const { data: d, error, loading } = useApi<ProblemDetail>(`/api/problem/${id}`);
   const mine = useMine(id);
@@ -536,6 +688,14 @@ export function ProblemView({ id }: { id: number }) {
   const [revealed, setRevealed] = useState(false);
   const reveal = useCallback(() => setRevealed(true), []);
   useEffect(() => setRevealed(false), [id]);
+  // 写代码的布局：练习区展开（桌面）。这时提示、动画这些收成入口，用到时弹出面板
+  const coding = useCodingLayout();
+  const [sheet, setSheet] = useState<StudyKey | null>(null);
+  const openSheet = useCallback((key: StudyKey | null) => {
+    setSheet(key);
+    if (key === "solution") setRevealed(true); // 点了「题解」就是要看，不再盖一层
+  }, []);
+  useEffect(() => setSheet(null), [id, coding]);
 
   useEffect(() => {
     if (d) document.title = `${d.summary.id}. ${d.summary.name} · 热题 100 题解手册`;
@@ -592,12 +752,19 @@ export function ProblemView({ id }: { id: number }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <a className="no-underline" href="#demo">
-              <Button size="sm" variant="secondary">
+            {coding ? (
+              <Button onPress={() => openSheet("demo")} size="sm" variant="secondary">
                 <PlayIcon />
                 看动画
               </Button>
-            </a>
+            ) : (
+              <a className="no-underline" href="#demo">
+                <Button size="sm" variant="secondary">
+                  <PlayIcon />
+                  看动画
+                </Button>
+              </a>
+            )}
             {d.slug && (
               <a className="no-underline" href={`https://leetcode.cn/problems/${d.slug}/`} rel="noopener noreferrer" target="_blank">
                 <Button size="sm" variant="outline">
@@ -610,8 +777,11 @@ export function ProblemView({ id }: { id: number }) {
         </div>
       </div>
 
+      {/* 写代码的布局：一排入口停在顶栏下面，用到时弹出面板 */}
+      {coding && <div className="problem-study-bar"><StudyBar entries={studyEntries(d, mine)} onOpen={openSheet} open={sheet} /></div>}
+
       <div className="problem-original-sections">
-        <div className="flex min-w-0 flex-col gap-12">
+        <div className={clsx("flex min-w-0 flex-col", coding ? "gap-8" : "gap-12")}>
           <section className="flex flex-col gap-4">
             <SectionTitle id="statement">题目描述</SectionTitle>
             <Card className="p-5 sm:p-7">
@@ -621,6 +791,8 @@ export function ProblemView({ id }: { id: number }) {
             {d.learn?.length ? <div className="problem-learn-inline"><LearnLinks learn={d.learn} /></div> : null}
           </section>
 
+          {/* 从上往下读的布局（练习区收起、手机）：各节依次排下来 */}
+          {!coding && <>
           <section className="flex flex-col gap-4">
             <SectionTitle extra={<span className="text-xs text-muted">卡住了再点开下一层</span>} id="hints">
               分层提示
@@ -672,6 +844,7 @@ export function ProblemView({ id }: { id: number }) {
               </div>
             </section>
           ) : null}
+          </>}
 
           <nav className="grid gap-3 border-t border-separator pt-6 sm:grid-cols-2">
             {d.prev ? (
@@ -717,6 +890,7 @@ export function ProblemView({ id }: { id: number }) {
       </div>
     </div>
     <PracticeWorkbench />
+    {coding && <StudySheet d={d} entries={studyEntries(d, mine)} mine={mine} onOpen={openSheet} onReveal={reveal} open={sheet} revealed={revealed} />}
     </div>
     </PracticeProvider>
   );

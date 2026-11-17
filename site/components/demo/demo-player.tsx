@@ -3,8 +3,9 @@
 import { Button, Card, Tabs } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { morphInto } from "@/components/demo/morph";
 import { renderViews } from "@/components/demo/render";
 import { StepCode } from "@/components/demo/step-code";
 import { ChevronLeft, ChevronRight, EyeIcon, PlayIcon } from "@/components/icons";
@@ -143,9 +144,26 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
     setPlaying(true);
   };
 
+  // 每一步的图是 render.ts 拼的一段 HTML。不整段换 innerHTML（每步整张图重新淡入、闪一下，格子的颜色过渡也不生效，
+  // 横向滚动还会回到开头），而是用 morphInto 把现有的 DOM 原地改成新的样子：没变的不动，变色的格子走 CSS 过渡，
+  // .dm-scroll 还是原来那个元素，滚动位置自然保留。换了输入或解法时才把横向滚动放回开头。
+  // 每次渲染都检查一遍：容器被重新挂载（比如收起代码面板时布局变了）时 HTML 没变也要重新写进去。
+  const viewsHtml = steps.length ? renderViews(steps[Math.min(idx, last)].views) : "";
+  const viewsRef = useRef<HTMLDivElement>(null);
+  const shown = useRef<{ el: HTMLElement | null; html: string; steps: Step[] | null }>({ el: null, html: "", steps: null });
+  useLayoutEffect(() => {
+    const el = viewsRef.current;
+    const prev = shown.current;
+    if (!el || (prev.el === el && prev.html === viewsHtml)) return;
+    morphInto(el, viewsHtml);
+    if (prev.el === el && prev.steps !== steps) {
+      el.querySelectorAll<HTMLElement>(".dm-scroll").forEach((x) => { x.scrollLeft = 0; x.scrollTop = 0; });
+    }
+    shown.current = { el, html: viewsHtml, steps };
+  });
+
   if (!build || !steps.length) return <p className="text-sm text-muted">这道题的演示加载失败了。</p>;
   const s = steps[Math.min(idx, last)];
-  const html = renderViews(s.views);
   // 这一步对应的代码行：at 里的每个标记在当前语言里标了哪些行
   const active = text ? (s.at == null ? [] : [s.at].flat()).flatMap((t) => text.marks?.[t] ?? []) : [];
 
@@ -219,7 +237,7 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
               {input.note}
             </div>
           )}
-          <div className="dm-views" dangerouslySetInnerHTML={{ __html: html }} />
+          <div ref={viewsRef} className="dm-views" />
           <div className="flex flex-col gap-3 border-t border-separator pt-4">
             {/* 一行放下：手机上和桌面窄的演示栏里，「自动播放」带字会被挤到第二行，所以只留图标（读屏和悬停提示里有文字） */}
             <div className="flex flex-nowrap items-center gap-2">
@@ -320,7 +338,7 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
                         <EyeIcon />
                         查看代码
                       </Button>
-                      <span className="text-xs text-muted">和下面的题解一起显示</span>
+                      <span className="text-xs text-muted">和题解里的代码一起显示</span>
                     </div>
                   </div>
                 ))}

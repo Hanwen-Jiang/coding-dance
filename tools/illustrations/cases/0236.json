@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"lowestCommonAncestor","params":["TreeNode","TreeRef","TreeRef"],"ret":"TreeVal"},
+ "fixed": 8,
  "cases": [
   {"in":[[3,5,1,6,2,0,8,null,null,7,4],5,1],"out":3},
   {"in":[[3,5,1,6,2,0,8,null,null,7,4],5,4],"out":5},

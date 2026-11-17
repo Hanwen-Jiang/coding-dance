@@ -34,6 +34,7 @@
         "ababcbacadefegdehijhklij"
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": [
         9,
         7,
@@ -53,6 +54,7 @@
         "eccbbbbdec"
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": [
         10
       ],
@@ -70,6 +72,7 @@
         "abacdcde"
       ],
       "label": "仓库判题用例 2",
+      "quick": true,
       "expected": [
         3,
         4,
@@ -83,6 +86,7 @@
         "a"
       ],
       "label": "仓库判题用例 3 · 边界",
+      "quick": true,
       "expected": [
         1
       ],
@@ -94,6 +98,7 @@
         "abc"
       ],
       "label": "仓库判题用例 4",
+      "quick": true,
       "expected": [
         1,
         1,
@@ -107,6 +112,7 @@
         "aaaa"
       ],
       "label": "仓库判题用例 6",
+      "quick": true,
       "expected": [
         4
       ],

@@ -1,5 +1,6 @@
 {
  "sig": {"cls":"Trie","ctor":[],"methods":{"insert":[["string"],"void"],"search":[["string"],"bool"],"countPrefix":[["string"],"int"]}},
+ "fixed": 4,
  "cases": [
   {"in":[["Trie","insert","insert","insert","search","search","countPrefix","countPrefix"],[[],["app"],["apple"],["bat"],["ap"],["app"],["ap"],["b"]]],"out":[null,null,null,null,false,true,2,1]},
   {"in":[["Trie","insert","search","search","countPrefix","insert","search","countPrefix"],[[],["apple"],["apple"],["app"],["app"],["app"],["app"],["ap"]]],"out":[null,null,true,false,1,null,true,2]},

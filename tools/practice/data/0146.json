@@ -96,6 +96,7 @@
         ]
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": [
         null,
         null,
@@ -157,6 +158,7 @@
         ]
       ],
       "label": "仓库判题用例 2",
+      "quick": true,
       "expected": [
         null,
         null,
@@ -783,6 +785,7 @@
         ]
       ],
       "label": "边界用例 1",
+      "quick": true,
       "expected": [
         null,
         null,

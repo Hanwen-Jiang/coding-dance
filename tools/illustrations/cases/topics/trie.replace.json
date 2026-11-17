@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"replaceWords","params":["List<string>","string"],"ret":"string"},
+ "fixed": 4,
  "cases": [
   {"in":[["cat","bat","rat","ca"],"the cattle was rattled by the battery"],"out":"the ca was rat by the bat"},
   {"in":[["cat","bat","rat"],"the cattle was rattled by the battery"],"out":"the cat was rat by the bat"},

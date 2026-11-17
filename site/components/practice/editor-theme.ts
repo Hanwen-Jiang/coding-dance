@@ -35,12 +35,13 @@ export function practiceEditorTheme(dark: boolean) {
       "&.cm-focused": { outline: "none" },
       ".cm-scroller": { fontFamily: "var(--font-mono)", fontSize: "15px", lineHeight: "26px", fontVariantLigatures: "none", fontFeatureSettings: "'liga' 0, 'calt' 0" },
       // The inset belongs to the document so column zero and the caret align.
-      ".cm-content": { padding: "14px 0 14px 12px", minHeight: "100%", caretColor: color.caret, fontSize: "15px", lineHeight: "26px", tabSize: "4" },
+      ".cm-content": { padding: "14px 0 14px 8px", minHeight: "100%", caretColor: color.caret, fontSize: "15px", lineHeight: "26px", tabSize: "4" },
       ".cm-line": { padding: "0 16px 0 0", lineHeight: "26px" },
       ".cm-gutters": { padding: "0", backgroundColor: color.background, color: color.gutter, border: "none", borderRight: `1px solid ${color.divider}`, fontFamily: "var(--font-mono)", fontSize: "15px", lineHeight: "26px" },
-      ".cm-lineNumbers .cm-gutterElement": { boxSizing: "border-box", minWidth: "38px", padding: "0 8px 0 10px", lineHeight: "26px" },
-      ".cm-foldGutter": { width: "16px" },
-      ".cm-foldGutter .cm-gutterElement": { padding: "0", width: "16px", textAlign: "center", fontSize: "11px", lineHeight: "26px" },
+      // 行号、断点、折叠三栏尽量窄：断点 12px | 行号（两位数约 24px）| 折叠 12px
+      ".cm-lineNumbers .cm-gutterElement": { boxSizing: "border-box", minWidth: "24px", padding: "0 2px 0 0", fontSize: "13px", lineHeight: "26px" },
+      ".cm-foldGutter": { width: "12px" },
+      ".cm-foldGutter .cm-gutterElement": { padding: "0", width: "12px", textAlign: "center", fontSize: "10px", lineHeight: "26px" },
       ".cm-class-reference, .cm-class-reference *": { color: `${color.type} !important`, fontWeight: "600" },
       ".cm-activeLine": { backgroundColor: "transparent" },
       ".cm-activeLineGutter": { backgroundColor: "transparent", color: color.gutterActive },

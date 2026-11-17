@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"knapsack","params":["int[]","int[]","int"],"ret":"int"},
+ "fixed": 4,
  "cases": [
   {"in":[[1,3,4],[15,20,30],4],"out":35},
   {"in":[[2],[5],1],"out":0},

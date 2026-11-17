@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"reversePairs","params":["int[]"],"ret":"int"},
+ "fixed": 5,
  "cases": [
   {"in":[[9,7,5,4,6]],"out":8},
   {"in":[[]],"out":0},

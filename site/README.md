@@ -1,6 +1,6 @@
 # 热题 100 题解网站
 
-线上地址：https://leetcode.cgent.link （Cloudflare Pages 项目 `lc-hot100`）
+线上地址：https://leetcode.cgent.link ，也可以用 https://codexdance.cn 、https://codingdance.cn （Cloudflare Pages 项目 `lc-hot100`；几个域名之间登录是通的，见下面「多个域名」）
 
 - 首页按重要程度 / 难度 / 题型分组，带状态筛选和搜索，顶部的进度矩阵每格是一道题。
 - 每道题一页：原题与代码练习、分层提示、逐步动画演示、简洁写法和标准题解、我的历史题解、尝试记录、写代码时注意；标题下有「相关基础」，链到用到的专题。
@@ -73,6 +73,18 @@ wrangler pages secret put SESSION_SECRET --project-name lc-hot100
 ```
 
 这几项没设齐时，网站照常能看，只是不显示登录入口。
+
+### 多个域名（https://leetcode.cgent.link、https://codexdance.cn、https://codingdance.cn）
+
+三个域名都是 Pages 项目 `lc-hot100` 的自定义域名，内容一样。浏览器不让不同域名共用 Cookie，所以登录状态靠整页跳转在几个域名之间传（`functions/_lib/sso.ts`，测试 `functions/_lib/test/sso.test.ts`）：
+
+- `wrangler.toml` 的 `SITE_ORIGINS` 列出这几个域名，**第一个是登录域名**。GitHub App 只登记了它的回调地址，登录、授权都在它上面走 GitHub；在别的域名点登录，先跳到登录域名，登录域名已经登录的话不用再去 GitHub。
+- 登录成功后顺着列表把其余域名都走一遍（每个域名三次跳转：`/api/auth/link` 记随机数 → 登录域名 `/api/auth/bridge` 开票据 → `/api/auth/accept` 写 Cookie），之后在哪个域名打开都是登录状态。票据加密、2 分钟过期、只给指定域名用，还要和那个域名上的随机数 Cookie 对上，别人拿着自己的票据链接骗不了你登录成他的账号。
+- 以前只在登录域名上登录过的用户，在登录域名上打开页面时 `/api/session` 返回 `spread`，页面先测一下其余域名连不连得上，再经 `/api/auth/spread` 补同步一次（只补一次）。
+- 退出时 `POST /api/auth/logout` 返回下一站，页面跳过去把每个域名的会话都清掉（`/api/auth/signout`，要带 logout 发的凭证，别的网站没法随手让你退出）。
+- 几个域名的会话是同一套 GitHub 令牌。GitHub 的 refresh token 只能用一次，用过之后旧的令牌也作废，所以令牌快过期时先看 KV（绑定 `SESSIONS`，命名空间 `lc-hot100-sessions`）：别的域名已经换过就直接用，自己换成功了存进去（加密）给别的域名用。
+- 换登录域名：先在 GitHub App 设置里加上新域名的回调地址（`https://<域名>/api/auth/callback`），再把它挪到 `SITE_ORIGINS` 第一个。加一个新域名：先在 Pages 项目里加自定义域名，再加进 `SITE_ORIGINS`；已经登录的用户下次在登录域名上打开页面时会自动补同步到新域名。
+- `*.pages.dev` 这类不在列表里的地址不参与，和只有一个域名时一样。
 
 ## 从力扣同步（`/sync/`）
 

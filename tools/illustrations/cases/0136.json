@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"singleNumber","params":["int[]"],"ret":"int"},
+ "fixed": 5,
  "cases": [
   {"in":[[4,1,2,1,2]],"out":4},
   {"in":[[2,2,1]],"out":1},

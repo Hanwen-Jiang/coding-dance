@@ -1,5 +1,6 @@
 {
  "sig": {"cls":"MinHeap","ctor":[],"methods":{"push":[["int"],"void"],"pop":[[],"int"],"peek":[[],"int"],"size":[[],"int"]}},
+ "fixed": 3,
  "cases": [
   {"in":[["MinHeap","push","push","push","push","push","pop","pop","peek"],[[],[5],[8],[3],[9],[1],[],[],[]]],"out":[null,null,null,null,null,null,1,3,5]},
   {"in":[["MinHeap","push","peek","pop","size"],[[],[3],[],[],[]]],"out":[null,null,3,3,0]},

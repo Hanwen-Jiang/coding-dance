@@ -37,6 +37,7 @@
         "ABC"
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": "BANC",
       "stdin": "ADOBECODEBANC\nABC\n",
       "stdout": "BANC\n",
@@ -53,6 +54,7 @@
         "a"
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": "a",
       "stdin": "a\na\n",
       "stdout": "a\n",
@@ -69,6 +71,7 @@
         "aa"
       ],
       "label": "示例 3 · 边界",
+      "quick": true,
       "expected": "",
       "stdin": "a\naa\n",
       "stdout": "\n",
@@ -85,6 +88,7 @@
         "aab"
       ],
       "label": "仓库判题用例 2",
+      "quick": true,
       "expected": "aba",
       "stdin": "abaacbab\naab\n",
       "stdout": "aba\n"
@@ -95,6 +99,7 @@
         "aa"
       ],
       "label": "仓库判题用例 5",
+      "quick": true,
       "expected": "aa",
       "stdin": "aa\naa\n",
       "stdout": "aa\n"
@@ -105,6 +110,7 @@
         "b"
       ],
       "label": "仓库判题用例 6",
+      "quick": true,
       "expected": "b",
       "stdin": "ab\nb\n",
       "stdout": "b\n"
@@ -115,6 +121,7 @@
         "ab"
       ],
       "label": "仓库判题用例 7",
+      "quick": true,
       "expected": "ba",
       "stdin": "bba\nab\n",
       "stdout": "ba\n"
@@ -125,6 +132,7 @@
         "cae"
       ],
       "label": "仓库判题用例 8",
+      "quick": true,
       "expected": "cwae",
       "stdin": "cabwefgewcwaefgcf\ncae\n",
       "stdout": "cwae\n"

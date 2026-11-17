@@ -59,15 +59,6 @@ export function SiteHeader() {
           >
             <PixelTitle cell={1.5} px={12} text="基础" weight={500} />
           </NextLink>
-          <a
-            className="hidden items-center gap-1.5 rounded-lg px-3 py-1.5 text-muted no-underline transition-colors hover:text-foreground sm:inline-flex"
-            href="https://leetcode.cn/studyplan/top-100-liked/"
-            rel="noopener noreferrer"
-            target="_blank"
-          >
-            <PixelTitle cell={1.5} px={12} text="力扣题单" weight={500} />
-            <PixelIcon cell={1.5} name="arrow" />
-          </a>
           <LangPicker />
           <ThemeSwitch />
           <AccountButton />

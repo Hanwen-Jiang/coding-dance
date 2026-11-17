@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"traversals","params":["TreeNode"],"ret":"List<List<int>>"},
+ "fixed": 4,
  "cases": [
   {"in":[[1,2,3,4,5,null,6]],"out":[[1,2,4,5,3,6],[4,2,5,1,3,6],[4,5,2,6,3,1]]},
   {"in":[[]],"out":[[],[],[]]},

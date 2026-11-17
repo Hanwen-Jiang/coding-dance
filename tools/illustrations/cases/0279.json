@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"numSquares","params":["int"],"ret":"int"},
+ "fixed": 7,
  "cases": [
   {"in":[12],"out":3},
   {"in":[13],"out":2},

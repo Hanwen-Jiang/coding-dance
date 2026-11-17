@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"lastStoneWeight","params":["int[]"],"ret":"int"},
+ "fixed": 4,
  "cases": [
   {"in":[[2,7,4,1,8,1]],"out":1},
   {"in":[[1]],"out":1},

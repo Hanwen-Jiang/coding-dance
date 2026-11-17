@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"subarraySum","params":["int[]","int"],"ret":"int"},
+ "fixed": 6,
  "cases": [
   {"in":[[1,2,3],3],"out":2},
   {"in":[[3,4,7,2,-3,1,4,2],7],"out":4},

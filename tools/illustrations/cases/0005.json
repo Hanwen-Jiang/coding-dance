@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"longestPalindrome","params":["string"],"ret":"string","cmp":"length"},
+ "fixed": 7,
  "cases": [
   {"in":["babad"],"out":"bab"},
   {"in":["cbbd"],"out":"bb"},

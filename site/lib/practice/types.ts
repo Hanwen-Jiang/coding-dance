@@ -23,6 +23,8 @@ export interface PracticeCase {
   stdin: string;
   stdout: string;
   label?: string;
+  /** 「精简边界测试」也跑这一组：题目示例、预设、手写的边界用例（固定种子的随机用例没有这个标记，只在全量测试里跑） */
+  quick?: boolean;
   /** Exact checked-in statement example, when this case comes from the problem document. */
   source?: { path: string; index: number; input: string; output: string };
 }
@@ -56,6 +58,29 @@ export interface PracticeRunRequest {
   mode: PracticeMode;
   code: string;
   cases: PracticeCase[];
+  /** 调试：只跑一组用例，同时记下每一步执行到哪一行、当时的变量 */
+  debug?: boolean;
+}
+/** 调试记录里的一步：执行到第 line 行之前（event=line），或者函数返回（return）、抛出异常（exception）时 */
+export interface PracticeTraceStep {
+  line: number;
+  event: "line" | "return" | "exception";
+  /** 当前函数名（ACM 模式最外层是 <module>） */
+  fn: string;
+  /** 调用栈（只算用户的代码），外层在前：[函数名, 行号] */
+  stack: [string, number][];
+  /** 当前函数里看得到的变量：[名字, 显示用的值] */
+  vars: [string, string][];
+  /** 到这一步为止标准输出有多少个字符 */
+  out: number;
+  ret?: string;
+  exc?: string;
+}
+export interface PracticeTrace {
+  steps: PracticeTraceStep[];
+  /** 记满了步数，程序没跑完 */
+  truncated: boolean;
+  limit: number;
 }
 export interface PracticeCaseResult {
   index: number;
@@ -65,6 +90,7 @@ export interface PracticeCaseResult {
   stdout: string;
   error?: string;
   duration: number;
+  trace?: PracticeTrace;
 }
 export interface PracticeRunResult {
   results: PracticeCaseResult[];

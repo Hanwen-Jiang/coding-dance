@@ -187,6 +187,13 @@ const pairs = matchExisting(
 assert.deepEqual([...pairs].map(([p, s]) => `${p}→${s.id}`), ["h1→1", "h2→3"]);
 assert.equal(matchExisting([{ path: "h", code: "return a + b", verbatim: true }], [{ sub: { id: 9, status: "AC", lang: "python3", timestamp: at }, detail: { code: "return a - b" } }]).size, 0);
 
+// 8b) 网站练习区记的（source: practice）是本站用例的结果：代码和力扣提交一样也不对上，力扣那次照常导入成一条新记录
+const practice102 = "---\nlang: python\nverbatim: true\nsource: practice\nmode: leetcode\nranAt: 2026-11-10T09:50:00+08:00\n---\n\n## 代码\n\n````python\n" + CODE[102] + "\n````\n\n## 测试结果\n\n全部通过\n";
+const ghP = mockGitHub({ "hot100.json": JSON.stringify(hot), "progress.json": '{ "version": 1, "problems": {} }\n', "attempts/0001.两数之和/2026-11-10.1.通过.md": practice102 });
+const planP = await buildPlan({ repo: client(ghP), lc: createLeetCode(fakeLeetCode(BASE.filter((s) => s.id === 102)).transport, { gap: 0 }) });
+assert.equal(planP.linked.length, 0, "练习区的记录不补力扣的提交编号");
+assert.deepEqual(planP.added.map((f) => f.path), ["attempts/0001.两数之和/2026-11-10.2.通过.md"]);
+
 // 9) 服务端只肯写三类文件，内容不合规则整个拒绝
 const ok = { branch: "main", parent: "a".repeat(40), baseTree: "b".repeat(40), message: "m" };
 const rejects = (fs: { path: string; content: string }[], re: RegExp) => assert.throws(() => validateWrites({ ...ok, files: fs }), (e: unknown) => e instanceof SyncError && re.test(e.message));

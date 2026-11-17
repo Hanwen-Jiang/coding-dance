@@ -91,10 +91,10 @@ function codeOf(text: string) {
   return null;
 }
 
-/** 读一条尝试记录里和匹配有关的部分 */
+/** 读一条尝试记录里和匹配有关的部分。source 是 practice 的是网站练习区记的（按本站用例判的结果），同步不拿它们去和力扣提交对 */
 export function readAttempt(text: string) {
   const meta = frontMatter(text);
-  return { submission: meta.submission || null, submittedAt: meta.submittedAt || null, verbatim: meta.verbatim !== "false", code: codeOf(text) ?? null };
+  return { submission: meta.submission || null, submittedAt: meta.submittedAt || null, verbatim: meta.verbatim !== "false", code: codeOf(text) ?? null, source: meta.source || null };
 }
 
 /** 一条尝试记录的格式问题（和 check.mjs、progress.ts 的检查一致）；没问题返回空数组 */
@@ -112,6 +112,9 @@ export function validateAttempt(text: string) {
   if (meta.verbatim != null && meta.verbatim !== "true" && meta.verbatim !== "false") errs.push("verbatim 只能写 true 或 false");
   if (meta.submission != null && !/^\d+$/.test(meta.submission)) errs.push("submission 只能写力扣的提交编号（数字）");
   if (meta.submittedAt != null && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z)$/.test(meta.submittedAt)) errs.push("submittedAt 格式不对");
+  // 网站练习区记的带着 mode、ranAt（见 lib/practice/record.ts）
+  if (meta.mode != null && meta.mode !== "leetcode" && meta.mode !== "acm") errs.push("mode 只能写 leetcode 或 acm");
+  if (meta.ranAt != null && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z)$/.test(meta.ranAt)) errs.push("ranAt 格式不对");
   if (codeOf(t) === undefined) errs.push("「代码」一节里要放且只放一个 ``` 代码块");
   return errs;
 }

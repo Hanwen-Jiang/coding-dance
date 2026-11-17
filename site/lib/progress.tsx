@@ -18,8 +18,6 @@ interface Ctx {
   setStatus: (id: number, s: Status) => Promise<void>;
   /** 给用户勾选的仓库点 Star，返回每个仓库的结果（没点上的带着 GitHub 的状态码） */
   star: (repos: string[]) => Promise<StarResult[]>;
-  /** 登录前记下用户勾选的仓库，登录回来后自动点 Star（只点一次） */
-  starAfterLogin: (repos: string[]) => void;
   /** 在网页里直接建进度仓（要先授权）。成功返回 null；失败返回原因，code 是 exists / forbidden / failed */
   createRepo: (isPrivate: boolean) => Promise<{ code: string; error: string } | null>;
   /** 重新确认登录状态（建完仓库后点「刷新」用） */
@@ -32,8 +30,20 @@ interface Ctx {
 }
 
 const ProgressCtx = createContext<Ctx | null>(null);
-/** 登录前勾选的、登录后要点 Star 的仓库（跳去 GitHub 登录再回来，页面状态就没了，只能先存着） */
-const STAR_AFTER_LOGIN = "hot100:star-after-login";
+
+/** 另一个域名连不连得上（3 秒内能拿到它的图标就算）。no-cors 拿不到内容，只看请求有没有失败 */
+async function reachable(origin: string): Promise<boolean> {
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 3000);
+  try {
+    await fetch(`${origin}/favicon.svg`, { mode: "no-cors", cache: "no-store", signal: ctl.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
   const r = await fetch(url, { cache: "no-store", ...init });
@@ -65,6 +75,21 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     load();
   }, [load]);
+
+  // 以前只在登录域名上登录过：把登录同步到网站的其余域名（只补这一次）。先测哪些域名连得上，连不上的跳过，免得卡在打不开的页面上
+  const spread = session?.spread;
+  useEffect(() => {
+    if (!spread?.length) return;
+    let gone = false;
+    (async () => {
+      const ok = await Promise.all(spread.map((o) => reachable(o)));
+      if (gone) return;
+      const to = spread.filter((_, i) => ok[i]);
+      const back = location.pathname + location.search + location.hash;
+      location.replace(`/api/auth/spread?to=${encodeURIComponent(to.join(","))}&return=${encodeURIComponent(back)}`);
+    })();
+    return () => { gone = true; };
+  }, [spread]);
 
   const statusOf = useCallback((id: number) => progress?.status[String(id)] ?? "未开始", [progress]);
   const langsOf = useCallback((id: number) => progress?.langs[String(id)] ?? [], [progress]);
@@ -106,22 +131,6 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const starAfterLogin = useCallback((repos: string[]) => {
-    try { localStorage.setItem(STAR_AFTER_LOGIN, JSON.stringify(repos)); } catch { /* 存不了就不点了 */ }
-  }, []);
-  // 登录回来了：把登录前勾选的仓库点上 Star，然后清掉记录
-  const login = session?.user?.login;
-  useEffect(() => {
-    if (!login || !session) return;
-    let want: string[] = [];
-    try {
-      want = JSON.parse(localStorage.getItem(STAR_AFTER_LOGIN) || "[]");
-      localStorage.removeItem(STAR_AFTER_LOGIN);
-    } catch { return; }
-    const todo = session.stars.filter((s) => !s.starred && want.includes(s.repo)).map((s) => s.repo);
-    if (todo.length) star(todo);
-  }, [login]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const createRepo = useCallback(async (isPrivate: boolean) => {
     try {
       const r = await fetch("/api/progress/create", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ private: isPrivate }) });
@@ -143,7 +152,14 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   }, [load]);
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    const back = location.pathname + location.search + location.hash;
+    const r = await fetch(`/api/auth/logout?return=${encodeURIComponent(back)}`, { method: "POST" });
+    // 网站有几个域名时，顺路把其余域名的登录也清掉，最后回到这一页
+    const j = (await r.json().catch(() => ({}))) as { next?: string };
+    if (j.next) {
+      location.assign(j.next);
+      return;
+    }
     setProgress(null);
     await load();
   }, [load]);
@@ -154,8 +170,8 @@ export function ProgressProvider({ children }: { children: React.ReactNode }) {
   const ready = !!(session?.user && session.repo?.exists && session.repo.accessible && progress);
 
   const value = useMemo(
-    () => ({ loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, starAfterLogin, createRepo, refresh: load, logout, loginHref, installHref, ready }),
-    [loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, starAfterLogin, createRepo, load, logout, loginHref, installHref, ready],
+    () => ({ loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, createRepo, refresh: load, logout, loginHref, installHref, ready }),
+    [loading, session, progress, saving, error, statusOf, langsOf, setStatus, star, createRepo, load, logout, loginHref, installHref, ready],
   );
   return <ProgressCtx.Provider value={value}>{children}</ProgressCtx.Provider>;
 }

@@ -22,6 +22,11 @@ async function main() {
     assert(p.acm.input && p.acm.output);
     assert(p.cases.length >= 3, `${p.id}: examples and a boundary case are required`);
     assert(p.cases.some((c) => c.label.includes("边界")), `${p.id}: boundary provenance is required`);
+    // 精简边界测试：示例和边界用例都在里面；随机用例只在全量里（22、51 这种输入很少的题没有随机用例，两档一样）
+    const quick = p.cases.filter((c) => c.quick);
+    assert(quick.length >= 3 && quick.length <= p.cases.length, `${p.id}: quick cases ${quick.length} / ${p.cases.length}`);
+    assert(p.cases.filter((c) => /^仓库判题用例/.test(c.label) && !c.quick).length <= 10, `${p.id}: only the 10 random cases are full-only`);
+    assert(p.cases.filter((c) => /^示例|边界/.test(c.label)).every((c) => c.quick), `${p.id}: examples and boundary cases must be quick`);
     assert.equal(p.examples.length, official[p.id].length);
     assert.equal(p.acm.examples.length, p.examples.length);
     for (const lang of ["python", "javascript", "typescript"]) {

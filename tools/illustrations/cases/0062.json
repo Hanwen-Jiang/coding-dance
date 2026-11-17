@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"uniquePaths","params":["int","int"],"ret":"int"},
+ "fixed": 7,
  "cases": [
   {"in":[3,7],"out":28},
   {"in":[3,2],"out":3},
