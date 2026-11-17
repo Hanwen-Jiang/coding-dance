@@ -10,19 +10,20 @@
     "preview:local": "node ../tools/dev/preview.mjs",
     "dev:resources": "node ../tools/dev/resource-api.mjs",
     "test:dev-resources": "node ../tools/dev/resource-api.test.mjs",
-    "test": "node lib/sync/test/sync.test.ts",
+    "test": "node lib/sync/test/sync.test.ts && node lib/practice/test/record.test.ts && node lib/practice/test/save-queue.test.ts",
     "deploy": "npm run build && wrangler pages deploy out",
     "prepare:practice": "node ../tools/practice-runtime/prepare.mjs",
     "generate:practice": "node ../tools/practice/build.cjs",
     "test:practice-data": "node ../tools/practice/test.cjs",
     "test:practice-ui": "node ../tools/practice-ui/test.mjs",
-    "test:practice-runtime": "node ../tools/practice-runtime/test.mjs"
+    "test:practice-runtime": "node ../tools/practice-runtime/test.mjs && node ../tools/practice-runtime/debug.test.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.20.4",
     "@codemirror/lang-javascript": "^6.2.5",
     "@codemirror/lang-python": "^6.2.1",
     "@codemirror/language": "^6.13.1",
+    "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.43.15",
     "@heroui-pro/react": "1.0.0-beta.11",
     "@heroui/react": "3.0.4",

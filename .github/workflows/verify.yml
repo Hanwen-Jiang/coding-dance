@@ -24,9 +24,12 @@ jobs:
         run: node tools/illustrations/build.js --strict
       - name: 生成的文件要和提交的一致
         run: git diff --exit-code -- tools/illustrations/data tools/illustrations/cases illustrations
-      - name: 同步逻辑的测试
+      - name: 同步逻辑、练习区写进度仓的测试
         working-directory: site
-        run: node lib/sync/test/sync.test.ts
+        run: |
+          node lib/sync/test/sync.test.ts
+          node lib/practice/test/record.test.ts
+          node lib/practice/test/save-queue.test.ts
 
   practice:
     name: 练习数据和运行器
@@ -54,6 +57,8 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/site/node_modules" && cp -r /tmp/rt/node_modules/. "$GITHUB_WORKSPACE/site/node_modules/"
       - name: 运行器的测试（Python、JavaScript、TypeScript）
         run: node tools/practice-runtime/test.mjs
+      - name: 调试（执行记录）的测试
+        run: node tools/practice-runtime/debug.test.mjs
 
   judge:
     name: 判题 ${{ matrix.lang }}

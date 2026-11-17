@@ -4,13 +4,15 @@ import { createHash } from "node:crypto";
 import type { Api } from "../server.ts";
 
 const hash = (s: string) => createHash("sha1").update(s).digest("hex");
+/** 和 git 一样的 blob sha：sha1("blob <字节数>\0" + 内容) */
+const blobSha = (c: string) => createHash("sha1").update(`blob ${Buffer.byteLength(c)}\0`).update(c).digest("hex");
 
 export function mockGitHub(initial: Record<string, string>, { owner = "me", name = "hot100-progress" } = {}) {
   const blobs = new Map<string, string>(), trees = new Map<string, Map<string, string>>(), commits = new Map<string, { tree: string; parent: string | null; message: string }>();
   const putTree = (files: Map<string, string>) => {
     const entries = [...files.entries()].sort(([a], [b]) => (a < b ? -1 : 1));
-    for (const [, c] of entries) blobs.set(hash("blob " + c), c);
-    const sha = hash("tree " + entries.map(([p, c]) => p + "\0" + hash("blob " + c)).join("\n"));
+    for (const [, c] of entries) blobs.set(blobSha(c), c);
+    const sha = hash("tree " + entries.map(([p, c]) => p + "\0" + blobSha(c)).join("\n"));
     trees.set(sha, new Map(entries));
     return sha;
   };
@@ -34,7 +36,7 @@ export function mockGitHub(initial: Record<string, string>, { owner = "me", name
     if (method === "GET" && (m = p.match(/^\/git\/commits\/(\w+)$/))) return r(200, { tree: { sha: commits.get(m[1])!.tree } });
     if (method === "GET" && (m = p.match(/^\/git\/trees\/(\w+)$/))) {
       const t = trees.get(m[1])!;
-      return r(200, { truncated: false, tree: [...t.entries()].map(([path, c]) => ({ path, type: "blob", sha: hash("blob " + c) })) });
+      return r(200, { truncated: false, tree: [...t.entries()].map(([path, c]) => ({ path, type: "blob", sha: blobSha(c) })) });
     }
     if (method === "GET" && (m = p.match(/^\/git\/blobs\/(\w+)$/))) return r(200, { encoding: "base64", content: Buffer.from(blobs.get(m[1])!).toString("base64") });
     if (method === "POST" && p === "/git/trees") {

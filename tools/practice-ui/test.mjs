@@ -251,6 +251,12 @@ try {
 
   await page.getByRole("button", { name: "进入专注模式", exact: true }).click();
   await page.locator(".practice-shell--focus").waitFor();
+  // 专注模式是一整块铺满屏幕的工作区：没有外框，代码卡片也不再套边框
+  await page.waitForTimeout(300);
+  const shellBox = await page.locator(".practice-shell--focus").boundingBox();
+  assert(shellBox.x === 0 && shellBox.y === 0 && Math.abs(shellBox.width - page.viewportSize().width) < 1, `Focus mode fills the screen without an outer frame (${JSON.stringify(shellBox)})`);
+  assert.equal(await page.locator("#practice").evaluate((el) => getComputedStyle(el).borderTopWidth + " " + getComputedStyle(el).borderTopLeftRadius), "0px 0px", "Code card has no border or rounded corners in focus mode");
+  await page.screenshot({ path: path.join(screenshots, "desktop-focus.png"), animations: "disabled" });
   await page.keyboard.press("Escape");
   await page.locator(".practice-shell--focus").waitFor({ state: "detached" });
   await page.locator(".cm-scroller").evaluate((element) => { element.scrollTop = 0; element.scrollLeft = 0; });

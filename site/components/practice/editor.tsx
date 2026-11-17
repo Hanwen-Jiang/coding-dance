@@ -7,9 +7,10 @@ import { localCompletionSource as pyLocals, python } from "@codemirror/lang-pyth
 import { indentUnit } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { useTheme } from "next-themes";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 import type { PracticeHints, PracticeLanguage } from "@/lib/practice/types";
+import { debugExtensions, setDebugLine } from "./editor-debug";
 import { practiceEditorTheme } from "./editor-theme";
 import { practiceIndentGuides } from "./editor-guides";
 
@@ -18,16 +19,31 @@ import { practiceIndentGuides } from "./editor-guides";
  * full：关键字、内置函数、库函数、类型都会提示，加上代码里已有的变量；
  * none：只补全代码里已经定义的变量和函数，不提示有哪些函数、类型、关键字可用（练习不靠提示写代码）。
  */
-export function PracticeEditor({ language, code, onChange, ready, hints = "full" }: {
+export function PracticeEditor({ language, code, onChange, ready, hints = "full", debugLine = null, onBreakpoints }: {
   language: PracticeLanguage;
   code: string;
   onChange: (code: string) => void;
   ready: boolean;
   hints?: PracticeHints;
+  /** 调试时当前执行到的行（从 1 开始），高亮并滚到能看见；null 表示没在调试 */
+  debugLine?: number | null;
+  /** 断点变了：行号左边那一栏点一下加上或去掉断点 */
+  onBreakpoints?: (lines: number[]) => void;
 }) {
   const { resolvedTheme } = useTheme();
   const full = hints === "full";
+  const view = useRef<EditorView | null>(null);
+  const breakpointsCb = useRef(onBreakpoints);
+  breakpointsCb.current = onBreakpoints;
+  const debug = useMemo(() => debugExtensions((lines) => breakpointsCb.current?.(lines)), []);
+  useEffect(() => {
+    const v = view.current;
+    if (!v) return;
+    const line = debugLine != null && debugLine >= 1 && debugLine <= v.state.doc.lines ? v.state.doc.line(debugLine) : null;
+    v.dispatch({ effects: [setDebugLine.of(line ? debugLine : null), ...(line ? [EditorView.scrollIntoView(line.from, { y: "nearest" })] : [])] });
+  }, [debugLine]);
   const extensions = useMemo(() => [
+    debug,
     language === "python" ? python() : javascript({ typescript: language === "typescript" }),
     indentUnit.of(language === "python" ? "    " : "  "),
     practiceIndentGuides,
@@ -36,7 +52,7 @@ export function PracticeEditor({ language, code, onChange, ready, hints = "full"
     EditorView.contentAttributes.of({ "aria-label": "代码编辑器", spellcheck: "false", "data-testid": "practice-code", "data-hints": hints }),
     Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
     ...practiceEditorTheme(resolvedTheme === "dark"),
-  ], [language, resolvedTheme, hints, full]);
+  ], [debug, language, resolvedTheme, hints, full]);
 
   return (
     <CodeMirror
@@ -47,6 +63,7 @@ export function PracticeEditor({ language, code, onChange, ready, hints = "full"
       height="100%"
       indentWithTab
       onChange={onChange}
+      onCreateEditor={(v) => { view.current = v; }}
       theme="none"
       value={code}
     />

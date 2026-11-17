@@ -3,6 +3,7 @@
 //   settings.json（可以没有）：{ version: 1, langs: ["java", "python"] }，常用语言，第一个是默认语言
 //   solutions/<语言>/<四位题号>.<题名>[.<写法>].<后缀>
 //   attempts/<四位题号>.<题名>/<YYYY-MM-DD>.<序号>.<结果>.md
+//   drafts/<语言>/<四位题号>.<题名>[.ACM].<后缀>：网站练习区的草稿（读写在 lib/practice/record.ts 和 api/progress/practice.ts）
 
 import type { Attempt, AttemptResult, HistoryFile, Settings, Status } from "../../lib/types";
 import { HttpError } from "./github";
@@ -97,10 +98,15 @@ export function parseAttemptBody(src: string) {
   // 从力扣同步过来的记录（或补过编号的手写记录）带着这三项
   if (meta.submission != null && !/^\d+$/.test(meta.submission)) errs.push("submission 只能写力扣的提交编号（数字）");
   if (meta.submittedAt != null && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z)$/.test(meta.submittedAt)) errs.push("submittedAt 要写成 2026-11-14T10:05:00+08:00 这样");
+  // 网站练习区记的带着 source: practice、mode、ranAt
+  if (meta.mode != null && meta.mode !== "leetcode" && meta.mode !== "acm") errs.push("mode 只能写 leetcode 或 acm");
+  if (meta.ranAt != null && !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z)$/.test(meta.ranAt)) errs.push("ranAt 要写成 2026-11-17T23:30:00+08:00 这样");
   const submission = meta.submission && /^\d+$/.test(meta.submission) ? meta.submission : null;
+  // 网站练习区的记录（source: practice）写的是运行时间 ranAt，页面上和提交时间显示在同一个位置
+  const at = meta.submittedAt || (meta.ranAt && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(meta.ranAt) ? meta.ranAt : "");
   return {
     lang, verbatim: meta.verbatim !== "false", sections, code, errors: errs,
-    source: meta.source || null, submission, submittedAt: meta.submittedAt || null,
+    source: meta.source || null, submission, submittedAt: at || null,
   };
 }
 

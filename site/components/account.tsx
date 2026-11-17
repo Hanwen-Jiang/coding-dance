@@ -117,20 +117,60 @@ export function useStarChoice() {
 }
 type StarChoice = ReturnType<typeof useStarChoice>;
 
-/** 注册、登录时的「顺手 Star」：说明 + 仓库列表。login 时勾着的会在登录回来后点，注册时在点开通按钮时一起点 */
-export function StarPicker({ c, when }: { c: StarChoice; when: "login" | "setup" }) {
+/** 开通时的「顺手 Star」：说明 + 仓库列表，勾着的在用户点开通按钮时一起点 */
+function StarPicker({ c }: { c: StarChoice }) {
   if (!c.all.length) return null;
   return (
     <div className="flex flex-col gap-3 border-t border-separator pt-4">
       <span className="text-sm text-muted">
         {!c.pending.length
           ? "下面这些你都已经 Star 了，谢谢。"
-          : when === "login"
-            ? "觉得有用的话，顺手点个 Star：勾着的会在你登录后自动点上，不想点的取消勾选。"
-            : "觉得有用的话，开通时顺手点个 Star：勾着的会在你点上面的按钮时一起点，不想点的取消勾选。"}
+          : "觉得有用的话，开通时顺手点个 Star：勾着的会在你点上面的按钮时一起点，不想点的取消勾选。"}
       </span>
       <StarList c={c} />
     </div>
+  );
+}
+
+/** 作者和共创者。GitHub App 没有 Followers 权限，关注只能去 GitHub 上点 */
+const PEOPLE = [
+  { login: "Hanwen-Jiang", role: "作者", note: "题目、动画演示、六种语言的题解和这个网站" },
+  { login: "Timmononon", role: "共创者", note: "题目页的在线练习：在浏览器里写代码、运行和测试" },
+];
+
+/** 开通卡片底部的共创人小列表：头像、分工，和去 GitHub 关注的按钮 */
+function Creators() {
+  return (
+    <div className="flex flex-col gap-3 border-t border-separator pt-4">
+      <span className="text-sm text-muted">网站是下面两位一起做的。想第一时间看到新题解和新功能，可以在 GitHub 上关注作者和共创者。</span>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {PEOPLE.map(({ login, role, note }) => (
+          <li key={login} className="flex items-center gap-3 rounded-xl border border-separator px-3 py-2.5">
+            <PixelAvatar size={32} src={`https://github.com/${login}.png?size=16`} />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="flex flex-wrap items-center gap-x-2">
+                <span className="font-mono text-[13px]">{login}</span>
+                <span className="rounded-full bg-foreground/[0.06] px-1.5 text-[11px] text-muted">{role}</span>
+              </span>
+              <span className="text-xs leading-5 text-muted">{note}</span>
+            </div>
+            <Button aria-label={`去 GitHub 关注 ${login}`} className="shrink-0" size="sm" variant="outline" onPress={() => window.open(`https://github.com/${login}`, "_blank", "noopener,noreferrer")}>
+              关注<ExternalIcon />
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** 开通卡片底部：顺手 Star + 共创人 */
+function Extras({ c }: { c: StarChoice }) {
+  return (
+    <>
+      <StarPicker c={c} />
+      <Creators />
+    </>
   );
 }
 
@@ -294,7 +334,7 @@ export function SetupCard() {
           </Step>
         </div>
         {!cannotCreate && <div><button className={linkBtn} type="button" onClick={() => setManual(false)}>← 还是让网站帮我建</button></div>}
-        <StarPicker c={c} when="setup" />
+        <Extras c={c} />
       </Card>
     );
   }
@@ -311,7 +351,7 @@ export function SetupCard() {
           <Button isPending={leaving} onPress={authorize}>去 GitHub 授权</Button>
           <button className={linkBtn} type="button" onClick={() => setManual(true)}>想先自己建仓库、只授权这一个？</button>
         </div>
-        <StarPicker c={c} when="setup" />
+        <Extras c={c} />
       </Card>
     );
   }
@@ -340,32 +380,29 @@ export function SetupCard() {
         </div>
       )}
       {problem && problem.code === "failed" && <p className="text-sm text-danger">{problem.error}，可以再试一次。</p>}
-      <StarPicker c={c} when="setup" />
+      <Extras c={c} />
     </Card>
   );
 }
 
-/**
- * 「用 GitHub 登录」按钮：点的时候记下用户勾选的仓库，登录回来后自动 Star。
- * 在 Button 自己的 onPress 里记下再跳转：Button 不让点击冒泡，包一层 <a onClick> 是收不到的。
- */
-export function LoginButton({ c, size }: { c: StarChoice; size?: "sm" | "md" | "lg" }) {
-  const { loginHref, starAfterLogin } = useProgress();
+/** 「用 GitHub 登录」按钮。顺手 Star 和关注共创者都放在登录之后的开通卡片里，这里只管登录 */
+export function LoginButton({ size }: { size?: "sm" | "md" | "lg" }) {
+  const { loginHref } = useProgress();
+  // 在 Button 自己的 onPress 里跳转：Button 不让点击冒泡，包一层 <a onClick> 是收不到的
   return (
-    <Button size={size} onPress={() => { starAfterLogin(c.chosen); window.location.href = loginHref(); }}>
+    <Button size={size} onPress={() => { window.location.href = loginHref(); }}>
       <PixelIcon cell={1.75} name="cat" />
       用 GitHub 登录
     </Button>
   );
 }
 
-/** 没登录时首页上的登录提示；下面列出请用户顺手 Star 的仓库（默认全勾） */
+/** 没登录时首页上的登录提示：只有一句说明和登录按钮 */
 export function LoginHint() {
   const { loading, session } = useProgress();
-  const c = useStarChoice();
   if (loading || !session?.configured || session.user) return null;
   return (
-    <Card className="reveal gap-5 p-5 sm:px-6">
+    <Card className="reveal p-5 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 flex-1 items-start gap-4">
           <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-foreground/[0.06]"><PixelIcon cell={2.5} name="cat" /></span>
@@ -376,9 +413,8 @@ export function LoginHint() {
             </span>
           </div>
         </div>
-        <LoginButton c={c} />
+        <LoginButton />
       </div>
-      <StarPicker c={c} when="login" />
     </Card>
   );
 }
