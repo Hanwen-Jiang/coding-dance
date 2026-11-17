@@ -83,10 +83,11 @@ try {
   await assertPreserved("popup Escape");
 
   await page.getByRole("button", { name: "退出专注模式", exact: true }).click();
-  const closing = await sidebar.evaluate((element) => ({ phase: element.getAttribute("data-focus-phase"), fixed: getComputedStyle(element).position, animation: getComputedStyle(element).animationName, visible: element.getBoundingClientRect().width > 0, locked: document.body.style.overflow }));
-  assert.equal(closing.phase, "closing", "Closing needs an observable exit phase");
-  assert.equal(closing.fixed, "fixed", "Keep focus geometry while its exit animation runs");
-  assert.notEqual(closing.animation, "none", "A real exit animation is required");
+  const closing = await sidebar.evaluate((element) => ({ phase: element.getAttribute("data-focus-phase"), position: getComputedStyle(element).position, animation: getComputedStyle(element).animationName, originalVisibility: getComputedStyle(document.querySelector(".problem-original")).visibility, visible: element.getBoundingClientRect().width > 0, locked: document.body.style.overflow }));
+  assert.equal(closing.phase, "closing", "Closing uses a single common-parent exit animation");
+  assert.equal(closing.position, "fixed", "Keep both focus panels together during exit");
+  assert.notEqual(closing.animation, "none", "The common parent performs a real exit animation");
+  assert.equal(closing.originalVisibility, "hidden", "Hide the entire original title, headings and body until exit completes");
   assert(closing.visible && closing.locked === "hidden", "Keep the workspace and scroll lock through exit animation");
   await phase("closed");
   assert.equal(await page.evaluate(() => document.body.style.overflow), originalOverflow);

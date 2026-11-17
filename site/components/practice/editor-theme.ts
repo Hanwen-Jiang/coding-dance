@@ -2,23 +2,23 @@ import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 
-// Token colors follow Microsoft's built-in Light+ / Dark+ themes:
-// https://github.com/microsoft/vscode/tree/main/extensions/theme-defaults/themes
+// Follow the user's VS Code reference: quiet canvas, purple names, red
+// functions, blue control flow and brown literals. Dark mode keeps the roles.
 const palettes = {
   light: {
-    background: "#ffffff", foreground: "#000000", gutter: "#858585", gutterActive: "#333333", divider: "#ececec",
-    activeLine: "#f5f5f5", selection: "#add6ff", inactiveSelection: "#e5ebf1", caret: "#000000",
-    keyword: "#0000ff", control: "#af00db", string: "#a31515", number: "#098658", comment: "#008000",
-    type: "#267f99", function: "#795e26", variable: "#001080", constant: "#0070c1", escape: "#ee0000", invalid: "#cd3131",
+    background: "#ffffff", foreground: "#303030", gutter: "#777870", gutterActive: "#777870", divider: "#e7e7e7", guide: "#d8d8d8",
+    selection: "#c8d0dd", inactiveSelection: "#dce0e7", selectionEdge: "#8c9caf66", selectionShadow: "#34455b1a", caret: "#303030",
+    keyword: "#8631b4", control: "#4167e8", string: "#a64b30", number: "#b05a16", comment: "#6c8470",
+    type: "#8433af", function: "#bb302a", variable: "#8433b5", constant: "#b05a16", operator: "#777777", bracket: "#4167e8", escape: "#ad542e", invalid: "#cd3131",
     popup: "#ffffff", popupBorder: "#d0d7de", popupText: "#24292f", popupDetail: "#57606a",
     popupHover: "#f4f6f8", popupSelected: "#e8f0ff", popupSelectedBorder: "#c5d9f3", popupMatch: "#0065a9", iconBackground: "#f3f4f6",
     shadow: "0 8px 24px #00000014, 0 2px 6px #0000000a", bracketBorder: "#b9b9b9", bracketBackground: "#bad0f833",
   },
   dark: {
-    background: "#1e1e1e", foreground: "#d4d4d4", gutter: "#858585", gutterActive: "#c6c6c6", divider: "#303031",
-    activeLine: "#2a2d2e", selection: "#264f78", inactiveSelection: "#3a3d41", caret: "#aeafad",
-    keyword: "#569cd6", control: "#c586c0", string: "#ce9178", number: "#b5cea8", comment: "#6a9955",
-    type: "#4ec9b0", function: "#dcdcaa", variable: "#9cdcfe", constant: "#4fc1ff", escape: "#d7ba7d", invalid: "#f44747",
+    background: "#202124", foreground: "#d8d8dc", gutter: "#8c8e91", gutterActive: "#8c8e91", divider: "#303136", guide: "#41434a",
+    selection: "#414f66", inactiveSelection: "#353e4e", selectionEdge: "#899bb366", selectionShadow: "#00000040", caret: "#d8d8dc",
+    keyword: "#c79be9", control: "#8ba9ff", string: "#dfae8c", number: "#dbad77", comment: "#8da58c",
+    type: "#c6a0e5", function: "#f18983", variable: "#c5a0e5", constant: "#dbad77", operator: "#a0a1a9", bracket: "#8ba9ff", escape: "#edba82", invalid: "#f44747",
     popup: "#252526", popupBorder: "#454545", popupText: "#d4d4d4", popupDetail: "#a6a6a6",
     popupHover: "#303031", popupSelected: "#2c425d", popupSelectedBorder: "#3b5879", popupMatch: "#4fc1ff", iconBackground: "#303034",
     shadow: "0 8px 28px #0000004d, 0 2px 8px #00000033", bracketBorder: "#888888", bracketBackground: "#3a3a3a",
@@ -31,21 +31,21 @@ export function practiceEditorTheme(dark: boolean) {
   const icon = (symbol: string, foreground: string) => ({ color: foreground, "&::after": { content: JSON.stringify(symbol) } });
   return [
     EditorView.theme({
-      "&": { color: color.foreground, backgroundColor: color.background, fontSize: "14px", fontWeight: "400" },
+      "&": { color: color.foreground, backgroundColor: color.background, fontSize: "15px", fontWeight: "400", "--practice-indent-guide": color.guide },
       "&.cm-focused": { outline: "none" },
-      ".cm-scroller": { fontFamily: "var(--font-mono)", fontSize: "14px", lineHeight: "24px", fontVariantLigatures: "none", fontFeatureSettings: "'liga' 0, 'calt' 0" },
-      // The inset belongs to the document, not each highlighted line. Column zero,
-      // the caret and the active-line fill consequently have the same left edge.
-      ".cm-content": { padding: "14px 0 14px 12px", minHeight: "100%", caretColor: color.caret, fontSize: "14px", lineHeight: "24px", tabSize: "4" },
-      ".cm-line": { padding: "0 16px 0 0", lineHeight: "24px" },
-      ".cm-gutters": { padding: "0", backgroundColor: color.background, color: color.gutter, border: "none", borderRight: `1px solid ${color.divider}`, fontFamily: "var(--font-mono)", fontSize: "14px", lineHeight: "24px" },
-      ".cm-lineNumbers .cm-gutterElement": { boxSizing: "border-box", minWidth: "38px", padding: "0 8px 0 10px", lineHeight: "24px" },
+      ".cm-scroller": { fontFamily: "var(--font-mono)", fontSize: "15px", lineHeight: "26px", fontVariantLigatures: "none", fontFeatureSettings: "'liga' 0, 'calt' 0" },
+      // The inset belongs to the document so column zero and the caret align.
+      ".cm-content": { padding: "14px 0 14px 12px", minHeight: "100%", caretColor: color.caret, fontSize: "15px", lineHeight: "26px", tabSize: "4" },
+      ".cm-line": { padding: "0 16px 0 0", lineHeight: "26px" },
+      ".cm-gutters": { padding: "0", backgroundColor: color.background, color: color.gutter, border: "none", borderRight: `1px solid ${color.divider}`, fontFamily: "var(--font-mono)", fontSize: "15px", lineHeight: "26px" },
+      ".cm-lineNumbers .cm-gutterElement": { boxSizing: "border-box", minWidth: "38px", padding: "0 8px 0 10px", lineHeight: "26px" },
       ".cm-foldGutter": { width: "16px" },
-      ".cm-foldGutter .cm-gutterElement": { padding: "0", width: "16px", textAlign: "center", fontSize: "11px", lineHeight: "24px" },
-      ".cm-activeLine": { backgroundColor: color.activeLine },
+      ".cm-foldGutter .cm-gutterElement": { padding: "0", width: "16px", textAlign: "center", fontSize: "11px", lineHeight: "26px" },
+      ".cm-class-reference, .cm-class-reference *": { color: `${color.type} !important`, fontWeight: "600" },
+      ".cm-activeLine": { backgroundColor: "transparent" },
       ".cm-activeLineGutter": { backgroundColor: "transparent", color: color.gutterActive },
       ".cm-cursor, .cm-dropCursor": { borderLeftColor: color.caret },
-      ".cm-selectionBackground": { backgroundColor: color.inactiveSelection },
+      ".cm-selectionBackground": { backgroundColor: `${color.inactiveSelection} !important`, borderRadius: "3px", boxShadow: `inset 0 0 0 1px ${color.selectionEdge}, 0 1px 3px ${color.selectionShadow}` },
       "&.cm-focused .cm-selectionBackground": { backgroundColor: `${color.selection} !important` },
       ".cm-content ::selection": { backgroundColor: `${color.selection} !important` },
       ".cm-selectionMatch": { backgroundColor: dark ? "#add6ff26" : "#add6ff55" },
@@ -82,15 +82,18 @@ export function practiceEditorTheme(dark: boolean) {
     syntaxHighlighting(HighlightStyle.define([
       { tag: tags.variableName, color: color.variable },
       { tag: tags.propertyName, color: color.variable },
-      { tag: [tags.keyword, tags.definitionKeyword, tags.modifier, tags.self, tags.bool, tags.null], color: color.keyword },
-      { tag: [tags.controlKeyword, tags.moduleKeyword, tags.operatorKeyword], color: color.control },
+      { tag: [tags.keyword, tags.definitionKeyword, tags.modifier], color: color.keyword },
+      { tag: tags.self, color: color.variable },
+      { tag: [tags.bool, tags.null], color: color.number },
+      { tag: [tags.controlKeyword, tags.moduleKeyword], color: color.control },
       { tag: [tags.string, tags.special(tags.string), tags.character], color: color.string },
       { tag: tags.number, color: color.number },
       { tag: [tags.comment, tags.lineComment, tags.blockComment, tags.docComment], color: color.comment },
-      { tag: [tags.typeName, tags.className, tags.namespace], color: color.type },
-      { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.function(tags.definition(tags.variableName))], color: color.function },
+      { tag: [tags.typeName, tags.className, tags.namespace], color: color.type, fontWeight: "600" },
+      { tag: [tags.function(tags.variableName), tags.function(tags.propertyName), tags.function(tags.definition(tags.variableName))], color: color.function, fontWeight: "600" },
       { tag: [tags.constant(tags.variableName), tags.standard(tags.variableName)], color: color.constant },
-      { tag: [tags.operator, tags.punctuation, tags.bracket, tags.separator], color: color.foreground },
+      { tag: [tags.operator, tags.operatorKeyword, tags.punctuation, tags.separator], color: color.operator },
+      { tag: tags.bracket, color: color.bracket },
       { tag: tags.regexp, color: color.string },
       { tag: tags.escape, color: color.escape },
       { tag: tags.meta, color: color.type },

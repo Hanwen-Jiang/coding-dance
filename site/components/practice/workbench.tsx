@@ -5,7 +5,8 @@ import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import { CodeIcon, PlayIcon } from "@/components/icons";
 import { PixelLoader, Skel } from "@/components/pixel";
@@ -35,6 +36,8 @@ export function PracticeWorkbench() {
   const active = focusPhase !== "closed";
   const reducedMotion = useReducedMotion();
   const focusButton = useRef<HTMLButtonElement>(null);
+  const closeFocus = useCallback(() => setFocusPhase((phase) => phase === "open" ? "closing" : phase), []);
+  const finishClosing = useCallback(() => setFocusPhase((phase) => phase === "closing" ? "closed" : phase), []);
 
   useEffect(() => {
     if (!active) return;
@@ -43,7 +46,7 @@ export function PracticeWorkbench() {
     const background = [document.querySelector(".problem-original"), document.querySelector("body > header"), document.querySelector("body > footer")].filter((node): node is HTMLElement => node instanceof HTMLElement);
     const previous = background.map((node) => node.inert);
     background.forEach((node) => { node.inert = true; });
-    const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented) setFocusPhase("closing"); };
+    const onEscape = (event: KeyboardEvent) => { if (event.key === "Escape" && !event.defaultPrevented) closeFocus(); };
     window.addEventListener("keydown", onEscape);
     return () => {
       document.body.style.overflow = overflow;
@@ -51,13 +54,22 @@ export function PracticeWorkbench() {
       window.removeEventListener("keydown", onEscape);
       focusButton.current?.focus({ preventScroll: true });
     };
+  }, [active, closeFocus]);
+
+  useLayoutEffect(() => {
+    if (!active) return;
+    const original = document.querySelector<HTMLElement>(".problem-original");
+    if (!original) return;
+    const visibility = original.style.visibility;
+    original.style.visibility = "hidden";
+    return () => { original.style.visibility = visibility; };
   }, [active]);
 
   useEffect(() => {
     if (focusPhase !== "closing") return;
-    const timeout = setTimeout(() => setFocusPhase("closed"), reducedMotion ? 0 : 240);
+    const timeout = setTimeout(finishClosing, reducedMotion ? 0 : 120);
     return () => clearTimeout(timeout);
-  }, [focusPhase, reducedMotion]);
+  }, [focusPhase, reducedMotion, finishClosing]);
 
   return (
     <aside
@@ -65,10 +77,9 @@ export function PracticeWorkbench() {
       aria-modal={active ? true : undefined}
       className={clsx("practice-sidebar practice-shell", active && "practice-shell--focus", focusPhase === "closing" && "practice-shell--closing")}
       data-focus-phase={focusPhase}
-      onAnimationEnd={(event) => { if (event.target === event.currentTarget && focusPhase === "closing") setFocusPhase("closed"); }}
+      onAnimationEnd={(event) => { if (event.target === event.currentTarget && focusPhase === "closing") flushSync(finishClosing); }}
       role={active ? "dialog" : undefined}
     >
-      <div aria-hidden className="practice-focus-backdrop" hidden={!active} />
       <section aria-label="专注题面" className="practice-focus-statement" hidden={!active} key="statement">
         <div className="practice-focus-statement-heading"><span className="font-mono text-xs text-muted">{detail.summary.id}.</span><h2 className="text-base font-bold">{detail.summary.name}</h2></div>
         <div className="practice-focus-statement-body"><PracticeStatement /></div>
@@ -76,7 +87,7 @@ export function PracticeWorkbench() {
       <div className="practice-editor-column" key="editor">
         <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-3">
           <PracticeModeSwitch />
-          <Button aria-label={active ? "退出专注模式" : "进入专注模式"} isDisabled={focusPhase === "closing"} onPress={() => setFocusPhase(active ? "closing" : "open")} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} />{active ? "退出专注" : "专注模式"}</Button>
+          <Button aria-label={active ? "退出专注模式" : "进入专注模式"} isDisabled={focusPhase === "closing"} onPress={() => { if (active) closeFocus(); else setFocusPhase("open"); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} />{active ? "退出专注" : "专注模式"}</Button>
         </div>
         {problem ? <PracticeSession key={`${problem.id}:${mode}:${language}`} language={language} mode={mode} onLanguageChange={(value) => select(mode, value)} problem={problem} /> : (
           <Card className="min-w-0 items-center justify-center gap-4 px-6 py-14">

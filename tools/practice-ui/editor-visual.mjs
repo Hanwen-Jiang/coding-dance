@@ -133,9 +133,9 @@ try {
         const content = node.querySelector(".cm-content"), view = content.cmTile?.root?.view || content.cmView?.view;
         return { background: getComputedStyle(node).backgroundColor, fontSize: getComputedStyle(content).fontSize, lineHeight: getComputedStyle(content).lineHeight, colors: [...new Set([...node.querySelectorAll(".cm-line span")].map((span) => getComputedStyle(span).color))], doc: view.state.doc.toString(), height: node.getBoundingClientRect().height };
       });
-      assert.equal(info.doc, source[name]); assert.equal(info.fontSize, "14px"); assert.equal(info.lineHeight, "24px");
+      assert.equal(info.doc, source[name]); assert.equal(info.fontSize, "15px"); assert.equal(info.lineHeight, "26px");
       assert(info.colors.length >= 6, `${theme}/${name}: expected distinct syntax colors`);
-      assert.equal(info.background, theme === "light" ? "rgb(255, 255, 255)" : "rgb(30, 30, 30)");
+      assert.equal(info.background, theme === "light" ? "rgb(255, 255, 255)" : "rgb(32, 33, 36)");
       assert(info.height >= 800 && info.height <= 850);
       await cropEditor(`${theme}-${name.toLowerCase()}.png`);
       report[theme][name] = info;
