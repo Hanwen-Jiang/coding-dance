@@ -11,4 +11,7 @@ export const TOPIC_SLUGS = [
   "trie",
   "union-find",
   "binary-search",
+  "quick-sort",
+  "merge-sort",
+  "heap-sort",
 ];
