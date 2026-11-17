@@ -322,6 +322,15 @@ try {
     await page.locator(".cm-line").nth(4).click();
     await page.keyboard.press("F9");
     assert.equal(await dots(), 2, "F9 toggles the cursor line");
+    // 折成几行的长行（第 5 行，刚才按 F9 加的）：圆点和行号在同一行，不跑到中间
+    const aligned = await page.evaluate(() => {
+      const num = [...document.querySelectorAll(".cm-lineNumbers .cm-gutterElement")].find((e) => e.textContent === "5").getBoundingClientRect();
+      const dot = [...document.querySelectorAll(".cm-breakpoint-gutter .cm-gutterElement")].filter((c) => c.style.visibility !== "hidden").map((c) => c.querySelector(".cm-breakpoint-dot")).filter(Boolean).map((d) => d.getBoundingClientRect()).find((r) => r.y >= num.y - 1 && r.y < num.bottom);
+      return { wrapped: num.height > 30, dy: Math.abs(dot.y + dot.height / 2 - (num.y + 13)) };
+    });
+    assert(aligned.wrapped && aligned.dy < 2, `Breakpoint dot sits on the line-number row of a wrapped line (${JSON.stringify(aligned)})`);
+    const gutters = await page.locator(".cm-gutters").boundingBox();
+    assert(gutters.width <= 56, `Gutters stay narrow (${gutters.width}px)`);
     const scroller = page.locator(".practice-editor .cm-scroller");
     const overflows = () => scroller.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
     const wrapButton = page.getByRole("button", { name: "自动换行", exact: true });

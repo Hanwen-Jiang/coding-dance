@@ -119,9 +119,15 @@
 .practice-editor .cm-editor { border-radius: 0; }
 /* 调试：当前执行到的行、断点栏（editor-debug.ts） */
 .practice-editor .cm-debug-line { background: color-mix(in oklch, var(--warning) 22%, transparent); box-shadow: inset 3px 0 0 var(--warning); }
-.practice-editor .cm-breakpoint-gutter { width: 16px; cursor: pointer; }
+.practice-editor .cm-breakpoint-gutter { width: 12px; cursor: pointer; }
 .practice-editor .cm-lineNumbers .cm-gutterElement { cursor: pointer; }
-.practice-editor .cm-breakpoint-gutter .cm-gutterElement { display: flex; align-items: center; justify-content: center; cursor: pointer; }
+/*
+ * 圆点对齐这一行的第一行（行号所在的那一行）：长行折成几行时不跑到中间去。行高 26px，圆点 8px，上面留 9px。
+ * 9px 写在圆点上而不是格子的 padding 上：栏最上面有个看不见的占位格（高度 0），给它加 padding 会把下面每一格都往下推。
+ */
+.practice-editor .cm-breakpoint-gutter .cm-gutterElement { display: flex; align-items: flex-start; justify-content: center; cursor: pointer; }
+.practice-editor .cm-breakpoint-gutter .cm-breakpoint-dot,
+.practice-editor .cm-breakpoint-gutter .cm-gutterElement:hover::after { margin-top: 9px; }
 .practice-editor .cm-breakpoint-gutter .cm-gutterElement:hover::after { content: ""; width: 8px; height: 8px; border-radius: 999px; background: color-mix(in oklch, var(--danger) 35%, transparent); }
 .practice-editor .cm-breakpoint-gutter .cm-gutterElement:has(.cm-breakpoint-dot):hover::after { display: none; }
 .cm-breakpoint-dot { display: block; width: 8px; height: 8px; border-radius: 999px; background: var(--danger); }
