@@ -1,0 +1,644 @@
+{
+ "slug": "trie",
+ "name": "字典树 Trie",
+ "kind": "ds",
+ "order": 8,
+ "lede": "字典树把一堆单词按前缀合并成一棵树：从根往下，每条边是一个字符，一条路径就是一个前缀。所有以 \"app\" 开头的单词都挂在同一个节点下面，所以查「有没有这个前缀」「有几个单词以它开头」只要沿着字符走一遍，和单词总数无关。",
+ "related": [
+  208,
+  139
+ ],
+ "sections": [
+  {
+   "key": "basic",
+   "t": "插入、查找、数前缀",
+   "body": [
+    "每个节点有一组孩子（字符 → 子节点）。插入单词时从根出发，每个字符走一步，路不存在就新建节点；走完在最后一个节点上记一个「单词结束」的标记。",
+    "查找单词也是逐个字符往下走，走不下去就是没有；走完了还要看结束标记——插入过 \"apple\" 不代表有 \"app\" 这个单词。",
+    "给每个节点再记一个 <code>pass</code>：插入时经过它的单词数。这样「有几个单词以 prefix 开头」就是走到 prefix 最后一个字符的节点后，读它的 pass。"
+   ],
+   "points": [
+    {
+     "t": "孩子用数组还是哈希表",
+     "body": "只有小写字母时用长度 26 的数组，<code>ch - 'a'</code> 是下标，最快；字符集大或者不确定时用哈希表。Python 习惯用字典。"
+    },
+    {
+     "t": "复杂度",
+     "body": "插入和查找都是 O(单词长度)。空间是所有单词的字符总数（共享前缀的部分只存一次）。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "带计数的字典树",
+     "kind": null,
+     "note": null,
+     "key": "basic",
+     "code": "class TrieNode:\n    def __init__(self):\n        self.children = {}                  # 字符 -> 子节点\n        self.pass_ = 0                      # 经过这个节点的单词数\n        self.end = False                    # 有没有单词在这里结束\n\nclass Trie:\n    def __init__(self):\n        self.root = TrieNode()\n\n    def insert(self, word: str) -> None:\n        node = self.root\n        for ch in word:\n            if ch not in node.children:     # 没有这条路就新建\n                node.children[ch] = TrieNode()\n            node = node.children[ch]\n            node.pass_ += 1\n        node.end = True                     # 标记单词在这里结束\n\n    def find(self, s: str) -> Optional[TrieNode]:\n        node = self.root\n        for ch in s:\n            if ch not in node.children:     # 走不下去了\n                return None\n            node = node.children[ch]\n        return node\n\n    def search(self, word: str) -> bool:\n        node = self.find(word)\n        return node is not None and node.end    # 还要看结束标记\n\n    def countPrefix(self, prefix: str) -> int:\n        node = self.find(prefix)\n        return node.pass_ if node else 0",
+     "marks": {
+      "init": [
+       9
+      ],
+      "ins": [
+       12,
+       13
+      ],
+      "new": [
+       14,
+       15
+      ],
+      "walk": [
+       16,
+       17
+      ],
+      "mark": [
+       18
+      ],
+      "find": [
+       22,
+       25
+      ],
+      "miss": [
+       23,
+       24
+      ],
+      "search": [
+       29,
+       30
+      ],
+      "count": [
+       33,
+       34
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class TrieNode {\n    TrieNode[] children = new TrieNode[26];     // 只有小写字母：下标是 ch - 'a'\n    int pass;                                   // 经过这个节点的单词数\n    boolean end;                                // 有没有单词在这里结束\n}\n\nclass Trie {\n    private final TrieNode root = new TrieNode();\n\n    public void insert(String word) {\n        TrieNode node = root;\n        for (char ch : word.toCharArray()) {\n            int c = ch - 'a';\n            if (node.children[c] == null) {         // 没有这条路就新建\n                node.children[c] = new TrieNode();\n            }\n            node = node.children[c];\n            node.pass++;\n        }\n        node.end = true;                            // 标记单词在这里结束\n    }\n\n    private TrieNode find(String s) {\n        TrieNode node = root;\n        for (char ch : s.toCharArray()) {\n            node = node.children[ch - 'a'];\n            if (node == null) {                     // 走不下去了\n                return null;\n            }\n        }\n        return node;\n    }\n\n    public boolean search(String word) {\n        TrieNode node = find(word);\n        return node != null && node.end;            // 还要看结束标记\n    }\n\n    public int countPrefix(String prefix) {\n        TrieNode node = find(prefix);\n        return node == null ? 0 : node.pass;\n    }\n}",
+       "marks": {
+        "init": [
+         8
+        ],
+        "ins": [
+         11,
+         12,
+         13
+        ],
+        "new": [
+         14,
+         15
+        ],
+        "walk": [
+         17,
+         18
+        ],
+        "mark": [
+         20
+        ],
+        "find": [
+         25,
+         26
+        ],
+        "miss": [
+         27,
+         28
+        ],
+        "search": [
+         35,
+         36
+        ],
+        "count": [
+         40,
+         41
+        ]
+       }
+      },
+      "cpp": {
+       "code": "struct TrieNode {\n    TrieNode* children[26] = {};                // 只有小写字母：下标是 ch - 'a'\n    int pass = 0;                               // 经过这个节点的单词数\n    bool end = false;                           // 有没有单词在这里结束\n};\n\nclass Trie {\n    TrieNode* root = new TrieNode();\n\n    TrieNode* find(const string& s) {\n        TrieNode* node = root;\n        for (char ch : s) {\n            node = node->children[ch - 'a'];\n            if (!node) {                        // 走不下去了\n                return nullptr;\n            }\n        }\n        return node;\n    }\n\npublic:\n    void insert(string word) {\n        TrieNode* node = root;\n        for (char ch : word) {\n            int c = ch - 'a';\n            if (!node->children[c]) {           // 没有这条路就新建\n                node->children[c] = new TrieNode();\n            }\n            node = node->children[c];\n            node->pass++;\n        }\n        node->end = true;                       // 标记单词在这里结束\n    }\n\n    bool search(string word) {\n        TrieNode* node = find(word);\n        return node && node->end;               // 还要看结束标记\n    }\n\n    int countPrefix(string prefix) {\n        TrieNode* node = find(prefix);\n        return node ? node->pass : 0;\n    }\n};",
+       "marks": {
+        "init": [
+         8
+        ],
+        "find": [
+         12,
+         13
+        ],
+        "miss": [
+         14,
+         15
+        ],
+        "ins": [
+         23,
+         24,
+         25
+        ],
+        "new": [
+         26,
+         27
+        ],
+        "walk": [
+         29,
+         30
+        ],
+        "mark": [
+         32
+        ],
+        "search": [
+         36,
+         37
+        ],
+        "count": [
+         41,
+         42
+        ]
+       }
+      },
+      "go": {
+       "code": "type trieNode struct {\n\tchildren [26]*trieNode // 只有小写字母：下标是 ch - 'a'\n\tpass     int           // 经过这个节点的单词数\n\tend      bool          // 有没有单词在这里结束\n}\n\ntype Trie struct {\n\troot *trieNode\n}\n\nfunc Constructor() Trie {\n\treturn Trie{root: &trieNode{}}\n}\n\nfunc (t *Trie) Insert(word string) {\n\tnode := t.root\n\tfor _, ch := range word {\n\t\tc := ch - 'a'\n\t\tif node.children[c] == nil { // 没有这条路就新建\n\t\t\tnode.children[c] = &trieNode{}\n\t\t}\n\t\tnode = node.children[c]\n\t\tnode.pass++\n\t}\n\tnode.end = true // 标记单词在这里结束\n}\n\nfunc (t *Trie) find(s string) *trieNode {\n\tnode := t.root\n\tfor _, ch := range s {\n\t\tnode = node.children[ch-'a']\n\t\tif node == nil { // 走不下去了\n\t\t\treturn nil\n\t\t}\n\t}\n\treturn node\n}\n\nfunc (t *Trie) Search(word string) bool {\n\tnode := t.find(word)\n\treturn node != nil && node.end // 还要看结束标记\n}\n\nfunc (t *Trie) CountPrefix(prefix string) int {\n\tnode := t.find(prefix)\n\tif node == nil {\n\t\treturn 0\n\t}\n\treturn node.pass\n}",
+       "marks": {
+        "init": [
+         12
+        ],
+        "ins": [
+         16,
+         17,
+         18
+        ],
+        "new": [
+         19,
+         20
+        ],
+        "walk": [
+         22,
+         23
+        ],
+        "mark": [
+         25
+        ],
+        "find": [
+         30,
+         31
+        ],
+        "miss": [
+         32,
+         33
+        ],
+        "search": [
+         40,
+         41
+        ],
+        "count": [
+         45,
+         46,
+         47,
+         49
+        ]
+       }
+      },
+      "javascript": {
+       "code": "class TrieNode {\n    constructor() {\n        this.children = new Map();              // 字符 -> 子节点\n        this.pass = 0;                          // 经过这个节点的单词数\n        this.end = false;                       // 有没有单词在这里结束\n    }\n}\n\nclass Trie {\n    constructor() {\n        this.root = new TrieNode();\n    }\n\n    insert(word) {\n        let node = this.root;\n        for (const ch of word) {\n            if (!node.children.has(ch)) {       // 没有这条路就新建\n                node.children.set(ch, new TrieNode());\n            }\n            node = node.children.get(ch);\n            node.pass++;\n        }\n        node.end = true;                        // 标记单词在这里结束\n    }\n\n    find(s) {\n        let node = this.root;\n        for (const ch of s) {\n            node = node.children.get(ch);\n            if (!node) {                        // 走不下去了\n                return null;\n            }\n        }\n        return node;\n    }\n\n    search(word) {\n        const node = this.find(word);\n        return !!node && node.end;              // 还要看结束标记\n    }\n\n    countPrefix(prefix) {\n        const node = this.find(prefix);\n        return node ? node.pass : 0;\n    }\n}",
+       "marks": {
+        "init": [
+         11
+        ],
+        "ins": [
+         15,
+         16
+        ],
+        "new": [
+         17,
+         18
+        ],
+        "walk": [
+         20,
+         21
+        ],
+        "mark": [
+         23
+        ],
+        "find": [
+         28,
+         29
+        ],
+        "miss": [
+         30,
+         31
+        ],
+        "search": [
+         38,
+         39
+        ],
+        "count": [
+         43,
+         44
+        ]
+       }
+      },
+      "typescript": {
+       "code": "class TrieNode {\n    children = new Map<string, TrieNode>();     // 字符 -> 子节点\n    pass = 0;                                   // 经过这个节点的单词数\n    end = false;                                // 有没有单词在这里结束\n}\n\nclass Trie {\n    private root = new TrieNode();\n\n    insert(word: string): void {\n        let node = this.root;\n        for (const ch of word) {\n            if (!node.children.has(ch)) {       // 没有这条路就新建\n                node.children.set(ch, new TrieNode());\n            }\n            node = node.children.get(ch)!;\n            node.pass++;\n        }\n        node.end = true;                        // 标记单词在这里结束\n    }\n\n    private find(s: string): TrieNode | null {\n        let node: TrieNode | undefined = this.root;\n        for (const ch of s) {\n            node = node.children.get(ch);\n            if (!node) {                        // 走不下去了\n                return null;\n            }\n        }\n        return node;\n    }\n\n    search(word: string): boolean {\n        const node = this.find(word);\n        return node !== null && node.end;       // 还要看结束标记\n    }\n\n    countPrefix(prefix: string): number {\n        const node = this.find(prefix);\n        return node ? node.pass : 0;\n    }\n}",
+       "marks": {
+        "init": [
+         8
+        ],
+        "ins": [
+         11,
+         12
+        ],
+        "new": [
+         13,
+         14
+        ],
+        "walk": [
+         16,
+         17
+        ],
+        "mark": [
+         19
+        ],
+        "find": [
+         24,
+         25
+        ],
+        "miss": [
+         26,
+         27
+        ],
+        "search": [
+         34,
+         35
+        ],
+        "count": [
+         39,
+         40
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "插入、查找、数前缀",
+    "legend": [
+     [
+      "a",
+      "正在走的节点"
+     ],
+     [
+      "w",
+      "刚新建的节点"
+     ],
+     [
+      "c",
+      "有单词在这里结束"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例",
+      "args": {
+       "ops": [
+        [
+         "insert",
+         "app"
+        ],
+        [
+         "insert",
+         "apple"
+        ],
+        [
+         "insert",
+         "bat"
+        ],
+        [
+         "search",
+         "ap"
+        ],
+        [
+         "search",
+         "app"
+        ],
+        [
+         "countPrefix",
+         "ap"
+        ],
+        [
+         "countPrefix",
+         "b"
+        ]
+       ]
+      },
+      "note": "insert(\"app\") insert(\"apple\") insert(\"bat\") search(\"ap\") search(\"app\") countPrefix(\"ap\") countPrefix(\"b\")"
+     }
+    ],
+    "build": "build(a, snap) {\n        const T = [{ ch: \"\", kids: {}, pass: 0, end: false, depth: 0 }], out = [null];\n        let path = [], fresh = -1;\n        const view = () => {\n          const pos = [], order = [];\n          let col = 0;\n          const place = (id) => {\n            const ks = Object.keys(T[id].kids).sort();\n            if (!ks.length) { pos[id] = [col++, T[id].depth]; return; }\n            ks.forEach((k) => place(T[id].kids[k]));\n            const xs = ks.map((k) => pos[T[id].kids[k]][0]);\n            pos[id] = [(Math.min(...xs) + Math.max(...xs)) / 2, T[id].depth];\n          };\n          place(0);\n          T.forEach((nd, i) => { for (const k in nd.kids) order.push([i, nd.kids[k]]); });\n          return [\n            { t: \"net\", label: \"字典树（节点下面是 pass）\", directed: true, pos, nodes: T.map((nd, i) => ({ v: i ? nd.ch : \"根\", cls: i === fresh ? \"w\" : path.includes(i) ? \"a\" : nd.end ? \"c\" : \"\" })), edges: order.map(([u, v]) => [u, v, path.includes(u) && path.includes(v) ? \"on\" : \"\"]), badges: T.map((nd, i) => (i ? nd.pass : \"\")) },\n            { t: \"chips\", label: \"返回值\", items: out.map((x) => (x === null ? \"null\" : String(x))) },\n          ];\n        };\n        snap(\"开始\", \"只有一个空的根节点。\", view(), { at: \"init\" });\n        for (const [op, w] of a.ops) {\n          path = [0]; fresh = -1;\n          if (op === \"insert\") {\n            let node = 0;\n            snap(`insert(\"${w}\")`, \"从根出发，每个字符走一步。\", view(), { at: \"ins\" });\n            for (const ch of w) {\n              const made = !(ch in T[node].kids);\n              if (made) { T.push({ ch, kids: {}, pass: 0, end: false, depth: T[node].depth + 1 }); T[node].kids[ch] = T.length - 1; }\n              node = T[node].kids[ch]; T[node].pass++; path.push(node); fresh = made ? node : -1;\n              snap(made ? \"新建节点\" : \"沿着走\", `${made ? `没有 '${ch}' 这条路，新建一个节点。` : `'${ch}' 这条路已经有了，直接走过去。`}经过它的单词数 pass 变成 ${T[node].pass}。`, view(), { at: made ? [\"new\", \"walk\"] : \"walk\" });\n            }\n            T[node].end = true; fresh = -1; out.push(null);\n            snap(\"标记结束\", `\"${w}\" 的字符走完了，在最后一个节点上标记「有单词在这里结束」。`, view(), { at: \"mark\" });\n          } else {\n            let node = 0, ok = true;\n            for (const ch of w) {\n              if (!(ch in T[node].kids)) { ok = false; snap(\"走不下去\", `'${ch}' 这条路不存在。`, view(), { at: \"miss\" }); break; }\n              node = T[node].kids[ch]; path.push(node);\n              snap(\"沿着走\", `走过 '${ch}'。`, view(), { at: \"find\" });\n            }\n            if (op === \"search\") {\n              const r = ok && T[node].end; out.push(r);\n              snap(`search(\"${w}\")`, !ok ? \"路断了，没有这个单词，返回 false。\" : r ? \"走完了，最后的节点有结束标记，返回 true。\" : \"走完了，但最后的节点没有结束标记：它只是别的单词的前缀，返回 false。\", view(), { at: \"search\" });\n            } else {\n              const r = ok ? T[node].pass : 0; out.push(r);\n              snap(`countPrefix(\"${w}\")`, ok ? `走到了 \"${w}\" 的最后一个字符，它的 pass 是 ${r}：有 ${r} 个单词以 \"${w}\" 开头。` : \"路断了，没有单词以它开头，返回 0。\", view(), { at: \"count\" });\n            }\n          }\n        }\n        path = []; fresh = -1;\n        snap(\"完成\", \"共享前缀的部分只存了一份。\", view(), { at: [], kind: \"ok\", ans: out });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "正在走的节点"
+       ],
+       [
+        "w",
+        "刚新建的节点"
+       ],
+       [
+        "c",
+        "有单词在这里结束"
+       ]
+      ],
+      "code": "basic",
+      "build": "build(a, snap) {\n        const T = [{ ch: \"\", kids: {}, pass: 0, end: false, depth: 0 }], out = [null];\n        let path = [], fresh = -1;\n        const view = () => {\n          const pos = [], order = [];\n          let col = 0;\n          const place = (id) => {\n            const ks = Object.keys(T[id].kids).sort();\n            if (!ks.length) { pos[id] = [col++, T[id].depth]; return; }\n            ks.forEach((k) => place(T[id].kids[k]));\n            const xs = ks.map((k) => pos[T[id].kids[k]][0]);\n            pos[id] = [(Math.min(...xs) + Math.max(...xs)) / 2, T[id].depth];\n          };\n          place(0);\n          T.forEach((nd, i) => { for (const k in nd.kids) order.push([i, nd.kids[k]]); });\n          return [\n            { t: \"net\", label: \"字典树（节点下面是 pass）\", directed: true, pos, nodes: T.map((nd, i) => ({ v: i ? nd.ch : \"根\", cls: i === fresh ? \"w\" : path.includes(i) ? \"a\" : nd.end ? \"c\" : \"\" })), edges: order.map(([u, v]) => [u, v, path.includes(u) && path.includes(v) ? \"on\" : \"\"]), badges: T.map((nd, i) => (i ? nd.pass : \"\")) },\n            { t: \"chips\", label: \"返回值\", items: out.map((x) => (x === null ? \"null\" : String(x))) },\n          ];\n        };\n        snap(\"开始\", \"只有一个空的根节点。\", view(), { at: \"init\" });\n        for (const [op, w] of a.ops) {\n          path = [0]; fresh = -1;\n          if (op === \"insert\") {\n            let node = 0;\n            snap(`insert(\"${w}\")`, \"从根出发，每个字符走一步。\", view(), { at: \"ins\" });\n            for (const ch of w) {\n              const made = !(ch in T[node].kids);\n              if (made) { T.push({ ch, kids: {}, pass: 0, end: false, depth: T[node].depth + 1 }); T[node].kids[ch] = T.length - 1; }\n              node = T[node].kids[ch]; T[node].pass++; path.push(node); fresh = made ? node : -1;\n              snap(made ? \"新建节点\" : \"沿着走\", `${made ? `没有 '${ch}' 这条路，新建一个节点。` : `'${ch}' 这条路已经有了，直接走过去。`}经过它的单词数 pass 变成 ${T[node].pass}。`, view(), { at: made ? [\"new\", \"walk\"] : \"walk\" });\n            }\n            T[node].end = true; fresh = -1; out.push(null);\n            snap(\"标记结束\", `\"${w}\" 的字符走完了，在最后一个节点上标记「有单词在这里结束」。`, view(), { at: \"mark\" });\n          } else {\n            let node = 0, ok = true;\n            for (const ch of w) {\n              if (!(ch in T[node].kids)) { ok = false; snap(\"走不下去\", `'${ch}' 这条路不存在。`, view(), { at: \"miss\" }); break; }\n              node = T[node].kids[ch]; path.push(node);\n              snap(\"沿着走\", `走过 '${ch}'。`, view(), { at: \"find\" });\n            }\n            if (op === \"search\") {\n              const r = ok && T[node].end; out.push(r);\n              snap(`search(\"${w}\")`, !ok ? \"路断了，没有这个单词，返回 false。\" : r ? \"走完了，最后的节点有结束标记，返回 true。\" : \"走完了，但最后的节点没有结束标记：它只是别的单词的前缀，返回 false。\", view(), { at: \"search\" });\n            } else {\n              const r = ok ? T[node].pass : 0; out.push(r);\n              snap(`countPrefix(\"${w}\")`, ok ? `走到了 \"${w}\" 的最后一个字符，它的 pass 是 ${r}：有 ${r} 个单词以 \"${w}\" 开头。` : \"路断了，没有单词以它开头，返回 0。\", view(), { at: \"count\" });\n            }\n          }\n        }\n        path = []; fresh = -1;\n        snap(\"完成\", \"共享前缀的部分只存了一份。\", view(), { at: [], kind: \"ok\", ans: out });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n      const ops = [], words = [];\n      for (let k = R.int(6, 9); k > 0; k--) {\n        const o = words.length < 2 || R.chance(0.45) ? \"insert\" : R.pick([\"search\", \"countPrefix\"]);\n        let w = R.chance(0.6) && words.length ? R.pick(words) : R.word(R.int(1, 4), \"abc\");\n        if (o === \"countPrefix\") w = w.slice(0, R.int(1, w.length));\n        if (o === \"insert\") words.push(w);\n        ops.push([o, w]);\n      }\n      return { args: { ops }, note: ops.map((o) => `${o[0]}(\"${o[1]}\")`).join(\" \") };\n    })(R); return { args: r.args, note: r.note }; }"
+   }
+  },
+  {
+   "key": "replace",
+   "t": "应用：替换成最短的词根",
+   "body": [
+    "给一组词根，把句子里的每个单词换成它最短的词根（没有词根就不换）。把词根都插进字典树，再拿每个单词从根往下走：途中第一次碰到「有词根在这里结束」的节点，走过的这一段就是最短的词根；路断了说明没有词根是它的前缀。",
+    "如果一个个词根去比，每个单词要和所有词根比一遍；字典树只沿着单词走一次。"
+   ],
+   "points": [
+    {
+     "t": "找到就停",
+     "body": "要的是<b>最短</b>的词根，所以第一次碰到结束标记就停下，不用再往下走。"
+    },
+    {
+     "t": "用字典实现",
+     "body": "Python 里可以直接用嵌套的字典当节点，用一个特殊的键（比如 <code>\"#\"</code>）表示结束。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "字典树 + 逐词查找",
+     "kind": null,
+     "note": null,
+     "key": "replace",
+     "code": "class Solution:\n    def replaceWords(self, dictionary: List[str], sentence: str) -> str:\n        root = {}                               # 嵌套的字典当节点，\"#\" 表示有词根在这里结束\n        for w in dictionary:\n            node = root\n            for ch in w:\n                node = node.setdefault(ch, {})\n            node[\"#\"] = True\n        res = []\n        for word in sentence.split():\n            node, cut = root, word\n            for i, ch in enumerate(word):\n                if ch not in node:              # 路断了：没有词根是它的前缀\n                    break\n                node = node[ch]\n                if \"#\" in node:                 # 第一次碰到结束标记：最短的词根\n                    cut = word[:i + 1]\n                    break\n            res.append(cut)\n        return \" \".join(res)",
+     "marks": {
+      "build": [
+       3,
+       4,
+       5,
+       6,
+       7,
+       8
+      ],
+      "word": [
+       10,
+       11
+      ],
+      "walk": [
+       12,
+       13,
+       14,
+       15
+      ],
+      "hit": [
+       16,
+       17,
+       18
+      ],
+      "add": [
+       19
+      ],
+      "done": [
+       20
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    private static class Node {\n        Node[] children = new Node[26];\n        boolean end;                                // 有词根在这里结束\n    }\n\n    public String replaceWords(List<String> dictionary, String sentence) {\n        Node root = new Node();\n        for (String w : dictionary) {\n            Node node = root;\n            for (char ch : w.toCharArray()) {\n                if (node.children[ch - 'a'] == null) {\n                    node.children[ch - 'a'] = new Node();\n                }\n                node = node.children[ch - 'a'];\n            }\n            node.end = true;\n        }\n        List<String> res = new ArrayList<>();\n        for (String word : sentence.split(\" \")) {\n            Node node = root;\n            String cut = word;\n            for (int i = 0; i < word.length(); i++) {\n                node = node.children[word.charAt(i) - 'a'];     // 路断了就是没有词根是它的前缀\n                if (node == null) {\n                    break;\n                }\n                if (node.end) {                     // 第一次碰到结束标记：最短的词根\n                    cut = word.substring(0, i + 1);\n                    break;\n                }\n            }\n            res.add(cut);\n        }\n        return String.join(\" \", res);\n    }\n}",
+       "marks": {
+        "build": [
+         8,
+         9,
+         10,
+         11,
+         12,
+         13,
+         15,
+         17
+        ],
+        "word": [
+         20,
+         21,
+         22
+        ],
+        "walk": [
+         23,
+         24,
+         25,
+         26
+        ],
+        "hit": [
+         28,
+         29,
+         30
+        ],
+        "add": [
+         33
+        ],
+        "done": [
+         35
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\n    struct Node {\n        Node* children[26] = {};\n        bool end = false;                           // 有词根在这里结束\n    };\n\npublic:\n    string replaceWords(vector<string>& dictionary, string sentence) {\n        Node* root = new Node();\n        for (auto& w : dictionary) {\n            Node* node = root;\n            for (char ch : w) {\n                if (!node->children[ch - 'a']) {\n                    node->children[ch - 'a'] = new Node();\n                }\n                node = node->children[ch - 'a'];\n            }\n            node->end = true;\n        }\n        string res;\n        stringstream ss(sentence);\n        for (string word; ss >> word;) {\n            Node* node = root;\n            string cut = word;\n            for (int i = 0; i < (int)word.size(); i++) {\n                node = node->children[word[i] - 'a'];   // 路断了就是没有词根是它的前缀\n                if (!node) {\n                    break;\n                }\n                if (node->end) {                    // 第一次碰到结束标记：最短的词根\n                    cut = word.substr(0, i + 1);\n                    break;\n                }\n            }\n            res += (res.empty() ? \"\" : \" \") + cut;\n        }\n        return res;\n    }\n};",
+       "marks": {
+        "build": [
+         9,
+         10,
+         11,
+         12,
+         13,
+         14,
+         16,
+         18
+        ],
+        "word": [
+         22,
+         23,
+         24
+        ],
+        "walk": [
+         25,
+         26,
+         27,
+         28
+        ],
+        "hit": [
+         30,
+         31,
+         32
+        ],
+        "add": [
+         35
+        ],
+        "done": [
+         37
+        ]
+       }
+      },
+      "go": {
+       "code": "type rootNode struct {\n\tchildren [26]*rootNode\n\tend      bool // 有词根在这里结束\n}\n\nfunc replaceWords(dictionary []string, sentence string) string {\n\troot := &rootNode{}\n\tfor _, w := range dictionary {\n\t\tnode := root\n\t\tfor _, ch := range w {\n\t\t\tif node.children[ch-'a'] == nil {\n\t\t\t\tnode.children[ch-'a'] = &rootNode{}\n\t\t\t}\n\t\t\tnode = node.children[ch-'a']\n\t\t}\n\t\tnode.end = true\n\t}\n\tres := []string{}\n\tfor _, word := range strings.Fields(sentence) {\n\t\tnode, cut := root, word\n\t\tfor i := 0; i < len(word); i++ {\n\t\t\tnode = node.children[word[i]-'a'] // 路断了就是没有词根是它的前缀\n\t\t\tif node == nil {\n\t\t\t\tbreak\n\t\t\t}\n\t\t\tif node.end { // 第一次碰到结束标记：最短的词根\n\t\t\t\tcut = word[:i+1]\n\t\t\t\tbreak\n\t\t\t}\n\t\t}\n\t\tres = append(res, cut)\n\t}\n\treturn strings.Join(res, \" \")\n}",
+       "marks": {
+        "build": [
+         7,
+         8,
+         9,
+         10,
+         11,
+         12,
+         14,
+         16
+        ],
+        "word": [
+         19,
+         20
+        ],
+        "walk": [
+         21,
+         22,
+         23,
+         24
+        ],
+        "hit": [
+         26,
+         27,
+         28
+        ],
+        "add": [
+         31
+        ],
+        "done": [
+         33
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var replaceWords = function(dictionary, sentence) {\n    const root = {};                            // 嵌套的对象当节点，\"#\" 表示有词根在这里结束\n    for (const w of dictionary) {\n        let node = root;\n        for (const ch of w) {\n            node = node[ch] ??= {};\n        }\n        node[\"#\"] = true;\n    }\n    const res = [];\n    for (const word of sentence.split(\" \")) {\n        let node = root, cut = word;\n        for (let i = 0; i < word.length; i++) {\n            node = node[word[i]];               // 路断了就是没有词根是它的前缀\n            if (!node) {\n                break;\n            }\n            if (node[\"#\"]) {                    // 第一次碰到结束标记：最短的词根\n                cut = word.slice(0, i + 1);\n                break;\n            }\n        }\n        res.push(cut);\n    }\n    return res.join(\" \");\n};",
+       "marks": {
+        "build": [
+         2,
+         3,
+         4,
+         5,
+         6,
+         8
+        ],
+        "word": [
+         11,
+         12
+        ],
+        "walk": [
+         13,
+         14,
+         15,
+         16
+        ],
+        "hit": [
+         18,
+         19,
+         20
+        ],
+        "add": [
+         23
+        ],
+        "done": [
+         25
+        ]
+       }
+      },
+      "typescript": {
+       "code": "interface RootNode {\n    [ch: string]: RootNode | undefined;\n}\n\nfunction replaceWords(dictionary: string[], sentence: string): string {\n    const root: RootNode = {};                  // 嵌套的对象当节点，\"#\" 表示有词根在这里结束\n    for (const w of dictionary) {\n        let node = root;\n        for (const ch of w) {\n            node = node[ch] ??= {};\n        }\n        node[\"#\"] = {};\n    }\n    const res: string[] = [];\n    for (const word of sentence.split(\" \")) {\n        let node: RootNode | undefined = root, cut = word;\n        for (let i = 0; i < word.length; i++) {\n            node = node[word[i]];               // 路断了就是没有词根是它的前缀\n            if (!node) {\n                break;\n            }\n            if (node[\"#\"]) {                    // 第一次碰到结束标记：最短的词根\n                cut = word.slice(0, i + 1);\n                break;\n            }\n        }\n        res.push(cut);\n    }\n    return res.join(\" \");\n}",
+       "marks": {
+        "build": [
+         6,
+         7,
+         8,
+         9,
+         10,
+         12
+        ],
+        "word": [
+         15,
+         16
+        ],
+        "walk": [
+         17,
+         18,
+         19,
+         20
+        ],
+        "hit": [
+         22,
+         23,
+         24
+        ],
+        "add": [
+         27
+        ],
+        "done": [
+         29
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "应用：替换成最短的词根",
+    "legend": [
+     [
+      "a",
+      "正在看的单词 / 走过的节点"
+     ],
+     [
+      "c",
+      "词根在这里结束"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例 1",
+      "args": {
+       "dictionary": [
+        "cat",
+        "bat",
+        "rat",
+        "ca"
+       ],
+       "sentence": "the cattle was rattled by the battery"
+      },
+      "note": "dictionary = [\"cat\",\"bat\",\"rat\",\"ca\"], sentence = \"the cattle was rattled by the battery\""
+     }
+    ],
+    "build": "build(a, snap) {\n        const T = [{ ch: \"\", kids: {}, end: false, depth: 0 }];\n        for (const w of a.dictionary) {\n          let node = 0;\n          for (const ch of w) { if (!(ch in T[node].kids)) { T.push({ ch, kids: {}, end: false, depth: T[node].depth + 1 }); T[node].kids[ch] = T.length - 1; } node = T[node].kids[ch]; }\n          T[node].end = true;\n        }\n        const words = a.sentence.split(\" \"), res = [];\n        let path = [], at = -1;\n        const view = () => {\n          const pos = [], edges = [];\n          let col = 0;\n          const place = (id) => {\n            const ks = Object.keys(T[id].kids).sort();\n            if (!ks.length) { pos[id] = [col++, T[id].depth]; return; }\n            ks.forEach((k) => place(T[id].kids[k]));\n            const xs = ks.map((k) => pos[T[id].kids[k]][0]);\n            pos[id] = [(Math.min(...xs) + Math.max(...xs)) / 2, T[id].depth];\n          };\n          place(0);\n          T.forEach((nd, i) => { for (const k in nd.kids) edges.push([i, nd.kids[k], path.includes(i) && path.includes(nd.kids[k]) ? \"on\" : \"\"]); });\n          return [\n            { t: \"array\", label: \"句子里的单词\", items: words.map((w, i) => ({ v: w, cls: i === at ? \"a\" : i < at ? \"d\" : \"\" })), idx: false },\n            { t: \"net\", label: \"词根的字典树\", directed: true, pos, nodes: T.map((nd, i) => ({ v: i ? nd.ch : \"根\", cls: path.includes(i) && i ? \"a\" : nd.end ? \"c\" : \"\" })), edges },\n            { t: \"chips\", label: \"结果\", items: res.slice(), empty: \"空\" },\n          ];\n        };\n        snap(\"建字典树\", `把 ${a.dictionary.length} 个词根插进字典树，绿色的节点表示有词根在这里结束。`, view(), { at: \"build\" });\n        words.forEach((w, i) => {\n          at = i; path = [0];\n          let node = 0, cut = w, why = \"\";\n          for (let k = 0; k < w.length; k++) {\n            const ch = w[k];\n            if (!(ch in T[node].kids)) { why = k ? `走过 \"${w.slice(0, k)}\" 之后，'${ch}' 这条路不存在` : `第一个字符 '${ch}' 就走不下去`; break; }\n            node = T[node].kids[ch]; path.push(node);\n            if (T[node].end) { cut = w.slice(0, k + 1); why = `走到 \"${cut}\" 时碰到了结束标记`; break; }\n          }\n          if (!why) why = \"单词走完了也没碰到结束标记\";\n          res.push(cut);\n          snap(`看 \"${w}\"`, `${why}，${cut === w ? \"不换\" : `换成词根 \"${cut}\"`}。`, view(), { at: [\"word\", \"walk\", ...(cut !== w ? [\"hit\"] : []), \"add\"] });\n        });\n        at = words.length; path = [];\n        const ans = res.join(\" \");\n        snap(\"完成\", `结果是 \"${ans}\"。`, view(), { at: \"done\", kind: \"ok\", ans });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "正在看的单词 / 走过的节点"
+       ],
+       [
+        "c",
+        "词根在这里结束"
+       ]
+      ],
+      "code": "replace",
+      "build": "build(a, snap) {\n        const T = [{ ch: \"\", kids: {}, end: false, depth: 0 }];\n        for (const w of a.dictionary) {\n          let node = 0;\n          for (const ch of w) { if (!(ch in T[node].kids)) { T.push({ ch, kids: {}, end: false, depth: T[node].depth + 1 }); T[node].kids[ch] = T.length - 1; } node = T[node].kids[ch]; }\n          T[node].end = true;\n        }\n        const words = a.sentence.split(\" \"), res = [];\n        let path = [], at = -1;\n        const view = () => {\n          const pos = [], edges = [];\n          let col = 0;\n          const place = (id) => {\n            const ks = Object.keys(T[id].kids).sort();\n            if (!ks.length) { pos[id] = [col++, T[id].depth]; return; }\n            ks.forEach((k) => place(T[id].kids[k]));\n            const xs = ks.map((k) => pos[T[id].kids[k]][0]);\n            pos[id] = [(Math.min(...xs) + Math.max(...xs)) / 2, T[id].depth];\n          };\n          place(0);\n          T.forEach((nd, i) => { for (const k in nd.kids) edges.push([i, nd.kids[k], path.includes(i) && path.includes(nd.kids[k]) ? \"on\" : \"\"]); });\n          return [\n            { t: \"array\", label: \"句子里的单词\", items: words.map((w, i) => ({ v: w, cls: i === at ? \"a\" : i < at ? \"d\" : \"\" })), idx: false },\n            { t: \"net\", label: \"词根的字典树\", directed: true, pos, nodes: T.map((nd, i) => ({ v: i ? nd.ch : \"根\", cls: path.includes(i) && i ? \"a\" : nd.end ? \"c\" : \"\" })), edges },\n            { t: \"chips\", label: \"结果\", items: res.slice(), empty: \"空\" },\n          ];\n        };\n        snap(\"建字典树\", `把 ${a.dictionary.length} 个词根插进字典树，绿色的节点表示有词根在这里结束。`, view(), { at: \"build\" });\n        words.forEach((w, i) => {\n          at = i; path = [0];\n          let node = 0, cut = w, why = \"\";\n          for (let k = 0; k < w.length; k++) {\n            const ch = w[k];\n            if (!(ch in T[node].kids)) { why = k ? `走过 \"${w.slice(0, k)}\" 之后，'${ch}' 这条路不存在` : `第一个字符 '${ch}' 就走不下去`; break; }\n            node = T[node].kids[ch]; path.push(node);\n            if (T[node].end) { cut = w.slice(0, k + 1); why = `走到 \"${cut}\" 时碰到了结束标记`; break; }\n          }\n          if (!why) why = \"单词走完了也没碰到结束标记\";\n          res.push(cut);\n          snap(`看 \"${w}\"`, `${why}，${cut === w ? \"不换\" : `换成词根 \"${cut}\"`}。`, view(), { at: [\"word\", \"walk\", ...(cut !== w ? [\"hit\"] : []), \"add\"] });\n        });\n        at = words.length; path = [];\n        const ans = res.join(\" \");\n        snap(\"完成\", `结果是 \"${ans}\"。`, view(), { at: \"done\", kind: \"ok\", ans });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n      const dictionary = [...new Set(Array.from({ length: R.int(2, 4) }, () => R.word(R.int(1, 3), \"abc\")))];\n      const sentence = Array.from({ length: R.int(2, 4) }, () => R.word(R.int(1, 5), \"abc\")).join(\" \");\n      return { args: { dictionary, sentence }, note: `dictionary = ${R.fmt(dictionary)}, sentence = \"${sentence}\"` };\n    })(R); return { args: r.args, note: r.note }; }"
+   }
+  }
+ ]
+}

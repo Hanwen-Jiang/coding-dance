@@ -72,6 +72,7 @@ html {
 .demo svg.dm-g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; }
 .demo svg.dm-g2 .edge.on { stroke: var(--dm-accent); stroke-width: 2.6; }
 .demo svg.dm-g2 .edge.warm { stroke: var(--dm-warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
+.demo svg.dm-g2 .edge.dim { opacity: 0.25; }
 .demo svg.dm-g2 .ah { fill: var(--muted); }
 .demo svg.dm-g2 rect.n, .demo svg.dm-g2 circle.n { fill: var(--surface); stroke: var(--dm-line); stroke-width: 2; transition: fill 0.25s ease; }
 .demo svg.dm-g2 .n.r-a { fill: var(--dm-accent); stroke: var(--dm-accent); }

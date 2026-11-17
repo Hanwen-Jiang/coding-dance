@@ -1,0 +1,19 @@
+{
+ "sig": {"fn":"replaceWords","params":["List<string>","string"],"ret":"string"},
+ "cases": [
+  {"in":[["cat","bat","rat","ca"],"the cattle was rattled by the battery"],"out":"the ca was rat by the bat"},
+  {"in":[["cat","bat","rat"],"the cattle was rattled by the battery"],"out":"the cat was rat by the bat"},
+  {"in":[["a","b","c"],"aadsfasf absbs bbab cadsfafs"],"out":"a a b c"},
+  {"in":[["abc"],"ab abc abcd"],"out":"ab abc abc"},
+  {"in":[["cb","cba","c","a"],"ccbcb bcc"],"out":"c bcc"},
+  {"in":[["a"],"cbca bcca bbbc bac"],"out":"cbca bcca bbbc bac"},
+  {"in":[["bcb","aab"],"ccc aca"],"out":"ccc aca"},
+  {"in":[["c","cc","cca"],"acbca bacb bc"],"out":"acbca bacb bc"},
+  {"in":[["c","a"],"a ccbbb aab cb"],"out":"a c a c"},
+  {"in":[["b","ca","a","ab"],"cba ccba"],"out":"cba ccba"},
+  {"in":[["b","bab"],"caa abaac bbbb"],"out":"caa abaac b"},
+  {"in":[["bba","aa","baa","bb"],"c accb bbac"],"out":"c accb bb"},
+  {"in":[["ab","acb"],"caab cbc"],"out":"caab cbc"},
+  {"in":[["ca","bb","cc","bab"],"caaa aba b"],"out":"ca aba b"}
+ ]
+}

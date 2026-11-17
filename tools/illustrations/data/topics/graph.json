@@ -1,0 +1,631 @@
+{
+ "slug": "graph",
+ "name": "图的表示",
+ "kind": "ds",
+ "order": 7,
+ "lede": "图由点和边组成。题目一般给一个边的列表，第一步几乎总是把它变成邻接表：每个点记下和它相连的点，这样「从 u 能走到哪些点」一查就有。网格是一种特殊的图：每个格子和上下左右四个格子相连，用方向数组就能找到邻居，不用真的建图。",
+ "related": [
+  200,
+  994,
+  207
+ ],
+ "sections": [
+  {
+   "key": "adj",
+   "t": "邻接表",
+   "body": [
+    "n 个点编号 0 到 n−1 时，邻接表就是一个长度为 n 的列表，<code>graph[u]</code> 里放 u 的所有邻居。无向边 <code>(u, v)</code> 两个方向都要加；有向边只加 <code>u → v</code>。建表 O(n + m)，m 是边数。",
+    "有了邻接表，从起点出发用 DFS 或 BFS 把能到的点都走一遍，就知道两个点之间有没有路。<code>seen</code> 数组记录走过的点，防止在环上转圈。",
+    "另一种表示是邻接矩阵 <code>g[u][v]</code>，适合点少边多的稠密图；点多的时候 n² 的空间放不下，所以题目里多用邻接表。"
+   ],
+   "points": [
+    {
+     "t": "进栈时就标记",
+     "body": "放进栈 / 队列的同时就设 <code>seen</code>，同一个点不会被放进去两次。"
+    },
+    {
+     "t": "点的编号从 1 开始",
+     "body": "有的题点是 1 到 n，邻接表开 <code>n + 1</code> 格，或者每个编号减 1。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "邻接表 + DFS",
+     "kind": null,
+     "note": null,
+     "key": "adj",
+     "code": "class Solution:\n    def validPath(self, n: int, edges: List[List[int]], source: int, destination: int) -> bool:\n        graph = [[] for _ in range(n)]          # graph[u] 是 u 的所有邻居\n        for u, v in edges:\n            graph[u].append(v)                  # 无向图：两个方向都要加\n            graph[v].append(u)\n        seen = [False] * n\n        seen[source] = True\n        stack = [source]\n        while stack:\n            u = stack.pop()\n            if u == destination:\n                return True\n            for v in graph[u]:                  # 只看和 u 相连的点\n                if not seen[v]:\n                    seen[v] = True\n                    stack.append(v)\n        return False",
+     "marks": {
+      "init": [
+       3
+      ],
+      "edge": [
+       4,
+       5,
+       6
+      ],
+      "start": [
+       7,
+       8,
+       9
+      ],
+      "pop": [
+       11
+      ],
+      "found": [
+       12,
+       13
+      ],
+      "next": [
+       14,
+       15,
+       16,
+       17
+      ],
+      "done": [
+       18
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    public boolean validPath(int n, int[][] edges, int source, int destination) {\n        List<List<Integer>> graph = new ArrayList<>();      // graph.get(u) 是 u 的所有邻居\n        for (int i = 0; i < n; i++) {\n            graph.add(new ArrayList<>());\n        }\n        for (int[] e : edges) {\n            graph.get(e[0]).add(e[1]);                      // 无向图：两个方向都要加\n            graph.get(e[1]).add(e[0]);\n        }\n        boolean[] seen = new boolean[n];\n        seen[source] = true;\n        Deque<Integer> stack = new ArrayDeque<>();\n        stack.push(source);\n        while (!stack.isEmpty()) {\n            int u = stack.pop();\n            if (u == destination) {\n                return true;\n            }\n            for (int v : graph.get(u)) {                    // 只看和 u 相连的点\n                if (!seen[v]) {\n                    seen[v] = true;\n                    stack.push(v);\n                }\n            }\n        }\n        return false;\n    }\n}",
+       "marks": {
+        "init": [
+         3,
+         4,
+         5
+        ],
+        "edge": [
+         7,
+         8,
+         9
+        ],
+        "start": [
+         11,
+         12,
+         13,
+         14
+        ],
+        "pop": [
+         16
+        ],
+        "found": [
+         17,
+         18
+        ],
+        "next": [
+         20,
+         21,
+         22,
+         23
+        ],
+        "done": [
+         27
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\npublic:\n    bool validPath(int n, vector<vector<int>>& edges, int source, int destination) {\n        vector<vector<int>> graph(n);                       // graph[u] 是 u 的所有邻居\n        for (auto& e : edges) {\n            graph[e[0]].push_back(e[1]);                    // 无向图：两个方向都要加\n            graph[e[1]].push_back(e[0]);\n        }\n        vector<bool> seen(n, false);\n        seen[source] = true;\n        vector<int> stack{source};\n        while (!stack.empty()) {\n            int u = stack.back();\n            stack.pop_back();\n            if (u == destination) {\n                return true;\n            }\n            for (int v : graph[u]) {                        // 只看和 u 相连的点\n                if (!seen[v]) {\n                    seen[v] = true;\n                    stack.push_back(v);\n                }\n            }\n        }\n        return false;\n    }\n};",
+       "marks": {
+        "init": [
+         4
+        ],
+        "edge": [
+         5,
+         6,
+         7
+        ],
+        "start": [
+         9,
+         10,
+         11
+        ],
+        "pop": [
+         13,
+         14
+        ],
+        "found": [
+         15,
+         16
+        ],
+        "next": [
+         18,
+         19,
+         20,
+         21
+        ],
+        "done": [
+         25
+        ]
+       }
+      },
+      "go": {
+       "code": "func validPath(n int, edges [][]int, source int, destination int) bool {\n\tgraph := make([][]int, n) // graph[u] 是 u 的所有邻居\n\tfor _, e := range edges {\n\t\tgraph[e[0]] = append(graph[e[0]], e[1]) // 无向图：两个方向都要加\n\t\tgraph[e[1]] = append(graph[e[1]], e[0])\n\t}\n\tseen := make([]bool, n)\n\tseen[source] = true\n\tstack := []int{source}\n\tfor len(stack) > 0 {\n\t\tu := stack[len(stack)-1]\n\t\tstack = stack[:len(stack)-1]\n\t\tif u == destination {\n\t\t\treturn true\n\t\t}\n\t\tfor _, v := range graph[u] { // 只看和 u 相连的点\n\t\t\tif !seen[v] {\n\t\t\t\tseen[v] = true\n\t\t\t\tstack = append(stack, v)\n\t\t\t}\n\t\t}\n\t}\n\treturn false\n}",
+       "marks": {
+        "init": [
+         2
+        ],
+        "edge": [
+         3,
+         4,
+         5
+        ],
+        "start": [
+         7,
+         8,
+         9
+        ],
+        "pop": [
+         11,
+         12
+        ],
+        "found": [
+         13,
+         14
+        ],
+        "next": [
+         16,
+         17,
+         18,
+         19
+        ],
+        "done": [
+         23
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var validPath = function(n, edges, source, destination) {\n    const graph = Array.from({ length: n }, () => []);  // graph[u] 是 u 的所有邻居\n    for (const [u, v] of edges) {\n        graph[u].push(v);                               // 无向图：两个方向都要加\n        graph[v].push(u);\n    }\n    const seen = new Array(n).fill(false);\n    seen[source] = true;\n    const stack = [source];\n    while (stack.length) {\n        const u = stack.pop();\n        if (u === destination) {\n            return true;\n        }\n        for (const v of graph[u]) {                     // 只看和 u 相连的点\n            if (!seen[v]) {\n                seen[v] = true;\n                stack.push(v);\n            }\n        }\n    }\n    return false;\n};",
+       "marks": {
+        "init": [
+         2
+        ],
+        "edge": [
+         3,
+         4,
+         5
+        ],
+        "start": [
+         7,
+         8,
+         9
+        ],
+        "pop": [
+         11
+        ],
+        "found": [
+         12,
+         13
+        ],
+        "next": [
+         15,
+         16,
+         17,
+         18
+        ],
+        "done": [
+         22
+        ]
+       }
+      },
+      "typescript": {
+       "code": "function validPath(n: number, edges: number[][], source: number, destination: number): boolean {\n    const graph: number[][] = Array.from({ length: n }, () => []);  // graph[u] 是 u 的所有邻居\n    for (const [u, v] of edges) {\n        graph[u].push(v);                               // 无向图：两个方向都要加\n        graph[v].push(u);\n    }\n    const seen: boolean[] = new Array(n).fill(false);\n    seen[source] = true;\n    const stack: number[] = [source];\n    while (stack.length) {\n        const u = stack.pop()!;\n        if (u === destination) {\n            return true;\n        }\n        for (const v of graph[u]) {                     // 只看和 u 相连的点\n            if (!seen[v]) {\n                seen[v] = true;\n                stack.push(v);\n            }\n        }\n    }\n    return false;\n}",
+       "marks": {
+        "init": [
+         2
+        ],
+        "edge": [
+         3,
+         4,
+         5
+        ],
+        "start": [
+         7,
+         8,
+         9
+        ],
+        "pop": [
+         11
+        ],
+        "found": [
+         12,
+         13
+        ],
+        "next": [
+         15,
+         16,
+         17,
+         18
+        ],
+        "done": [
+         22
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "邻接表",
+    "legend": [
+     [
+      "a",
+      "刚弹出的点"
+     ],
+     [
+      "e",
+      "在栈里"
+     ],
+     [
+      "c",
+      "走过了"
+     ],
+     [
+      "w",
+      "终点"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "走得到",
+      "args": {
+       "n": 6,
+       "edges": [
+        [
+         0,
+         1
+        ],
+        [
+         0,
+         2
+        ],
+        [
+         2,
+         3
+        ],
+        [
+         3,
+         5
+        ],
+        [
+         1,
+         4
+        ]
+       ],
+       "source": 0,
+       "destination": 5
+      },
+      "note": "n = 6, edges = [[0,1],[0,2],[2,3],[3,5],[1,4]], source = 0, destination = 5"
+     },
+     {
+      "label": "走不到",
+      "args": {
+       "n": 6,
+       "edges": [
+        [
+         0,
+         1
+        ],
+        [
+         0,
+         2
+        ],
+        [
+         3,
+         5
+        ],
+        [
+         5,
+         4
+        ],
+        [
+         4,
+         3
+        ]
+       ],
+       "source": 0,
+       "destination": 5
+      },
+      "note": "n = 6, edges = [[0,1],[0,2],[3,5],[5,4],[4,3]], source = 0, destination = 5"
+     }
+    ],
+    "build": "build(a, snap) {\n        const n = a.n, g = Array.from({ length: n }, () => []), seen = new Array(n).fill(false), st = [];\n        let built = 0, cur = -1, hotEdge = -1;\n        const view = () => [\n          { t: \"net\", label: \"图\", nodes: Array.from({ length: n }, (_, i) => ({ v: i, cls: i === cur ? \"a\" : st.includes(i) ? \"e\" : seen[i] ? \"c\" : i === a.destination ? \"w\" : \"\" })), edges: a.edges.map(([u, v], k) => [u, v, k === hotEdge ? \"on\" : k < built ? \"\" : \"dim\"]) },\n          { t: \"chips\", label: \"邻接表 graph\", items: g.map((nb, i) => ({ v: `${i}: [${nb.join(\", \")}]`, cls: i === cur ? \"a\" : \"\" })) },\n          { t: \"chips\", label: \"栈（右边是栈顶）\", items: st.slice(), empty: \"空\" },\n        ];\n        snap(\"开始\", `${n} 个点，邻接表里每个点先放一个空列表。`, view(), { at: \"init\" });\n        a.edges.forEach(([u, v], k) => {\n          g[u].push(v); g[v].push(u); built = k + 1; hotEdge = k;\n          snap(\"加边\", `边 (${u}, ${v})：把 ${v} 加进 graph[${u}]，把 ${u} 加进 graph[${v}]。`, view(), { at: \"edge\" });\n        });\n        hotEdge = -1;\n        seen[a.source] = true; st.push(a.source);\n        snap(\"出发\", `从 ${a.source} 出发：标记走过，放进栈。要找的是 ${a.destination}。`, view(), { at: \"start\" });\n        while (st.length) {\n          cur = st.pop();\n          if (cur === a.destination) { snap(\"到了\", `弹出 ${cur}，就是终点，返回 true。`, view(), { at: [\"pop\", \"found\"], kind: \"ok\", ans: true }); return; }\n          const add = g[cur].filter((v) => !seen[v]);\n          add.forEach((v) => { seen[v] = true; st.push(v); });\n          snap(\"弹出\", `弹出 ${cur}，不是终点。它的邻居是 [${g[cur].join(\", \")}]，` + (add.length ? `其中 ${add.join(\"、\")} 没走过，标记后压栈。` : \"都走过了。\"), view(), { at: [\"pop\", \"found\", \"next\"] });\n        }\n        cur = -1;\n        snap(\"走不到\", `栈空了，从 ${a.source} 能走到的点都走过了，没有 ${a.destination}，返回 false。`, view(), { at: \"done\", kind: \"ok\", ans: false });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "刚弹出的点"
+       ],
+       [
+        "e",
+        "在栈里"
+       ],
+       [
+        "c",
+        "走过了"
+       ],
+       [
+        "w",
+        "终点"
+       ]
+      ],
+      "code": "adj",
+      "build": "build(a, snap) {\n        const n = a.n, g = Array.from({ length: n }, () => []), seen = new Array(n).fill(false), st = [];\n        let built = 0, cur = -1, hotEdge = -1;\n        const view = () => [\n          { t: \"net\", label: \"图\", nodes: Array.from({ length: n }, (_, i) => ({ v: i, cls: i === cur ? \"a\" : st.includes(i) ? \"e\" : seen[i] ? \"c\" : i === a.destination ? \"w\" : \"\" })), edges: a.edges.map(([u, v], k) => [u, v, k === hotEdge ? \"on\" : k < built ? \"\" : \"dim\"]) },\n          { t: \"chips\", label: \"邻接表 graph\", items: g.map((nb, i) => ({ v: `${i}: [${nb.join(\", \")}]`, cls: i === cur ? \"a\" : \"\" })) },\n          { t: \"chips\", label: \"栈（右边是栈顶）\", items: st.slice(), empty: \"空\" },\n        ];\n        snap(\"开始\", `${n} 个点，邻接表里每个点先放一个空列表。`, view(), { at: \"init\" });\n        a.edges.forEach(([u, v], k) => {\n          g[u].push(v); g[v].push(u); built = k + 1; hotEdge = k;\n          snap(\"加边\", `边 (${u}, ${v})：把 ${v} 加进 graph[${u}]，把 ${u} 加进 graph[${v}]。`, view(), { at: \"edge\" });\n        });\n        hotEdge = -1;\n        seen[a.source] = true; st.push(a.source);\n        snap(\"出发\", `从 ${a.source} 出发：标记走过，放进栈。要找的是 ${a.destination}。`, view(), { at: \"start\" });\n        while (st.length) {\n          cur = st.pop();\n          if (cur === a.destination) { snap(\"到了\", `弹出 ${cur}，就是终点，返回 true。`, view(), { at: [\"pop\", \"found\"], kind: \"ok\", ans: true }); return; }\n          const add = g[cur].filter((v) => !seen[v]);\n          add.forEach((v) => { seen[v] = true; st.push(v); });\n          snap(\"弹出\", `弹出 ${cur}，不是终点。它的邻居是 [${g[cur].join(\", \")}]，` + (add.length ? `其中 ${add.join(\"、\")} 没走过，标记后压栈。` : \"都走过了。\"), view(), { at: [\"pop\", \"found\", \"next\"] });\n        }\n        cur = -1;\n        snap(\"走不到\", `栈空了，从 ${a.source} 能走到的点都走过了，没有 ${a.destination}，返回 false。`, view(), { at: \"done\", kind: \"ok\", ans: false });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n      const n = R.int(4, 7), edges = [], has = new Set();\n      for (let k = R.int(n - 2, n + 1), guard = 0; edges.length < k && guard < 100; guard++) {\n        const u = R.int(0, n - 1), v = R.int(0, n - 1);\n        if (u === v || has.has(`${u},${v}`)) continue;\n        has.add(`${u},${v}`); has.add(`${v},${u}`); edges.push([u, v]);\n      }\n      const source = R.int(0, n - 1), destination = R.int(0, n - 1);\n      return { args: { n, edges, source, destination }, note: `n = ${n}, edges = ${R.fmt(edges)}, source = ${source}, destination = ${destination}` };\n    })(R); return { args: r.args, note: r.note }; }"
+   }
+  },
+  {
+   "key": "grid",
+   "t": "网格：方向数组",
+   "body": [
+    "网格题里格子 <code>(i, j)</code> 的邻居是上下左右四个格子。把四个方向写成数组 <code>[(-1, 0), (1, 0), (0, -1), (0, 1)]</code>，一个循环就能枚举邻居，不用写四遍几乎一样的代码。",
+    "邻居可能越界，要先判断 <code>0 &lt;= a &lt; m</code> 且 <code>0 &lt;= b &lt; n</code>。这道题正好利用了越界：一块陆地的某条边如果挨着水或者网格边缘，这条边就是周长的一部分。",
+    "需要斜着走时用八个方向；网格上的 DFS / BFS（岛屿数量、腐烂的橘子）也都是这个写法。"
+   ],
+   "points": [
+    {
+     "t": "m 行 n 列",
+     "body": "<code>grid[i][j]</code> 的 i 是行、j 是列。<code>m = len(grid)</code>，<code>n = len(grid[0])</code>。"
+    },
+    {
+     "t": "也可以数相邻",
+     "body": "周长 = 4 × 陆地数 − 2 × 相邻的陆地对数，不用方向数组也能算。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "方向数组",
+     "kind": null,
+     "note": null,
+     "key": "grid",
+     "code": "class Solution:\n    def islandPerimeter(self, grid: List[List[int]]) -> int:\n        m, n = len(grid), len(grid[0])\n        dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]       # 上下左右\n        ans = 0\n        for i in range(m):\n            for j in range(n):\n                if grid[i][j] == 0:\n                    continue\n                for di, dj in dirs:\n                    a, b = i + di, j + dj               # 邻居的坐标\n                    if not (0 <= a < m and 0 <= b < n) or grid[a][b] == 0:     # 出界或者是水\n                        ans += 1                        # 这条边是周长\n        return ans",
+     "marks": {
+      "init": [
+       4,
+       5
+      ],
+      "cell": [
+       6,
+       7,
+       8,
+       9
+      ],
+      "dir": [
+       10,
+       11
+      ],
+      "edge": [
+       12,
+       13
+      ],
+      "done": [
+       14
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    private static final int[][] DIRS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};    // 上下左右\n\n    public int islandPerimeter(int[][] grid) {\n        int m = grid.length, n = grid[0].length, ans = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] == 0) {\n                    continue;\n                }\n                for (int[] d : DIRS) {\n                    int a = i + d[0], b = j + d[1];         // 邻居的坐标\n                    if (a < 0 || a >= m || b < 0 || b >= n || grid[a][b] == 0) {    // 出界或者是水\n                        ans++;                              // 这条边是周长\n                    }\n                }\n            }\n        }\n        return ans;\n    }\n}",
+       "marks": {
+        "init": [
+         2,
+         5
+        ],
+        "cell": [
+         6,
+         7,
+         8,
+         9
+        ],
+        "dir": [
+         11,
+         12
+        ],
+        "edge": [
+         13,
+         14
+        ],
+        "done": [
+         19
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\npublic:\n    int islandPerimeter(vector<vector<int>>& grid) {\n        const int dirs[4][2] = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};     // 上下左右\n        int m = grid.size(), n = grid[0].size(), ans = 0;\n        for (int i = 0; i < m; i++) {\n            for (int j = 0; j < n; j++) {\n                if (grid[i][j] == 0) {\n                    continue;\n                }\n                for (auto& d : dirs) {\n                    int a = i + d[0], b = j + d[1];         // 邻居的坐标\n                    if (a < 0 || a >= m || b < 0 || b >= n || grid[a][b] == 0) {    // 出界或者是水\n                        ans++;                              // 这条边是周长\n                    }\n                }\n            }\n        }\n        return ans;\n    }\n};",
+       "marks": {
+        "init": [
+         4,
+         5
+        ],
+        "cell": [
+         6,
+         7,
+         8,
+         9
+        ],
+        "dir": [
+         11,
+         12
+        ],
+        "edge": [
+         13,
+         14
+        ],
+        "done": [
+         19
+        ]
+       }
+      },
+      "go": {
+       "code": "func islandPerimeter(grid [][]int) int {\n\tdirs := [4][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} // 上下左右\n\tm, n, ans := len(grid), len(grid[0]), 0\n\tfor i := 0; i < m; i++ {\n\t\tfor j := 0; j < n; j++ {\n\t\t\tif grid[i][j] == 0 {\n\t\t\t\tcontinue\n\t\t\t}\n\t\t\tfor _, d := range dirs {\n\t\t\t\ta, b := i+d[0], j+d[1] // 邻居的坐标\n\t\t\t\tif a < 0 || a >= m || b < 0 || b >= n || grid[a][b] == 0 { // 出界或者是水\n\t\t\t\t\tans++ // 这条边是周长\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t}\n\treturn ans\n}",
+       "marks": {
+        "init": [
+         2,
+         3
+        ],
+        "cell": [
+         4,
+         5,
+         6,
+         7
+        ],
+        "dir": [
+         9,
+         10
+        ],
+        "edge": [
+         11,
+         12
+        ],
+        "done": [
+         17
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var islandPerimeter = function(grid) {\n    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];    // 上下左右\n    const m = grid.length, n = grid[0].length;\n    let ans = 0;\n    for (let i = 0; i < m; i++) {\n        for (let j = 0; j < n; j++) {\n            if (grid[i][j] === 0) {\n                continue;\n            }\n            for (const [di, dj] of dirs) {\n                const a = i + di, b = j + dj;           // 邻居的坐标\n                if (a < 0 || a >= m || b < 0 || b >= n || grid[a][b] === 0) {   // 出界或者是水\n                    ans++;                              // 这条边是周长\n                }\n            }\n        }\n    }\n    return ans;\n};",
+       "marks": {
+        "init": [
+         2,
+         3,
+         4
+        ],
+        "cell": [
+         5,
+         6,
+         7,
+         8
+        ],
+        "dir": [
+         10,
+         11
+        ],
+        "edge": [
+         12,
+         13
+        ],
+        "done": [
+         18
+        ]
+       }
+      },
+      "typescript": {
+       "code": "function islandPerimeter(grid: number[][]): number {\n    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];    // 上下左右\n    const m = grid.length, n = grid[0].length;\n    let ans = 0;\n    for (let i = 0; i < m; i++) {\n        for (let j = 0; j < n; j++) {\n            if (grid[i][j] === 0) {\n                continue;\n            }\n            for (const [di, dj] of dirs) {\n                const a = i + di, b = j + dj;           // 邻居的坐标\n                if (a < 0 || a >= m || b < 0 || b >= n || grid[a][b] === 0) {   // 出界或者是水\n                    ans++;                              // 这条边是周长\n                }\n            }\n        }\n    }\n    return ans;\n}",
+       "marks": {
+        "init": [
+         2,
+         3,
+         4
+        ],
+        "cell": [
+         5,
+         6,
+         7,
+         8
+        ],
+        "dir": [
+         10,
+         11
+        ],
+        "edge": [
+         12,
+         13
+        ],
+        "done": [
+         18
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "网格：方向数组",
+    "legend": [
+     [
+      "a",
+      "正在看的陆地"
+     ],
+     [
+      "w",
+      "它挨着水或边缘的方向"
+     ],
+     [
+      "e",
+      "陆地"
+     ],
+     [
+      "c",
+      "数过了"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例 1",
+      "args": {
+       "grid": [
+        [
+         0,
+         1,
+         0,
+         0
+        ],
+        [
+         1,
+         1,
+         1,
+         0
+        ],
+        [
+         0,
+         1,
+         0,
+         0
+        ],
+        [
+         1,
+         1,
+         0,
+         0
+        ]
+       ]
+      },
+      "note": "grid = [[0,1,0,0],[1,1,1,0],[0,1,0,0],[1,1,0,0]]"
+     }
+    ],
+    "build": "build(a, snap) {\n        const g = a.grid, m = g.length, n = g[0].length, done = new Set();\n        let ans = 0, ci = -1, cj = -1, open = [];\n        const view = () => [{ t: \"grid\", rows: g.map((row, i) => row.map((v, j) => ({ v: v ? \"\" : \"\", cls: i === ci && j === cj ? \"a\" : open.some(([x, y]) => x === i && y === j) ? \"w\" : v ? (done.has(i * n + j) ? \"c\" : \"e\") : \"\" }))) }];\n        snap(\"开始\", \"四个方向：上、下、左、右。周长先是 0。\", view(), { at: \"init\", facts: [[\"周长\", 0]] });\n        const D = [[-1, 0, \"上\"], [1, 0, \"下\"], [0, -1, \"左\"], [0, 1, \"右\"]];\n        for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n          if (!g[i][j]) continue;\n          ci = i; cj = j;\n          const sides = D.filter(([di, dj]) => { const x = i + di, y = j + dj; return !(x >= 0 && x < m && y >= 0 && y < n) || !g[x][y]; });\n          open = sides.map(([di, dj]) => [i + di, j + dj]).filter(([x, y]) => x >= 0 && x < m && y >= 0 && y < n);\n          ans += sides.length;\n          snap(\"看一块陆地\", `(${i}, ${j}) 是陆地。看四个方向：${sides.length ? sides.map((d) => d[2]).join(\"、\") + \" 挨着水或边缘\" : \"四面都是陆地\"}，周长加 ${sides.length}。`, view(), { at: [\"cell\", \"dir\", \"edge\"], facts: [[\"周长\", ans]] });\n          done.add(i * n + j);\n        }\n        ci = cj = -1; open = [];\n        snap(\"完成\", `周长是 ${ans}。`, view(), { at: \"done\", kind: \"ok\", ans, facts: [[\"周长\", ans]] });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "正在看的陆地"
+       ],
+       [
+        "w",
+        "它挨着水或边缘的方向"
+       ],
+       [
+        "e",
+        "陆地"
+       ],
+       [
+        "c",
+        "数过了"
+       ]
+      ],
+      "code": "grid",
+      "build": "build(a, snap) {\n        const g = a.grid, m = g.length, n = g[0].length, done = new Set();\n        let ans = 0, ci = -1, cj = -1, open = [];\n        const view = () => [{ t: \"grid\", rows: g.map((row, i) => row.map((v, j) => ({ v: v ? \"\" : \"\", cls: i === ci && j === cj ? \"a\" : open.some(([x, y]) => x === i && y === j) ? \"w\" : v ? (done.has(i * n + j) ? \"c\" : \"e\") : \"\" }))) }];\n        snap(\"开始\", \"四个方向：上、下、左、右。周长先是 0。\", view(), { at: \"init\", facts: [[\"周长\", 0]] });\n        const D = [[-1, 0, \"上\"], [1, 0, \"下\"], [0, -1, \"左\"], [0, 1, \"右\"]];\n        for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {\n          if (!g[i][j]) continue;\n          ci = i; cj = j;\n          const sides = D.filter(([di, dj]) => { const x = i + di, y = j + dj; return !(x >= 0 && x < m && y >= 0 && y < n) || !g[x][y]; });\n          open = sides.map(([di, dj]) => [i + di, j + dj]).filter(([x, y]) => x >= 0 && x < m && y >= 0 && y < n);\n          ans += sides.length;\n          snap(\"看一块陆地\", `(${i}, ${j}) 是陆地。看四个方向：${sides.length ? sides.map((d) => d[2]).join(\"、\") + \" 挨着水或边缘\" : \"四面都是陆地\"}，周长加 ${sides.length}。`, view(), { at: [\"cell\", \"dir\", \"edge\"], facts: [[\"周长\", ans]] });\n          done.add(i * n + j);\n        }\n        ci = cj = -1; open = [];\n        snap(\"完成\", `周长是 ${ans}。`, view(), { at: \"done\", kind: \"ok\", ans, facts: [[\"周长\", ans]] });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n      const m = R.int(3, 5), n = R.int(3, 5), grid = Array.from({ length: m }, () => new Array(n).fill(0)), cells = [[R.int(0, m - 1), R.int(0, n - 1)]];\n      grid[cells[0][0]][cells[0][1]] = 1;\n      for (let k = R.int(2, Math.floor((m * n) / 2)), guard = 0; cells.length < k && guard < 200; guard++) {\n        const [i, j] = R.pick(cells), [di, dj] = R.pick([[-1, 0], [1, 0], [0, -1], [0, 1]]), a = i + di, b = j + dj;\n        if (a >= 0 && a < m && b >= 0 && b < n && !grid[a][b]) { grid[a][b] = 1; cells.push([a, b]); }\n      }\n      return { args: { grid }, note: `grid = ${R.fmt(grid)}` };\n    })(R); return { args: r.args, note: r.note }; }"
+   }
+  }
+ ]
+}

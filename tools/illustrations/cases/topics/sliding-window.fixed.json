@@ -1,0 +1,20 @@
+{
+ "sig": {"fn":"maxVowels","params":["string","int"],"ret":"int"},
+ "cases": [
+  {"in":["abciiidef",3],"out":3},
+  {"in":["aeiou",2],"out":2},
+  {"in":["leetcode",3],"out":2},
+  {"in":["rhythms",4],"out":0},
+  {"in":["a",1],"out":1},
+  {"in":["teoiaatoo",5],"out":5},
+  {"in":["ettbo",3],"out":1},
+  {"in":["etaabte",4],"out":3},
+  {"in":["oibboeet",6],"out":4},
+  {"in":["eibbaii",5],"out":3},
+  {"in":["eobbaoaee",7],"out":5},
+  {"in":["otobeebe",6],"out":4},
+  {"in":["eiaeoeato",6],"out":6},
+  {"in":["bbboaabeii",6],"out":5},
+  {"in":["bboaeea",5],"out":5}
+ ]
+}

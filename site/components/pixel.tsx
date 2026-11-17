@@ -410,7 +410,7 @@ export function LevelPixels({ level, withLabel = true }: { level: Level; withLab
   );
 }
 
-const STATUS_TONE: Record<Status, string> = { 已通过: "bg-success", 曾通过: "bg-warning", 尝试过: "bg-danger", 未开始: "bg-foreground/15" };
+export const STATUS_TONE: Record<Status, string> = { 已通过: "bg-success", 曾通过: "bg-warning", 尝试过: "bg-danger", 未开始: "bg-foreground/15" };
 
 export function StatusPixel({ status, withLabel = true, className }: { status: Status; withLabel?: boolean; className?: string }) {
   return (

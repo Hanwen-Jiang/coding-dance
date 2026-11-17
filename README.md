@@ -2,7 +2,7 @@
 
 力扣「[热题 100](https://leetcode.cn/studyplan/top-100-liked/)」的**不变的资源**：100 道题的题目文档、分层提示、简洁写法和标准解法、逐步动画演示，以及按重要程度排好的刷题顺序。
 
-网站：**https://leetcode.cgent.link** —— 按重要程度 / 难度 / 题型浏览，每道题一页。
+网站：**https://leetcode.cgent.link** —— 按重要程度 / 难度 / 题型浏览，每道题一页。另有「[数据结构与算法基础](https://leetcode.cgent.link/learn/)」：22 个专题（链表、二叉树、堆、并查集……二分、排序、BFS / DFS、回溯、动态规划……），讲解 + 逐步演示 + 六种语言的代码 + 相关热题。
 
 ## 资源仓和进度仓
 
@@ -23,7 +23,7 @@
 ├── studyplan/
 │   ├── 热题100.md        # 按专题分组的题单
 │   └── 优先级清单.md      # 100 题按重要程度排序（Hot 20 重点 → P0 必做 → P3 选做）
-├── tools/           # 小工具（TreeGraph.py：二叉树可视化；illustrations/：图解生成器，data/ 是导出给网站的数据）
+├── tools/           # 小工具（TreeGraph.py：二叉树可视化；illustrations/：图解生成器，data/ 是导出给网站的数据，topics/ 是基础专题）
 └── site/            # 题解网站（Next.js + HeroUI Pro，部署在 Cloudflare Pages）
 ```
 

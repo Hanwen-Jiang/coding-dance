@@ -6,7 +6,7 @@
 const fs = require("fs"), path = require("path"), cp = require("child_process"), os = require("os");
 const { makeR, GEN, randomSource } = require("./random");
 const { parseCode, pad4, codesOf, markMismatch } = require("./judge/code");
-const { normSig } = require("./judge/util");
+const { normSig, matches } = require("./judge/util");
 const pyJudge = require("./judge/langs/python");
 const dir = __dirname, out = path.join(dir, "../../illustrations"), dataDir = path.join(dir, "data"), casesDir = path.join(dir, "cases");
 const dataOnly = process.argv.includes("--data-only");
@@ -61,14 +61,14 @@ const exportData = (S) => {
 };
 /**
  * 核对演示的每一步都指到了代码里的标记：at 不能缺，写的 tag 在这种解法的代码里要有。
- * 代码还没加标记的题先跳过（--strict 时不允许）。
+ * 代码还没加标记的题先跳过（--strict 时不允许；专题一律要求有标记）。
  */
-function checkAt(S, entries, m, steps, where) {
+function checkAt(S, entries, m, steps, where, mustMark = strict) {
   const e = m.code ? entries.find((x) => x.key === m.code) : null;
   if (m.code && !e) throw new Error(`${S.id} [${m.t}]: 找不到 key 是 "${m.code}" 的代码`);
   const marks = e ? parseCode(e.raw.python).marks : {};
   if (!Object.keys(marks).length) {
-    if (strict) throw new Error(`${S.id} [${m.t}]: 这种解法的代码还没有步骤标记`);
+    if (mustMark) throw new Error(`${S.id} [${m.t}]: 这种解法的代码还没有步骤标记`);
     if (steps.some((s) => s.at != null)) throw new Error(`${S.id} [${m.t}]: 演示里写了 at，但代码里没有标记`);
     return;
   }
@@ -161,9 +161,15 @@ const prelude = fs.readFileSync(path.join(dir, "pytest_prelude.py"), "utf8");
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const codeHtml = (code) => esc(code.replace(/^\n+|\s+$/g, "")).split("\n")
   .map((l) => l.replace(/(^|\s)(#(?!['"]).*)$/, (m, a, b) => `${a}<span class="cmt">${b}</span>`)).join("\n");
-const only = process.argv.slice(2).filter((a) => !a.startsWith("--")).map(Number);
+// 参数：题号只处理这几题；专题的 slug 或 --topics 只处理专题；什么都不写就是全部（CI 跑的就是这个）
+const names = process.argv.slice(2).filter((a) => !a.startsWith("--"));
+const only = names.filter((a) => /^\d+$/.test(a)).map(Number);
+const onlyTopics = names.filter((a) => !/^\d+$/.test(a));
+const wantTopics = !only.length || onlyTopics.length > 0 || process.argv.includes("--topics");
+const wantSpecs = !onlyTopics.length && !process.argv.includes("--topics");
+if (wantTopics) buildTopics(onlyTopics);
 let n = 0;
-for (const f of fs.readdirSync(path.join(dir, "specs")).sort()) {
+if (wantSpecs) for (const f of fs.readdirSync(path.join(dir, "specs")).sort()) {
   if (!f.endsWith(".js")) continue;
   // 带题号运行时只加载这几题的 spec：别的题正改到一半、暂时有语法错误时不受影响
   if (only.length && !only.includes(Number(f.slice(0, 4)))) continue;
@@ -287,4 +293,131 @@ ${engine}</script>
   n++;
   console.log("ok", S.id, S.name);
 }
-console.log(`built ${n}`);
+if (wantSpecs) console.log(`built ${n}`);
+
+/**
+ * 「数据结构与算法基础」专题：topics/<slug>.js，一个专题分几小节，每小节 = 讲解 + 代码（六种语言）+ 演示。
+ * 代码的其他语言放 code/topics/<slug>/<key>.<后缀>；小节的第一段代码 key 必须写成小节的 key（判题器按它找文件）。
+ * 导出 data/topics/<slug>.json、data/topics/index.json 和判题用例 cases/topics/<slug>.<key>.json。
+ */
+function buildTopics(want) {
+  const tdir = path.join(dir, "topics"), tdata = path.join(dataDir, "topics"), tcases = path.join(casesDir, "topics");
+  if (!fs.existsSync(tdir)) return;
+  fs.mkdirSync(tdata, { recursive: true });
+  const all = fs.readdirSync(tdir).filter((f) => f.endsWith(".js")).sort().map((f) => {
+    const T = require(path.join(tdir, f));
+    if (`${T.slug}.js` !== f) throw new Error(`topics/${f}: slug 要和文件名一致（现在是 ${T.slug}）`);
+    if (!["ds", "algo"].includes(T.kind)) throw new Error(`专题 ${T.slug}: kind 只能是 ds 或 algo`);
+    return T;
+  });
+  for (const s of want) if (!all.some((T) => T.slug === s)) throw new Error(`没有专题 ${s}（topics/${s}.js）`);
+  // related 只能写热题 100 里的题号（网站按它列相关热题、在题目页反查「相关基础」）
+  const hot = new Set(fs.readdirSync(path.join(dir, "specs")).filter((f) => /^\d{4}\.js$/.test(f)).map((f) => Number(f.slice(0, 4))));
+  for (const T of all) {
+    const bad = (T.related || []).filter((id) => !hot.has(id));
+    if (bad.length) throw new Error(`专题 ${T.slug}: related 里的 ${bad.join("、")} 不是热题 100 的题`);
+  }
+  let built = 0;
+  for (const T of all) {
+    if (want.length && !want.includes(T.slug)) continue;
+    const sections = T.sections.map((sec) => buildSection(T, sec));
+    const keys = T.sections.flatMap((sec) => sec.codes.map((c) => c.key).filter(Boolean));
+    const dup = keys.find((k, i) => keys.indexOf(k) !== i);
+    if (dup) throw new Error(`专题 ${T.slug}: 代码的 key「${dup}」重复了（同一个专题的代码放在同一个目录里）`);
+    fs.writeFileSync(path.join(tdata, `${T.slug}.json`), JSON.stringify({
+      slug: T.slug, name: T.name, kind: T.kind, order: T.order, lede: T.lede, related: T.related || [], sections,
+    }, null, 1) + "\n");
+    built++;
+    console.log("ok", "专题", T.slug, T.name);
+  }
+  // 目录：全部专题，按「数据结构 / 算法」和 order 排
+  const index = all.slice().sort((a, b) => (a.kind === b.kind ? a.order - b.order : a.kind === "ds" ? -1 : 1)).map((T) => ({
+    slug: T.slug, name: T.name, kind: T.kind, order: T.order, lede: T.lede, related: T.related || [],
+    sections: T.sections.map((s) => ({ key: s.key, t: s.t, demo: !!s.demo })),
+  }));
+  fs.writeFileSync(path.join(tdata, "index.json"), JSON.stringify(index, null, 1) + "\n");
+  // 网站的 /learn/<slug>/ 是静态导出的，slug 列表写在 site/lib/topic-slugs.ts 里，两边要一致
+  const listFile = path.join(dir, "../../site/lib/topic-slugs.ts");
+  if (fs.existsSync(listFile)) {
+    const listed = [...fs.readFileSync(listFile, "utf8").matchAll(/"([\w-]+)"/g)].map((m) => m[1]).sort().join(",");
+    if (listed !== all.map((T) => T.slug).sort().join(",")) throw new Error(`site/lib/topic-slugs.ts 里的专题列表要和 topics/ 一致：现在是 [${listed}]`);
+  }
+  console.log(`built ${built} topics`);
+
+  function buildSection(T, sec) {
+    const label = `专题 ${T.slug}「${sec.t}」`;
+    if (!sec.key || !/^[\w-]+$/.test(sec.key)) throw new Error(`${label}: 小节要有 key（字母、数字、- 和 _）`);
+    if (!sec.codes || !sec.codes.length) throw new Error(`${label}: 没有代码`);
+    if (sec.codes[0].key !== sec.key) throw new Error(`${label}: 第一段代码要写 key: "${sec.key}"（和小节的 key 一样，判题器按它找其他语言的文件）`);
+    const entries = codesOf(sec.codes, path.join("topics", T.slug));
+    const demo = sec.demo || null;
+    const methods = !demo ? [] : [
+      { t: demo.method || "演示", note: demo.methodNote || null, legend: demo.legend || [], build: demo.build, code: sec.key },
+      ...(demo.alts || []).map((m) => ({ t: m.t, note: m.note || null, legend: m.legend || demo.legend || [], build: m.build, code: m.code || null })),
+    ];
+    const random = sec.gen ? `() => { const R = (${makeR.toString()})(); const r = (${sec.gen.toString()})(R); return { args: r.args, note: r.note }; }` : null;
+    if (!dataOnly) {
+      const S = { id: `${T.slug}/${sec.key}` };
+      // 0) 各语言代码里的步骤标记要和 Python 的一致
+      for (const e of entries) { const bad = markMismatch(e); if (bad) throw new Error(`${label}「${e.t}」: ${bad}`); }
+      // 1) 演示：每种解法、每个预设都跑一遍；每步都要指到代码行，写了 expect 的核对答案
+      const norm = (x) => JSON.stringify(sec.cmp === "unordered" || (sec.sig && sec.sig.cmp === "unordered") ? deepSort(x) : x);
+      for (const m of methods) for (const p of demo.presets) {
+        const steps = runBuild(m.build, p.args);
+        if (!steps.length) throw new Error(`${label} [${m.t}] ${p.label}: 演示没有步骤`);
+        for (const s of steps) if (typeof s.phase !== "string" || typeof s.msg !== "string" || !Array.isArray(s.views)) throw new Error(`${label} [${m.t}] ${p.label}: 有一步的格式不对`);
+        checkAt(S, entries, m, steps, p.label, true);
+        if ("expect" in p && norm(steps[steps.length - 1].ans) !== norm(p.expect)) throw new Error(`${label} [${m.t}] ${p.label}: 演示的答案 ${JSON.stringify(steps[steps.length - 1].ans)} 不等于 ${JSON.stringify(p.expect)}`);
+      }
+      // 2) 判题用例：预设（要写 call）+ cases + 随机输入，期望输出由第一段 Python 代码算出
+      if (sec.sig) {
+        if ((demo || sec.gen) && typeof sec.call !== "function") throw new Error(`${label}: 有演示或随机输入时要写 call(args)，把演示的输入变成力扣的参数`);
+        const file = path.join(tcases, `${T.slug}.${sec.key}.json`);
+        const seed = [...`${T.slug}.${sec.key}`].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 7);
+        exportCases({
+          name: `${T.slug}_${sec.key}`.replace(/-/g, "_"), label, sig: sec.sig, call: sec.call, presets: sec.call && demo ? demo.presets : [], extra: sec.cases,
+          gen: sec.call ? sec.gen : null, seed, code: parseCode(sec.codes[0].code).code, file,
+        });
+        const { cases } = JSON.parse(fs.readFileSync(file, "utf8"));
+        if (cases.length < 3) throw new Error(`${label}: 判题用例太少（${cases.length} 组），在 cases 里多写几组`);
+        // 其余的 Python 代码也要和第一段的答案一致（其他语言用 judge/run.js 跑）
+        for (const e of entries.slice(1)) {
+          if (!e.judge) continue;
+          const outs = pyJudge.runSync({ name: `${T.slug}_${e.key || e.i}`.replace(/-/g, "_"), sig: normSig(sec.sig), cases: cases.map((c) => c.in), code: parseCode(e.raw.python).code }, path.join(os.tmpdir(), "lc-judge", String(process.pid), "build"));
+          const k = cases.findIndex((c, i) => !matches(c.out, outs[i], normSig(sec.sig).cmp));
+          if (k >= 0) throw new Error(`${label}「${e.t}」: Python 代码的答案不对：输入 ${JSON.stringify(cases[k].in)}，期望 ${JSON.stringify(cases[k].out)}，得到 ${JSON.stringify(outs[k])}`);
+        }
+        // 3) 随机演示：和第一段 Python 代码对答案
+        if (demo && sec.gen) {
+          const R = makeR(), inputs = [], got = [];
+          for (let k = 0; k < 20; k++) {
+            const r = sec.gen(R);
+            for (const m of methods) {
+              const steps = runBuild(m.build, r.args), last = steps[steps.length - 1];
+              if (!last || !("ans" in last)) throw new Error(`${label} [${m.t}]: 随机输入 ${r.note} 的演示没有给出答案`);
+              checkAt(S, entries, m, steps, `随机输入 ${r.note}`, true);
+              inputs.push(sec.call(r.args, makeR()));
+              got.push({ ans: last.ans, m: m.t, note: r.note });
+            }
+          }
+          const outs = pyJudge.runSync({ name: `${T.slug}_${sec.key}_rand`.replace(/-/g, "_"), sig: normSig(sec.sig), cases: inputs, code: parseCode(sec.codes[0].code).code }, path.join(os.tmpdir(), "lc-judge", String(process.pid), "build"));
+          got.forEach((g, i) => {
+            if (!matches(outs[i], g.ans, normSig(sec.sig).cmp)) throw new Error(`${label} [${g.m}]: 随机输入 ${g.note} 的演示答案 ${JSON.stringify(g.ans)}，Python 算出来是 ${JSON.stringify(outs[i])}`);
+          });
+        }
+      } else if (entries.some((e) => Object.keys(e.raw).length > 1)) throw new Error(`${label}: 有其他语言的代码就要写 sig，才能判题`);
+    }
+    return {
+      key: sec.key, t: sec.t, body: sec.body || [], points: sec.points || [],
+      codes: exportCodes(entries),
+      demo: !demo ? null : {
+        title: demo.title || sec.t,
+        legend: methods[0].legend,
+        presets: demo.presets.map(({ label, args, note }) => ({ label, args, note: note || "" })),
+        build: src(methods[0].build),
+        methods: methods.map((m) => ({ t: m.t, note: m.note, legend: m.legend, ...(m.code ? { code: m.code } : {}), build: src(m.build) })),
+        random: random && src(random),
+      },
+    };
+  }
+}

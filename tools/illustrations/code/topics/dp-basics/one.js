@@ -1,0 +1,8 @@
+var minCostClimbingStairs = function(cost) {
+    const n = cost.length;
+    const dp = new Array(n + 1).fill(0);    // 边界 dp[0] = dp[1] = 0：从第 0 或第 1 阶出发不花钱 //@init
+    for (let i = 2; i <= n; i++) {
+        dp[i] = Math.min(dp[i - 1] + cost[i - 1], dp[i - 2] + cost[i - 2]);    // 跨 1 步或跨 2 步上来 //@step
+    }
+    return dp[n];                           // 楼顶是第 n 阶 //@done
+};
