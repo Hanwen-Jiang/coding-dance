@@ -98,8 +98,8 @@ function SolutionCode({ code }: { code: SpecCode }) {
   );
 }
 
-function Solutions({ spec }: { spec: Spec }) {
-  const [revealed, setRevealed] = useState(false);
+/** revealed 由题目页统一管：点开题解或者点开演示旁边的代码，两处一起显示 */
+function Solutions({ spec, revealed, onReveal }: { spec: Spec; revealed: boolean; onReveal: () => void }) {
   const { langs: prefs } = usePrefs();
   const [tab, setTab] = useState<string | null>(null);
   const elegantIdx = spec.codes.findIndex((c) => c.kind === "elegant");
@@ -125,7 +125,7 @@ function Solutions({ spec }: { spec: Spec }) {
         </div>
         <div className="relative flex flex-col items-center gap-3">
           <span className="font-pixel text-[11px] tracking-widest text-muted">SPOILER</span>
-          <Button onPress={() => setRevealed(true)}>
+          <Button onPress={onReveal}>
             <EyeIcon />
             查看题解
           </Button>
@@ -445,8 +445,8 @@ function HandwrittenDemo({ src }: { src: string }) {
   );
 }
 
-function DemoSection({ d }: { d: ProblemDetail }) {
-  if (d.spec?.demo) return <DemoPlayer codes={d.spec.codes} demo={d.spec.demo} />;
+function DemoSection({ d, revealed, onReveal }: { d: ProblemDetail; revealed: boolean; onReveal: () => void }) {
+  if (d.spec?.demo) return <DemoPlayer codeRevealed={revealed} codes={d.spec.codes} demo={d.spec.demo} onRevealCode={onReveal} />;
   if (d.illustrationUrl) return <HandwrittenDemo src={d.illustrationUrl} />;
   return <p className="text-sm text-muted">这道题还没有动画演示。</p>;
 }
@@ -455,6 +455,10 @@ export function ProblemView({ id }: { id: number }) {
   const { data: d, error, loading } = useApi<ProblemDetail>(`/api/problem/${id}`);
   const progressCtx = useProgress();
   const mine = useMine(id);
+  // 题解默认盖着；演示旁边「这一步的代码」跟它共用这个开关，换一道题重新盖上
+  const [revealed, setRevealed] = useState(false);
+  const reveal = useCallback(() => setRevealed(true), []);
+  useEffect(() => setRevealed(false), [id]);
 
   useEffect(() => {
     if (d) document.title = `${d.summary.id}. ${d.summary.name} · 热题 100 题解手册`;
@@ -557,12 +561,12 @@ export function ProblemView({ id }: { id: number }) {
             >
               动画演示
             </SectionTitle>
-            <DemoSection d={d} />
+            <DemoSection d={d} revealed={revealed} onReveal={reveal} />
           </section>
 
           <section className="flex flex-col gap-4">
             <SectionTitle id="solution">题解</SectionTitle>
-            {d.spec?.codes?.length ? <Solutions key={s.id} spec={d.spec} /> : <p className="text-sm text-muted">这道题还没有题解。</p>}
+            {d.spec?.codes?.length ? <Solutions key={s.id} revealed={revealed} spec={d.spec} onReveal={reveal} /> : <p className="text-sm text-muted">这道题还没有题解。</p>}
           </section>
 
           <section className="flex flex-col gap-4">
