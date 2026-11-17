@@ -3,7 +3,7 @@
 import { Button, Card, Tabs } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import { renderViews } from "@/components/demo/render";
 import { StepCode } from "@/components/demo/step-code";
@@ -143,9 +143,29 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
     setPlaying(true);
   };
 
+  // 每一步的图是 render.ts 拼的一段 HTML，宽的数组、树、表格放在 .dm-scroll 里横着滚。整段换掉会把滚动条打回开头，
+  // 一张图一屏放不下时每点一次「下一步」都要重新滚过去。所以自己写 innerHTML：同一组输入、同一种解法里换步骤时，
+  // 先记下每个 .dm-scroll 滚到哪，换完再滚回去；换了输入或解法才从头开始。
+  // 每次渲染都检查一遍：容器被重新挂载（比如收起代码面板时布局变了）时 HTML 没变也要重新写进去。
+  const viewsHtml = steps.length ? renderViews(steps[Math.min(idx, last)].views) : "";
+  const viewsRef = useRef<HTMLDivElement>(null);
+  const shown = useRef<{ el: HTMLElement | null; html: string; steps: Step[] | null }>({ el: null, html: "", steps: null });
+  useLayoutEffect(() => {
+    const el = viewsRef.current;
+    const prev = shown.current;
+    if (!el || (prev.el === el && prev.html === viewsHtml)) return;
+    const keep = prev.el === el && prev.steps === steps ? [...el.querySelectorAll<HTMLElement>(".dm-scroll")].map((x) => [x.scrollLeft, x.scrollTop]) : [];
+    el.innerHTML = viewsHtml;
+    el.querySelectorAll<HTMLElement>(".dm-scroll").forEach((x, i) => {
+      if (!keep[i]) return;
+      x.scrollLeft = keep[i][0];
+      x.scrollTop = keep[i][1];
+    });
+    shown.current = { el, html: viewsHtml, steps };
+  });
+
   if (!build || !steps.length) return <p className="text-sm text-muted">这道题的演示加载失败了。</p>;
   const s = steps[Math.min(idx, last)];
-  const html = renderViews(s.views);
   // 这一步对应的代码行：at 里的每个标记在当前语言里标了哪些行
   const active = text ? (s.at == null ? [] : [s.at].flat()).flatMap((t) => text.marks?.[t] ?? []) : [];
 
@@ -219,7 +239,7 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
               {input.note}
             </div>
           )}
-          <div className="dm-views" dangerouslySetInnerHTML={{ __html: html }} />
+          <div ref={viewsRef} className="dm-views" />
           <div className="flex flex-col gap-3 border-t border-separator pt-4">
             {/* 一行放下：手机上和桌面窄的演示栏里，「自动播放」带字会被挤到第二行，所以只留图标（读屏和悬停提示里有文字） */}
             <div className="flex flex-nowrap items-center gap-2">

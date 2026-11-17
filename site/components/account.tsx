@@ -410,7 +410,7 @@ export function LoginHint() {
           <div className="flex min-w-0 flex-col gap-1">
             <span className="text-base font-semibold">登录后，这里显示你自己的进度</span>
             <span className="text-sm leading-6 text-muted">
-              现在看到的是 0 进度。用 GitHub 登录并授权后，网站会在你的账号下建一个 <span className="font-mono">{session.repoName}</span> 仓库（私有或公开由你定），进度、题解和尝试记录都存在里面。网站能读写哪些仓库，由你在 GitHub 的授权页面上选。
+              进度和题解存在你自己 GitHub 账号下的 <span className="font-mono">{session.repoName}</span> 仓库里，可以设成私有。
             </span>
           </div>
         </div>
