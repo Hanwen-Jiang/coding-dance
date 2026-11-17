@@ -4,6 +4,7 @@ import { Accordion, Breadcrumbs, Button, Card, Tabs } from "@heroui/react";
 import { EmptyState } from "@heroui-pro/react";
 import clsx from "clsx";
 import NextLink from "next/link";
+import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -24,6 +25,46 @@ import { useProgress } from "@/lib/progress";
 import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec } from "@/lib/types";
 import { TIER_INFO, TOPIC_KIND } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
+
+/**
+ * 面包屑那一行右边的「‹ 上一题 · 12 / 100 · 下一题 ›」（按重要程度），不占新的一行。
+ * 快捷键 [ 和 ]；光标在编辑器、输入框里时不管。手机上只留箭头。页面最下面的两张卡片照旧留着。
+ */
+function ProblemPager({ d }: { d: ProblemDetail }) {
+  const router = useRouter();
+  const { prev, next } = d;
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || (e.key !== "[" && e.key !== "]")) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || t.closest("input, textarea, select, [contenteditable], .cm-editor, [role=dialog]"))) return;
+      const to = e.key === "[" ? prev : next;
+      if (!to) return;
+      e.preventDefault();
+      router.push(`/p/${to.id}/`);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [prev, next, router]);
+  const btn = "inline-flex h-7 items-center gap-1 rounded-lg px-2 text-xs text-muted no-underline outline-none transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent";
+  return (
+    <nav aria-label="按重要程度的上一题、下一题" className="flex shrink-0 items-center gap-0.5" data-testid="problem-pager">
+      {prev ? (
+        <NextLink aria-label={`上一题：${prev.id}. ${prev.name}（快捷键 [）`} className={btn} href={`/p/${prev.id}/`} title={`${prev.id}. ${prev.name}（[）`}>
+          <ChevronLeft height={14} width={14} />
+          <span className="max-sm:hidden">上一题</span>
+        </NextLink>
+      ) : <span aria-hidden className={clsx(btn, "pointer-events-none opacity-40")}><ChevronLeft height={14} width={14} /><span className="max-sm:hidden">上一题</span></span>}
+      <span className="px-1 font-mono text-[11px] tabular-nums text-muted" title="在 100 题里按重要程度排第几">{d.summary.order} / 100</span>
+      {next ? (
+        <NextLink aria-label={`下一题：${next.id}. ${next.name}（快捷键 ]）`} className={btn} href={`/p/${next.id}/`} title={`${next.id}. ${next.name}（]）`}>
+          <span className="max-sm:hidden">下一题</span>
+          <ChevronRight height={14} width={14} />
+        </NextLink>
+      ) : <span aria-hidden className={clsx(btn, "pointer-events-none opacity-40")}><span className="max-sm:hidden">下一题</span><ChevronRight height={14} width={14} /></span>}
+    </nav>
+  );
+}
 
 const SECTIONS = [
   { id: "statement", label: "题目描述", en: "PROBLEM" },
@@ -726,12 +767,15 @@ export function ProblemView({ id }: { id: number }) {
     <div className="problem-page-layout">
     <div className="problem-original reveal flex flex-col gap-8 pt-8">
       <div className="flex flex-col gap-4">
-        <Breadcrumbs>
-          <Breadcrumbs.Item className="no-underline" href="/">
-            题目列表
-          </Breadcrumbs.Item>
-          <Breadcrumbs.Item>{TIER_INFO[s.tier].label}</Breadcrumbs.Item>
-        </Breadcrumbs>
+        <div className="flex min-h-7 items-center justify-between gap-3">
+          <Breadcrumbs>
+            <Breadcrumbs.Item className="no-underline" href="/">
+              题目列表
+            </Breadcrumbs.Item>
+            <Breadcrumbs.Item>{TIER_INFO[s.tier].label}</Breadcrumbs.Item>
+          </Breadcrumbs>
+          <ProblemPager d={d} />
+        </div>
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div className="flex items-center gap-5">
             <div className="pixel-hover hidden shrink-0 rounded-2xl border border-border bg-surface p-2 shadow-surface sm:block">

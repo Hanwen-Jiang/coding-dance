@@ -426,7 +426,8 @@ export function StatusPixel({ status, withLabel = true, className }: { status: S
  * 进度矩阵：每道题一个像素格，颜色表示状态，点一下进入这道题。
  * 数据还没到时先画 100 个灰格子占位；数据到了，同一批格子按顺序变色，布局不跳。
  */
-export function ProgressMatrix({ problems, count = 100 }: { problems: Problem[] | null; count?: number }) {
+/** cellProps：给每个格子加事件（首页用它挂预览，见 matrix-preview.tsx）；不传时格子上用浏览器自带的提示 */
+export function ProgressMatrix({ problems, count = 100, cellProps }: { problems: Problem[] | null; count?: number; cellProps?: (p: Problem) => Partial<React.ComponentProps<typeof NextLink>> }) {
   const n = problems?.length || count;
   return (
     <div className="grid grid-cols-[repeat(20,minmax(0,1fr))] gap-[5px] sm:grid-cols-[repeat(25,minmax(0,1fr))] lg:grid-cols-[repeat(50,minmax(0,1fr))]">
@@ -445,7 +446,8 @@ export function ProgressMatrix({ problems, count = 100 }: { problems: Problem[] 
             prefetch={false}
             style={{ "--i": i } as React.CSSProperties}
             tabIndex={p ? undefined : -1}
-            title={p ? `${p.id}. ${p.name} · ${p.status}` : undefined}
+            title={p && !cellProps ? `${p.id}. ${p.name} · ${p.status}` : undefined}
+            {...(p && cellProps ? cellProps(p) : {})}
           />
         );
       })}
