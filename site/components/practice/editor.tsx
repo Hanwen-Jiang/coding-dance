@@ -19,12 +19,14 @@ import { practiceIndentGuides } from "./editor-guides";
  * full：关键字、内置函数、库函数、类型都会提示，加上代码里已有的变量；
  * none：只补全代码里已经定义的变量和函数，不提示有哪些函数、类型、关键字可用（练习不靠提示写代码）。
  */
-export function PracticeEditor({ language, code, onChange, ready, hints = "full", debugLine = null, onBreakpoints }: {
+export function PracticeEditor({ language, code, onChange, ready, hints = "full", wrap = true, debugLine = null, onBreakpoints }: {
   language: PracticeLanguage;
   code: string;
   onChange: (code: string) => void;
   ready: boolean;
   hints?: PracticeHints;
+  /** 长行折到下一行显示（默认）；false 时不折行，横向滚动 */
+  wrap?: boolean;
   /** 调试时当前执行到的行（从 1 开始），高亮并滚到能看见；null 表示没在调试 */
   debugLine?: number | null;
   /** 断点变了：行号左边那一栏点一下加上或去掉断点 */
@@ -47,16 +49,18 @@ export function PracticeEditor({ language, code, onChange, ready, hints = "full"
     language === "python" ? python() : javascript({ typescript: language === "typescript" }),
     indentUnit.of(language === "python" ? "    " : "  "),
     practiceIndentGuides,
+    ...(wrap ? [EditorView.lineWrapping] : []),
     // 「无提示」：用自己的补全代替语言自带的，只留局部变量这一个来源
     ...(full ? [] : [autocompletion({ override: [language === "python" ? pyLocals : jsLocals] })]),
     EditorView.contentAttributes.of({ "aria-label": "代码编辑器", spellcheck: "false", "data-testid": "practice-code", "data-hints": hints }),
     Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
     ...practiceEditorTheme(resolvedTheme === "dark"),
-  ], [debug, language, resolvedTheme, hints, full]);
+  ], [debug, language, resolvedTheme, hints, full, wrap]);
 
   return (
     <CodeMirror
-      basicSetup={{ lineNumbers: true, highlightActiveLineGutter: false, foldGutter: true, autocompletion: full, highlightActiveLine: false, drawSelection: true, syntaxHighlighting: false }}
+      // 行号由 editor-debug.ts 提供（点行号能切换断点），这里关掉
+      basicSetup={{ lineNumbers: false, highlightActiveLineGutter: false, foldGutter: true, autocompletion: full, highlightActiveLine: false, drawSelection: true, syntaxHighlighting: false }}
       className="practice-editor"
       editable={ready}
       extensions={extensions}

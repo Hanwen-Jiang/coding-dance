@@ -140,7 +140,7 @@ export function PracticeDebugger({ run, index, onIndex, breakpoints, stale }: {
       )}
       {at === last && run.error && !run.trace?.truncated && <pre className="practice-output border-danger/30 bg-danger/5 text-danger">{run.error}</pre>}
       <p className="text-[11px] leading-5 text-muted">
-        用的是「{run.label}」。点行号左边的空白处加断点{breakpoints.length ? `（现在 ${breakpoints.length} 个）` : ""}；方向键前后走，F10 跳过，Shift+F11 跳出，F8 到下一个断点。这一步变了的变量会高亮。
+        用的是「{run.label}」。点行号（或它左边那一栏）加断点，光标所在行按 F9 也行{breakpoints.length ? `（现在 ${breakpoints.length} 个）` : ""}；方向键前后走，F10 跳过，Shift+F11 跳出，F8 到下一个断点。这一步变了的变量会高亮。
       </p>
     </div>
   );
