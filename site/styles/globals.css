@@ -1,12 +1,13 @@
 @import "tailwindcss";
-@import "@heroui/styles";
-@import "@heroui-pro/react/css";
+/* HeroUI（OSS + Pro）只引入用到的组件，列表在 heroui.css；用到新组件时要在那里加上它的样式 */
+@import "./heroui.css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* --font-inter 等由 app/fonts.ts（next/font/local，自托管）定义在 <html> 上 */
 @theme {
-  --font-sans: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --font-sans: var(--font-inter), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
 }
 
 html {
@@ -128,7 +129,7 @@ html {
 /* ———— 像素矩阵风格 ———— */
 
 .font-pixel {
-  font-family: "Silkscreen", var(--font-mono);
+  font-family: var(--font-silkscreen), var(--font-mono);
   font-weight: 400;
 }
 

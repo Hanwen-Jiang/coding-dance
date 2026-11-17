@@ -13,19 +13,20 @@
   }
   async function initialize(message) {
     base = message.base; language = message.language;
+    const vendor = message.vendor; // versioned paths relative to base, e.g. vendor/pyodide/<version>/
     await import(base + "kernel.js"); kernel = self.PracticeKernel; delete self.PracticeKernel;
     if (language === "typescript") {
       send({ type: "status", text: "正在加载 TypeScript 编译器…" });
-      const response = await nativeFetch(base + "vendor/typescript.js", { credentials: "omit" });
+      const response = await nativeFetch(base + vendor.typescript, { credentials: "omit" });
       if (!response.ok) throw Error("无法加载 TypeScript 编译器");
       typescript = new Function(await response.text() + "\nreturn ts;")();
     }
     if (language === "python") {
       send({ type: "status", text: "首次运行正在加载 Python 环境，资源会缓存在浏览器中…" });
-      const { loadPyodide } = await import(base + "vendor/pyodide/pyodide.mjs");
+      const { loadPyodide } = await import(base + vendor.pyodide + "pyodide.mjs");
       const response = await nativeFetch(base + "python-runner.py", { credentials: "omit" });
       if (!response.ok) throw Error("无法加载 Python 运行器"); pythonRunner = await response.text();
-      pyodide = await loadPyodide({ indexURL: base + "vendor/pyodide/", stdout: () => {}, stderr: () => {} });
+      pyodide = await loadPyodide({ indexURL: base + vendor.pyodide, stdout: () => {}, stderr: () => {} });
       pyodide.runPython(pythonRunner);
     }
     lockCapabilities();

@@ -13,6 +13,12 @@ export interface PracticeRunOptions {
   timeoutMs?: number;
 }
 
+/** Versioned runtime paths under /practice-runtime/ (copied by tools/practice-runtime/prepare.mjs, cached for a year). */
+const VENDOR = {
+  pyodide: `vendor/pyodide/${process.env.PRACTICE_PYODIDE_VERSION}/`,
+  typescript: `vendor/typescript/${process.env.PRACTICE_TYPESCRIPT_VERSION}/typescript.js`,
+};
+
 /** Opaque iframe + disposable Worker: user programs never share the site's origin. */
 export async function runPractice(request: PracticeRunRequest, options: PracticeRunOptions = {}): Promise<PracticeRunResult> {
   if (typeof document === "undefined") throw new Error("代码运行需要浏览器环境");
@@ -48,7 +54,7 @@ export async function runPractice(request: PracticeRunRequest, options: Practice
     channel.port1.onmessage = (event: MessageEvent) => {
       if (done) return;
       const message = event.data;
-      if (message.type === "connected") channel.port1.postMessage({ type: "init", base, language: request.language });
+      if (message.type === "connected") channel.port1.postMessage({ type: "init", base, vendor: VENDOR, language: request.language });
       else if (message.type === "status") options.onStatus?.(message.text);
       else if (message.type === "ready") {
         options.onStatus?.("正在运行测试…");

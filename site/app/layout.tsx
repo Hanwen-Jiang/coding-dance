@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 
 import type { Metadata, Viewport } from "next";
 
+import { inter, jetbrainsMono, silkscreen } from "./fonts";
 import { Providers } from "./providers";
 import { OverlayScrollbar } from "@/components/overlay-scrollbar";
 import { SiteHeader } from "@/components/site-header";
@@ -21,17 +22,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html suppressHydrationWarning lang="zh-CN">
-      <head>
-        <link href="https://fonts.googleapis.com" rel="preconnect" />
-        <link crossOrigin="anonymous" href="https://fonts.gstatic.com" rel="preconnect" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap"
-          rel="stylesheet"
-        />
-        {/* 像素字体用 block：短暂等待字体，而不是先显示后备字体再跳变 */}
-        <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=block" rel="stylesheet" />
-      </head>
+    // 字体变量要定义在 <html> 上：globals.css 的 --font-sans / --font-mono 也定义在 :root，引用它们
+    <html suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable} ${silkscreen.variable}`} lang="zh-CN">
       <body className="min-h-screen font-sans text-foreground antialiased">
         <Providers>
           <SiteHeader />

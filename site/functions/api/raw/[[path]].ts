@@ -1,6 +1,9 @@
 // 只代理题目图片和图解页面，不把整个仓库暴露出去
+import { edgeCached } from "../../_lib/edge-cache";
 import type { Env } from "../../_lib/github";
 import { fail, json, readBytes } from "../../_lib/github";
+
+type Ctx = { request: Request; env: Env; params: { path?: string | string[] }; waitUntil: (p: Promise<unknown>) => void };
 
 const ALLOWED = ["problems/images/", "illustrations/"];
 const TYPES: Record<string, string> = {
@@ -13,7 +16,7 @@ const TYPES: Record<string, string> = {
   html: "text/html; charset=utf-8",
 };
 
-export const onRequestGet = async ({ env, params }: { env: Env; params: { path?: string | string[] } }) => {
+export const onRequestGet = edgeCached(async ({ env, params }: Ctx) => {
   const dec = (s: string) => {
     try {
       return decodeURIComponent(s);
@@ -36,4 +39,4 @@ export const onRequestGet = async ({ env, params }: { env: Env; params: { path?:
   } catch (e) {
     return fail(e);
   }
-};
+});

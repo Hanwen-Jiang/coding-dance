@@ -2,7 +2,6 @@
 
 import { Card, Chip, SearchField } from "@heroui/react";
 import { EmptyState, KPIGroup, Segment } from "@heroui-pro/react";
-import { KPI } from "@heroui-pro/react/kpi";
 import clsx from "clsx";
 import NextLink from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -15,6 +14,23 @@ import { useProgress } from "@/lib/progress";
 import type { IndexData, Problem, Status } from "@/lib/types";
 import { LEVEL_ORDER, TIER_INFO, TIER_ORDER, byImportance } from "@/lib/types";
 import { useApi } from "@/lib/use-api";
+
+/** 和 Pro 的 KPI（KPI.Header / Title / Content / Value）渲染出一样的结构和类名，样式还是 Pro 的 kpi.css。
+ *  不直接用 KPI：从 "@heroui-pro/react/kpi" 引入会连带它的 area-chart 和 recharts（首页多出约 390 KB JS），这里只显示标题和整数 */
+function Kpi({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Card className="kpi" data-slot="kpi">
+      <div className="kpi__header" data-slot="kpi-header">
+        <dt className="kpi__title" data-slot="kpi-title">
+          {title}
+        </dt>
+      </div>
+      <div className="kpi__content" data-slot="kpi-content">
+        {children}
+      </div>
+    </Card>
+  );
+}
 
 type GroupBy = "tier" | "level" | "topic";
 type StatusFilter = "all" | Status;
@@ -189,15 +205,16 @@ export function ProblemList() {
           <KPIGroup className="max-md:hidden">
             {stats.flatMap((s, i) => [
               ...(i ? [<KPIGroup.Separator key={`s${i}`} />] : []),
-              <KPI key={s.title}>
-                <KPI.Header>
-                  <KPI.Title>{s.title}</KPI.Title>
-                </KPI.Header>
-                <KPI.Content>
-                  {/* 数据到之前用骨架占住同样的高度，不显示一个假的 0 */}
-                  {ready ? <KPI.Value maximumFractionDigits={0} value={s.value} /> : <Skel className="my-1 h-7 w-14" />}
-                </KPI.Content>
-              </KPI>,
+              <Kpi key={s.title} title={s.title}>
+                {/* 数据到之前用骨架占住同样的高度，不显示一个假的 0 */}
+                {ready ? (
+                  <dd className="kpi__value" data-slot="kpi-value">
+                    {s.value}
+                  </dd>
+                ) : (
+                  <Skel className="my-1 h-7 w-14" />
+                )}
+              </Kpi>,
             ])}
           </KPIGroup>
           {/* 手机：一张卡片里五列，数字在上、短标签在下；色块同时当下面进度矩阵的图例 */}
