@@ -12,7 +12,7 @@ import { DemoPlayer } from "@/components/demo/demo-player";
 import { withFigures } from "@/components/demo/figures";
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
-import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel, StatusPixel } from "@/components/pixel";
+import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel } from "@/components/pixel";
 import { SolutionCode } from "@/components/solution-code";
 import { TierChip, TopicChip } from "@/components/tags";
 import { codeIn } from "@/lib/langs";
@@ -425,8 +425,26 @@ function HandwrittenDemo({ src }: { src: string }) {
   );
 }
 
-/** 相关基础：这道题用到的数据结构和算法专题（专题的 related 里有这道题） */
-function LearnLinks({ learn }: { learn: NonNullable<ProblemDetail["learn"]> }) {
+/** 相关基础：这道题用到的数据结构和算法专题（专题的 related 里有这道题）。vertical：侧栏里的竖排列表 */
+function LearnLinks({ learn, vertical = false }: { learn: NonNullable<ProblemDetail["learn"]>; vertical?: boolean }) {
+  if (vertical) {
+    return (
+      <nav aria-label="相关基础" className="flex flex-col gap-1">
+        <span className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">相关基础</span>
+        {learn.map((t) => (
+          <NextLink
+            key={t.slug}
+            className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-muted no-underline transition-colors hover:bg-surface-secondary hover:text-foreground"
+            href={`/learn/${t.slug}/`}
+            title={`${TOPIC_KIND[t.kind].label}专题：${t.name}`}
+          >
+            <span aria-hidden className={clsx("size-1.5 shrink-0 rounded-[2px]", t.kind === "ds" ? "bg-accent" : "bg-warning")} />
+            {t.name}
+          </NextLink>
+        ))}
+      </nav>
+    );
+  }
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-xs text-muted">相关基础</span>
@@ -453,7 +471,6 @@ function DemoSection({ d, revealed, onReveal }: { d: ProblemDetail; revealed: bo
 
 export function ProblemView({ id }: { id: number }) {
   const { data: d, error, loading } = useApi<ProblemDetail>(`/api/problem/${id}`);
-  const progressCtx = useProgress();
   const mine = useMine(id);
   // 题解默认盖着；演示旁边「这一步的代码」跟它共用这个开关，换一道题重新盖上
   const [revealed, setRevealed] = useState(false);
@@ -482,7 +499,6 @@ export function ProblemView({ id }: { id: number }) {
   }
 
   const s = d.summary;
-  const { statusOf } = progressCtx;
   const sections = SECTIONS.filter((x) => (x.id === "points" ? d.spec?.points?.length : true));
 
   return (
@@ -504,14 +520,13 @@ export function ProblemView({ id }: { id: number }) {
                 <span className="me-2 font-mono text-muted sm:hidden">{s.id}.</span>
                 {s.name}
               </h1>
-              <div className="flex flex-wrap items-center gap-3">
+              {/* 一行就够：难度、专题、重要程度、这道题的状态（登录后点开就能改）。相关基础挪到了侧栏和题面下面 */}
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                 <LevelPixels level={s.level} />
                 <TopicChip topic={s.topic} />
                 <TierChip tier={s.tier} />
-                {progressCtx.ready ? null : <StatusPixel status={statusOf(s.id)} />}
+                <StatusPicker id={s.id} />
               </div>
-              <StatusPicker id={s.id} />
-              {d.learn?.length ? <LearnLinks learn={d.learn} /> : null}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -540,6 +555,8 @@ export function ProblemView({ id }: { id: number }) {
             <Card className="p-5 sm:p-7">
               {d.statementHtml ? <div className="statement" dangerouslySetInnerHTML={{ __html: withFigures(d.statementHtml, d.spec?.figures) }} /> : <p className="text-muted">仓库里还没有这道题的题面。</p>}
             </Card>
+            {/* 窄屏没有侧栏：相关基础放在题面下面 */}
+            {d.learn?.length ? <div className="lg:hidden"><LearnLinks learn={d.learn} /></div> : null}
           </section>
 
           <section className="flex flex-col gap-4">
@@ -623,13 +640,16 @@ export function ProblemView({ id }: { id: number }) {
         </div>
 
         <aside className="hidden lg:block">
-          <div className="sticky top-24 flex flex-col gap-1">
-            <span className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">本页</span>
-            {sections.map((x) => (
-              <a key={x.id} className="rounded-lg px-3 py-1.5 text-sm text-muted no-underline transition-colors hover:bg-surface-secondary hover:text-foreground" href={`#${x.id}`}>
-                {x.label}
-              </a>
-            ))}
+          <div className="sticky top-24 flex flex-col gap-6">
+            <nav aria-label="本页" className="flex flex-col gap-1">
+              <span className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">本页</span>
+              {sections.map((x) => (
+                <a key={x.id} className="rounded-lg px-3 py-1.5 text-sm text-muted no-underline transition-colors hover:bg-surface-secondary hover:text-foreground" href={`#${x.id}`}>
+                  {x.label}
+                </a>
+              ))}
+            </nav>
+            {d.learn?.length ? <LearnLinks vertical learn={d.learn} /> : null}
           </div>
         </aside>
       </div>
