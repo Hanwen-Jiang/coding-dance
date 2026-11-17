@@ -20,4 +20,7 @@ export const TOPIC_SLUGS = [
   "two-pointers",
   "sliding-window",
   "monotonic",
+  "dp-basics",
+  "topo-sort",
+  "bit-manipulation",
 ];
