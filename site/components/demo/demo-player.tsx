@@ -5,6 +5,7 @@ import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { morphInto } from "@/components/demo/morph";
 import { renderViews } from "@/components/demo/render";
 import { StepCode } from "@/components/demo/step-code";
 import { ChevronLeft, ChevronRight, EyeIcon, PlayIcon } from "@/components/icons";
@@ -143,9 +144,9 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
     setPlaying(true);
   };
 
-  // 每一步的图是 render.ts 拼的一段 HTML，宽的数组、树、表格放在 .dm-scroll 里横着滚。整段换掉会把滚动条打回开头，
-  // 一张图一屏放不下时每点一次「下一步」都要重新滚过去。所以自己写 innerHTML：同一组输入、同一种解法里换步骤时，
-  // 先记下每个 .dm-scroll 滚到哪，换完再滚回去；换了输入或解法才从头开始。
+  // 每一步的图是 render.ts 拼的一段 HTML。不整段换 innerHTML（每步整张图重新淡入、闪一下，格子的颜色过渡也不生效，
+  // 横向滚动还会回到开头），而是用 morphInto 把现有的 DOM 原地改成新的样子：没变的不动，变色的格子走 CSS 过渡，
+  // .dm-scroll 还是原来那个元素，滚动位置自然保留。换了输入或解法时才把横向滚动放回开头。
   // 每次渲染都检查一遍：容器被重新挂载（比如收起代码面板时布局变了）时 HTML 没变也要重新写进去。
   const viewsHtml = steps.length ? renderViews(steps[Math.min(idx, last)].views) : "";
   const viewsRef = useRef<HTMLDivElement>(null);
@@ -154,13 +155,10 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
     const el = viewsRef.current;
     const prev = shown.current;
     if (!el || (prev.el === el && prev.html === viewsHtml)) return;
-    const keep = prev.el === el && prev.steps === steps ? [...el.querySelectorAll<HTMLElement>(".dm-scroll")].map((x) => [x.scrollLeft, x.scrollTop]) : [];
-    el.innerHTML = viewsHtml;
-    el.querySelectorAll<HTMLElement>(".dm-scroll").forEach((x, i) => {
-      if (!keep[i]) return;
-      x.scrollLeft = keep[i][0];
-      x.scrollTop = keep[i][1];
-    });
+    morphInto(el, viewsHtml);
+    if (prev.el === el && prev.steps !== steps) {
+      el.querySelectorAll<HTMLElement>(".dm-scroll").forEach((x) => { x.scrollLeft = 0; x.scrollTop = 0; });
+    }
     shown.current = { el, html: viewsHtml, steps };
   });
 
