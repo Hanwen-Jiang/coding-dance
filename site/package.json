@@ -38,7 +38,6 @@
     "react-aria-components": "^1.17.0",
     "react-dom": "19.2.6",
     "react-is": "19.2.6",
-    "recharts": "^3.10.1",
     "shiki": "^4.4.2",
     "tailwind-merge": "^3.4.0"
   },
