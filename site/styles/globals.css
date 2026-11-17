@@ -115,7 +115,8 @@ html {
 .statement .lc-fig { margin: 0.75rem 0 1rem; display: flex; flex-direction: column; gap: 4px; }
 .statement .lc-fig .dm-v { animation: none; }
 /* 并排的树、链表缩小一点，两张图能放在一行里（演示里它们是按原尺寸画的，不能缩） */
-.statement .lc-fig .dm-row svg.dm-g2 { max-width: min(100%, 300px) !important; }
+/* 用固定像素：百分比的上限在排版时算不进内容宽度，两张图还是会被挤成两行 */
+.statement .lc-fig .dm-row svg.dm-g2 { max-width: 300px !important; }
 .statement .lc-fig .lc-orig { align-self: flex-start; font-size: 11px; color: var(--muted); text-decoration: none; }
 .statement .lc-fig .lc-orig:hover { color: var(--accent); }
 @keyframes dm-fade {
