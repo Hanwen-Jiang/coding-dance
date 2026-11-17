@@ -10,6 +10,7 @@
 - `tools/`：小工具。图解生成器在 `tools/illustrations/`：`specs/`（每题一份 spec，Python 代码写在里面）、`code/<四位题号>/<key>.<后缀>`（其他语言的题解）、`cases/`（判题用例，build 导出）、`judge/`（判题器）、`data/`（导出给网站的数据）。「数据结构与算法基础」专题在 `topics/<slug>.js`，其他语言的代码在 `code/topics/<slug>/`，导出到 `data/topics/` 和 `cases/topics/`。
 - `.github/workflows/verify.yml`：CI。每次 push 重新 build 并核对生成的文件和提交的一致，再把六种语言的每段题解编译、运行、对答案。
 - `site/`：题解网站（Next.js 静态导出 + HeroUI Pro，部署在 Cloudflare Pages 项目 `lc-hot100`，域名 https://leetcode.cgent.link）。网站在运行时通过 GitHub API 读这个仓库，push 之后最多一分钟网站就会更新，不用重新部署。登录的用户的进度和题解从他自己的 `hot100-progress` 仓库读写。
+- `ROADMAP.md`：在线练习（浏览器里编译运行六种语言、调试、云端容器、额度和订阅、测试用例设计）的路线图、实测数据和任务清单。做相关工作前先看，认领任务、完成后打勾并补变更记录。
 - `site/lib/sync/`：「从力扣同步」的逻辑（网站 `/sync/` 页面用）：把用户在 leetcode.cn 上的提交记录写进他自己的进度仓。测试在 `site/lib/sync/test/`，在 `site/` 里运行 `npm test`（`node lib/sync/test/sync.test.ts`）。
 
 ## 工作约定
