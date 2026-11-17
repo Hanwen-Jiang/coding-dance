@@ -1,0 +1,398 @@
+{
+  "id": 104,
+  "name": "二叉树的最大深度",
+  "signature": {
+    "fn": "maxDepth",
+    "params": [
+      "TreeNode"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "root"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def maxDepth(self, root: Optional[TreeNode]) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction maxDepth(root) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction maxDepth(root: TreeNode | null): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "d34cfda6",
+    "javascript": "a080299c",
+    "typescript": "b159f1bd"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          3,
+          9,
+          20,
+          null,
+          null,
+          15,
+          7
+        ]
+      ],
+      "label": "示例 1",
+      "expected": 3,
+      "stdin": "7\n3 9 20 null null 15 7\n",
+      "stdout": "3\n",
+      "source": {
+        "path": "problems/0104.二叉树的最大深度.md",
+        "index": 1,
+        "input": "root = [3,9,20,null,null,15,7]",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        [
+          1,
+          null,
+          2
+        ]
+      ],
+      "label": "示例 2",
+      "expected": 2,
+      "stdin": "3\n1 null 2\n",
+      "stdout": "2\n",
+      "source": {
+        "path": "problems/0104.二叉树的最大深度.md",
+        "index": 2,
+        "input": "root = [1,null,2]",
+        "output": "2"
+      }
+    },
+    {
+      "input": [
+        [
+          1,
+          2,
+          3,
+          4,
+          null,
+          null,
+          null,
+          5
+        ]
+      ],
+      "label": "仓库判题用例 2",
+      "expected": 4,
+      "stdin": "8\n1 2 3 4 null null null 5\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        []
+      ],
+      "label": "仓库判题用例 3 · 边界",
+      "expected": 0,
+      "stdin": "0\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        [
+          0
+        ]
+      ],
+      "label": "仓库判题用例 5",
+      "expected": 1,
+      "stdin": "1\n0\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        [
+          1,
+          2,
+          null,
+          3,
+          null,
+          4,
+          null,
+          5
+        ]
+      ],
+      "label": "仓库判题用例 6",
+      "expected": 5,
+      "stdin": "8\n1 2 null 3 null 4 null 5\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          7,
+          8,
+          5,
+          9,
+          12,
+          null,
+          null,
+          null,
+          null,
+          17,
+          null,
+          5,
+          11
+        ]
+      ],
+      "label": "仓库判题用例 7",
+      "expected": 5,
+      "stdin": "13\n7 8 5 9 12 null null null null 17 null 5 11\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          8,
+          null,
+          5,
+          1,
+          9,
+          null,
+          null,
+          9
+        ]
+      ],
+      "label": "仓库判题用例 8",
+      "expected": 4,
+      "stdin": "8\n8 null 5 1 9 null null 9\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          17,
+          3,
+          10,
+          null,
+          null,
+          null,
+          3,
+          15
+        ]
+      ],
+      "label": "仓库判题用例 9",
+      "expected": 4,
+      "stdin": "8\n17 3 10 null null null 3 15\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          12,
+          13,
+          null,
+          null,
+          4,
+          null,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 10",
+      "expected": 4,
+      "stdin": "7\n12 13 null null 4 null 4\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          20,
+          20,
+          null,
+          17,
+          null,
+          17,
+          14,
+          8,
+          null,
+          1,
+          5
+        ]
+      ],
+      "label": "仓库判题用例 11",
+      "expected": 5,
+      "stdin": "11\n20 20 null 17 null 17 14 8 null 1 5\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          19,
+          7,
+          5,
+          null,
+          10,
+          6,
+          null,
+          10
+        ]
+      ],
+      "label": "仓库判题用例 12",
+      "expected": 4,
+      "stdin": "8\n19 7 5 null 10 6 null 10\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          2,
+          16,
+          1,
+          null,
+          16,
+          4,
+          null,
+          5,
+          9
+        ]
+      ],
+      "label": "仓库判题用例 13",
+      "expected": 4,
+      "stdin": "9\n2 16 1 null 16 4 null 5 9\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          11,
+          17,
+          14,
+          null,
+          20,
+          20,
+          null,
+          2,
+          null,
+          16,
+          null,
+          null,
+          null,
+          14
+        ]
+      ],
+      "label": "仓库判题用例 14",
+      "expected": 5,
+      "stdin": "14\n11 17 14 null 20 20 null 2 null 16 null null null 14\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          16,
+          7,
+          null,
+          17,
+          16,
+          16
+        ]
+      ],
+      "label": "仓库判题用例 15",
+      "expected": 4,
+      "stdin": "6\n16 7 null 17 16 16\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          7,
+          null,
+          4,
+          null,
+          12
+        ]
+      ],
+      "label": "仓库判题用例 16",
+      "expected": 3,
+      "stdin": "5\n7 null 4 null 12\n",
+      "stdout": "3\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          3,
+          9,
+          20,
+          null,
+          null,
+          15,
+          7
+        ]
+      ],
+      "expected": 3,
+      "stdin": "7\n3 9 20 null null 15 7\n",
+      "stdout": "3\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0104.二叉树的最大深度.md",
+        "index": 1,
+        "input": "root = [3,9,20,null,null,15,7]",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        [
+          1,
+          null,
+          2
+        ]
+      ],
+      "expected": 2,
+      "stdin": "3\n1 null 2\n",
+      "stdout": "2\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0104.二叉树的最大深度.md",
+        "index": 2,
+        "input": "root = [1,null,2]",
+        "output": "2"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定一棵二叉树，求从根节点到最深叶节点经过的节点数量。空树的最大深度为 0。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. root：二叉树层序序列：先一行序列长度 n；n > 0 时下一行给出 n 个空格分隔的节点值或 null。按队列从左到右分配每个非空节点的左右孩子，末尾多余 null 可省略；空树写 0。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：树中节点的数量在 [0, 10^4] 区间内。",
+      "数据范围：-100 <= Node.val <= 100",
+      "ACM 使用上述序列格式表示链表或二叉树，程序需自行读取输入并处理这些结构。LeetCode 模式由测试环境建立节点。"
+    ],
+    "examples": [
+      {
+        "input": "7\n3 9 20 null null 15 7\n",
+        "output": "3\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "3\n1 null 2\n",
+        "output": "2\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

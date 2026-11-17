@@ -16,16 +16,17 @@ export class HttpError extends Error {
   }
 }
 
-// isolate 内的短期缓存：同一个 isolate 处理的请求共享，避免每次都打 GitHub
+// isolate 内的短期缓存：同一个 isolate 处理的请求共享，避免每次都打 GitHub。
+// 只缓存已经拿到的结果，不缓存还在进行中的 Promise：Workers 里一个请求创建的 Promise 不能在别的请求里等，
+// 发起它的请求先结束（比如访客关掉了页面）的话，别的请求会一直拿到「request that has since ended」的 500。
 const TTL = 60_000;
-const memo = new Map<string, { at: number; value: Promise<unknown> }>();
+const memo = new Map<string, { at: number; value: unknown }>();
 
-function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+async function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
   const hit = memo.get(key);
-  if (hit && Date.now() - hit.at < TTL) return hit.value as Promise<T>;
-  const value = load();
+  if (hit && Date.now() - hit.at < TTL) return hit.value as T;
+  const value = await load(); // 失败时直接抛出，不缓存
   memo.set(key, { at: Date.now(), value });
-  value.catch(() => memo.delete(key)); // 失败的不缓存
   return value;
 }
 

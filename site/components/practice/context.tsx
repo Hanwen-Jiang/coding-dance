@@ -45,7 +45,7 @@ export function PracticeProvider({ detail, children }: { detail: ProblemDetail; 
     const controller = new AbortController();
     setProblem(null);
     setError(null);
-    fetch(`/practice/${String(detail.summary.id).padStart(4, "0")}.json`, { signal: controller.signal })
+    fetch(`/api/practice/${detail.summary.id}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error(`练习数据暂时无法加载（${response.status}）`);
         return response.json() as Promise<PracticeProblem>;
