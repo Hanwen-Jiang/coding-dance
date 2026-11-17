@@ -35,6 +35,7 @@
         4
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": [
         [
           ".Q..",
@@ -63,6 +64,7 @@
         1
       ],
       "label": "示例 2 · 边界",
+      "quick": true,
       "expected": [
         [
           "Q"
@@ -82,6 +84,7 @@
         5
       ],
       "label": "仓库判题用例 2",
+      "quick": true,
       "expected": [
         [
           "Q....",
@@ -162,6 +165,7 @@
         2
       ],
       "label": "仓库判题用例 4",
+      "quick": true,
       "expected": [],
       "stdin": "2\n",
       "stdout": "0\n"
@@ -171,6 +175,7 @@
         3
       ],
       "label": "仓库判题用例 5",
+      "quick": true,
       "expected": [],
       "stdin": "3\n",
       "stdout": "0\n"
@@ -180,6 +185,7 @@
         6
       ],
       "label": "仓库判题用例 6",
+      "quick": true,
       "expected": [
         [
           ".Q....",

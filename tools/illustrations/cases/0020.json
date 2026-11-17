@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"isValid","params":["string"],"ret":"bool"},
+ "fixed": 11,
  "cases": [
   {"in":["{[()]}"],"out":true},
   {"in":["([)]"],"out":false},

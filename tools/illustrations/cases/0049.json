@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"groupAnagrams","params":["string[]"],"ret":"List<List<string>>","cmp":"unordered"},
+ "fixed": 5,
  "cases": [
   {"in":[["eat","tea","tan","ate","nat","bat"]],"out":[["eat","tea","ate"],["tan","nat"],["bat"]]},
   {"in":[["listen","silent","enlist","google","gogole","cat"]],"out":[["listen","silent","enlist"],["google","gogole"],["cat"]]},

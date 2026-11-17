@@ -37,6 +37,7 @@
         "abc"
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": [
         0,
         6
@@ -56,6 +57,7 @@
         "ab"
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": [
         0,
         1,
@@ -76,6 +78,7 @@
         "ab"
       ],
       "label": "仓库判题用例 3",
+      "quick": true,
       "expected": [],
       "stdin": "a\nab\n",
       "stdout": "0\n"
@@ -86,6 +89,7 @@
         "a"
       ],
       "label": "仓库判题用例 4",
+      "quick": true,
       "expected": [
         0,
         1,
@@ -101,6 +105,7 @@
         "zyx"
       ],
       "label": "仓库判题用例 5",
+      "quick": true,
       "expected": [
         0
       ],
@@ -113,6 +118,7 @@
         "aa"
       ],
       "label": "仓库判题用例 6",
+      "quick": true,
       "expected": [
         1
       ],
@@ -249,6 +255,7 @@
         "aa"
       ],
       "label": "边界用例 1",
+      "quick": true,
       "expected": [],
       "stdin": "a\naa\n",
       "stdout": "0\n"

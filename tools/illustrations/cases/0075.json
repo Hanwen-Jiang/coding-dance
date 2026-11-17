@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"sortColors","params":["int[]"],"ret":"void"},
+ "fixed": 6,
  "cases": [
   {"in":[[2,0,2,1,1,0]],"out":[0,0,1,1,2,2]},
   {"in":[[2,0,1]],"out":[0,1,2]},

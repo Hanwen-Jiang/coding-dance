@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"firstUniqChar","params":["string"],"ret":"int"},
+ "fixed": 4,
  "cases": [
   {"in":["loveleetcode"],"out":2},
   {"in":["aabb"],"out":-1},

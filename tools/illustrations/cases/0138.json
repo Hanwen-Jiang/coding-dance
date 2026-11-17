@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"copyRandomList","params":["RandomList"],"ret":"RandomList"},
+ "fixed": 6,
  "cases": [
   {"in":[[[7,null],[13,0],[11,4],[10,2],[1,0]]],"out":[[7,null],[13,0],[11,4],[10,2],[1,0]]},
   {"in":[[[1,1],[2,1]]],"out":[[1,1],[2,1]]},

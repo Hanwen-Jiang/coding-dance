@@ -37,6 +37,7 @@
         "ace"
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": 3,
       "stdin": "abcde\nace\n",
       "stdout": "3\n",
@@ -53,6 +54,7 @@
         "abc"
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": 3,
       "stdin": "abc\nabc\n",
       "stdout": "3\n",
@@ -69,6 +71,7 @@
         "def"
       ],
       "label": "示例 3",
+      "quick": true,
       "expected": 0,
       "stdin": "abc\ndef\n",
       "stdout": "0\n",
@@ -85,6 +88,7 @@
         "a"
       ],
       "label": "仓库判题用例 3",
+      "quick": true,
       "expected": 1,
       "stdin": "a\na\n",
       "stdout": "1\n"
@@ -95,6 +99,7 @@
         "b"
       ],
       "label": "仓库判题用例 4 · 边界",
+      "quick": true,
       "expected": 0,
       "stdin": "a\nb\n",
       "stdout": "0\n"
@@ -105,6 +110,7 @@
         "jmjkbkjkv"
       ],
       "label": "仓库判题用例 6",
+      "quick": true,
       "expected": 1,
       "stdin": "bsbininm\njmjkbkjkv\n",
       "stdout": "1\n"

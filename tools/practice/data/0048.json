@@ -50,6 +50,7 @@
         ]
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": [
         [
           7,
@@ -106,6 +107,7 @@
         ]
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": [
         [
           15,
@@ -150,6 +152,7 @@
         ]
       ],
       "label": "仓库判题用例 3 · 边界",
+      "quick": true,
       "expected": [
         [
           1
@@ -172,6 +175,7 @@
         ]
       ],
       "label": "仓库判题用例 4",
+      "quick": true,
       "expected": [
         [
           3,

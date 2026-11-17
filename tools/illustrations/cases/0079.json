@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"exist","params":["char[][]","string"],"ret":"bool"},
+ "fixed": 7,
  "cases": [
   {"in":[[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]],"ABCCED"],"out":true},
   {"in":[[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]],"ABCB"],"out":false},

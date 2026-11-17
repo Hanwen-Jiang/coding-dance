@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"searchRange","params":["int[]","int"],"ret":"int[]"},
+ "fixed": 8,
  "cases": [
   {"in":[[5,7,7,8,8,10],8],"out":[3,4]},
   {"in":[[5,7,7,8,8,10],6],"out":[-1,-1]},

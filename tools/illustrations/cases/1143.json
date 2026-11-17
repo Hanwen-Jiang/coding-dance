@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"longestCommonSubsequence","params":["string","string"],"ret":"int"},
+ "fixed": 6,
  "cases": [
   {"in":["abcde","ace"],"out":3},
   {"in":["abc","def"],"out":0},

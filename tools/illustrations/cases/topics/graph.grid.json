@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"islandPerimeter","params":["int[][]"],"ret":"int"},
+ "fixed": 3,
  "cases": [
   {"in":[[[0,1,0,0],[1,1,1,0],[0,1,0,0],[1,1,0,0]]],"out":16},
   {"in":[[[1]]],"out":4},

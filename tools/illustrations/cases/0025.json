@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"reverseKGroup","params":["ListNode","int"],"ret":"ListNode"},
+ "fixed": 8,
  "cases": [
   {"in":[[1,2,3,4,5],2],"out":[2,1,4,3,5]},
   {"in":[[1,2,3,4,5],3],"out":[3,2,1,4,5]},

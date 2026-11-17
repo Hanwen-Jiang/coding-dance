@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"intersection","params":["int[]","int[]"],"ret":"int[]","cmp":"unordered"},
+ "fixed": 3,
  "cases": [
   {"in":[[4,9,5],[9,4,9,8,4]],"out":[9,4]},
   {"in":[[1,2,2,1],[2,2]],"out":[2]},

@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"missingNumber","params":["int[]"],"ret":"int"},
+ "fixed": 5,
  "cases": [
   {"in":[[3,0,1]],"out":2},
   {"in":[[9,6,4,2,3,5,7,0,1]],"out":8},

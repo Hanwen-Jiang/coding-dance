@@ -1,14 +1,14 @@
 "use client";
 
-import { Button, Card, ListBox, Modal, Select, TextArea } from "@heroui/react";
+import { Button, ButtonGroup, Card, Dropdown, ListBox, Modal, Select, TextArea } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
 import { useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
-import { ChevronDown, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
+import { ChevronDown, ChevronLeft, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
 import { PixelLoader, Skel } from "@/components/pixel";
 import { PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
 import { type DebugRun, PracticeDebugger } from "@/components/practice/debugger";
@@ -44,6 +44,21 @@ function readHints(): PracticeHints {
   try { const v = localStorage.getItem(HINTS_KEY); if (v === "full" || v === "none") return v; } catch { /* 存储不可用 */ }
   return "full";
 }
+/**
+ * 测试的两档，存在浏览器里（默认全量）：
+ *   quick 精简边界：题目示例、预设和边界用例，几组就能确认代码跑得通；
+ *   full 全量：再加上固定种子的随机用例，全部通过才算能当题解（只有全量测试会记进进度仓的尝试记录、通过时存成题解）。
+ */
+type TestLevel = "quick" | "full";
+const LEVEL_KEY = "hot100:practice:test-level";
+function readLevel(): TestLevel {
+  try { return localStorage.getItem(LEVEL_KEY) === "quick" ? "quick" : "full"; } catch { return "full"; }
+}
+/** 精简边界：练习数据里标了 quick 的几组（示例、预设、边界）；旧数据没有标记时退回到题目示例 */
+const quickCasesOf = (cases: PracticeCase[]) => {
+  const quick = cases.filter((c) => c.quick);
+  return quick.length ? quick : cases.filter((c) => c.source);
+};
 /** 长行自动折行（默认开），存在浏览器里；关掉就是一行到底、横向滚动 */
 const WRAP_KEY = "hot100:practice:wrap";
 function readWrap() {
@@ -101,7 +116,8 @@ function useDockSize() {
   const min = Math.min(0.5, 360 / row), max = Math.max(min, (row - 584) / row);
   // 只在用户拖、按键、双击时改 CSS 变量；首屏的值由 layout.tsx 设好，这里不去覆盖
   const change = useCallback((v: number) => { setSize(v); document.documentElement.style.setProperty("--practice-dock", String(Math.round(v * 1000) / 1000)); }, [setSize]);
-  return { value: Math.min(max, Math.max(min, size)), min, max, change, commit };
+  // 往右拖过最小宽度再 80px：整块收进右边那条窄边里
+  return { value: Math.min(max, Math.max(min, size)), min, max, change, commit, collapseBelow: (360 - 80) / row };
 }
 
 export function PracticeWorkbench() {
@@ -162,14 +178,18 @@ export function PracticeWorkbench() {
   // 桌面上收起时侧栏还在页面里（编辑器的内容和撤销记录都留着），只是看不见、也不能用键盘进去
   const stowed = desktop && !docked && !active;
   const dockButton = useRef<HTMLButtonElement>(null);
-  const stow = () => { setDocked(false); requestAnimationFrame(() => launcher.current?.focus({ preventScroll: true })); };
+  const rail = useRef<HTMLButtonElement>(null);
+  const stow = () => { setDocked(false); requestAnimationFrame(() => rail.current?.focus({ preventScroll: true })); };
   const summon = () => { setDocked(true); requestAnimationFrame(() => dockButton.current?.focus({ preventScroll: true })); };
+  // 收起后右边那条窄边：点一下、或者按住往左拖一点就展开
+  const railDrag = useRef<{ x: number; done: boolean } | null>(null);
   return (
     <>
-    {/* 正文和练习区之间的竖条：左右拖调整练习区宽度，方向键也行，双击恢复默认（桌面并排、练习区展开时才有） */}
+    {/* 正文和练习区之间的竖条：左右拖调整练习区宽度，方向键也行，双击恢复默认；往右拖过最小宽度就收进右边（桌面并排、练习区展开时才有） */}
     <ResizeHandle
       axis="x"
       className="practice-dock-handle"
+      collapseBelow={dock.collapseBelow}
       container={() => shell.current?.parentElement ?? null}
       fallback={DOCK_DEFAULT}
       hidden={!desktop || !docked || active}
@@ -178,6 +198,7 @@ export function PracticeWorkbench() {
       max={dock.max}
       min={dock.min}
       onChange={dock.change}
+      onCollapse={stow}
       onCommit={dock.commit}
       value={dock.value}
     />
@@ -203,13 +224,15 @@ export function PracticeWorkbench() {
             ) : (
               <>
                 {/* 只看题目：上下排列（窄屏）时才有，并排时用不着 */}
-                {!folded && <Button className="practice-only-toggle" onPress={() => setStatementView("only")} size="sm" variant="ghost"><DocIcon />只看题目</Button>}
+                {!folded && <Button aria-label="只看题目" className="practice-only-toggle" onPress={() => setStatementView("only")} size="sm" variant="ghost"><DocIcon /><span className="practice-heading-label">只看题目</span></Button>}
                 <Button aria-controls={statementBodyId} aria-expanded={!folded} aria-label={folded ? "展开题目" : "收起题目"} className="practice-fold-toggle" onPress={() => setStatementView(folded ? "split" : "folded")} size="sm" variant="ghost">
                   <ChevronDown className={clsx("practice-fold-icon transition-transform", folded && "-rotate-90")} />
                   <span className="practice-fold-label">{folded ? "展开题目" : "收起"}</span>
                 </Button>
               </>
             )}
+            {/* 手机上「退出」放在屏幕最上面这一行的最右边，最显眼；并排（≥1024）时用代码那边的「退出专注」 */}
+            <Button aria-label="退出专注模式" className="practice-focus-exit-top" isDisabled={focusPhase === "closing"} onPress={closeFocus} size="sm" variant="secondary"><ExpandIcon collapsed />退出</Button>
           </div>
         </div>
         <div className="practice-focus-statement-body" hidden={folded} id={statementBodyId}><PracticeStatement /></div>
@@ -231,8 +254,8 @@ export function PracticeWorkbench() {
         <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-3">
           <PracticeModeSwitch />
           <div className="flex items-center gap-1">
-            <Button aria-label={active ? "退出专注模式" : "进入专注模式"} isDisabled={focusPhase === "closing"} onPress={() => { if (active) closeFocus(); else openFocus(); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} />{active ? "退出专注" : "专注模式"}</Button>
-            {/* 桌面上可以把练习区收起来，页面回到和首页一样宽；右下角的「写代码」再召出来 */}
+            <Button aria-label={active ? "退出专注模式" : "进入专注模式"} className={clsx(active && "practice-focus-exit-row")} isDisabled={focusPhase === "closing"} onPress={() => { if (active) closeFocus(); else openFocus(); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} />{active ? "退出专注" : "专注模式"}</Button>
+            {/* 桌面上可以把练习区收起来，页面回到和首页一样宽；右边留一条窄边，点它或往左拖再展开 */}
             {desktop && !active && <Button aria-label="收起练习区" onPress={stow} ref={dockButton} size="sm" variant="ghost"><StowIcon />收起</Button>}
           </div>
         </div>
@@ -243,13 +266,30 @@ export function PracticeWorkbench() {
         )}
       </div>
     </aside>
-    {/* 1200px 以下页面里不放编辑器：屏幕底部常驻「写代码」，点开是全屏的题面 + 编辑器；桌面上练习区收起时，它在右下角，点开是召回侧栏（显示规则见 practice.css） */}
+    {/* 1200px 以下页面里不放编辑器：屏幕底部常驻「写代码」，点开是全屏的题面 + 编辑器（显示规则见 practice.css） */}
     <div className="practice-launcher" hidden={active}>
-      <Button aria-label={stowed ? "展开练习区" : "写代码"} className="practice-launcher-button" onPress={stowed ? summon : openFocus} ref={launcher}>
+      <Button aria-label="写代码" className="practice-launcher-button" onPress={openFocus} ref={launcher}>
         <CodeIcon />
         <span className="font-semibold">写代码</span>
       </Button>
     </div>
+    {/* 桌面上练习区收起时：贴在屏幕右边的一条窄边（和练习区一样高），点一下或按住往左拖就展开 */}
+    <button
+      aria-label="展开练习区"
+      className="practice-rail"
+      hidden={!stowed}
+      onClick={() => { if (!railDrag.current?.done) summon(); }}
+      onPointerDown={(e) => { if (e.button === 0) { railDrag.current = { x: e.clientX, done: false }; e.currentTarget.setPointerCapture(e.pointerId); } }}
+      onPointerMove={(e) => { const d = railDrag.current; if (d && !d.done && d.x - e.clientX > 24) { d.done = true; summon(); } }}
+      onPointerUp={() => { setTimeout(() => { railDrag.current = null; }, 0); }}
+      ref={rail}
+      title="展开练习区（点一下或往左拖）"
+      type="button"
+    >
+      <ChevronLeft aria-hidden className="practice-rail-chevron" height={14} width={14} />
+      <CodeIcon aria-hidden />
+      <span className="practice-rail-label">动手练习</span>
+    </button>
     </>
   );
 }
@@ -267,6 +307,9 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const [ready, setReady] = useState(false);
   const [hints, setHints] = useState<PracticeHints>(readHints);
   const changeHints = (value: PracticeHints) => { setHints(value); try { localStorage.setItem(HINTS_KEY, value); } catch { /* 这次仍然生效 */ } };
+  const [level, setLevel] = useState<TestLevel>(readLevel);
+  const changeLevel = (next: TestLevel) => { setLevel(next); try { localStorage.setItem(LEVEL_KEY, next); } catch { /* 这次仍然生效 */ } };
+  const quickCases = useMemo(() => quickCasesOf(problem.cases), [problem]);
   const [wrap, setWrap] = useState(readWrap);
   const toggleWrap = () => setWrap((on) => { try { localStorage.setItem(WRAP_KEY, on ? "off" : "on"); } catch { /* 这次仍然生效 */ } return !on; });
   const [confirmReset, setConfirmReset] = useState(false);
@@ -599,7 +642,31 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
       <div className="practice-run-controls flex flex-wrap items-center justify-between gap-2 border-y border-separator px-4 py-3">
         <SaveStatus draft={draftState} flash={flash} repoReady={repoReady} run={runState} />
         <div className="ms-auto flex gap-2">
-          {running ? <Button onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止运行</Button> : <><Button aria-label={`调试（用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}，一步步看每一行和变量）`} isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="ghost"><BugIcon />调试</Button><Button isDisabled={!ready} onPress={() => void execute(problem.cases)} size="sm" variant="outline">测试全部 · {problem.cases.length}</Button><Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples); }} size="sm"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button></>}
+          {running ? <Button onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止运行</Button> : <>
+            <Button aria-label={`调试（用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}，一步步看每一行和变量）`} isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="ghost"><BugIcon />调试</Button>
+            <Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples); }} size="sm" variant="outline"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button>
+            {/* 测试：主按钮跑当前这一档，右边的小箭头换档（精简边界 / 全量），选过的记在浏览器里 */}
+            <ButtonGroup size="sm">
+              <Button aria-label={level === "full" ? `全量测试，${problem.cases.length} 组用例，通过可当题解` : `精简边界测试，${quickCases.length} 组用例`} isDisabled={!ready} onPress={() => void execute(level === "full" ? problem.cases : quickCases)}>
+                {level === "full" ? "全量测试" : "精简测试"} · {level === "full" ? problem.cases.length : quickCases.length}
+              </Button>
+              <Dropdown>
+                <Button aria-label="选择测试档位" isDisabled={!ready} isIconOnly size="sm"><ButtonGroup.Separator /><ChevronDown /></Button>
+                <Dropdown.Popover className="max-w-[300px]" placement="top end">
+                  <Dropdown.Menu aria-label="测试档位" disallowEmptySelection onSelectionChange={(keys) => { const next = [...(keys as Set<string>)][0]; if (next === "quick" || next === "full") changeLevel(next); }} selectedKeys={new Set([level])} selectionMode="single">
+                    <Dropdown.Item className="flex flex-col items-start gap-0.5" id="quick" textValue="精简边界测试">
+                      <span className="flex w-full items-center justify-between gap-3 text-sm font-medium">精简边界测试<span className="font-mono text-xs text-muted">{quickCases.length} 组</span></span>
+                      <span className="text-xs leading-5 text-muted">示例和边界用例，确认代码能跑通</span>
+                    </Dropdown.Item>
+                    <Dropdown.Item className="flex flex-col items-start gap-0.5" id="full" textValue="全量测试">
+                      <span className="flex w-full items-center justify-between gap-3 text-sm font-medium">全量测试<span className="font-mono text-xs text-muted">{problem.cases.length} 组</span></span>
+                      <span className="text-xs leading-5 text-muted">再加随机用例，全部通过才算能当题解{repoReady ? "；会记进尝试记录" : ""}</span>
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown.Popover>
+              </Dropdown>
+            </ButtonGroup>
+          </>}
         </div>
       </div>
       {panelOpen && <div className="practice-console" data-testid="practice-test-panel">
@@ -648,7 +715,7 @@ function SaveStatus({ draft, run, flash, repoReady }: { draft?: SaveJobState; ru
     if (draft?.phase === "queued" || draft?.phase === "saving") parts.push({ text: "正在存草稿…" });
     else if (draft?.phase === "saved") parts.push({ text: `草稿已存到进度仓 ${clock(draft.at)}` });
     else if (draft?.phase === "error") parts.push({ text: draft.retrying ? "草稿没存上，稍后重试" : "草稿没存上", tone: "danger", title: draft.error });
-    if (!parts.length && repoReady) parts.push({ text: "Ctrl+S 存草稿 · 「测试全部」会记进尝试记录" });
+    if (!parts.length && repoReady) parts.push({ text: "Ctrl+S 存草稿 · 全量测试会记进尝试记录" });
   }
   if (!parts.length) return null;
   return (
