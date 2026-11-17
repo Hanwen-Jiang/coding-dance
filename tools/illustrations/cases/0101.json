@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"isSymmetric","params":["TreeNode"],"ret":"bool"},
+ "fixed": 6,
  "cases": [
   {"in":[[1,2,2,3,4,4,3]],"out":true},
   {"in":[[1,2,2,null,3,null,3]],"out":false},

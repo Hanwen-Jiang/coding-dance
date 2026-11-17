@@ -23,6 +23,8 @@ export interface PracticeCase {
   stdin: string;
   stdout: string;
   label?: string;
+  /** 「精简边界测试」也跑这一组：题目示例、预设、手写的边界用例（固定种子的随机用例没有这个标记，只在全量测试里跑） */
+  quick?: boolean;
   /** Exact checked-in statement example, when this case comes from the problem document. */
   source?: { path: string; index: number; input: string; output: string };
 }

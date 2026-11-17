@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"wordBreak","params":["string","List<string>"],"ret":"bool"},
+ "fixed": 6,
  "cases": [
   {"in":["leetcode",["leet","code"]],"out":true},
   {"in":["catsandog",["cats","dog","sand","and","cat"]],"out":false},

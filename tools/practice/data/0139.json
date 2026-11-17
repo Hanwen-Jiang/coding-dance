@@ -40,6 +40,7 @@
         ]
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": true,
       "stdin": "leetcode\n2\nleet\ncode\n",
       "stdout": "true\n",
@@ -59,6 +60,7 @@
         ]
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": true,
       "stdin": "applepenapple\n2\napple\npen\n",
       "stdout": "true\n",
@@ -81,6 +83,7 @@
         ]
       ],
       "label": "示例 3",
+      "quick": true,
       "expected": false,
       "stdin": "catsandog\n5\ncats\ndog\nsand\nand\ncat\n",
       "stdout": "false\n",
@@ -99,6 +102,7 @@
         ]
       ],
       "label": "仓库判题用例 3 · 边界",
+      "quick": true,
       "expected": false,
       "stdin": "a\n1\nb\n",
       "stdout": "false\n"
@@ -111,6 +115,7 @@
         ]
       ],
       "label": "仓库判题用例 4",
+      "quick": true,
       "expected": true,
       "stdin": "a\n1\na\n",
       "stdout": "true\n"
@@ -125,6 +130,7 @@
         ]
       ],
       "label": "仓库判题用例 5",
+      "quick": true,
       "expected": false,
       "stdin": "aaaaaaab\n3\na\naa\naaa\n",
       "stdout": "false\n"
@@ -139,6 +145,7 @@
         ]
       ],
       "label": "仓库判题用例 6",
+      "quick": true,
       "expected": true,
       "stdin": "cars\n3\ncar\nca\nrs\n",
       "stdout": "true\n"

@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"canPartition","params":["int[]"],"ret":"bool"},
+ "fixed": 8,
  "cases": [
   {"in":[[1,5,11,5]],"out":true},
   {"in":[[1,2,5]],"out":false},

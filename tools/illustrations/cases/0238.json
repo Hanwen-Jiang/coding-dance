@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"productExceptSelf","params":["int[]"],"ret":"int[]"},
+ "fixed": 5,
  "cases": [
   {"in":[[1,2,3,4]],"out":[24,12,8,6]},
   {"in":[[-1,1,0,-3,3]],"out":[0,0,9,0,0]},

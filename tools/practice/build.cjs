@@ -150,27 +150,36 @@ async function main() {
       const python = parseCode(s.codes[0].code).code;
       const names = sig.cls ? ["operations", "arguments"] : method(python, sig.fn).names;
       const methodNames = sig.cls ? Object.fromEntries(Object.keys(sig.methods).map((n) => [n, method(python, n).names])) : {};
+      // quick：练习区「精简边界测试」跑的那几组——题目示例、预设、手写的边界用例；固定种子的随机用例只在「全量测试」里跑
       const inputs = [], seen = new Set();
-      const add = (value, label) => {
+      const add = (value, label, quick) => {
         const key = JSON.stringify(value);
-        if (!seen.has(key)) { seen.add(key); inputs.push({ input: clone(value), label }); }
-        else if (label.startsWith("边界")) inputs.find((c) => JSON.stringify(c.input) === key).label += " · 边界";
+        if (!seen.has(key)) { seen.add(key); inputs.push({ input: clone(value), label, ...(quick ? { quick: true } : {}) }); }
+        else {
+          const prev = inputs.find((c) => JSON.stringify(c.input) === key);
+          if (label.startsWith("边界")) prev.label += " · 边界";
+          if (quick) prev.quick = true;
+        }
       };
       const officialExamples = official[s.id];
       if (!officialExamples?.length) throw new Error(`${s.id}: missing official examples`);
-      officialExamples.forEach((example) => add(officialInput(s.id, sig, example), `示例 ${example.index}`));
+      officialExamples.forEach((example) => add(officialInput(s.id, sig, example), `示例 ${example.index}`, true));
       const existing = path.join(root, "tools/illustrations/cases", pad(s.id) + ".json");
-      if (fs.existsSync(existing)) JSON.parse(fs.readFileSync(existing, "utf8")).cases.forEach((c, i) => add(c.in, `仓库判题用例 ${i + 1}`));
-      else {
-        (s.presets || []).forEach((p, i) => add(presetInput(s, sig, p.args), `题目预设 ${i + 1} · ${p.label || "示例"}`));
+      if (fs.existsSync(existing)) {
+        // 判题用例文件里前 fixed 组是预设和手写的用例，后面是随机的（见 tools/illustrations/build.js 的 exportCases）
+        const file = JSON.parse(fs.readFileSync(existing, "utf8"));
+        if (!Number.isInteger(file.fixed)) throw new Error(`${s.id}: ${existing} has no "fixed" count; rebuild tools/illustrations first`);
+        file.cases.forEach((c, i) => add(c.in, `仓库判题用例 ${i + 1}`, i < file.fixed));
+      } else {
+        (s.presets || []).forEach((p, i) => add(presetInput(s, sig, p.args), `题目预设 ${i + 1} · ${p.label || "示例"}`, true));
         if (GEN[s.id]) {
           const orig = Math.random; let seed = s.id * 2654435761 >>> 0;
           Math.random = () => { seed = Math.imul(seed, 1664525) + 1013904223 >>> 0; return seed / 4294967296; };
-          try { for (let i = 0; i < 10; i++) add(presetInput(s, sig, GEN[s.id](makeR()).args), `固定随机用例 ${i + 1}`); }
+          try { for (let i = 0; i < 10; i++) add(presetInput(s, sig, GEN[s.id](makeR()).args), `固定随机用例 ${i + 1}`, false); }
           finally { Math.random = orig; }
         }
       }
-      boundaries[s.id].forEach((c, i) => add(c, `边界用例 ${i + 1}`));
+      boundaries[s.id].forEach((c, i) => add(c, `边界用例 ${i + 1}`, true));
       const expected = pyJudge.runSync({ name: pad(s.id), sig: normSig(sig), cases: inputs.map((c) => c.input), code: python }, temp);
       expected.forEach((v, i) => { if (v && typeof v === "object" && "__error" in v) throw new Error(`${s.id} ${inputs[i].label}: ${v.__error}`); });
       const examples = officialExamples.map((example) => {

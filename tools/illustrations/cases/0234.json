@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"isPalindrome","params":["ListNode"],"ret":"bool"},
+ "fixed": 8,
  "cases": [
   {"in":[[1,2,2,1]],"out":true},
   {"in":[[1,2,3,2,1]],"out":true},

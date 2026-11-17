@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"lengthOfLongestSubstring","params":["string"],"ret":"int"},
+ "fixed": 8,
  "cases": [
   {"in":["abcabcbb"],"out":3},
   {"in":["pwwkew"],"out":3},

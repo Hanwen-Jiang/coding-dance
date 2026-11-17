@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"findKthLargest","params":["int[]","int"],"ret":"int"},
+ "fixed": 7,
  "cases": [
   {"in":[[3,2,1,5,6,4],2],"out":5},
   {"in":[[3,2,3,1,2,4,5,5,6],4],"out":4},

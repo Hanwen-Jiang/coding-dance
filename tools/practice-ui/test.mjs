@@ -47,7 +47,7 @@ async function mode(name) {
   await waitEditor();
 }
 async function run(all = false) {
-  await page.getByRole("button", { name: all ? /^测试全部/ : "运行示例", exact: !all }).click();
+  await page.getByRole("button", { name: all ? /^全量测试/ : "运行示例", exact: !all }).click();
   const verdict = page.getByText("全部通过", { exact: true }).or(page.getByText("有用例未通过", { exact: true }));
   await verdict.first().waitFor({ timeout: 90000 });
   assert.equal(await page.getByText("有用例未通过", { exact: true }).count(), 0, await page.locator("#practice").innerText());
@@ -284,12 +284,61 @@ try {
     await page.getByRole("button", { name: "收起练习区", exact: true }).click();
     await settle();
     assert.equal(await handle.isVisible(), false, "Divider hides when practice is stowed");
-    await page.getByRole("button", { name: "展开练习区", exact: true }).click();
+    // 收起后是贴在右边的一条窄边，不是浮着的按钮；点它展开
+    const rail = page.getByRole("button", { name: "展开练习区", exact: true });
+    const rb = await rail.boundingBox();
+    assert(rb.width <= 40 && Math.abs(rb.x + rb.width - page.viewportSize().width) < 2 && rb.height > 300, `Stowed practice is a slim rail on the right edge (${JSON.stringify(rb)})`);
+    assert.equal(await page.locator(".practice-launcher").isVisible(), false, "No floating 写代码 pill on desktop");
+    await rail.click();
     await settle();
     assert(Math.abs((await practiceWidth()) - keyed) < 2, "Summoning practice brings back the chosen width");
+    // 往右拖过最小宽度：收进右边；按住窄边往左拖：展开，宽度还是原来的
+    const hb2 = await handle.boundingBox();
+    await page.mouse.move(hb2.x + hb2.width / 2, hb2.y + hb2.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(hb2.x + 900, hb2.y + hb2.height / 2, { steps: 12 });
+    await page.mouse.up();
+    await settle();
+    assert(await rail.isVisible(), "Dragging the divider far right folds practice into the rail");
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.practice), "closed");
+    const rb2 = await rail.boundingBox();
+    await page.mouse.move(rb2.x + rb2.width / 2, rb2.y + rb2.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(rb2.x - 80, rb2.y + rb2.height / 2, { steps: 6 });
+    await page.mouse.up();
+    await settle();
+    assert.equal(await rail.isVisible(), false, "Dragging the rail left brings practice back");
+    assert(Math.abs((await practiceWidth()) - keyed) < 2, "…at the width it had before folding");
     await handle.dblclick();
     await settle();
-    console.log("✓ Desktop divider: drag, min body width, keys, double-click reset, survives reload, hidden when stowed");
+    console.log("✓ Desktop divider: drag, min body width, keys, double-click reset, survives reload; drag past min folds into a right-edge rail, rail click/drag brings it back");
+  }
+
+  // 测试分两档：精简边界（示例 + 边界，几组）和全量（再加随机）；运行示例在前，测试在后；选的档记在浏览器里
+  {
+    const order = await page.locator(".practice-run-controls button").evaluateAll((els) => els.map((e) => e.getAttribute("aria-label") || e.textContent.trim()));
+    const sampleAt = order.findIndex((t) => /运行示例/.test(t)), testAt = order.findIndex((t) => /^全量测试/.test(t));
+    assert(sampleAt >= 0 && testAt > sampleAt, `运行示例 comes before the test button (${order})`);
+    await page.getByRole("button", { name: "选择测试档位", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: /精简边界测试/ }).click();
+    const quick = page.getByRole("button", { name: /^精简边界测试，\d+ 组用例/ });
+    await quick.waitFor();
+    const n = Number((await quick.getAttribute("aria-label")).match(/(\d+) 组/)[1]);
+    const total = Number((await page.locator(".practice-run-controls").innerText()).match(/· (\d+)/)?.[1] ?? 0) || n;
+    assert(n > 0 && n <= total, `Quick level has a few cases (${n})`);
+    await language("Python");
+    await writeCode(spec.codes[0].code);
+    await quick.click();
+    await page.getByText("全部通过", { exact: true }).waitFor({ timeout: 90000 });
+    assert.match(await page.locator("#practice").innerText(), new RegExp(`${n} / ${n}`), "Quick test runs only the quick cases");
+    await page.reload();
+    await waitEditor();
+    assert(await page.getByRole("button", { name: /^精简边界测试/ }).isVisible(), "Chosen test level survives reload");
+    await page.getByRole("button", { name: "选择测试档位", exact: true }).click();
+    await page.getByRole("menuitemradio", { name: /全量测试/ }).click();
+    await page.getByRole("button", { name: /^全量测试/ }).waitFor();
+    await mode("LeetCode");
+    console.log("✓ Run controls: 运行示例 then test; quick (examples + boundaries) vs full level, remembered");
   }
 
   // 桌面上练习区钉在顶栏下面：滚到页面最底下也不被页脚顶上去，页脚的字不被它盖住
@@ -375,6 +424,9 @@ try {
   const box = (selector) => page.locator(selector).boundingBox();
   const [statementBox, editorBox] = [await box(".practice-focus-statement"), await box(".practice-editor-column")];
   assert(editorBox.y >= statementBox.y + statementBox.height - 1 && statementBox.x >= 0 && editorBox.x + editorBox.width <= 391, "Mobile workspace stacks statement above code inside the screen");
+  // 手机上「退出」在屏幕最上面那一行的右边
+  const exitTop = await page.getByRole("button", { name: "退出专注模式", exact: true }).boundingBox();
+  assert(exitTop.y < 60 && exitTop.x + exitTop.width > 330, `Mobile exit sits at the top right (${JSON.stringify(exitTop)})`);
   await page.getByRole("button", { name: "收起题目", exact: true }).click();
   assert.equal(await page.locator(".practice-focus-statement-body").isVisible(), false, "Folding hides the statement body");
   assert((await box(".cm-editor")).height > editorBox.height * 0.5, "Folding leaves the editor usable");

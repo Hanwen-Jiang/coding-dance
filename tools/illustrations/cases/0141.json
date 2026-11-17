@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"hasCycle","params":["CycleList"],"ret":"bool"},
+ "fixed": 8,
  "cases": [
   {"in":[[[3,2,0,-4],1]],"out":true},
   {"in":[[[1,2,3,4,5,6,7],2]],"out":true},

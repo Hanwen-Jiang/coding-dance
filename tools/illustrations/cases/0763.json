@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"partitionLabels","params":["string"],"ret":"List<int>"},
+ "fixed": 6,
  "cases": [
   {"in":["ababcbacadefegdehijhklij"],"out":[9,7,8]},
   {"in":["abacdcde"],"out":[3,4,1]},

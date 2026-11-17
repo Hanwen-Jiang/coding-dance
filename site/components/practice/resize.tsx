@@ -32,8 +32,10 @@ export function useMedia(query: string) {
  * axis="x"：竖着的一条，左右拖；axis="y"：横着的一条，上下拖。
  * value 是「被调整那一块」占容器的比例；invert=true 表示那一块在拖动条后面（往下拖它变小）。
  * container() 返回用来换算比例的容器。
+ * collapseBelow + onCollapse：拖到比 collapseBelow 还小（已经越过最小值一段）时整块收起来，像 VS Code 的侧栏那样；
+ * 这次拖动就此结束，比例保持拖到最小值之前的样子，展开时还是原来的宽度。
  */
-export function ResizeHandle({ axis, value, min, max, fallback, invert = false, label, container, onChange, onCommit, className, hidden }: {
+export function ResizeHandle({ axis, value, min, max, fallback, invert = false, label, container, onChange, onCommit, className, hidden, collapseBelow, onCollapse }: {
   axis: "x" | "y";
   value: number;
   min: number;
@@ -46,8 +48,10 @@ export function ResizeHandle({ axis, value, min, max, fallback, invert = false, 
   onCommit: (value: number) => void;
   className?: string;
   hidden?: boolean;
+  collapseBelow?: number;
+  onCollapse?: () => void;
 }) {
-  const drag = useRef<{ start: number; from: number; size: number; last: number } | null>(null);
+  const drag = useRef<{ start: number; from: number; size: number; last: number; collapsed?: boolean } | null>(null);
   const [active, setActive] = useState(false);
   const set = (v: number) => { const next = clamp(v, min, max); onChange(next); return next; };
   const coordinate = (e: React.PointerEvent) => (axis === "x" ? e.clientX : e.clientY);
@@ -74,7 +78,7 @@ export function ResizeHandle({ axis, value, min, max, fallback, invert = false, 
         e.preventDefault();
         onCommit(set(next));
       }}
-      onLostPointerCapture={() => { if (drag.current) onCommit(drag.current.last); drag.current = null; setActive(false); }}
+      onLostPointerCapture={() => { if (drag.current && !drag.current.collapsed) onCommit(drag.current.last); drag.current = null; setActive(false); }}
       onPointerDown={(e) => {
         const box = container()?.getBoundingClientRect();
         if (!box || e.button !== 0) return;
@@ -87,7 +91,17 @@ export function ResizeHandle({ axis, value, min, max, fallback, invert = false, 
         const d = drag.current;
         if (!d || !d.size) return;
         const delta = (coordinate(e) - d.start) / d.size;
-        d.last = set(d.from + (invert ? -delta : delta));
+        const raw = d.from + (invert ? -delta : delta);
+        if (collapseBelow != null && onCollapse && raw < collapseBelow) {
+          // 越过最小值一段：收起来，这次拖动到此为止（宽度留在拖之前，展开时还是原来那样）
+          d.collapsed = true;
+          onChange(d.from);
+          onCommit(d.from);
+          e.currentTarget.releasePointerCapture(e.pointerId);
+          onCollapse();
+          return;
+        }
+        d.last = set(raw);
       }}
       role="separator"
       tabIndex={0}

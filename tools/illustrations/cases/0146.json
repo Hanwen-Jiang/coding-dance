@@ -1,5 +1,6 @@
 {
  "sig": {"cls":"LRUCache","ctor":["int"],"methods":{"get":[["int"],"int"],"put":[["int","int"],"void"]}},
+ "fixed": 2,
  "cases": [
   {"in":[["LRUCache","put","put","get","put","get","put","get","get","get"],[[2],[1,1],[2,2],[1],[3,3],[2],[4,4],[1],[3],[4]]],"out":[null,null,null,1,null,-1,null,-1,3,4]},
   {"in":[["LRUCache","put","put","put","put","get","get"],[[2],[1,1],[2,2],[1,10],[3,3],[2],[1]]],"out":[null,null,null,null,null,-1,10]},

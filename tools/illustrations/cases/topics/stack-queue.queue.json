@@ -1,5 +1,6 @@
 {
  "sig": {"cls":"MyQueue","ctor":[],"methods":{"push":[["int"],"void"],"pop":[[],"int"],"peek":[[],"int"],"empty":[[],"bool"]}},
+ "fixed": 3,
  "cases": [
   {"in":[["MyQueue","push","push","push","pop","push","pop","peek","pop","empty"],[[],[1],[2],[3],[],[4],[],[],[],[]]],"out":[null,null,null,null,1,null,2,3,3,false]},
   {"in":[["MyQueue","push","push","peek","pop","empty"],[[],[1],[2],[],[],[]]],"out":[null,null,null,1,1,false]},

@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"findRedundantConnection","params":["int[][]"],"ret":"int[]"},
+ "fixed": 3,
  "cases": [
   {"in":[[[1,2],[2,3],[3,4],[1,4],[1,5]]],"out":[1,4]},
   {"in":[[[1,2],[1,3],[2,3]]],"out":[2,3]},

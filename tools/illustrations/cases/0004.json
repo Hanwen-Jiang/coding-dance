@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"findMedianSortedArrays","params":["int[]","int[]"],"ret":"double"},
+ "fixed": 8,
  "cases": [
   {"in":[[1,3,8,9,15],[7,11,18,19,21,25]],"out":11},
   {"in":[[1,2],[3,4]],"out":2.5},

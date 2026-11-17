@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"findAnagrams","params":["string","string"],"ret":"List<int>"},
+ "fixed": 6,
  "cases": [
   {"in":["cbaebabacd","abc"],"out":[0,6]},
   {"in":["abab","ab"],"out":[0,1,2]},

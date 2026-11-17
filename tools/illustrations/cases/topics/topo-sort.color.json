@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"eventualSafeNodes","params":["List<List<int>>"],"ret":"List<int>"},
+ "fixed": 4,
  "cases": [
   {"in":[[[1,2],[2,3],[5],[0],[5],[],[]]],"out":[2,4,5,6]},
   {"in":[[[1,2,3,4],[1,2],[3,4],[0,4],[]]],"out":[4]},

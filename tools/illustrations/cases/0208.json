@@ -1,5 +1,6 @@
 {
  "sig": {"cls":"Trie","ctor":[],"methods":{"insert":[["string"],"void"],"search":[["string"],"bool"],"startsWith":[["string"],"bool"]}},
+ "fixed": 4,
  "cases": [
   {"in":[["Trie","insert","search","search","startsWith","insert","search"],[[],["apple"],["apple"],["app"],["app"],["app"],["app"]]],"out":[null,null,true,false,true,null,true]},
   {"in":[["Trie","insert","insert","insert","startsWith","search","search"],[[],["car"],["cat"],["do"],["ca"],["ca"],["cat"]]],"out":[null,null,null,null,true,false,true]},
