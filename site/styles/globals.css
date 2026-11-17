@@ -318,6 +318,9 @@ a:hover .pixel-logo .lg-slash {
   to { opacity: 1; transform: none; }
 }
 
+/* 进入题目页、展开或收起练习区时，顶栏跟着正文变宽变窄（规则在 practice.css）：用一个短动画过渡，不是一下跳过去 */
+.site-header-inner { transition: max-width 320ms cubic-bezier(0.2, 0.8, 0.2, 1); }
+
 /* 系统开了「减少动态效果」时：去掉位移、缩放这类会动的效果，只保留透明度变化（淡入、光标闪烁、点阵闪烁） */
 @keyframes fade-only {
   from { opacity: 0; }
@@ -351,6 +354,9 @@ a:hover .pixel-logo .lg-slash {
     transform: none;
     outline: 2px solid var(--accent);
     outline-offset: 1px;
+  }
+  .site-header-inner {
+    transition: none;
   }
 }
 

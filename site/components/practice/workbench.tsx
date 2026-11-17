@@ -5,18 +5,22 @@ import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
 import { useReducedMotion } from "motion/react";
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
 import { ChevronDown, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
 import { PixelLoader, Skel } from "@/components/pixel";
 import { PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
+import { type DebugRun, PracticeDebugger } from "@/components/practice/debugger";
 import { PracticeResults } from "@/components/practice/results";
 import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice/resize";
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
 import { runPractice } from "@/lib/practice/runner";
+import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
+import { practiceVerdict } from "@/lib/practice/verdict";
 import { formatPracticeInput, formatPracticeResult, formatPracticeValue, parsePracticeFields, practiceInputFields, starterHash, type PracticeInputField } from "@/lib/practice/format";
+import { useProgress } from "@/lib/progress";
 
 import "./practice.css";
 
@@ -29,7 +33,7 @@ const LANGUAGES: { id: PracticeLanguage; label: string }[] = [
   { id: "javascript", label: "JavaScript" },
   { id: "typescript", label: "TypeScript" },
 ];
-type TestTab = "examples" | "custom" | "results";
+type TestTab = "examples" | "custom" | "results" | "debug";
 /** 编辑器提示程度，存在浏览器里，换题、换语言都不变 */
 const HINT_LEVELS: { id: PracticeHints; label: string; desc: string }[] = [
   { id: "full", label: "完整提示", desc: "提示关键字、内置函数、库函数和类型" },
@@ -40,14 +44,42 @@ function readHints(): PracticeHints {
   try { const v = localStorage.getItem(HINTS_KEY); if (v === "full" || v === "none") return v; } catch { /* 存储不可用 */ }
   return "full";
 }
+/** 停下不改多久之后自动把草稿存进进度仓（每存一次是一个 commit，所以不要太勤） */
+const AUTOSAVE_MS = 60_000;
+/** 比较两份代码时不管换行符和末尾空白（服务端存的时候会统一成这样） */
+const tidyCode = (code: string) => code.replace(/\r\n?/g, "\n").replace(/\s+$/, "");
+/** 存进进度仓的队列里某一项的状态（草稿、记录各一项） */
+function useSaveState(key: string) {
+  const subscribe = useCallback((fn: () => void) => practiceSaves().subscribe(fn), []);
+  return useSyncExternalStore(subscribe, () => practiceSaves().state(key), () => undefined);
+}
+const clock = (at: number) => new Date(at).toTimeString().slice(0, 5);
 /**
  * 专注模式里题面的三种状态：split 题面和代码都在；folded 题面收起，只留标题栏（并排时收成一条窄边）；
  * only 只看题面（上下排列时代码区只留顶上那一行工具条）。
  */
 type StatementView = "split" | "folded" | "only";
 
+/**
+ * 桌面（≥1200）页面右侧的练习区展开还是收起，记在浏览器里，换题、刷新都不变。
+ * 状态写在 <html data-practice> 上，样式全靠它（practice.css）；layout.tsx 在首屏前就按存的值设好，避免先展开再收起的闪动。
+ */
+export const DOCK_KEY = "hot100:practice:dock";
+function usePracticeDock() {
+  const [docked, setDockedState] = useState(true);
+  useEffect(() => { setDockedState(document.documentElement.dataset.practice !== "closed"); }, []);
+  const setDocked = useCallback((open: boolean) => {
+    setDockedState(open);
+    document.documentElement.dataset.practice = open ? "open" : "closed";
+    try { localStorage.setItem(DOCK_KEY, open ? "open" : "closed"); } catch { /* 这次仍然生效 */ }
+  }, []);
+  return [docked, setDocked] as const;
+}
+
 export function PracticeWorkbench() {
   const { detail, problem, error, retry, mode, language, select } = usePractice();
+  const [docked, setDocked] = usePracticeDock();
+  const desktop = useMedia("(min-width: 1200px)");
   const [focusPhase, setFocusPhase] = useState<"closed" | "open" | "closing">("closed");
   const [statementView, setStatementView] = useState<StatementView>("split");
   const active = focusPhase !== "closed";
@@ -98,6 +130,11 @@ export function PracticeWorkbench() {
   }, [focusPhase, reducedMotion, finishClosing]);
 
   const folded = statementView === "folded";
+  // 桌面上收起时侧栏还在页面里（编辑器的内容和撤销记录都留着），只是看不见、也不能用键盘进去
+  const stowed = desktop && !docked && !active;
+  const dockButton = useRef<HTMLButtonElement>(null);
+  const stow = () => { setDocked(false); requestAnimationFrame(() => launcher.current?.focus({ preventScroll: true })); };
+  const summon = () => { setDocked(true); requestAnimationFrame(() => dockButton.current?.focus({ preventScroll: true })); };
   return (
     <>
     <aside
@@ -106,6 +143,7 @@ export function PracticeWorkbench() {
       className={clsx("practice-sidebar practice-shell", active && "practice-shell--focus", focusPhase === "closing" && "practice-shell--closing")}
       data-focus-phase={focusPhase}
       data-statement={statementView}
+      inert={stowed || undefined}
       onAnimationEnd={(event) => { if (event.target === event.currentTarget && focusPhase === "closing") flushSync(finishClosing); }}
       ref={shell}
       role={active ? "dialog" : undefined}
@@ -148,7 +186,11 @@ export function PracticeWorkbench() {
       <div className="practice-editor-column" key="editor">
         <div className="flex flex-wrap items-center justify-between gap-2 px-1 pb-3">
           <PracticeModeSwitch />
-          <Button aria-label={active ? "退出专注模式" : "进入专注模式"} isDisabled={focusPhase === "closing"} onPress={() => { if (active) closeFocus(); else openFocus(); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} />{active ? "退出专注" : "专注模式"}</Button>
+          <div className="flex items-center gap-1">
+            <Button aria-label={active ? "退出专注模式" : "进入专注模式"} isDisabled={focusPhase === "closing"} onPress={() => { if (active) closeFocus(); else openFocus(); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} />{active ? "退出专注" : "专注模式"}</Button>
+            {/* 桌面上可以把练习区收起来，页面回到和首页一样宽；右下角的「写代码」再召出来 */}
+            {desktop && !active && <Button aria-label="收起练习区" onPress={stow} ref={dockButton} size="sm" variant="ghost"><StowIcon />收起</Button>}
+          </div>
         </div>
         {problem ? <PracticeSession key={`${problem.id}:${mode}:${language}`} language={language} mode={mode} onLanguageChange={(value) => select(mode, value)} problem={problem} /> : (
           <Card className="min-w-0 items-center justify-center gap-4 px-6 py-14">
@@ -157,9 +199,9 @@ export function PracticeWorkbench() {
         )}
       </div>
     </aside>
-    {/* 1200px 以下页面里不放编辑器：屏幕底部常驻「写代码」，点开是全屏的题面 + 编辑器（显示规则见 practice.css） */}
+    {/* 1200px 以下页面里不放编辑器：屏幕底部常驻「写代码」，点开是全屏的题面 + 编辑器；桌面上练习区收起时，它在右下角，点开是召回侧栏（显示规则见 practice.css） */}
     <div className="practice-launcher" hidden={active}>
-      <Button aria-label="写代码" className="practice-launcher-button" onPress={openFocus} ref={launcher}>
+      <Button aria-label={stowed ? "展开练习区" : "写代码"} className="practice-launcher-button" onPress={stowed ? summon : openFocus} ref={launcher}>
         <CodeIcon />
         <span className="font-semibold">写代码</span>
         <span className="practice-launcher-meta">{LANGUAGES.find((entry) => entry.id === language)?.label} · {mode === "acm" ? "ACM" : "LeetCode"}</span>
@@ -196,6 +238,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [report, setReport] = useState<{ result: PracticeRunResult; cases: PracticeCase[]; code: string; unchecked: boolean } | null>(null);
+  // 调试：一组输入的执行记录、当前看到第几步、编辑器里的断点；调试用的输入跟着上一次看的是「示例」还是「自定义」
+  const [debugRun, setDebugRun] = useState<DebugRun | null>(null);
+  const [debugIndex, setDebugIndex] = useState(0);
+  const [breakpoints, setBreakpoints] = useState<number[]>([]);
+  const caseTab = useRef<"examples" | "custom">("examples");
   const abortRef = useRef<AbortController | null>(null);
   const sequenceRef = useRef(0);
   const codeRef = useRef(code);
@@ -228,11 +275,93 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
     };
   }, [draftKey]);
 
+  // —— 存进用户自己的进度仓（要登录并开通）：草稿（Ctrl+S、停下 60 秒后自动存）和「测试全部」的记录，都走 save-queue 排队 ——
+  const { ready: repoReady, refresh: refreshProgress } = useProgress();
+  const draftJob = `draft:${problem.id}:${mode}:${language}`;
+  const runJob = `run:${problem.id}:${mode}:${language}`;
+  const draftState = useSaveState(draftJob);
+  const runState = useSaveState(runJob);
+  /** 上一次和进度仓对上的那份草稿的指纹：本地改过之后它就对不上了，说明有没存的改动 */
+  const syncedKey = `${draftKey}:synced`;
+  const autosave = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [remoteDraft, setRemoteDraft] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+  useEffect(() => { if (!flash) return; const t = setTimeout(() => setFlash(null), 5000); return () => clearTimeout(t); }, [flash]);
+  const readSynced = () => { try { return localStorage.getItem(syncedKey); } catch { return null; } };
+  const markSynced = (value: string) => { try { localStorage.setItem(syncedKey, starterHash(tidyCode(value))); } catch { /* 下次多存一遍而已 */ } };
+
+  const saveDraft = (manual: boolean) => {
+    if (autosave.current) { clearTimeout(autosave.current); autosave.current = null; }
+    if (!repoReady) { if (manual) setFlash("草稿已存在这个浏览器里。登录并开通进度仓后，Ctrl+S 会把它存进你的进度仓。"); return; }
+    const snapshot = codeRef.current;
+    if (tidyCode(snapshot) === tidyCode(starter)) { if (manual) setFlash("还是模板，没有要存的。"); return; }
+    if (readSynced() === starterHash(tidyCode(snapshot))) { if (manual) setFlash("进度仓里已经是这一版了。"); return; }
+    setFlash(null);
+    void practiceSaves().push(draftJob, { kind: "draft", id: problem.id, lang: language, mode, code: snapshot }, true).then((res) => { if (res) markSynced(snapshot); });
+  };
+  const saveDraftRef = useRef(saveDraft);
+  saveDraftRef.current = saveDraft;
+
+  // 切到后台、关掉页面、换题换语言时，还没自动存的改动马上存
+  useEffect(() => {
+    const now = () => { if (autosave.current) { saveDraftRef.current(false); practiceSaves().flush(); } };
+    const onVisibility = () => { if (document.visibilityState === "hidden") now(); };
+    window.addEventListener("pagehide", now);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", now);
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (autosave.current) saveDraftRef.current(false);
+    };
+  }, []);
+
+  /** 换掉编辑器里的代码，但不当作用户的改动（不触发自动保存） */
+  const applyCode = (value: string) => {
+    setCode(value);
+    codeRef.current = value;
+    try { localStorage.setItem(draftKey, value); } catch { /* 保留当前编辑内容。 */ }
+  };
+
+  // 打开时看一眼进度仓里有没有这道题的草稿（可能是在别的设备上写的）：本地没改过就直接换上，改过就问一下
+  useEffect(() => {
+    if (!ready || !repoReady) return;
+    let alive = true;
+    fetch(`/api/progress/practice?id=${problem.id}&lang=${language}&mode=${mode}`, { cache: "no-store" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ code?: string | null }>) : null))
+      .then((j) => {
+        if (!alive || !j?.code) return;
+        const remote = tidyCode(j.code), local = tidyCode(codeRef.current);
+        if (remote === local) { markSynced(remote); return; }
+        if (local === tidyCode(starter) || readSynced() === starterHash(local)) { applyCode(remote); markSynced(remote); setFlash("已载入进度仓里的草稿。"); }
+        else setRemoteDraft(remote);
+      })
+      .catch(() => { /* 读不到就用本地的 */ });
+    return () => { alive = false; };
+  }, [ready, repoReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** 「测试全部」跑完：记一条尝试记录，全部通过再存成题解；写好后题目页的两节重新读，状态变了就刷新进度 */
+  const recordRun = (run: PracticeRunResult, cases: PracticeCase[], snapshot: string) => {
+    if (!repoReady) return;
+    const verdict = practiceVerdict(problem, mode, cases, run);
+    if (!verdict) return;
+    void practiceSaves().push(runJob, { kind: "run", id: problem.id, lang: language, mode, code: snapshot, duration: run.duration, ...verdict }, false).then((res) => {
+      if (!res) return;
+      window.dispatchEvent(new CustomEvent(PRACTICE_SAVED_EVENT, { detail: { id: problem.id } }));
+      if (res.status) void refreshProgress();
+    });
+  };
+  const recordRef = useRef(recordRun);
+  recordRef.current = recordRun;
+
   const changeCode = (value: string) => {
     setCode(value);
     codeRef.current = value;
     setConfirmReset(false);
     try { localStorage.setItem(draftKey, value); } catch { /* 保留当前编辑内容。 */ }
+    if (repoReady) {
+      if (autosave.current) clearTimeout(autosave.current);
+      autosave.current = setTimeout(() => saveDraftRef.current(false), AUTOSAVE_MS);
+    }
   };
 
   const execute = useCallback(async (cases: PracticeCase[], unchecked = false) => {
@@ -261,6 +390,8 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
       });
       if (sequenceRef.current === token) setReport({ result, cases, code: snapshot, unchecked });
+      // 「测试全部」相当于一次提交：记进进度仓的尝试记录（示例、自定义用例只是运行，不记）
+      if (cases === problem.cases && !unchecked) recordRef.current(result, cases, snapshot);
     } catch (e) {
       if (sequenceRef.current === token) setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -268,24 +399,74 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
     }
   }, [language, mode, problem, ready, running, starter]);
 
-  const runCustom = () => {
-    try {
-      const input: unknown = mode === "leetcode" ? parsePracticeFields(problem, customFields) : decodeAcmInput(customInput, problem.signature);
-      if (!Array.isArray(input)) throw new Error("请检查输入参数。");
-      if (!problem.signature.cls && input.length !== problem.signature.params?.length) throw new Error(`这道题需要 ${problem.signature.params?.length || 0} 个参数，请将它们放在同一个数组中。`);
-      if (problem.signature.cls && (input.length !== 2 || !Array.isArray(input[0]) || !Array.isArray(input[1]))) throw new Error("设计类题的输入是 [操作名数组, 参数数组]。");
-      const unchecked = !customExpected.trim();
-      const expected: unknown = unchecked ? undefined : mode === "leetcode" ? JSON.parse(customExpected) : parseAcmOutput(customExpected, problem.signature);
-      const test: PracticeCase = {
+  /** 按「自定义」里填的内容拼一组用例；填得不对抛出中文错误 */
+  const customCase = (): { test: PracticeCase; unchecked: boolean } => {
+    const input: unknown = mode === "leetcode" ? parsePracticeFields(problem, customFields) : decodeAcmInput(customInput, problem.signature);
+    if (!Array.isArray(input)) throw new Error("请检查输入参数。");
+    if (!problem.signature.cls && input.length !== problem.signature.params?.length) throw new Error(`这道题需要 ${problem.signature.params?.length || 0} 个参数，请将它们放在同一个数组中。`);
+    if (problem.signature.cls && (input.length !== 2 || !Array.isArray(input[0]) || !Array.isArray(input[1]))) throw new Error("设计类题的输入是 [操作名数组, 参数数组]。");
+    const unchecked = !customExpected.trim();
+    const expected: unknown = unchecked ? undefined : mode === "leetcode" ? JSON.parse(customExpected) : parseAcmOutput(customExpected, problem.signature);
+    return {
+      unchecked,
+      test: {
         input,
         expected,
         stdin: mode === "acm" ? customInput : encodeAcmInput(input, problem.signature),
         stdout: unchecked ? "" : mode === "acm" ? customExpected : encodeAcmOutput(expected, problem.signature),
         label: "自定义用例",
-      };
+      },
+    };
+  };
+  const runCustom = () => {
+    try {
+      const { test, unchecked } = customCase();
       void execute([test], unchecked);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
   };
+
+  /** 调试：用当前的示例（或者自定义输入）跑一遍，记下每一步，在「调试」里一步步看 */
+  const runDebug = async () => {
+    if (!ready || running || abortRef.current) return;
+    let test: PracticeCase;
+    try {
+      test = caseTab.current === "custom" ? customCase().test : samples[Math.min(sample, samples.length - 1)];
+    } catch (e) { setPanelOpen(true); setError(e instanceof Error ? e.message : String(e)); return; }
+    if (codeRef.current.trim() === starter.trim()) {
+      setPanelOpen(true);
+      setTab("debug");
+      setError(mode === "acm" ? "还没写程序：先写好读入、计算和输出，再调试。" : "还没写解法：在模板的方法里补上代码，再调试。");
+      return;
+    }
+    const token = ++sequenceRef.current;
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const snapshot = codeRef.current;
+    setError(null);
+    setStatus("正在调试：记下每一步…");
+    setPanelOpen(true);
+    setRunning(true);
+    setTab("debug");
+    try {
+      const result = await runPractice({ problem, language, mode, code: snapshot, cases: [test], debug: true }, {
+        signal: controller.signal,
+        onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
+      });
+      if (sequenceRef.current !== token) return;
+      const r = result.results[0];
+      setDebugRun({ trace: r?.trace ?? null, stdout: r?.stdout ?? "", error: r?.error, code: snapshot, label: test.label || (caseTab.current === "custom" ? "自定义用例" : `示例 ${sample + 1}`), cancelled: result.cancelled });
+      // 有断点就直接停在第一个断点上，没有就从第一步开始
+      const steps = r?.trace?.steps ?? [];
+      const firstBreak = steps.findIndex((s) => s.event === "line" && breakpoints.includes(s.line));
+      setDebugIndex(firstBreak >= 0 ? firstBreak : 0);
+    } catch (e) {
+      if (sequenceRef.current === token) setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
+    }
+  };
+  const debugging = tab === "debug" && !!debugRun && debugRun.code === code;
+  const debugLine = debugging ? debugRun?.trace?.steps[Math.min(debugIndex, debugRun.trace.steps.length - 1)]?.line ?? null : null;
 
   const selectedSample = samples[Math.min(sample, samples.length - 1)];
 
@@ -296,6 +477,12 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
         event.preventDefault();
         event.stopPropagation();
         if (!event.repeat && !running) { if (tab === "custom") runCustom(); else void execute(samples); }
+      }
+      // Ctrl+S：把草稿存进进度仓（不弹浏览器的「另存网页」）
+      if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!event.repeat) saveDraft(true);
       }
     }}>
       <div className="practice-editor-toolbar flex flex-wrap items-center justify-between gap-2 border-b border-separator px-4 py-3">
@@ -346,20 +533,30 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
           </Modal>
         </div>
       </div>
-      <CodeEditor code={code} hints={hints} language={language} onChange={changeCode} ready={ready} />
+      {remoteDraft !== null && (
+        <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-2 border-b border-separator bg-warning/10 px-4 py-2 text-xs" role="status">
+          <span className="leading-5">进度仓里有另一份草稿，可能是在别的设备上写的。</span>
+          <span className="flex gap-1">
+            <Button onPress={() => { applyCode(remoteDraft); markSynced(remoteDraft); setRemoteDraft(null); }} size="sm" variant="ghost">换成进度仓里的</Button>
+            <Button onPress={() => setRemoteDraft(null)} size="sm" variant="ghost">留着现在的</Button>
+          </span>
+        </div>
+      )}
+      <CodeEditor code={code} debugLine={debugLine} hints={hints} language={language} onBreakpoints={setBreakpoints} onChange={changeCode} ready={ready} />
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="border-t border-separator px-4 py-2 text-[11px] leading-5 text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
       {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
-      <div className="practice-run-controls flex justify-end gap-2 border-y border-separator px-4 py-3">
-        <div className="flex gap-2">
-          {running ? <Button onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止运行</Button> : <><Button isDisabled={!ready} onPress={() => void execute(problem.cases)} size="sm" variant="outline">测试全部 · {problem.cases.length}</Button><Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples); }} size="sm"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button></>}
+      <div className="practice-run-controls flex flex-wrap items-center justify-between gap-2 border-y border-separator px-4 py-3">
+        <SaveStatus draft={draftState} flash={flash} repoReady={repoReady} run={runState} />
+        <div className="ms-auto flex gap-2">
+          {running ? <Button onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止运行</Button> : <><Button aria-label={`调试（用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}，一步步看每一行和变量）`} isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="ghost"><BugIcon />调试</Button><Button isDisabled={!ready} onPress={() => void execute(problem.cases)} size="sm" variant="outline">测试全部 · {problem.cases.length}</Button><Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples); }} size="sm"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button></>}
         </div>
       </div>
       {panelOpen && <div className="practice-console" data-testid="practice-test-panel">
       <div className="flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-2">
-          <Segment aria-label="测试面板" onSelectionChange={(key) => setTab(String(key) as TestTab)} selectedKey={tab} size="sm" variant="ghost">
-            <Segment.Item id="examples">示例</Segment.Item><Segment.Item id="custom">自定义</Segment.Item><Segment.Item id="results">运行结果</Segment.Item>
+          <Segment aria-label="测试面板" onSelectionChange={(key) => { const next = String(key) as TestTab; if (next === "examples" || next === "custom") caseTab.current = next; setTab(next); }} selectedKey={tab} size="sm" variant="ghost">
+            <Segment.Item id="examples">示例</Segment.Item><Segment.Item id="custom">自定义</Segment.Item><Segment.Item id="results">运行结果</Segment.Item><Segment.Item id="debug">调试</Segment.Item>
           </Segment>
           <span className="font-pixel text-[9px] tracking-wider text-muted">TEST</span>
         </div>
@@ -374,6 +571,12 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
           <label className="flex min-w-0 flex-col gap-1.5 text-xs text-muted">{mode === "leetcode" ? "预期结果（JSON，可选）" : "预期标准输出（可选）"}<TextArea aria-label="自定义预期结果" className="w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomExpected(event.target.value)} rows={3} value={customExpected} variant="secondary" /></label>
         </div>}
         {tab === "results" && (running ? <div className="flex items-center gap-3 rounded-xl border border-border px-4 py-6" role="status"><span aria-hidden className="bullet-blink size-2 shrink-0 rounded-[2px] bg-accent" /><p className="text-xs leading-5 text-muted">{status}</p></div> : report ? <PracticeResults problem={problem} cases={report.cases} key={report.result.duration} mode={mode} result={report.result} stale={report.code !== code} unchecked={report.unchecked} /> : <p className="py-5 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
+        {tab === "debug" && (running ? <div className="flex items-center gap-3 rounded-xl border border-border px-4 py-6" role="status"><span aria-hidden className="bullet-blink size-2 shrink-0 rounded-[2px] bg-accent" /><p className="text-xs leading-5 text-muted">{status}</p></div> : debugRun ? <PracticeDebugger breakpoints={breakpoints} index={debugIndex} onIndex={setDebugIndex} run={debugRun} stale={debugRun.code !== code} /> : (
+          <div className="flex flex-col items-center gap-3 py-5 text-center">
+            <p className="max-w-sm text-xs leading-6 text-muted">点下面的「调试」，用{caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}把程序跑一遍，记下每一行执行时的变量，然后在这里一步步往前、往后看。行号左边点一下可以加断点。</p>
+            <Button isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="outline"><BugIcon />开始调试</Button>
+          </div>
+        ))}
       </div>
       </div>}
     </Card>
@@ -382,6 +585,37 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
 
 function ExpandIcon({ collapsed }: { collapsed: boolean }) {
   return <svg aria-hidden fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="14"><path d={collapsed ? "M1.5 5h3.5V1.5M5 5 1.5 1.5M14.5 11H11v3.5M11 11l3.5 3.5" : "M5 1.5H1.5V5M1.5 1.5 5 5M11 14.5h3.5V11M14.5 14.5 11 11"} /></svg>;
+}
+
+/** 运行按钮左边的一行小字：草稿和「测试全部」的记录存到进度仓没有 */
+function SaveStatus({ draft, run, flash, repoReady }: { draft?: SaveJobState; run?: SaveJobState; flash: string | null; repoReady: boolean }) {
+  const parts: { text: string; tone?: "danger"; title?: string }[] = [];
+  if (flash) parts.push({ text: flash });
+  else {
+    if (run?.phase === "queued" || run?.phase === "saving") parts.push({ text: "正在记进尝试记录…" });
+    else if (run?.phase === "saved") parts.push({ text: run.res.solution ? "已记进尝试记录，并存成题解" : run.res.attempt ? "已记进尝试记录" : "记录已在进度仓里" });
+    else if (run?.phase === "error") parts.push({ text: run.retrying ? "记录没存上，稍后重试" : "记录没存上", tone: "danger", title: run.error });
+    if (draft?.phase === "queued" || draft?.phase === "saving") parts.push({ text: "正在存草稿…" });
+    else if (draft?.phase === "saved") parts.push({ text: `草稿已存到进度仓 ${clock(draft.at)}` });
+    else if (draft?.phase === "error") parts.push({ text: draft.retrying ? "草稿没存上，稍后重试" : "草稿没存上", tone: "danger", title: draft.error });
+    if (!parts.length && repoReady) parts.push({ text: "Ctrl+S 存草稿 · 「测试全部」会记进尝试记录" });
+  }
+  if (!parts.length) return null;
+  return (
+    <p aria-live="polite" className="min-w-0 flex-1 truncate text-[11px] leading-5 text-muted" data-testid="practice-save-status">
+      {parts.map((p, i) => <span className={clsx(p.tone === "danger" && "text-danger")} key={i} title={p.title}>{i > 0 && " · "}{p.text}{p.title ? `：${p.title}` : ""}</span>)}
+    </p>
+  );
+}
+
+/** 调试：一只小虫子 */
+function BugIcon() {
+  return <svg aria-hidden fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="14"><rect height="8.5" rx="3.5" width="7" x="4.5" y="5" /><path d="M8 7.5v6M6 3.5 6.8 5M10 3.5 9.2 5M4.5 8H2M14 8h-2.5M4.5 11.5l-2 1.5M11.5 11.5l2 1.5M4.6 6.2 2.8 5M11.4 6.2 13.2 5" /></svg>;
+}
+
+/** 收起侧栏：一个框，右边一栏带向右的箭头 */
+function StowIcon() {
+  return <svg aria-hidden fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="14"><rect height="12" rx="2" width="13" x="1.5" y="2" /><path d="M10 2v12M5 6l2 2-2 2" /></svg>;
 }
 
 function ResetIcon() {

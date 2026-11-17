@@ -100,6 +100,16 @@
   .practice-shell--focus, .practice-shell--closing { animation-duration: 1ms; }
 }
 .practice-editor .cm-editor { border-radius: 0; }
+/* 调试：当前执行到的行、断点栏（editor-debug.ts） */
+.practice-editor .cm-debug-line { background: color-mix(in oklch, var(--warning) 22%, transparent); box-shadow: inset 3px 0 0 var(--warning); }
+.practice-editor .cm-breakpoint-gutter { width: 14px; }
+.practice-editor .cm-breakpoint-gutter .cm-gutterElement { display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.practice-editor .cm-breakpoint-gutter .cm-gutterElement:hover::after { content: ""; width: 8px; height: 8px; border-radius: 999px; background: color-mix(in oklch, var(--danger) 35%, transparent); }
+.practice-editor .cm-breakpoint-gutter .cm-gutterElement:has(.cm-breakpoint-dot):hover::after { display: none; }
+.cm-breakpoint-dot { display: block; width: 8px; height: 8px; border-radius: 999px; background: var(--danger); }
+.practice-debug-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+.practice-debug-changed > * { background: color-mix(in oklch, var(--accent) 7%, transparent); }
+.practice-debug-range { accent-color: var(--accent); }
 .practice-editor .cm-scroller { scrollbar-gutter: stable; font-family: var(--font-mono); }
 .practice-output {
   max-height: 210px;
@@ -123,10 +133,14 @@
   .problem-toc { display: block; }
   .problem-learn-inline { display: none; }
 }
+/*
+ * 桌面（≥1200）练习区在页面右侧，可以收起（html[data-practice="closed"]，记在浏览器里，layout.tsx 在首屏前就设好）：
+ *   展开：题目页撑宽，顶栏也跟着撑宽（内边距 24px，正好和下面正文的左右边缘对齐）；
+ *   收起：题目页和首页一样宽（max-w-6xl），顶栏不动，右下角留一个「写代码」按钮召出练习区。
+ * 两种状态之间宽度、列宽、间距都有过渡，顶栏的过渡写在 globals.css。
+ */
 @media (min-width: 1200px) {
-  /* 题目页撑宽时，顶栏也跟着撑宽：内边距 24px，正好和下面正文（宽 min(1744px, 100vw - 48px)）的左右边缘对齐 */
-  body:has(.problem-page-layout) .site-header-inner { max-width: min(1792px, 100vw); }
-  /* Only this problem page leaves the global max-w-6xl container. The homepage is unchanged. */
+  html:not([data-practice="closed"]) body:has(.problem-page-layout) .site-header-inner { max-width: min(1792px, 100vw); }
   .problem-page-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 480px;
@@ -134,19 +148,31 @@
     gap: 24px;
     width: min(1744px, calc(100vw - 48px));
     margin-left: calc((100% - min(1744px, calc(100vw - 48px))) / 2);
+    transition: width 320ms cubic-bezier(0.2, 0.8, 0.2, 1), margin-left 320ms cubic-bezier(0.2, 0.8, 0.2, 1), grid-template-columns 320ms cubic-bezier(0.2, 0.8, 0.2, 1), column-gap 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
   }
+  html[data-practice="closed"] .problem-page-layout { grid-template-columns: minmax(0, 1fr) 0px; column-gap: 0px; width: 100%; margin-left: 0px; }
   /* 桌面侧栏：跟着页面滚动停在顶栏下面，高度占满剩下的屏幕，里面的编辑器和控制台按比例分 */
-  .practice-sidebar:not(.practice-shell--focus) { position: sticky; top: 80px; display: flex; flex-direction: column; height: calc(100dvh - 96px); margin-top: 32px; }
+  .practice-sidebar:not(.practice-shell--focus) { position: sticky; top: 80px; display: flex; flex-direction: column; height: calc(100dvh - 96px); margin-top: 32px; transition: opacity 200ms ease 120ms, visibility 0s; }
   .practice-sidebar:not(.practice-shell--focus) > .practice-editor-column { flex: 1 1 auto; }
+  html[data-practice="closed"] .practice-sidebar:not(.practice-shell--focus) { overflow: hidden; opacity: 0; visibility: hidden; transition: opacity 120ms ease, visibility 0s 120ms; }
+  /* 收起时正文够宽，「本页」目录和相关基础放回右边 */
+  html[data-practice="closed"] .problem-original-sections { grid-template-columns: minmax(0, 1fr) 200px; }
+  html[data-practice="closed"] .problem-toc { display: block; }
+  html[data-practice="closed"] .problem-learn-inline { display: none; }
+  html[data-practice="closed"] .practice-launcher { position: fixed; z-index: 60; right: 24px; bottom: 24px; display: flex; }
 }
 @media (min-width: 1500px) {
   .problem-page-layout { grid-template-columns: minmax(0, 1fr) 540px; }
 }
 @media (min-width: 1800px) {
-  .problem-page-layout { grid-template-columns: 1104px minmax(0, 1fr); }
+  /* 正文固定 1104px，剩下的都给练习区；写成「1fr + 剩余宽度」而不是「1104px + 1fr」，收起和展开之间才能过渡 */
+  .problem-page-layout { grid-template-columns: minmax(0, 1fr) calc(100% - 1128px); }
   .problem-original-sections { grid-template-columns: minmax(0, 1fr) 200px; }
   .problem-toc { display: block; }
   .problem-learn-inline { display: none; }
+}
+@media (min-width: 1200px) and (prefers-reduced-motion: reduce) {
+  .problem-page-layout, .practice-sidebar:not(.practice-shell--focus) { transition: none !important; }
 }
 /* 上下排列（<1024，手机和竖着的平板）：铺满整个屏幕；题面在上，可以拖动调整高度、收起、只看题目 */
 @media (max-width: 1023px) {

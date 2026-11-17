@@ -43,7 +43,8 @@
   - 通过后把整理好的写法按 `solutions/<语言>/<四位题号>.<题名>[.<写法>].<后缀>` 存一份。
   - 常用语言存在 `settings.json`（可以没有）：`{ "version": 1, "langs": ["java", "python"] }`，第一个是默认语言。网站右上角的语言菜单会读写它；没登录时存在浏览器里。
   - 从力扣同步来的记录（以及补过编号的手写记录）开头的设置里有 `source: leetcode.cn`、`submission: <提交编号>`、`submittedAt`。手写记录时如果对应某次力扣提交，也照着写上编号，同步时就不会再导入一份。
-  - 规则以模板仓的 README 为准，模板仓的 `scripts/check.mjs`、网站 `site/functions/_lib/progress.ts` 和 `site/lib/sync/core.ts` 按同一套规则读写文件，改规则时几处一起改（进度仓里的 README 和 check.mjs 是模板的副本，也要同步）。
+  - 网站练习区（题目页右侧的编辑器）也写进度仓：「测试全部」每次记一条尝试记录（开头 `source: practice`、`mode: leetcode|acm`、`ranAt`，结果按本站用例判，同步不拿它们去和力扣提交对），全部通过再存成题解（ACM 模式写法名 `ACM`），状态只升不降；Ctrl+S 和停下 60 秒的自动保存写草稿 `drafts/<语言>/<四位题号>.<题名>[.ACM].<后缀>`。路径和内容由 `site/lib/practice/record.ts` 按规则生成，接口是 `/api/progress/practice`，页面上经 `site/lib/practice/save-queue.ts` 排队发（一次一个、草稿合并、失败重试、页面关掉时 keepalive 发完）。测试 `node site/lib/practice/test/record.test.ts`。
+  - 规则以模板仓的 README 为准，模板仓的 `scripts/check.mjs`、网站 `site/functions/_lib/progress.ts`、`site/lib/sync/core.ts` 和 `site/lib/practice/record.ts` 按同一套规则读写文件，改规则时几处一起改（进度仓里的 README 和 check.mjs 是模板的副本，也要同步）。
 - 「从力扣同步」的约定：
   - **进度仓是唯一的数据源**。网站不另存任何数据，每次同步都重新读仓库，按 `submission` 编号判断导入过没有；用户取消勾选的提交记进 `attempts/skip.txt`；状态只升不降。
   - 流程：用户在 leetcode.cn 上点「同步力扣」书签（`site/lib/sync/bookmarklet.ts`），书签打开本站 `/sync/`，同步页用 postMessage 让力扣页面代发只读查询（`bridge.ts`），在浏览器里算出要写的内容；用户确认后，`/api/sync/commit` 用用户自己的 GitHub 登录写成一个 commit。网站服务器只转手，不保存。

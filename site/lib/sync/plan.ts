@@ -137,8 +137,8 @@ export async function buildPlan({ repo, lc, cache = new Map<string, Cached>(), o
       partial = { done: i, total: todo.length, next: t.problem, left: todo.slice(i).reduce((n, x) => n + x.fresh.filter(wanted).length, 0) };
       break;
     }
-    // 手写的记录先和力扣提交对上，对上的只补编号
-    const pairs = matchExisting(t.existing.filter((f) => !f.submission), subs);
+    // 手写的记录先和力扣提交对上，对上的只补编号。网站练习区记的（source: practice）是本站用例的结果，不算力扣提交，不参与
+    const pairs = matchExisting(t.existing.filter((f) => !f.submission && f.source !== "practice"), subs);
     const linked = [...pairs].map(([path, sub]) => ({ path, content: addSubmissionMeta(t.existing.find((f) => f.path === path)!.text, sub), id: String(sub.id) }));
     for (const l of linked) t.known.add(l.id);
     const plan = planProblem({ problem: t.problem, existing: t.existing.map((f) => f.path), known: t.known, subs });

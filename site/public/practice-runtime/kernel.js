@@ -43,8 +43,93 @@
     }
     return { input, output };
   }
-  function executeJavaScript(code, mode, signature, test) {
+  /*
+   * 调试记录（配合 instrument.js 改写过的源码）：__step 记下执行到哪一行、当时的变量，__ret 记返回值，
+   * __enter / __exit 维护调用栈，__exc 记异常。最多记 LIMIT 步，记满了就抛 StepLimit 让程序停下。格式和 Python 的一样。
+   */
+  const TRACE_LIMIT = 1000, TRACE_BYTES = 600000;
+  class StepLimit extends Error {}
+  function show(v, depth = 0) {
+    try {
+      if (v === undefined) return "undefined";
+      if (v === null) return "null";
+      const t = typeof v;
+      if (t === "string") return JSON.stringify(v.length > 60 ? v.slice(0, 59) + "…" : v);
+      if (t === "number" || t === "boolean") return String(v);
+      if (t === "bigint") return v + "n";
+      if (t === "function") return v.name ? `ƒ ${v.name}` : "ƒ";
+      if (t === "symbol") return String(v);
+      if (v instanceof ListNode) { const out = [], seen = new Set(); let n = v; while (n && out.length < 12) { if (seen.has(n)) { out.push("…（有环）"); break; } seen.add(n); out.push(show(n.val, 3)); n = n.next; } if (n && out.length >= 12 && !seen.has(n)) out.push("…"); return `ListNode(${out.join(" → ")})`; }
+      if (v instanceof TreeNode) return `TreeNode(${show(v.val, 3)})`;
+      if (v instanceof RandomNode) return `Node(${show(v.val, 3)})`;
+      if (depth >= 3) return Array.isArray(v) ? "[…]" : "{…}";
+      const list = (items, size, open, close) => `${open}${items.join(", ")}${size > items.length ? ", …" : ""}${close}`;
+      if (Array.isArray(v)) return list(v.slice(0, 12).map((x) => show(x, depth + 1)), v.length, "[", "]");
+      if (ArrayBuffer.isView(v)) return `${v.constructor.name}(${v.length}) ` + list([...v.slice(0, 12)].map(String), v.length, "[", "]");
+      if (v instanceof Map) return `Map(${v.size}) ` + list([...v].slice(0, 10).map(([k, x]) => `${show(k, depth + 1)} => ${show(x, depth + 1)}`), v.size, "{", "}");
+      if (v instanceof Set) return `Set(${v.size}) ` + list([...v].slice(0, 10).map((x) => show(x, depth + 1)), v.size, "{", "}");
+      const keys = Object.keys(v), name = v.constructor && v.constructor !== Object ? v.constructor.name + " " : "";
+      return name + list(keys.slice(0, 10).map((k) => `${k}: ${show(v[k], depth + 1)}`), keys.length, "{", "}");
+    } catch { return "<无法显示>"; }
+  }
+  function makeTracer(outLength) {
+    const steps = [], stack = [];
+    let full = false, bytes = 0, lastId = 0;
+    const record = (step) => {
+      steps.push(step);
+      bytes += JSON.stringify(step).length;
+      if (steps.length >= TRACE_LIMIT || bytes > TRACE_BYTES) full = true;
+    };
+    const vars = (getters) => {
+      const out = [];
+      for (const [name, get] of Object.entries(getters || {})) {
+        let value;
+        try { value = get(); } catch { continue; } // 还没声明到（暂时性死区）或者不在作用域里
+        if (typeof value === "function") continue;
+        if (name === "this") {
+          // 设计类题：把 this 上的字段一个个列出来
+          if (value && typeof value === "object") for (const k of Object.keys(value).slice(0, 12)) { let x; try { x = value[k]; } catch { continue; } if (typeof x !== "function") out.push([`this.${k}`, show(x)]); }
+          continue;
+        }
+        out.push([name, show(value)]);
+        if (out.length >= 40) break;
+      }
+      return out;
+    };
+    const where = (line) => { if (stack.length) stack[stack.length - 1][1] = line; return stack.length ? stack[stack.length - 1][0] : "<module>"; };
+    const frames = () => stack.map(([n, l]) => [n, l]);
+    const hooks = {
+      __snap: (getters) => getters,
+      __step(line, snap, id) {
+        if (full) throw new StepLimit("step limit");
+        const fn = where(line), step = { line, event: "line", fn, stack: frames(), vars: vars(snap()), out: outLength() };
+        // 同一行上紧挨着的两条不同语句（比如 if (…) return …），变量也没变：只算一步。同一条语句反复执行（循环）照常每次都记
+        const last = steps[steps.length - 1];
+        if (last && last.event === "line" && lastId !== id && JSON.stringify(last) === JSON.stringify(step)) { lastId = id; return; }
+        lastId = id;
+        record(step);
+      },
+      __ret(line, snap, value) {
+        if (!full) { const fn = where(line); record({ line, event: "return", fn, stack: frames(), vars: vars(snap()), out: outLength(), ret: show(value) }); }
+        return value;
+      },
+      __enter(name) { stack.push([name, 0]); },
+      __exit() { stack.pop(); },
+      __exc(error) {
+        if (full || error instanceof StepLimit || !stack.length) return;
+        const [fn, line] = stack[stack.length - 1];
+        if (steps.length && steps[steps.length - 1].event === "exception" && steps[steps.length - 1].exc === String(error?.message || error)) return; // 往外层传的同一个异常只记一次
+        record({ line, event: "exception", fn, stack: frames(), vars: [], out: outLength(), exc: `${error?.name || "Error"}: ${error?.message || error}` });
+      },
+    };
+    return { hooks, trace: () => ({ steps, truncated: full, limit: TRACE_LIMIT }) };
+  }
+
+  function executeJavaScript(code, mode, signature, test, debug = false) {
     let stdout = "";
+    const tracer = debug ? makeTracer(() => stdout.length) : null;
+    const hookNames = tracer ? Object.keys(tracer.hooks) : [], hookValues = tracer ? Object.values(tracer.hooks) : [];
+    const withTrace = (result) => (tracer ? { ...result, trace: tracer.trace() } : result);
     class ProgramExit extends Error { constructor(code) { super(`程序退出，状态码 ${code}`); this.code = code; } }
     function write(value) { const s = String(value); if (stdout.length + s.length > 16384) throw Error("标准输出超过 16 KB，请减少调试输出"); stdout += s; }
     const log = (...args) => write(args.map((v) => typeof v === "string" ? v : JSON.stringify(v)).join(" ") + "\n");
@@ -60,7 +145,8 @@
     function compile(extraNames, extraValues, body) {
       // Put supplied node classes in an outer lexical scope. User declarations
       // can shadow them, and commented LeetCode node definitions stay harmless.
-      return new Function(...extraNames, "__nodeTypes", '"use strict"; return (function(ListNode, TreeNode, _Node, Node) { return (function() { "use strict";\n' + body + '\n}).call(undefined); })(...__nodeTypes);')(...extraValues, [ListNode, TreeNode, RandomNode, RandomNode]);
+      // 调试时再加上记录用的几个函数（__step 这些，见 makeTracer）
+      return new Function(...extraNames, ...hookNames, "__nodeTypes", '"use strict"; return (function(ListNode, TreeNode, _Node, Node) { return (function() { "use strict";\n' + body + '\n}).call(undefined); })(...__nodeTypes);')(...extraValues, ...hookValues, [ListNode, TreeNode, RandomNode, RandomNode]);
     }
     if (mode === "acm") {
       // Allow the common Node ESM stdin import while keeping all other imports unavailable.
@@ -68,7 +154,7 @@
       source = source.replace(/^\s*import\s+(\w+)\s+from\s*["'](?:node:)?fs["'];?\s*$/gm, 'const $1 = require("fs");');
       const exports = {}, module = { exports };
       compile(["console", "require", "process", "readline", "print", "exports", "module"], [console, require, process, () => lineIndex < lines.length ? lines[lineIndex++] : null, log, exports, module], source);
-      return { actual: null, stdout };
+      return withTrace({ actual: null, stdout });
     }
     const target = signature.cls || signature.fn;
     if (!/^[A-Za-z_$][\w$]*$/.test(target || "")) throw Error("题目函数签名无效");
@@ -85,10 +171,11 @@
       const args = test.input.map((v, i) => judge.input(signature.params[i], v)), result = fn(...args);
       actual = signature.ret === "void" ? judge.output(signature.params[signature.out || 0], args[signature.out || 0]) : judge.output(signature.ret, result);
     }
-    return { actual, stdout };
+    return withTrace({ actual, stdout });
     } catch (error) {
-      if (mode === "acm" && error instanceof ProgramExit && error.code === 0) return { actual: null, stdout };
-      return { actual: null, stdout, error: String(error?.message || error) };
+      if (mode === "acm" && error instanceof ProgramExit && error.code === 0) return withTrace({ actual: null, stdout });
+      if (error instanceof StepLimit) return withTrace({ actual: null, stdout, error: `调试最多记录 ${TRACE_LIMIT} 步，程序停在了这里（没有运行完）。可以换一组小一点的输入再调试` });
+      return withTrace({ actual: null, stdout, error: String(error?.message || error) });
     }
   }
   globalThis.PracticeKernel = { executeJavaScript };

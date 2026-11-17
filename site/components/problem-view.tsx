@@ -17,6 +17,7 @@ import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel } fro
 import { SolutionCode } from "@/components/solution-code";
 import { TierChip, TopicChip } from "@/components/tags";
 import { codeIn } from "@/lib/langs";
+import { PRACTICE_SAVED_EVENT } from "@/lib/practice/save-queue";
 import { usePrefs } from "@/lib/prefs";
 import { useProgress } from "@/lib/progress";
 import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec } from "@/lib/types";
@@ -173,6 +174,14 @@ function useMine(id: number) {
   const [state, setState] = useState<MineState>({ key: "", history: null, attempts: null, error: null });
   const key = canRead ? `${user}/${id}` : "";
 
+  // 练习区把这道题的尝试记录、题解写进进度仓后，重新读一次
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    const onSaved = (e: Event) => { if ((e as CustomEvent<{ id: number }>).detail?.id === id) setVersion((v) => v + 1); };
+    window.addEventListener(PRACTICE_SAVED_EVENT, onSaved);
+    return () => window.removeEventListener(PRACTICE_SAVED_EVENT, onSaved);
+  }, [id]);
+
   useEffect(() => {
     if (!canRead) return;
     let alive = true;
@@ -187,7 +196,7 @@ function useMine(id: number) {
     return () => {
       alive = false;
     };
-  }, [canRead, id, key]);
+  }, [canRead, id, key, version]);
 
   return { loading, session, loginHref, id, state, ready: state.key === key && !!key };
 }
@@ -373,6 +382,7 @@ function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | n
                       {a.date}
                       {a.submittedAt?.slice(11, 16) ? ` ${a.submittedAt.slice(11, 16)}` : ""} · 第 {a.seq} 次 · {LANG_NAME[a.lang] ?? a.lang}
                     </span>
+                    {a.source === "practice" && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted" title="在本站题目页的练习区「测试全部」记的，结果按本站的用例判">网站练习</span>}
                     {!a.verbatim && <span className="rounded-full border border-border px-2 py-0.5 text-xs text-muted">不是原样提交</span>}
                   </span>
                   <Accordion.Indicator>
@@ -406,9 +416,10 @@ function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | n
   );
 }
 
-/** 和真实页面同样布局的骨架，数据到了原地淡入 */
+/** 和真实页面同样布局的骨架，数据到了原地淡入。外面也套 problem-page-layout：换题时页面和顶栏的宽度不会先缩回去再撑开 */
 function Loading() {
   return (
+    <div className="problem-page-layout">
     <div className="flex flex-col gap-8 pt-8" aria-busy>
       <div className="flex flex-col gap-4">
         <Skel className="h-4 w-36" />
@@ -431,6 +442,7 @@ function Loading() {
           <PixelLoader label="LOADING" />
         </div>
       </div>
+    </div>
     </div>
   );
 }
