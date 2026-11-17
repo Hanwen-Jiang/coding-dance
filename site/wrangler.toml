@@ -18,7 +18,7 @@ STAR_REPOS = "Hanwen-Jiang/agent-runtime,Hanwen-Jiang/coding-agent,Hanwen-Jiang/
 # 创始会员：在这之前授权网站或建好进度仓的用户，永久享有最高档（北京时间 2026-11-18 0 点）
 FOUNDER_CUTOFF = "2026-11-18T00:00:00+08:00"
 # GitHub App 的 slug（https://github.com/apps/<slug>），建好 App 后填上
-GITHUB_APP_SLUG = "hot-100"
+GITHUB_APP_SLUG = "coding-dance"
 # 网站的几个域名（都是这个 Pages 项目的自定义域名）。第一个是「登录域名」：GitHub App 的回调地址只登记了它，
 # 登录、授权都在它上面走，再把会话同步到其余域名；退出时一起退出。换登录域名要先在 GitHub App 设置里加它的回调地址。
 # 原理和安全考虑见 functions/_lib/sso.ts，测试 functions/_lib/test/sso.test.ts
