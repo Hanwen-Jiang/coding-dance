@@ -45,9 +45,9 @@ export function AccountButton() {
   };
   return (
     <Dropdown>
-      <Dropdown.Trigger aria-label={`账号 ${u.login}${founder ? "（创始会员）" : ""}`} className="flex items-center gap-2 rounded-lg px-2 py-1 text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent">
-        <span className="relative" title={founder ? "创始会员 · 永久专业版" : undefined}>
-          {/* 创始会员：头像一圈金边，头顶一顶像素皇冠 */}
+      <Dropdown.Trigger aria-label={`账号 ${u.login}${founder ? "（首批用户）" : ""}`} className="flex items-center gap-2 rounded-lg px-2 py-1 text-muted outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent">
+        <span className="relative" title={founder ? "首批用户 · 永久专业版" : undefined}>
+          {/* 首批用户（代码里叫 founder）：头像一圈金边，头顶一顶像素皇冠 */}
           <span className={clsx("block rounded-[6px]", founder && "ring-2 ring-warning ring-offset-1 ring-offset-background")}><PixelAvatar src={u.avatar} /></span>
           {founder && <span aria-hidden className="founder-crown absolute -top-3 left-1/2 -translate-x-1/2 text-warning drop-shadow-[0_1px_0_var(--background)]"><PixelIcon cell={1.75} name="crown" /></span>}
           {/* 进度仓能不能用：右下角一个小点 */}
@@ -62,11 +62,11 @@ export function AccountButton() {
             <span className={clsx("truncate text-sm font-semibold", founder && "text-warning")}>{u.login}</span>
             {founder && (
               <span className="inline-flex items-center gap-1 self-start rounded-full bg-warning/15 px-2 py-0.5 text-[11px] font-semibold text-warning">
-                <PixelIcon cell={1} name="crown" />创始会员 · 永久专业版
+                <PixelIcon cell={1} name="crown" />首批用户 · 永久专业版
               </span>
             )}
             <span className={clsx("text-xs", ready ? "text-success" : "text-warning")}>{ready ? "进度仓已连接" : "进度仓还没开通"}</span>
-            {founder && session.member?.since && <span className="text-[11px] text-muted">{session.member.since} 起，感谢最早一批用户</span>}
+            {founder && session.member?.since && <span className="text-[11px] text-muted">{session.member.since} 加入</span>}
           </div>
         </div>
         <Dropdown.Menu aria-label="账号" onAction={act}>
