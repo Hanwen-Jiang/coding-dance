@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const PROJECT_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const REPOSITORY = "Hanwen-Jiang/leetcode";
-const RESOURCE_PREFIXES = ["studyplan/", "problems/", "illustrations/", "tools/illustrations/data/"];
+const RESOURCE_PREFIXES = ["studyplan/", "problems/", "illustrations/", "tools/illustrations/data/", "tools/practice/data/"];
 const RESOURCE_EXTENSIONS = new Set([".md", ".html", ".json", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp", ".avif", ".bmp", ".ico"]);
 const MIME = { ".json": "application/json; charset=utf-8", ".md": "text/markdown; charset=utf-8", ".html": "text/html; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".svg": "image/svg+xml", ".webp": "image/webp", ".avif": "image/avif" };
 

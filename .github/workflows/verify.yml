@@ -42,7 +42,7 @@ jobs:
       - name: 练习数据要和提交的一致
         run: |
           node tools/practice/build.cjs
-          git diff --exit-code -- site/public/practice
+          git diff --exit-code -- tools/practice/data
       - name: 练习数据和输入输出的测试
         run: node tools/practice/test.cjs
       # 网站的其他依赖（HeroUI Pro）要授权，CI 里装不了，所以网站本身不在 CI 里构建；这里只单独装运行器测试用到的两个包

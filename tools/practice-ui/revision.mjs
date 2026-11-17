@@ -12,7 +12,7 @@ const { chromium } = require("@playwright/test");
 const { legacyAcmTemplate, starterHash } = require(path.join(root, "tools/practice/templates.cjs"));
 const base = process.env.PRACTICE_BASE_URL || "http://127.0.0.1:8788";
 const screenshots = path.join(os.tmpdir(), "leetcode-practice-revision");
-const readData = async (id) => JSON.parse(await fs.readFile(path.join(root, "site/public/practice", `${String(id).padStart(4, "0")}.json`), "utf8"));
+const readData = async (id) => JSON.parse(await fs.readFile(path.join(root, "tools/practice/data", `${String(id).padStart(4, "0")}.json`), "utf8"));
 const p15 = await readData(15);
 const oldPython = legacyAcmTemplate(p15.signature, p15.parameterNames, "python");
 const modifiedJs = `// genuine-user-edit-do-not-delete\n${legacyAcmTemplate(p15.signature, p15.parameterNames, "javascript")}`;

@@ -389,7 +389,7 @@ async function latencyOnly() {
   assert.equal(closed.sourceVisibility, "visible"); assert.equal(closed.copyVisible, false);
   const canvas = await page.locator(".cm-editor").evaluate((element) => getComputedStyle(element).backgroundColor);
   assert.equal(canvas, "rgb(255, 255, 255)");
-  for (const url of ["/p/15/", "/practice/0015.json"]) assert.equal((await page.request.get(`${base}${url}`)).status(), 200);
+  for (const url of ["/p/15/", "/api/practice/15"]) assert.equal((await page.request.get(`${base}${url}`)).status(), 200);
   assert.deepEqual(errors, []);
   results.push({ opening, exit: data.timing, inputToFirstChangeMilliseconds: inputToChange, inputToAnimationEndMilliseconds: data.animationEndTime - data.inputTime, animationEndToClosedCommitMilliseconds: data.closedCommitTime - data.animationEndTime, inputToClosedMilliseconds: inputToClosed, firstChangeAfterClosingRafMilliseconds: changed.rafTime - firstClosing.rafTime, measuredRafIntervalMilliseconds: rafInterval, firstChangedOpacity: changed.opacity, doubleStatementFrames: 0, canvas, healthyPageAndProblemData: true });
   await fs.writeFile(path.join(artifacts, "latency-frames.json"), JSON.stringify(data, null, 2));

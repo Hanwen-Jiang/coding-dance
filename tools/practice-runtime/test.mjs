@@ -118,7 +118,7 @@ function __asOutput(t,v) {
   }
   return helpers + `function ${signature.fn}(...args) { const sig=${JSON.stringify(signature)}; if(JSON.stringify(args.map((v,i)=>__asInput(sig.params[i],v)))!==${JSON.stringify(JSON.stringify(test.input))}) throw Error("输入适配错误"); const expected=${JSON.stringify(test.expected)}; ${signature.ret === "void" ? `args[${signature.out || 0}].splice(0,args[${signature.out || 0}].length,...expected);` : `return __asOutput(${JSON.stringify(signature.ret)},expected);`} }`;
 }
-const practicePath = path.join(root, "site/public/practice");
+const practicePath = path.join(root, "tools/practice/data");
 const generated = fs.existsSync(practicePath) ? fs.readdirSync(practicePath).filter((f) => /^\d+\.json$/.test(f)).sort() : [];
 const files = generated.length === 100 ? generated : [];
 const dataFiles = files.length ? files : fs.readdirSync(path.join(root, "tools/illustrations/cases")).filter((f) => f.endsWith(".json")).sort();

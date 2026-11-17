@@ -40,7 +40,7 @@ def compact(text):
 
 
 problem_count = example_count = 0
-for file in sorted((ROOT / "site/public/practice").glob("[0-9][0-9][0-9][0-9].json")):
+for file in sorted((ROOT / "tools/practice/data").glob("[0-9][0-9][0-9][0-9].json")):
     problem = json.loads(file.read_text(encoding="utf-8"))
     examples = problem.get("examples")
     assert examples, f'{problem["id"]}: no official examples'

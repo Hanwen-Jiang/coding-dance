@@ -31,7 +31,7 @@
 | 每道题的状态 | 登录用户自己的进度仓里的 `progress.json` |
 | 重要程度（Hot 20 / P0 / P1 / P2 / P3） | `studyplan/优先级清单.md` |
 | 原题 | `problems/<编号>.<题名>.md` 的「题目描述」一节，图片在 `problems/images/` |
-| 练习模板、ACM 题面、练习测试用例 | `public/practice/<四位编号>.json`，由 `tools/practice/` 生成，随网站构建发布 |
+| 练习模板、ACM 题面、练习测试用例（`/api/practice/<题号>`） | 资源仓的 `tools/practice/data/<四位编号>.json`，由 `node tools/practice/build.cjs` 从 spec 和判题用例生成；和其他题目资源一样运行时读，push 后一分钟内生效 |
 | 分层提示、简洁写法、标准题解（六种语言）、注意点、动画演示（有几种解法就有几个演示，可以切换；每一步高亮对应的代码行） | `tools/illustrations/data/<编号>.json`（由 `tools/illustrations/build.js` 从 spec 和 `code/` 导出） |
 | 基础专题的目录和内容（`/api/topics`、`/api/topic/<slug>`；题目页的「相关基础」按专题的 `related` 反查） | `tools/illustrations/data/topics/index.json`、`data/topics/<slug>.json`（由 `build.js` 从 `tools/illustrations/topics/` 和 `code/topics/` 导出）。`/learn/<slug>/` 的页面外壳是静态导出的，slug 列表在 `lib/topic-slugs.ts`：加专题要改它并重新部署，只改内容不用 |
 | 用户的常用语言（题解和演示里的代码按它显示） | 登录用户自己的进度仓里的 `settings.json`；没登录时存在浏览器里 |

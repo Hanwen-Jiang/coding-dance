@@ -84,7 +84,7 @@ async function openModal(label) {
 
 try {
   await fs.mkdir(screenshots, { recursive: true });
-  const problemResponse = await page.request.get(`${base}/practice/0015.json`);
+  const problemResponse = await page.request.get(`${base}/api/practice/15`);
   assert.equal(problemResponse.status(), 200);
   const problem = await problemResponse.json();
   assert.equal(problem.starters.acm.python, "");

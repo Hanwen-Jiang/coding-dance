@@ -8,7 +8,7 @@ const { parseCode } = require("../illustrations/judge/code");
 const { GEN, makeR } = require("../illustrations/random");
 const descriptions = require("./descriptions.cjs"), boundaries = require("./boundaries.cjs");
 const { leetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash } = require("./templates.cjs");
-const root = path.resolve(__dirname, "../.."), output = path.join(root, "site/public/practice");
+const root = path.resolve(__dirname, "../.."), output = path.join(root, "tools/practice/data");
 const pad = (id) => String(id).padStart(4, "0");
 const clone = (v) => JSON.parse(JSON.stringify(v));
 const aliases = {

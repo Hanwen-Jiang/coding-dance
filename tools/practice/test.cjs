@@ -4,7 +4,7 @@ const fs = require("node:fs"), path = require("node:path"), vm = require("node:v
 const { pathToFileURL } = require("node:url");
 const { legacyAcmTemplate, previousAcmTemplate, starterHash } = require("./templates.cjs");
 const root = path.resolve(__dirname, "../..");
-const dir = path.join(root, "site/public/practice");
+const dir = path.join(root, "tools/practice/data");
 
 async function main() {
   const { encodeAcmInput, decodeAcmInput, encodeAcmOutput, parseAcmOutput } = await import(pathToFileURL(path.join(root, "site/lib/practice/acm.ts")).href);
