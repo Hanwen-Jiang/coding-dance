@@ -132,7 +132,60 @@ export interface ProblemDetail {
   illustrationUrl: string | null;
   prev: ProblemLink | null;
   next: ProblemLink | null;
+  /** 相关的基础专题（专题的 related 里有这道题）；旧接口没有这个字段 */
+  learn?: TopicLink[];
 }
+
+/** 基础专题：数据结构（ds）或算法（algo） */
+export type TopicKind = "ds" | "algo";
+
+export interface TopicLink {
+  slug: string;
+  name: string;
+  kind: TopicKind;
+}
+
+/** tools/illustrations/data/topics/index.json 里的一项 */
+export interface TopicSummary extends TopicLink {
+  order: number;
+  lede: string;
+  /** 相关的热题题号 */
+  related: number[];
+  sections: { key: string; t: string; demo: boolean }[];
+}
+
+/** 专题的一小节：讲解 + 代码（六种语言）+ 演示 */
+export interface TopicSection {
+  key: string;
+  t: string;
+  /** 段落 HTML */
+  body: string[];
+  points: { t: string; body: string }[];
+  codes: SpecCode[];
+  demo: Demo | null;
+}
+
+/** tools/illustrations/data/topics/<slug>.json */
+export interface Topic extends TopicLink {
+  order: number;
+  lede: string;
+  related: number[];
+  sections: TopicSection[];
+}
+
+/** /api/topic/<slug> */
+export interface TopicDetail {
+  topic: Topic;
+  /** 相关热题，顺序和 topic.related 一致 */
+  problems: ProblemSummary[];
+  prev: TopicLink | null;
+  next: TopicLink | null;
+}
+
+export const TOPIC_KIND: Record<TopicKind, { label: string; en: string; desc: string }> = {
+  ds: { label: "数据结构", en: "DATA STRUCTURES", desc: "怎么定义、怎么构造、常用的写法" },
+  algo: { label: "算法", en: "ALGORITHMS", desc: "常见算法的模板和它适合的题" },
+};
 
 /** /api/session */
 export interface SessionInfo {

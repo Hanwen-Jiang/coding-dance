@@ -183,6 +183,45 @@ function vTree(v: View) {
   return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 0 ${W} ${H}" style="width:${W * 1.15}px;max-width:100%"><g>${s}</g></svg></div></div>`;
 }
 
+/**
+ * 网络图（基础专题里的图、拓扑排序、并查集用）：nodes 是节点（{ v, cls }），edges 是 [起点下标, 终点下标, 边的样式?]
+ * （样式：on 高亮 / warm 虚线 / dim 变淡）。directed 为真时画箭头；pos 是每个节点的 [列, 行]（可以是小数），
+ * 不给时节点排成一圈。badges 是节点下方的小标签。要自由摆放、带弯曲箭头的图用上面的 graph。
+ */
+function vNet(v: View) {
+  const nodes = (v.nodes as unknown[]).map(norm), n = nodes.length, RAD = 17, id = "dmnet" + uid++;
+  let pos: [number, number][];
+  let W: number, H: number;
+  if (v.pos) {
+    const GAP = 74, PAD = 30;
+    pos = (v.pos as [number, number][]).map(([c, r]) => [PAD + c * GAP, PAD + r * GAP]);
+    W = Math.max(...pos.map((p) => p[0])) + PAD;
+    H = Math.max(...pos.map((p) => p[1])) + PAD + (v.badges ? 22 : 0);
+  } else {
+    const R = Math.max(60, n * 13), C = R + 34;
+    pos = nodes.map((_, i) => [C + R * Math.sin((2 * Math.PI * i) / n), C - R * Math.cos((2 * Math.PI * i) / n)]);
+    W = H = 2 * C + (v.badges ? 22 : 0);
+  }
+  let s = v.directed ? `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>` : "";
+  for (const [a, b, cls] of (v.edges || []) as [number, number, string?][]) {
+    if (!pos[a] || !pos[b]) continue;
+    const [x1, y1] = pos[a], [x2, y2] = pos[b], d = Math.hypot(x2 - x1, y2 - y1) || 1;
+    const ux = (x2 - x1) / d, uy = (y2 - y1) / d, end = v.directed ? RAD + 3 : RAD;
+    s += `<line class="edge ${cls || ""}"${v.directed ? ` marker-end="url(#${id})"` : ""} x1="${x1 + ux * RAD}" y1="${y1 + uy * RAD}" x2="${x2 - ux * end}" y2="${y2 - uy * end}"></line>`;
+  }
+  nodes.forEach((nd, i) => {
+    if (nd.hide) return;
+    const [px, py] = pos[i], c = first(nd.cls);
+    s += `<circle class="n ${roles(nd.cls)}" cx="${px}" cy="${py}" r="${RAD}"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(nd.v)}</text>`;
+    const b = v.badges && v.badges[i];
+    if (b !== undefined && b !== null && b !== "") {
+      const t = String(b), w = Math.max(26, t.length * 7 + 10);
+      s += `<rect class="bd" x="${px - w / 2}" y="${py + 21}" width="${w}" height="16" rx="8"></rect><text class="bt" x="${px}" y="${py + 29}">${E(t)}</text>`;
+    }
+  });
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:100%"><g>${s}</g></svg></div></div>`;
+}
+
 const R: Record<string, (v: View) => string> = {
   array: vArray,
   bars: vBars,
@@ -192,6 +231,7 @@ const R: Record<string, (v: View) => string> = {
   tree: vTree,
   row: vRow,
   graph: vGraph,
+  net: vNet,
   note: (v) => `<div class="dm-v">${lab(v)}<div class="dm-note">${v.html}</div></div>`,
 };
 
