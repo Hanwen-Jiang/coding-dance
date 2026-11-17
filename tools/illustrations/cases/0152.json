@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"maxProduct","params":["int[]"],"ret":"int"},
+ "fixed": 7,
  "cases": [
   {"in":[[2,3,-2,4]],"out":6},
   {"in":[[-2,3,-4]],"out":24},

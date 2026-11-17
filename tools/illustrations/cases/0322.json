@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"coinChange","params":["int[]","int"],"ret":"int"},
+ "fixed": 7,
  "cases": [
   {"in":[[1,2,5],11],"out":3},
   {"in":[[2],3],"out":-1},

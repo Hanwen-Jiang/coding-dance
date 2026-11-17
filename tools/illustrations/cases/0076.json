@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"minWindow","params":["string","string"],"ret":"string"},
+ "fixed": 8,
  "cases": [
   {"in":["ADOBECODEBANC","ABC"],"out":"BANC"},
   {"in":["abaacbab","aab"],"out":"aba"},

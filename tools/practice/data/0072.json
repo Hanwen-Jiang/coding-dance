@@ -37,6 +37,7 @@
         "ros"
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": 3,
       "stdin": "horse\nros\n",
       "stdout": "3\n",
@@ -53,6 +54,7 @@
         "execution"
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": 5,
       "stdin": "intention\nexecution\n",
       "stdout": "5\n",
@@ -69,6 +71,7 @@
         "yabd"
       ],
       "label": "仓库判题用例 2",
+      "quick": true,
       "expected": 2,
       "stdin": "abc\nyabd\n",
       "stdout": "2\n"
@@ -79,6 +82,7 @@
         ""
       ],
       "label": "仓库判题用例 3",
+      "quick": true,
       "expected": 0,
       "stdin": "\n\n",
       "stdout": "0\n"
@@ -89,6 +93,7 @@
         "abc"
       ],
       "label": "仓库判题用例 4",
+      "quick": true,
       "expected": 3,
       "stdin": "\nabc\n",
       "stdout": "3\n"
@@ -99,6 +104,7 @@
         ""
       ],
       "label": "仓库判题用例 5",
+      "quick": true,
       "expected": 3,
       "stdin": "abc\n\n",
       "stdout": "3\n"
@@ -209,6 +215,7 @@
         "a"
       ],
       "label": "边界用例 1",
+      "quick": true,
       "expected": 1,
       "stdin": "\na\n",
       "stdout": "1\n"

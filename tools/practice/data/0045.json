@@ -40,6 +40,7 @@
         ]
       ],
       "label": "示例 1",
+      "quick": true,
       "expected": 2,
       "stdin": "5\n2 3 1 1 4\n",
       "stdout": "2\n",
@@ -61,6 +62,7 @@
         ]
       ],
       "label": "示例 2",
+      "quick": true,
       "expected": 2,
       "stdin": "5\n2 3 0 1 4\n",
       "stdout": "2\n",
@@ -82,6 +84,7 @@
         ]
       ],
       "label": "仓库判题用例 2",
+      "quick": true,
       "expected": 3,
       "stdin": "5\n1 2 1 1 1\n",
       "stdout": "3\n"
@@ -93,6 +96,7 @@
         ]
       ],
       "label": "仓库判题用例 3 · 边界",
+      "quick": true,
       "expected": 0,
       "stdin": "1\n0\n",
       "stdout": "0\n"
@@ -107,6 +111,7 @@
         ]
       ],
       "label": "仓库判题用例 5",
+      "quick": true,
       "expected": 3,
       "stdin": "4\n1 1 1 1\n",
       "stdout": "3\n"
@@ -120,6 +125,7 @@
         ]
       ],
       "label": "仓库判题用例 6",
+      "quick": true,
       "expected": 1,
       "stdin": "3\n5 1 1\n",
       "stdout": "1\n"
@@ -132,6 +138,7 @@
         ]
       ],
       "label": "仓库判题用例 7",
+      "quick": true,
       "expected": 1,
       "stdin": "2\n1 2\n",
       "stdout": "1\n"

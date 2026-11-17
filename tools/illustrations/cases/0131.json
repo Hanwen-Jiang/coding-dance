@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"partition","params":["string"],"ret":"List<List<string>>","cmp":"unordered"},
+ "fixed": 7,
  "cases": [
   {"in":["aab"],"out":[["a","a","b"],["aa","b"]]},
   {"in":["abba"],"out":[["a","b","b","a"],["a","bb","a"],["abba"]]},

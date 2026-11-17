@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"maxDepth","params":["TreeNode"],"ret":"int"},
+ "fixed": 6,
  "cases": [
   {"in":[[3,9,20,null,null,15,7]],"out":3},
   {"in":[[1,2,3,4,null,null,null,5]],"out":4},

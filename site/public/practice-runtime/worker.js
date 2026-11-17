@@ -11,14 +11,19 @@
       try { Object.defineProperty(self, name, { value: undefined, configurable: false, writable: false }); } catch { /* unavailable */ }
     }
   }
+  let instrument;
   async function initialize(message) {
     base = message.base; language = message.language;
     await import(base + "kernel.js"); kernel = self.PracticeKernel; delete self.PracticeKernel;
-    if (language === "typescript") {
-      send({ type: "status", text: "正在加载 TypeScript 编译器…" });
+    // TypeScript 要转成 JS；调试 JS / TS 时还要用它的解析器改写源码（instrument.js），所以调试 JS 也加载
+    if (language === "typescript" || (message.debug && language === "javascript")) {
+      send({ type: "status", text: language === "typescript" ? "正在加载 TypeScript 编译器…" : "正在加载调试用的解析器…" });
       const response = await nativeFetch(base + "vendor/typescript.js", { credentials: "omit" });
       if (!response.ok) throw Error("无法加载 TypeScript 编译器");
       typescript = new Function(await response.text() + "\nreturn ts;")();
+    }
+    if (message.debug && language !== "python") {
+      await import(base + "instrument.js"); instrument = self.PracticeInstrument; delete self.PracticeInstrument;
     }
     if (language === "python") {
       send({ type: "status", text: "首次运行正在加载 Python 环境，资源会缓存在浏览器中…" });
@@ -33,6 +38,8 @@
   }
   async function run(message) {
     let code = message.code;
+    // 调试：先在原文上插入记录调用（行号对得上原文），TypeScript 再照常转成 JS
+    if (message.debug && instrument) code = instrument(typescript, code, language, message.mode);
     if (language === "typescript") {
       const result = typescript.transpileModule(code, { compilerOptions: { target: typescript.ScriptTarget.ES2022, module: typescript.ModuleKind.None }, reportDiagnostics: true });
       const diagnostics = (result.diagnostics || []).filter((d) => d.category === typescript.DiagnosticCategory.Error);
@@ -44,9 +51,9 @@
       const start = performance.now(); let result;
       try {
         if (language === "python") {
-          pyodide.globals.set("__practice_request_json", JSON.stringify({ code, mode: message.mode, signature: message.signature, test: message.cases[index] }));
+          pyodide.globals.set("__practice_request_json", JSON.stringify({ code, mode: message.mode, signature: message.signature, test: message.cases[index], trace: !!message.debug }));
           result = JSON.parse(pyodide.runPython("__practice_run(__practice_request_json)"));
-        } else result = kernel.executeJavaScript(code, message.mode, message.signature, message.cases[index]);
+        } else result = kernel.executeJavaScript(code, message.mode, message.signature, message.cases[index], !!message.debug);
       } catch (error) { result = { actual: null, stdout: "", error: String(error?.message || error) }; }
       send({ type: "case-result", index, ...result, duration: performance.now() - start });
       // Yield between cases so cancellation messages are serviced.

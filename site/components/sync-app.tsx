@@ -12,7 +12,7 @@ import NextLink from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { LoginButton, StarPicker, useStarChoice } from "@/components/account";
+import { LoginButton } from "@/components/account";
 import { PixelBullet, PixelIcon, Skel } from "@/components/pixel";
 import { useProgress } from "@/lib/progress";
 import { bookmarklet } from "@/lib/sync/bookmarklet.ts";
@@ -639,14 +639,12 @@ function PlanView({ plan, excluded, toggle }: { plan: Plan; excluded: Set<string
 
 // ───────────────────────── 页面 ─────────────────────────
 
-/** 没登录：登录按钮，下面是顺手 Star 的仓库（默认全勾，登录回来后自动点） */
+/** 没登录：只有登录按钮（顺手 Star 放在登录之后的开通卡片里） */
 function LoginCard({ repoName }: { repoName: string }) {
-  const c = useStarChoice();
   return (
     <div className="flex flex-col items-center gap-5 py-2">
       <Title center sub={<>同步时由本站用你的 GitHub 登录，把记录写进你账号下的 <span className="font-mono">{repoName}</span>。网站能读写哪些仓库，由你在 GitHub 的授权页面上选。</>}>先用 GitHub 登录</Title>
-      <LoginButton c={c} size="lg" />
-      <div className="w-full max-w-lg text-left"><StarPicker c={c} when="login" /></div>
+      <LoginButton size="lg" />
     </div>
   );
 }

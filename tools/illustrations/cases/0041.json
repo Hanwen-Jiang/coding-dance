@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"firstMissingPositive","params":["int[]"],"ret":"int"},
+ "fixed": 8,
  "cases": [
   {"in":[[3,4,-1,1]],"out":2},
   {"in":[[2,1,2,6,4,1]],"out":3},

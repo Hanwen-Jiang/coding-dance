@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"longestConsecutive","params":["int[]"],"ret":"int"},
+ "fixed": 7,
  "cases": [
   {"in":[[100,4,200,1,3,2]],"out":4},
   {"in":[[9,1,4,7,3,2,8,1,6]],"out":4},

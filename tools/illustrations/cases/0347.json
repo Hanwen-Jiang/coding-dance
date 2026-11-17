@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"topKFrequent","params":["int[]","int"],"ret":"int[]","cmp":"unordered"},
+ "fixed": 6,
  "cases": [
   {"in":[[1,1,1,2,2,3],2],"out":[2,1]},
   {"in":[[4,1,-1,2,-1,2,3],2],"out":[-1,2]},

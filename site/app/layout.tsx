@@ -31,6 +31,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         {/* 像素字体用 block：短暂等待字体，而不是先显示后备字体再跳变 */}
         <link href="https://fonts.googleapis.com/css2?family=Silkscreen&display=block" rel="stylesheet" />
+        {/* 题目页的练习区上次是收起的、或者拖过宽度：首屏前就标上，页面直接按上次的样子画，不会先按默认画再跳（见 practice/workbench.tsx） */}
+        <script dangerouslySetInnerHTML={{ __html: `try{var h=document.documentElement;if(localStorage.getItem("hot100:practice:dock")==="closed")h.dataset.practice="closed";var w=Number(localStorage.getItem("hot100:practice:dock-size"));if(w>=0.15&&w<=0.8)h.style.setProperty("--practice-dock",String(w))}catch(e){}` }} />
       </head>
       <body className="min-h-screen font-sans text-foreground antialiased">
         <Providers>

@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"swapPairs","params":["ListNode"],"ret":"ListNode"},
+ "fixed": 6,
  "cases": [
   {"in":[[1,2,3,4]],"out":[2,1,4,3]},
   {"in":[[1,2,3,4,5]],"out":[2,1,4,3,5]},

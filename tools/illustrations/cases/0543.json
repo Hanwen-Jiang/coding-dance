@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"diameterOfBinaryTree","params":["TreeNode"],"ret":"int"},
+ "fixed": 4,
  "cases": [
   {"in":[[1,2,3,4,5]],"out":3},
   {"in":[[1,2,null,3,4,5,null,null,6]],"out":4},

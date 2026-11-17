@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"minDistance","params":["string","string"],"ret":"int"},
+ "fixed": 6,
  "cases": [
   {"in":["horse","ros"],"out":3},
   {"in":["abc","yabd"],"out":2},

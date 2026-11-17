@@ -111,11 +111,11 @@ export interface Attempt {
   code: string | null;
   /** 文件格式不对时的提示（仍然尽量显示） */
   errors: string[];
-  /** 从哪里同步来的，比如 leetcode.cn（手写的记录没有） */
+  /** 从哪里来：leetcode.cn 是从力扣同步的，practice 是网站练习区「测试全部」记的，手写的记录没有 */
   source: string | null;
   /** 力扣的提交编号（只含数字），有的话可以链接到力扣上的这次提交 */
   submission: string | null;
-  /** 提交时间，如 2026-11-14T10:05:00+08:00 */
+  /** 提交时间，如 2026-11-14T10:05:00+08:00；练习区的记录是运行时间（ranAt） */
   submittedAt: string | null;
 }
 

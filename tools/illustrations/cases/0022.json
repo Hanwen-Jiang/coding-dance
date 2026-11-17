@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"generateParenthesis","params":["int"],"ret":"List<string>","cmp":"unordered"},
+ "fixed": 4,
  "cases": [
   {"in":[2],"out":["(())","()()"]},
   {"in":[3],"out":["((()))","(()())","(())()","()(())","()()()"]},

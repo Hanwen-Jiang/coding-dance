@@ -83,15 +83,23 @@ export function validateWrites(body: unknown) {
   return b as { branch: string; parent: string; baseTree: string; files: { path: string; content: string }[]; message: string };
 }
 
-/** 一次提交写入：建 tree、建 commit、移动分支（不强推）。分支在这期间被移动过返回 { conflict: true } */
-export async function commitWrites(api: Api, repo: string, body: unknown) {
-  const b = validateWrites(body);
-  const tree = await api("POST", `/repos/${repo}/git/trees`, { base_tree: b.baseTree, tree: b.files.map((f) => ({ path: f.path, mode: "100644", type: "blob", content: f.content })) });
+/**
+ * 在 parent 上一次提交写入这些文件：建 tree、建 commit、移动分支（不强推）。分支在这期间被移动过返回 { conflict: true }。
+ * 不检查内容，调用方先检查好（同步用 validateWrites，练习区用 lib/practice/record.ts 按规则生成）。
+ */
+export async function commitFiles(api: Api, repo: string, at: { branch: string; parent: string; baseTree: string }, files: { path: string; content: string }[], message: string) {
+  const tree = await api("POST", `/repos/${repo}/git/trees`, { base_tree: at.baseTree, tree: files.map((f) => ({ path: f.path, mode: "100644", type: "blob", content: f.content })) });
   if (tree.status >= 400) throw new SyncError(`GitHub 建 tree 失败（${tree.status}）`, 502);
-  const c = await api("POST", `/repos/${repo}/git/commits`, { message: b.message, tree: tree.json.sha, parents: [b.parent] });
+  const c = await api("POST", `/repos/${repo}/git/commits`, { message, tree: tree.json.sha, parents: [at.parent] });
   if (c.status >= 400) throw new SyncError(`GitHub 建 commit 失败（${c.status}）`, 502);
-  const ref = await api("PATCH", `/repos/${repo}/git/refs/heads/${enc(b.branch)}`, { sha: c.json.sha, force: false });
+  const ref = await api("PATCH", `/repos/${repo}/git/refs/heads/${enc(at.branch)}`, { sha: c.json.sha, force: false });
   if (ref.status === 422 || ref.status === 409) return { conflict: true as const };
   if (ref.status >= 400) throw new SyncError(`GitHub 更新分支失败（${ref.status}）`, 502);
   return { sha: c.json.sha as string, url: c.json.html_url as string };
+}
+
+/** 同步的一次写入：先按规则检查，再一次提交 */
+export async function commitWrites(api: Api, repo: string, body: unknown) {
+  const b = validateWrites(body);
+  return commitFiles(api, repo, b, b.files, b.message);
 }

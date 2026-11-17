@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"pathSum","params":["TreeNode","int"],"ret":"int"},
+ "fixed": 7,
  "cases": [
   {"in":[[10,5,-3,3,2,null,11,3,-2,null,1],8],"out":3},
   {"in":[[1,2,3],3],"out":2},

@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"findMin","params":["int[]"],"ret":"int"},
+ "fixed": 7,
  "cases": [
   {"in":[[4,5,6,7,0,1,2]],"out":0},
   {"in":[[3,4,5,1,2]],"out":1},

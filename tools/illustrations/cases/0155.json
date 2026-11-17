@@ -1,5 +1,6 @@
 {
  "sig": {"cls":"MinStack","ctor":[],"methods":{"push":[["int"],"void"],"pop":[[],"void"],"top":[[],"int"],"getMin":[[],"int"]}},
+ "fixed": 4,
  "cases": [
   {"in":[["MinStack","push","push","push","getMin","pop","top","getMin"],[[],[-2],[0],[-3],[],[],[],[]]],"out":[null,null,null,null,-3,null,0,-2]},
   {"in":[["MinStack","push","push","push","getMin","pop","getMin"],[[],[0],[1],[0],[],[],[]]],"out":[null,null,null,null,0,null,0]},

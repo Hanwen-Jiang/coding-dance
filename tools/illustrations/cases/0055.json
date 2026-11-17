@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"canJump","params":["int[]"],"ret":"bool"},
+ "fixed": 7,
  "cases": [
   {"in":[[2,3,1,1,4]],"out":true},
   {"in":[[3,2,1,0,4]],"out":false},

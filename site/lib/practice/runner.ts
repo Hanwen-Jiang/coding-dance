@@ -21,6 +21,8 @@ export async function runPractice(request: PracticeRunRequest, options: Practice
   if (request.cases.length > 100) throw new Error("一次最多运行 100 个测试用例");
   const started = performance.now(), results: PracticeCaseResult[] = [];
   if (options.signal?.aborted) return { results, duration: 0, cancelled: true };
+  // 调试时每一行都要记变量，慢得多：每组用例多给一些时间（记满步数会自己停下）
+  const caseLimit = options.timeoutMs ?? (request.debug ? 15000 : 3000);
   return new Promise((resolve) => {
     const iframe = document.createElement("iframe"), channel = new MessageChannel();
     const base = new URL("/practice-runtime/", location.href).href;
@@ -35,7 +37,7 @@ export async function runPractice(request: PracticeRunRequest, options: Practice
     };
     const fail = (error: string) => {
       const test = request.cases[index];
-      if (test && !results.some((r) => r.index === index)) results.push({ index, passed: false, actual: null, expected: test.expected, stdout: "", error, duration: options.timeoutMs ?? 3000 });
+      if (test && !results.some((r) => r.index === index)) results.push({ index, passed: false, actual: null, expected: test.expected, stdout: "", error, duration: caseLimit });
       finish();
     };
     const timeout = (ms: number, message: string) => { clearTimeout(timer); timer = setTimeout(() => fail(message), ms); };
@@ -48,15 +50,15 @@ export async function runPractice(request: PracticeRunRequest, options: Practice
     channel.port1.onmessage = (event: MessageEvent) => {
       if (done) return;
       const message = event.data;
-      if (message.type === "connected") channel.port1.postMessage({ type: "init", base, language: request.language });
+      if (message.type === "connected") channel.port1.postMessage({ type: "init", base, language: request.language, debug: !!request.debug });
       else if (message.type === "status") options.onStatus?.(message.text);
       else if (message.type === "ready") {
         options.onStatus?.("正在运行测试…");
-        channel.port1.postMessage({ type: "run", code: request.code, mode: request.mode, signature: request.problem.signature, cases: request.cases.map(({ input, stdin }) => ({ input, stdin })) });
-        timeout(options.timeoutMs ?? 3000, "运行超时，请检查是否存在死循环或复杂度过高");
+        channel.port1.postMessage({ type: "run", code: request.code, mode: request.mode, signature: request.problem.signature, cases: request.cases.map(({ input, stdin }) => ({ input, stdin })), debug: !!request.debug });
+        timeout(caseLimit, "运行超时，请检查是否存在死循环或复杂度过高");
       } else if (message.type === "case-start") {
         index = message.index;
-        timeout(options.timeoutMs ?? 3000, "运行超时，请检查是否存在死循环或复杂度过高");
+        timeout(caseLimit, "运行超时，请检查是否存在死循环或复杂度过高");
         options.onStatus?.(`正在运行测试 ${index + 1} / ${request.cases.length}…`);
       } else if (message.type === "case-result") {
         const test = request.cases[message.index]; if (!test) return;
@@ -70,7 +72,7 @@ export async function runPractice(request: PracticeRunRequest, options: Practice
             error = String(message.stdout || "").trim() ? `标准输出格式不正确：${detail.replace("输入提前结束，请按题面补齐数据。", "输出提前结束，请按题面补齐结果。")}` : "程序没有输出，请先编写代码并输出答案。";
           }
         }
-        results.push({ index: message.index, actual, expected: test.expected, stdout: String(message.stdout || "").slice(0, 16384), ...(error ? { error } : {}), passed: checked && !error && comparePracticeOutput(request.problem, test, actual), duration: message.duration });
+        results.push({ index: message.index, actual, expected: test.expected, stdout: String(message.stdout || "").slice(0, 16384), ...(error ? { error } : {}), ...(message.trace ? { trace: message.trace } : {}), passed: checked && !error && comparePracticeOutput(request.problem, test, actual), duration: message.duration });
       } else if (message.type === "done") finish();
       else if (message.type === "fatal") fail(String(message.error));
     };

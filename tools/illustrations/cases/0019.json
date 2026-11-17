@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"removeNthFromEnd","params":["ListNode","int"],"ret":"ListNode"},
+ "fixed": 5,
  "cases": [
   {"in":[[1,2,3,4,5],2],"out":[1,2,3,5]},
   {"in":[[1,2,3],3],"out":[2,3]},

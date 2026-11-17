@@ -1,5 +1,6 @@
 {
  "sig": {"fn":"sortList","params":["ListNode"],"ret":"ListNode"},
+ "fixed": 6,
  "cases": [
   {"in":[[4,2,1,3]],"out":[1,2,3,4]},
   {"in":[[-1,5,3,4,0]],"out":[-1,0,3,4,5]},
