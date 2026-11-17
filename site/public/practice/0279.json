@@ -1,0 +1,190 @@
+{
+  "id": 279,
+  "name": "完全平方数",
+  "signature": {
+    "fn": "numSquares",
+    "params": [
+      "int"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "n"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def numSquares(self, n: int) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction numSquares(n) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction numSquares(n: number): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "a793ff94",
+    "javascript": "2ade565a",
+    "typescript": "be85e55b"
+  },
+  "cases": [
+    {
+      "input": [
+        12
+      ],
+      "label": "示例 1",
+      "expected": 3,
+      "stdin": "12\n",
+      "stdout": "3\n",
+      "source": {
+        "path": "problems/0279.完全平方数.md",
+        "index": 1,
+        "input": "n = 12",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        13
+      ],
+      "label": "示例 2",
+      "expected": 2,
+      "stdin": "13\n",
+      "stdout": "2\n",
+      "source": {
+        "path": "problems/0279.完全平方数.md",
+        "index": 2,
+        "input": "n = 13",
+        "output": "2"
+      }
+    },
+    {
+      "input": [
+        8
+      ],
+      "label": "固定随机用例 1",
+      "expected": 2,
+      "stdin": "8\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        5
+      ],
+      "label": "固定随机用例 2",
+      "expected": 2,
+      "stdin": "5\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        6
+      ],
+      "label": "固定随机用例 3",
+      "expected": 3,
+      "stdin": "6\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        3
+      ],
+      "label": "固定随机用例 4",
+      "expected": 3,
+      "stdin": "3\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        10
+      ],
+      "label": "固定随机用例 5",
+      "expected": 2,
+      "stdin": "10\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        4
+      ],
+      "label": "固定随机用例 10",
+      "expected": 1,
+      "stdin": "4\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        1
+      ],
+      "label": "边界用例 1",
+      "expected": 1,
+      "stdin": "1\n",
+      "stdout": "1\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        12
+      ],
+      "expected": 3,
+      "stdin": "12\n",
+      "stdout": "3\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0279.完全平方数.md",
+        "index": 1,
+        "input": "n = 12",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        13
+      ],
+      "expected": 2,
+      "stdin": "13\n",
+      "stdout": "2\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0279.完全平方数.md",
+        "index": 2,
+        "input": "n = 13",
+        "output": "2"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定正整数 n，把它表示成若干个正完全平方数之和，例如 1、4、9、16 等。完全平方数可以重复使用，求所需项数的最小值。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. n：整数。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= n <= 10^4"
+    ],
+    "examples": [
+      {
+        "input": "12\n",
+        "output": "3\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "13\n",
+        "output": "2\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

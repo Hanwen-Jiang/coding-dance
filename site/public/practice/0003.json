@@ -1,0 +1,298 @@
+{
+  "id": 3,
+  "name": "无重复字符的最长子串",
+  "signature": {
+    "fn": "lengthOfLongestSubstring",
+    "params": [
+      "string"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "s"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction lengthOfLongestSubstring(s) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction lengthOfLongestSubstring(s: string): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "4915ce13",
+    "javascript": "450de3bd",
+    "typescript": "638ca036"
+  },
+  "cases": [
+    {
+      "input": [
+        "abcabcbb"
+      ],
+      "label": "示例 1",
+      "expected": 3,
+      "stdin": "abcabcbb\n",
+      "stdout": "3\n",
+      "source": {
+        "path": "problems/0003.无重复字符的最长子串.md",
+        "index": 1,
+        "input": "s = \"abcabcbb\"",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        "bbbbb"
+      ],
+      "label": "示例 2",
+      "expected": 1,
+      "stdin": "bbbbb\n",
+      "stdout": "1\n",
+      "source": {
+        "path": "problems/0003.无重复字符的最长子串.md",
+        "index": 2,
+        "input": "s = \"bbbbb\"",
+        "output": "1"
+      }
+    },
+    {
+      "input": [
+        "pwwkew"
+      ],
+      "label": "示例 3",
+      "expected": 3,
+      "stdin": "pwwkew\n",
+      "stdout": "3\n",
+      "source": {
+        "path": "problems/0003.无重复字符的最长子串.md",
+        "index": 3,
+        "input": "s = \"pwwkew\"",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        "abba"
+      ],
+      "label": "仓库判题用例 3",
+      "expected": 2,
+      "stdin": "abba\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        ""
+      ],
+      "label": "仓库判题用例 4 · 边界",
+      "expected": 0,
+      "stdin": "\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        "dvdf"
+      ],
+      "label": "仓库判题用例 6",
+      "expected": 3,
+      "stdin": "dvdf\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        " "
+      ],
+      "label": "仓库判题用例 7",
+      "expected": 1,
+      "stdin": " \n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        "tmmzuxt"
+      ],
+      "label": "仓库判题用例 8",
+      "expected": 5,
+      "stdin": "tmmzuxt\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        "adacdbcbee"
+      ],
+      "label": "仓库判题用例 9",
+      "expected": 4,
+      "stdin": "adacdbcbee\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        "bbacaabbcac"
+      ],
+      "label": "仓库判题用例 10",
+      "expected": 3,
+      "stdin": "bbacaabbcac\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "ccbbbaaacba"
+      ],
+      "label": "仓库判题用例 11",
+      "expected": 3,
+      "stdin": "ccbbbaaacba\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "cbbebcec"
+      ],
+      "label": "仓库判题用例 12",
+      "expected": 3,
+      "stdin": "cbbebcec\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "dacddaddbc"
+      ],
+      "label": "仓库判题用例 13",
+      "expected": 3,
+      "stdin": "dacddaddbc\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "aaaabacbb"
+      ],
+      "label": "仓库判题用例 14",
+      "expected": 3,
+      "stdin": "aaaabacbb\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "accbaabb"
+      ],
+      "label": "仓库判题用例 15",
+      "expected": 3,
+      "stdin": "accbaabb\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "aaeeeabaea"
+      ],
+      "label": "仓库判题用例 16",
+      "expected": 3,
+      "stdin": "aaeeeabaea\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "ddcdbcaab"
+      ],
+      "label": "仓库判题用例 17",
+      "expected": 4,
+      "stdin": "ddcdbcaab\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        "babedebada"
+      ],
+      "label": "仓库判题用例 18",
+      "expected": 4,
+      "stdin": "babedebada\n",
+      "stdout": "4\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "abcabcbb"
+      ],
+      "expected": 3,
+      "stdin": "abcabcbb\n",
+      "stdout": "3\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0003.无重复字符的最长子串.md",
+        "index": 1,
+        "input": "s = \"abcabcbb\"",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        "bbbbb"
+      ],
+      "expected": 1,
+      "stdin": "bbbbb\n",
+      "stdout": "1\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0003.无重复字符的最长子串.md",
+        "index": 2,
+        "input": "s = \"bbbbb\"",
+        "output": "1"
+      }
+    },
+    {
+      "input": [
+        "pwwkew"
+      ],
+      "expected": 3,
+      "stdin": "pwwkew\n",
+      "stdout": "3\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0003.无重复字符的最长子串.md",
+        "index": 3,
+        "input": "s = \"pwwkew\"",
+        "output": "3"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定一个字符串 s，求其中不含重复字符的最长连续子串的长度。子串必须连续，空字符串的答案为 0。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. s：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：0 <= s.length <= 10^5",
+      "数据范围：s 由英文字母、数字、符号和空格组成"
+    ],
+    "examples": [
+      {
+        "input": "abcabcbb\n",
+        "output": "3\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "bbbbb\n",
+        "output": "1\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "pwwkew\n",
+        "output": "3\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

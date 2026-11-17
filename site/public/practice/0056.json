@@ -1,0 +1,700 @@
+{
+  "id": 56,
+  "name": "合并区间",
+  "signature": {
+    "fn": "merge",
+    "params": [
+      "int[][]"
+    ],
+    "ret": "int[][]"
+  },
+  "parameterNames": [
+    "intervals"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def merge(self, intervals: List[List[int]]) -> List[List[int]]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction merge(intervals) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction merge(intervals: number[][]): number[][] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "613563a4",
+    "javascript": "7254eb4e",
+    "typescript": "92aebb85"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            15,
+            18
+          ]
+        ]
+      ],
+      "label": "示例 1",
+      "expected": [
+        [
+          1,
+          6
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          15,
+          18
+        ]
+      ],
+      "stdin": "4\n2\n1 3\n2\n2 6\n2\n8 10\n2\n15 18\n",
+      "stdout": "3\n2\n1 6\n2\n8 10\n2\n15 18\n",
+      "source": {
+        "path": "problems/0056.合并区间.md",
+        "index": 1,
+        "input": "intervals = [[1,3],[2,6],[8,10],[15,18]]",
+        "output": "[[1,6],[8,10],[15,18]]"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            1,
+            4
+          ],
+          [
+            4,
+            5
+          ]
+        ]
+      ],
+      "label": "示例 2",
+      "expected": [
+        [
+          1,
+          5
+        ]
+      ],
+      "stdin": "2\n2\n1 4\n2\n4 5\n",
+      "stdout": "1\n2\n1 5\n",
+      "source": {
+        "path": "problems/0056.合并区间.md",
+        "index": 2,
+        "input": "intervals = [[1,4],[4,5]]",
+        "output": "[[1,5]]"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            4,
+            7
+          ],
+          [
+            1,
+            4
+          ]
+        ]
+      ],
+      "label": "示例 3",
+      "expected": [
+        [
+          1,
+          7
+        ]
+      ],
+      "stdin": "2\n2\n4 7\n2\n1 4\n",
+      "stdout": "1\n2\n1 7\n",
+      "source": {
+        "path": "problems/0056.合并区间.md",
+        "index": 3,
+        "input": "intervals = [[4,7],[1,4]]",
+        "output": "[[1,7]]"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            8,
+            9
+          ],
+          [
+            1,
+            10
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            10,
+            12
+          ],
+          [
+            14,
+            15
+          ]
+        ]
+      ],
+      "label": "题目预设 2 · 乱序 + 包含",
+      "expected": [
+        [
+          1,
+          12
+        ],
+        [
+          14,
+          15
+        ]
+      ],
+      "stdin": "5\n2\n8 9\n2\n1 10\n2\n2 3\n2\n10 12\n2\n14 15\n",
+      "stdout": "2\n2\n1 12\n2\n14 15\n"
+    },
+    {
+      "input": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            10,
+            10
+          ],
+          [
+            8,
+            12
+          ],
+          [
+            11,
+            12
+          ]
+        ]
+      ],
+      "label": "固定随机用例 1",
+      "expected": [
+        [
+          0,
+          0
+        ],
+        [
+          8,
+          12
+        ]
+      ],
+      "stdin": "4\n2\n0 0\n2\n10 10\n2\n8 12\n2\n11 12\n",
+      "stdout": "2\n2\n0 0\n2\n8 12\n"
+    },
+    {
+      "input": [
+        [
+          [
+            3,
+            6
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            6,
+            9
+          ]
+        ]
+      ],
+      "label": "固定随机用例 2",
+      "expected": [
+        [
+          3,
+          9
+        ]
+      ],
+      "stdin": "4\n2\n3 6\n2\n3 4\n2\n5 5\n2\n6 9\n",
+      "stdout": "1\n2\n3 9\n"
+    },
+    {
+      "input": [
+        [
+          [
+            10,
+            10
+          ],
+          [
+            11,
+            13
+          ],
+          [
+            9,
+            13
+          ],
+          [
+            6,
+            10
+          ],
+          [
+            7,
+            9
+          ]
+        ]
+      ],
+      "label": "固定随机用例 3",
+      "expected": [
+        [
+          6,
+          13
+        ]
+      ],
+      "stdin": "5\n2\n10 10\n2\n11 13\n2\n9 13\n2\n6 10\n2\n7 9\n",
+      "stdout": "1\n2\n6 13\n"
+    },
+    {
+      "input": [
+        [
+          [
+            9,
+            13
+          ],
+          [
+            5,
+            7
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            4,
+            7
+          ],
+          [
+            11,
+            12
+          ]
+        ]
+      ],
+      "label": "固定随机用例 4",
+      "expected": [
+        [
+          1,
+          7
+        ],
+        [
+          9,
+          13
+        ]
+      ],
+      "stdin": "5\n2\n9 13\n2\n5 7\n2\n1 4\n2\n4 7\n2\n11 12\n",
+      "stdout": "2\n2\n1 7\n2\n9 13\n"
+    },
+    {
+      "input": [
+        [
+          [
+            1,
+            4
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            1,
+            5
+          ],
+          [
+            11,
+            13
+          ],
+          [
+            8,
+            12
+          ]
+        ]
+      ],
+      "label": "固定随机用例 5",
+      "expected": [
+        [
+          0,
+          0
+        ],
+        [
+          1,
+          5
+        ],
+        [
+          8,
+          13
+        ]
+      ],
+      "stdin": "5\n2\n1 4\n2\n0 0\n2\n1 5\n2\n11 13\n2\n8 12\n",
+      "stdout": "3\n2\n0 0\n2\n1 5\n2\n8 13\n"
+    },
+    {
+      "input": [
+        [
+          [
+            6,
+            9
+          ],
+          [
+            9,
+            12
+          ],
+          [
+            3,
+            5
+          ]
+        ]
+      ],
+      "label": "固定随机用例 6",
+      "expected": [
+        [
+          3,
+          5
+        ],
+        [
+          6,
+          12
+        ]
+      ],
+      "stdin": "3\n2\n6 9\n2\n9 12\n2\n3 5\n",
+      "stdout": "2\n2\n3 5\n2\n6 12\n"
+    },
+    {
+      "input": [
+        [
+          [
+            8,
+            11
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            11,
+            12
+          ]
+        ]
+      ],
+      "label": "固定随机用例 7",
+      "expected": [
+        [
+          1,
+          4
+        ],
+        [
+          8,
+          12
+        ]
+      ],
+      "stdin": "3\n2\n8 11\n2\n1 4\n2\n11 12\n",
+      "stdout": "2\n2\n1 4\n2\n8 12\n"
+    },
+    {
+      "input": [
+        [
+          [
+            10,
+            14
+          ],
+          [
+            8,
+            11
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            4,
+            8
+          ],
+          [
+            5,
+            6
+          ]
+        ]
+      ],
+      "label": "固定随机用例 8",
+      "expected": [
+        [
+          1,
+          3
+        ],
+        [
+          4,
+          14
+        ]
+      ],
+      "stdin": "5\n2\n10 14\n2\n8 11\n2\n1 3\n2\n4 8\n2\n5 6\n",
+      "stdout": "2\n2\n1 3\n2\n4 14\n"
+    },
+    {
+      "input": [
+        [
+          [
+            0,
+            1
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            9,
+            10
+          ],
+          [
+            3,
+            4
+          ]
+        ]
+      ],
+      "label": "固定随机用例 9",
+      "expected": [
+        [
+          0,
+          1
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          9,
+          10
+        ]
+      ],
+      "stdin": "4\n2\n0 1\n2\n2 3\n2\n9 10\n2\n3 4\n",
+      "stdout": "3\n2\n0 1\n2\n2 4\n2\n9 10\n"
+    },
+    {
+      "input": [
+        [
+          [
+            8,
+            10
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            3
+          ]
+        ]
+      ],
+      "label": "固定随机用例 10",
+      "expected": [
+        [
+          1,
+          1
+        ],
+        [
+          2,
+          4
+        ],
+        [
+          8,
+          10
+        ]
+      ],
+      "stdin": "4\n2\n8 10\n2\n1 1\n2\n2 4\n2\n3 3\n",
+      "stdout": "3\n2\n1 1\n2\n2 4\n2\n8 10\n"
+    },
+    {
+      "input": [
+        [
+          [
+            1,
+            1
+          ]
+        ]
+      ],
+      "label": "边界用例 1",
+      "expected": [
+        [
+          1,
+          1
+        ]
+      ],
+      "stdin": "1\n2\n1 1\n",
+      "stdout": "1\n2\n1 1\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            6
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            15,
+            18
+          ]
+        ]
+      ],
+      "expected": [
+        [
+          1,
+          6
+        ],
+        [
+          8,
+          10
+        ],
+        [
+          15,
+          18
+        ]
+      ],
+      "stdin": "4\n2\n1 3\n2\n2 6\n2\n8 10\n2\n15 18\n",
+      "stdout": "3\n2\n1 6\n2\n8 10\n2\n15 18\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0056.合并区间.md",
+        "index": 1,
+        "input": "intervals = [[1,3],[2,6],[8,10],[15,18]]",
+        "output": "[[1,6],[8,10],[15,18]]"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            1,
+            4
+          ],
+          [
+            4,
+            5
+          ]
+        ]
+      ],
+      "expected": [
+        [
+          1,
+          5
+        ]
+      ],
+      "stdin": "2\n2\n1 4\n2\n4 5\n",
+      "stdout": "1\n2\n1 5\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0056.合并区间.md",
+        "index": 2,
+        "input": "intervals = [[1,4],[4,5]]",
+        "output": "[[1,5]]"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            4,
+            7
+          ],
+          [
+            1,
+            4
+          ]
+        ]
+      ],
+      "expected": [
+        [
+          1,
+          7
+        ]
+      ],
+      "stdin": "2\n2\n4 7\n2\n1 4\n",
+      "stdout": "1\n2\n1 7\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0056.合并区间.md",
+        "index": 3,
+        "input": "intervals = [[4,7],[1,4]]",
+        "output": "[[1,7]]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定若干闭区间，将所有重叠区间合并。端点相接也算重叠，输出互不重叠的合并结果，并按左端点升序排列。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. intervals：先一行外层序列的长度 r；之后依次给出 r 个子序列，每个子序列按以下规则独立编码：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。",
+    "output": "输出题目要求的结果。格式为：先一行外层序列的长度 r；之后依次给出 r 个子序列，每个子序列按以下规则独立编码：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= intervals.length <= 10^4",
+      "数据范围：intervals[i].length == 2",
+      "数据范围：0 <= start_i <= end_i <= 10^4"
+    ],
+    "examples": [
+      {
+        "input": "4\n2\n1 3\n2\n2 6\n2\n8 10\n2\n15 18\n",
+        "output": "3\n2\n1 6\n2\n8 10\n2\n15 18\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "2\n2\n1 4\n2\n4 5\n",
+        "output": "1\n2\n1 5\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "2\n2\n4 7\n2\n1 4\n",
+        "output": "1\n2\n1 7\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

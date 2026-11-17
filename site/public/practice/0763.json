@@ -1,0 +1,280 @@
+{
+  "id": 763,
+  "name": "划分字母区间",
+  "signature": {
+    "fn": "partitionLabels",
+    "params": [
+      "string"
+    ],
+    "ret": "int[]"
+  },
+  "parameterNames": [
+    "s"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def partitionLabels(self, s: str) -> List[int]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction partitionLabels(s) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction partitionLabels(s: string): number[] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "01d23dfe",
+    "javascript": "42d4c838",
+    "typescript": "f81a326d"
+  },
+  "cases": [
+    {
+      "input": [
+        "ababcbacadefegdehijhklij"
+      ],
+      "label": "示例 1",
+      "expected": [
+        9,
+        7,
+        8
+      ],
+      "stdin": "ababcbacadefegdehijhklij\n",
+      "stdout": "3\n9 7 8\n",
+      "source": {
+        "path": "problems/0763.划分字母区间.md",
+        "index": 1,
+        "input": "s = \"ababcbacadefegdehijhklij\"",
+        "output": "[9,7,8]"
+      }
+    },
+    {
+      "input": [
+        "eccbbbbdec"
+      ],
+      "label": "示例 2",
+      "expected": [
+        10
+      ],
+      "stdin": "eccbbbbdec\n",
+      "stdout": "1\n10\n",
+      "source": {
+        "path": "problems/0763.划分字母区间.md",
+        "index": 2,
+        "input": "s = \"eccbbbbdec\"",
+        "output": "[10]"
+      }
+    },
+    {
+      "input": [
+        "abacdcde"
+      ],
+      "label": "题目预设 2 · 短一点",
+      "expected": [
+        3,
+        4,
+        1
+      ],
+      "stdin": "abacdcde\n",
+      "stdout": "3\n3 4 1\n"
+    },
+    {
+      "input": [
+        "ecggffdgecfffa"
+      ],
+      "label": "固定随机用例 1",
+      "expected": [
+        13,
+        1
+      ],
+      "stdin": "ecggffdgecfffa\n",
+      "stdout": "2\n13 1\n"
+    },
+    {
+      "input": [
+        "agdgaghdgcdehe"
+      ],
+      "label": "固定随机用例 2",
+      "expected": [
+        14
+      ],
+      "stdin": "agdgaghdgcdehe\n",
+      "stdout": "1\n14\n"
+    },
+    {
+      "input": [
+        "eeaebbbca"
+      ],
+      "label": "固定随机用例 3",
+      "expected": [
+        9
+      ],
+      "stdin": "eeaebbbca\n",
+      "stdout": "1\n9\n"
+    },
+    {
+      "input": [
+        "bfafabdfcdf"
+      ],
+      "label": "固定随机用例 4",
+      "expected": [
+        11
+      ],
+      "stdin": "bfafabdfcdf\n",
+      "stdout": "1\n11\n"
+    },
+    {
+      "input": [
+        "eadeddbebc"
+      ],
+      "label": "固定随机用例 5",
+      "expected": [
+        9,
+        1
+      ],
+      "stdin": "eadeddbebc\n",
+      "stdout": "2\n9 1\n"
+    },
+    {
+      "input": [
+        "dfaddabef"
+      ],
+      "label": "固定随机用例 6",
+      "expected": [
+        9
+      ],
+      "stdin": "dfaddabef\n",
+      "stdout": "1\n9\n"
+    },
+    {
+      "input": [
+        "egcchddffch"
+      ],
+      "label": "固定随机用例 7",
+      "expected": [
+        1,
+        1,
+        9
+      ],
+      "stdin": "egcchddffch\n",
+      "stdout": "3\n1 1 9\n"
+    },
+    {
+      "input": [
+        "bafaedhcba"
+      ],
+      "label": "固定随机用例 8",
+      "expected": [
+        10
+      ],
+      "stdin": "bafaedhcba\n",
+      "stdout": "1\n10\n"
+    },
+    {
+      "input": [
+        "aabdabeadefdd"
+      ],
+      "label": "固定随机用例 9",
+      "expected": [
+        13
+      ],
+      "stdin": "aabdabeadefdd\n",
+      "stdout": "1\n13\n"
+    },
+    {
+      "input": [
+        "adadceafbgb"
+      ],
+      "label": "固定随机用例 10",
+      "expected": [
+        7,
+        1,
+        3
+      ],
+      "stdin": "adadceafbgb\n",
+      "stdout": "3\n7 1 3\n"
+    },
+    {
+      "input": [
+        "a"
+      ],
+      "label": "边界用例 1",
+      "expected": [
+        1
+      ],
+      "stdin": "a\n",
+      "stdout": "1\n1\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "ababcbacadefegdehijhklij"
+      ],
+      "expected": [
+        9,
+        7,
+        8
+      ],
+      "stdin": "ababcbacadefegdehijhklij\n",
+      "stdout": "3\n9 7 8\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0763.划分字母区间.md",
+        "index": 1,
+        "input": "s = \"ababcbacadefegdehijhklij\"",
+        "output": "[9,7,8]"
+      }
+    },
+    {
+      "input": [
+        "eccbbbbdec"
+      ],
+      "expected": [
+        10
+      ],
+      "stdin": "eccbbbbdec\n",
+      "stdout": "1\n10\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0763.划分字母区间.md",
+        "index": 2,
+        "input": "s = \"eccbbbbdec\"",
+        "output": "[10]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "把字符串划分为尽量多的非空连续片段，要求同一个字母只出现在其中一个片段里。按从左到右的顺序输出各片段的长度。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. s：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= s.length <= 500",
+      "数据范围：s 仅由小写英文字母组成"
+    ],
+    "examples": [
+      {
+        "input": "ababcbacadefegdehijhklij\n",
+        "output": "3\n9 7 8\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "eccbbbbdec\n",
+        "output": "1\n10\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

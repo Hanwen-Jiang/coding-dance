@@ -3,11 +3,26 @@
 线上地址：https://leetcode.cgent.link （Cloudflare Pages 项目 `lc-hot100`）
 
 - 首页按重要程度 / 难度 / 题型分组，带状态筛选和搜索，顶部的进度矩阵每格是一道题。
-- 每道题一页：原题、分层提示、逐步动画演示、简洁写法和标准题解、我的历史题解、尝试记录、写代码时注意。
+- 每道题一页：题目与代码练习、分层提示、逐步动画演示、简洁写法和标准题解、我的历史题解、尝试记录、写代码时注意。
+
+## 在题目页写代码和测试
+
+100 道题都提供两种练习方式，支持 Python、JavaScript、TypeScript：
+
+- **LeetCode**：补全函数或设计类。测试环境提供链表、二叉树等节点类型，并负责准备参数和读取返回值；原地修改题会检查修改后的参数。
+- **ACM**：题面改写为完整程序任务，单独说明标准输入、标准输出及样例。编辑器默认空白，由用户编写完整程序。每个用例启动一份程序，处理一组输入。
+
+原页面的题面、提示、动画和题解保留原顺序；宽屏在页面右侧增加独立的代码编辑栏，窄屏按顺序上下显示。语言通过下拉列表选择，标题栏的重置按钮需要再次确认。编辑器支持语法高亮、行号、缩进、查找和撤销。草稿按题号、模式和语言分别保存在当前浏览器中；切换模式、语言和题目不会覆盖其他草稿。专注模式左侧显示题面、右侧编写代码，开关带动画，按 Escape 退出；切换专注模式会保留编辑器、选区和测试结果。模板升级只迁移未修改的旧默认模板，并按模板指纹分代保留迁移前备份；用户编辑过的代码继续保留。
+
+首次点击「运行示例」或「测试全部」后，下方展开示例、自定义和运行结果面板。「运行示例」按题面顺序测试真实样例，「测试全部」运行本项目为这道题准备的全部用例。示例按参数名展示，一维数组保持一行。自定义面板允许修改输入和预期结果：LeetCode 按参数分别填写 JSON，ACM 使用题面规定的文本格式；预期留空时仅运行并显示输出。Ctrl / Command + Enter 可快捷运行示例或当前自定义用例。运行结果显示各用例的输入、实际值、预期值、调试输出和错误，运行中的程序可以停止。
+
+代码在隔离的浏览器执行线程内运行；Python 使用 Pyodide，首次准备环境需要稍候。每例有限时保护，超时会终止执行线程。代码不会通过练习功能上传到服务器，也不会自动写入 GitHub 进度或尝试记录。本项目测试通过不代表力扣官方评测通过。
+
+练习数据在仓库根目录运行 `node tools/practice/build.cjs` 重新生成。修改题面格式、代码模板或用例后，需要重新构建网站。开发验证时，先启动本地预览，再运行 `node tools/practice-ui/test.mjs`；浏览器回归默认使用本机 Chrome，可通过 `CHROME_PATH` 和 `PRACTICE_BASE_URL` 指定其他浏览器路径与预览地址。
 
 ## 数据从哪来
 
-网站本身只是静态页面，数据在运行时由 `functions/`（Cloudflare Pages Functions）通过 GitHub API 读取这个仓库：
+网站本身是静态页面。原题、提示和用户进度等数据在运行时由 `functions/`（Cloudflare Pages Functions）通过 GitHub API 读取；练习模板、ACM 题面和练习测试用例则随网站构建发布：
 
 | 网站上的内容 | 仓库里的来源 |
 | --- | --- |
@@ -15,13 +30,14 @@
 | 每道题的状态 | 登录用户自己的进度仓里的 `progress.json` |
 | 重要程度（Hot 20 / P0 / P1 / P2 / P3） | `studyplan/优先级清单.md` |
 | 原题 | `problems/<编号>.<题名>.md` 的「题目描述」一节，图片在 `problems/images/` |
+| 练习模板、ACM 题面、练习测试用例 | `public/practice/<四位编号>.json`，由 `tools/practice/` 生成，随网站构建发布 |
 | 分层提示、简洁写法、标准题解（六种语言）、注意点、动画演示（有几种解法就有几个演示，可以切换；每一步高亮对应的代码行） | `tools/illustrations/data/<编号>.json`（由 `tools/illustrations/build.js` 从 spec 和 `code/` 导出） |
 | 用户的常用语言（题解和演示里的代码按它显示） | 登录用户自己的进度仓里的 `settings.json`；没登录时存在浏览器里 |
 | 我的历史题解 | 登录用户自己的进度仓里的 `solutions/<语言>/<编号>.*`（Java 文件只取 submit region 里的代码） |
 | 尝试记录（每次提交的原样代码、结果和分析，按时间排） | 登录用户自己的进度仓里的 `attempts/<编号>.<题名>/<日期>.<序号>.<结果>.md` |
 | 手写图解（spec 标了 `handwritten` 的题，目前没有） | `illustrations/<编号>.<题名>.html`，内嵌在题目页里 |
 
-所以平时只要改仓库、push，网站最多一分钟后就会显示新内容（Functions 在内存里缓存 60 秒），不用重新部署。
+通过 GitHub 读取的资源只要改仓库、push，网站最多一分钟后就会显示新内容（Functions 在内存里缓存 60 秒）。练习模板、ACM 题面和练习测试用例修改后，需要重新生成数据、构建并部署网站。
 
 ## 登录和每个人自己的进度
 
@@ -78,11 +94,14 @@ wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 
 ## 本地开发和部署
 
+@heroui-pro/react 需要授权；首次安装或缺包时按 [HeroUI Pro 官方安装文档](https://heroui.pro/docs/react/getting-started/installation) 完成授权。
+
 ```bash
-npm install          # @heroui-pro/react 需要授权：缺包时运行 HeroUI Pro 的 hpsetup 安装
+npm install
 npm run build        # 静态导出到 out/
-npx wrangler pages dev out     # 本地预览，带 Functions
+npm run preview:local # 推荐：读取本地仓库资源，预览尚未 push 的改动
+# npx wrangler pages dev out   # 可选：通过 GitHub API 读取远端资源，带 Functions
 npx wrangler pages deploy out --project-name lc-hot100 --branch main
 ```
 
-本地预览时可以在 `.dev.vars` 里写 `GITHUB_API=http://127.0.0.1:<端口>` 指向一个模拟的 GitHub API，用本地仓库的数据测试还没 push 的改动。
+本地资源预览的端口与配置见 [tools/dev/README.md](../tools/dev/README.md)。使用远端资源预览时，也可以在 `.dev.vars` 中设置 `GITHUB_API` 指向兼容的本地资源服务。

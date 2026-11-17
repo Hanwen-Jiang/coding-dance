@@ -1,0 +1,778 @@
+{
+  "id": 208,
+  "name": "实现 Trie (前缀树)",
+  "signature": {
+    "cls": "Trie",
+    "ctor": [],
+    "methods": {
+      "insert": [
+        [
+          "string"
+        ],
+        "void"
+      ],
+      "search": [
+        [
+          "string"
+        ],
+        "bool"
+      ],
+      "startsWith": [
+        [
+          "string"
+        ],
+        "bool"
+      ]
+    }
+  },
+  "parameterNames": [
+    "operations",
+    "arguments"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Trie:\n    def __init__(self):\n        # 初始化数据结构\n        pass\n\n    def insert(self, word: str) -> None:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def search(self, word: str) -> bool:\n        raise NotImplementedError(\"请完成此方法\")\n\n    def startsWith(self, prefix: str) -> bool:\n        raise NotImplementedError(\"请完成此方法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass Trie {\n  constructor() {\n    // 初始化数据结构\n  }\n\n  insert(word) {\n    throw new Error(\"请完成此方法\");\n  }\n\n  search(word) {\n    throw new Error(\"请完成此方法\");\n  }\n\n  startsWith(prefix) {\n    throw new Error(\"请完成此方法\");\n  }\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nclass Trie {\n  constructor() {\n    // 初始化数据结构\n  }\n\n  insert(word: string): void {\n    throw new Error(\"请完成此方法\");\n  }\n\n  search(word: string): boolean {\n    throw new Error(\"请完成此方法\");\n  }\n\n  startsWith(prefix: string): boolean {\n    throw new Error(\"请完成此方法\");\n  }\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "3e0a4413",
+    "javascript": "e5aafc47",
+    "typescript": "c9f7d656"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "search",
+          "startsWith",
+          "insert",
+          "search"
+        ],
+        [
+          [],
+          [
+            "apple"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ]
+        ]
+      ],
+      "label": "示例 1",
+      "expected": [
+        null,
+        null,
+        true,
+        false,
+        true,
+        null,
+        true
+      ],
+      "stdin": "7\nTrie\ninsert apple\nsearch apple\nsearch app\nstartsWith app\ninsert app\nsearch app\n",
+      "stdout": "null\nnull\ntrue\nfalse\ntrue\nnull\ntrue\n",
+      "source": {
+        "path": "problems/0208.实现 Trie (前缀树).md",
+        "index": 1,
+        "input": "[\"Trie\", \"insert\", \"search\", \"search\", \"startsWith\", \"insert\", \"search\"]\n[[], [\"apple\"], [\"apple\"], [\"app\"], [\"app\"], [\"app\"], [\"app\"]]",
+        "output": "[null, null, true, false, true, null, true]"
+      }
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "insert",
+          "startsWith",
+          "search",
+          "search"
+        ],
+        [
+          [],
+          [
+            "car"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "do"
+          ],
+          [
+            "ca"
+          ],
+          [
+            "ca"
+          ],
+          [
+            "cat"
+          ]
+        ]
+      ],
+      "label": "题目预设 2 · 分叉",
+      "expected": [
+        null,
+        null,
+        null,
+        null,
+        true,
+        false,
+        true
+      ],
+      "stdin": "7\nTrie\ninsert car\ninsert cat\ninsert do\nstartsWith ca\nsearch ca\nsearch cat\n",
+      "stdout": "null\nnull\nnull\nnull\ntrue\nfalse\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "startsWith",
+          "startsWith",
+          "insert",
+          "startsWith",
+          "search",
+          "insert"
+        ],
+        [
+          [],
+          [
+            "cat"
+          ],
+          [
+            "ba"
+          ],
+          [
+            "c"
+          ],
+          [
+            "b"
+          ],
+          [
+            "app"
+          ],
+          [
+            "ball"
+          ],
+          [
+            "ba"
+          ],
+          [
+            "ape"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 1",
+      "expected": [
+        null,
+        null,
+        false,
+        true,
+        false,
+        null,
+        false,
+        false,
+        null
+      ],
+      "stdin": "9\nTrie\ninsert cat\nsearch ba\nstartsWith c\nstartsWith b\ninsert app\nstartsWith ball\nsearch ba\ninsert ape\n",
+      "stdout": "null\nnull\nfalse\ntrue\nfalse\nnull\nfalse\nfalse\nnull\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "startsWith",
+          "search",
+          "search",
+          "insert",
+          "startsWith",
+          "insert",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "bat"
+          ],
+          [
+            "ap"
+          ],
+          [
+            "car"
+          ],
+          [
+            "b"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "ba"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "b"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 2",
+      "expected": [
+        null,
+        null,
+        false,
+        false,
+        false,
+        null,
+        true,
+        null,
+        true
+      ],
+      "stdin": "9\nTrie\ninsert bat\nstartsWith ap\nsearch car\nsearch b\ninsert apple\nstartsWith ba\ninsert bat\nstartsWith b\n",
+      "stdout": "null\nnull\nfalse\nfalse\nfalse\nnull\ntrue\nnull\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "insert",
+          "startsWith",
+          "insert",
+          "insert",
+          "insert"
+        ],
+        [
+          [],
+          [
+            "apple"
+          ],
+          [
+            "ball"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "ape"
+          ],
+          [
+            "ape"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "ball"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 3",
+      "expected": [
+        null,
+        null,
+        false,
+        null,
+        false,
+        null,
+        null,
+        null
+      ],
+      "stdin": "8\nTrie\ninsert apple\nsearch ball\ninsert apple\nstartsWith ape\ninsert ape\ninsert cat\ninsert ball\n",
+      "stdout": "null\nnull\nfalse\nnull\nfalse\nnull\nnull\nnull\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "startsWith",
+          "search",
+          "search",
+          "startsWith",
+          "insert",
+          "search"
+        ],
+        [
+          [],
+          [
+            "ape"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "bal"
+          ],
+          [
+            "ap"
+          ],
+          [
+            "a"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "ap"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 4",
+      "expected": [
+        null,
+        null,
+        false,
+        false,
+        false,
+        true,
+        null,
+        false
+      ],
+      "stdin": "8\nTrie\ninsert ape\nstartsWith bat\nsearch bal\nsearch ap\nstartsWith a\ninsert cat\nsearch ap\n",
+      "stdout": "null\nnull\nfalse\nfalse\nfalse\ntrue\nnull\nfalse\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "insert",
+          "startsWith",
+          "insert",
+          "search"
+        ],
+        [
+          [],
+          [
+            "app"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "app"
+          ],
+          [
+            "b"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "appl"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 5",
+      "expected": [
+        null,
+        null,
+        null,
+        null,
+        true,
+        null,
+        false
+      ],
+      "stdin": "7\nTrie\ninsert app\ninsert bat\ninsert app\nstartsWith b\ninsert bat\nsearch appl\n",
+      "stdout": "null\nnull\nnull\nnull\ntrue\nnull\nfalse\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "insert",
+          "search",
+          "insert",
+          "search",
+          "search"
+        ],
+        [
+          [],
+          [
+            "car"
+          ],
+          [
+            "ape"
+          ],
+          [
+            "ball"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "car"
+          ],
+          [
+            "ca"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 6",
+      "expected": [
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        true,
+        false
+      ],
+      "stdin": "8\nTrie\ninsert car\ninsert ape\ninsert ball\nsearch cat\ninsert cat\nsearch car\nsearch ca\n",
+      "stdout": "null\nnull\nnull\nnull\nfalse\nnull\ntrue\nfalse\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "startsWith",
+          "startsWith",
+          "startsWith",
+          "startsWith",
+          "insert",
+          "startsWith",
+          "search"
+        ],
+        [
+          [],
+          [
+            "app"
+          ],
+          [
+            "car"
+          ],
+          [
+            "ba"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "a"
+          ],
+          [
+            "car"
+          ],
+          [
+            "ba"
+          ],
+          [
+            "ap"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 7",
+      "expected": [
+        null,
+        null,
+        false,
+        false,
+        false,
+        true,
+        null,
+        false,
+        false
+      ],
+      "stdin": "9\nTrie\ninsert app\nstartsWith car\nstartsWith ba\nstartsWith apple\nstartsWith a\ninsert car\nstartsWith ba\nsearch ap\n",
+      "stdout": "null\nnull\nfalse\nfalse\nfalse\ntrue\nnull\nfalse\nfalse\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "startsWith",
+          "search",
+          "insert",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "ball"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "car"
+          ],
+          [
+            "ba"
+          ],
+          [
+            "car"
+          ],
+          [
+            "appl"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 8",
+      "expected": [
+        null,
+        null,
+        null,
+        false,
+        false,
+        null,
+        false
+      ],
+      "stdin": "7\nTrie\ninsert ball\ninsert cat\nstartsWith car\nsearch ba\ninsert car\nstartsWith appl\n",
+      "stdout": "null\nnull\nnull\nfalse\nfalse\nnull\nfalse\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "startsWith",
+          "insert",
+          "search",
+          "insert",
+          "insert",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "car"
+          ],
+          [
+            "c"
+          ],
+          [
+            "c"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "app"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "ape"
+          ],
+          [
+            "ca"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 9",
+      "expected": [
+        null,
+        null,
+        false,
+        true,
+        null,
+        false,
+        null,
+        null,
+        true
+      ],
+      "stdin": "9\nTrie\ninsert car\nsearch c\nstartsWith c\ninsert cat\nsearch app\ninsert bat\ninsert ape\nstartsWith ca\n",
+      "stdout": "null\nnull\nfalse\ntrue\nnull\nfalse\nnull\nnull\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "insert",
+          "search",
+          "startsWith",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "app"
+          ],
+          [
+            "car"
+          ],
+          [
+            "car"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "ba"
+          ],
+          [
+            "ap"
+          ]
+        ]
+      ],
+      "label": "固定随机用例 10",
+      "expected": [
+        null,
+        null,
+        false,
+        null,
+        false,
+        false,
+        true
+      ],
+      "stdin": "7\nTrie\ninsert app\nsearch car\ninsert car\nsearch bat\nstartsWith ba\nstartsWith ap\n",
+      "stdout": "null\nnull\nfalse\nnull\nfalse\nfalse\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "a"
+          ],
+          [
+            "a"
+          ],
+          [
+            "b"
+          ]
+        ]
+      ],
+      "label": "边界用例 1",
+      "expected": [
+        null,
+        null,
+        true,
+        false
+      ],
+      "stdin": "4\nTrie\ninsert a\nsearch a\nstartsWith b\n",
+      "stdout": "null\nnull\ntrue\nfalse\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "search",
+          "startsWith",
+          "insert",
+          "search"
+        ],
+        [
+          [],
+          [
+            "apple"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ]
+        ]
+      ],
+      "expected": [
+        null,
+        null,
+        true,
+        false,
+        true,
+        null,
+        true
+      ],
+      "stdin": "7\nTrie\ninsert apple\nsearch apple\nsearch app\nstartsWith app\ninsert app\nsearch app\n",
+      "stdout": "null\nnull\ntrue\nfalse\ntrue\nnull\ntrue\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0208.实现 Trie (前缀树).md",
+        "index": 1,
+        "input": "[\"Trie\", \"insert\", \"search\", \"search\", \"startsWith\", \"insert\", \"search\"]\n[[], [\"apple\"], [\"apple\"], [\"app\"], [\"app\"], [\"app\"], [\"app\"]]",
+        "output": "[null, null, true, false, true, null, true]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "维护一个最初为空的前缀树。insert word 插入单词；search word 判断完整单词是否已经插入；startsWith prefix 判断是否存在以 prefix 开头的已插入单词。所有单词仅含小写英文字母。",
+    "input": "第一行输入操作数 q，之后 q 行每行一个操作。第一条必须是构造操作 Trie。其余操作为：\ninsert word\nsearch word\nstartsWith prefix\n参数与操作名使用空格分隔，字符串不加引号。",
+    "output": "输出 q 行，与输入操作一一对应。构造操作和没有返回值的操作输出 null；查询操作输出查询结果，布尔值写 true 或 false。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= word.length, prefix.length <= 2000",
+      "数据范围：word 和 prefix 仅由小写英文字母组成",
+      "数据范围：insert、search 和 startsWith 调用次数 总计 不超过 3 * 10^4 次"
+    ],
+    "examples": [
+      {
+        "input": "7\nTrie\ninsert apple\nsearch apple\nsearch app\nstartsWith app\ninsert app\nsearch app\n",
+        "output": "null\nnull\ntrue\nfalse\ntrue\nnull\ntrue\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

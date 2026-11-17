@@ -1,0 +1,328 @@
+{
+  "id": 62,
+  "name": "不同路径",
+  "signature": {
+    "fn": "uniquePaths",
+    "params": [
+      "int",
+      "int"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "m",
+    "n"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction uniquePaths(m, n) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction uniquePaths(m: number, n: number): number {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "a930aa15",
+    "javascript": "ee8fec47",
+    "typescript": "6b3bf3cc"
+  },
+  "cases": [
+    {
+      "input": [
+        3,
+        7
+      ],
+      "label": "示例 1",
+      "expected": 28,
+      "stdin": "3\n7\n",
+      "stdout": "28\n",
+      "source": {
+        "path": "problems/0062.不同路径.md",
+        "index": 1,
+        "input": "m = 3, n = 7",
+        "output": "28"
+      }
+    },
+    {
+      "input": [
+        3,
+        2
+      ],
+      "label": "示例 2",
+      "expected": 3,
+      "stdin": "3\n2\n",
+      "stdout": "3\n",
+      "source": {
+        "path": "problems/0062.不同路径.md",
+        "index": 2,
+        "input": "m = 3, n = 2",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        7,
+        3
+      ],
+      "label": "示例 3",
+      "expected": 28,
+      "stdin": "7\n3\n",
+      "stdout": "28\n",
+      "source": {
+        "path": "problems/0062.不同路径.md",
+        "index": 3,
+        "input": "m = 7, n = 3",
+        "output": "28"
+      }
+    },
+    {
+      "input": [
+        3,
+        3
+      ],
+      "label": "示例 4",
+      "expected": 6,
+      "stdin": "3\n3\n",
+      "stdout": "6\n",
+      "source": {
+        "path": "problems/0062.不同路径.md",
+        "index": 4,
+        "input": "m = 3, n = 3",
+        "output": "6"
+      }
+    },
+    {
+      "input": [
+        1,
+        1
+      ],
+      "label": "仓库判题用例 3 · 边界",
+      "expected": 1,
+      "stdin": "1\n1\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        1,
+        5
+      ],
+      "label": "仓库判题用例 4",
+      "expected": 1,
+      "stdin": "1\n5\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        10,
+        10
+      ],
+      "label": "仓库判题用例 6",
+      "expected": 48620,
+      "stdin": "10\n10\n",
+      "stdout": "48620\n"
+    },
+    {
+      "input": [
+        23,
+        12
+      ],
+      "label": "仓库判题用例 7",
+      "expected": 193536720,
+      "stdin": "23\n12\n",
+      "stdout": "193536720\n"
+    },
+    {
+      "input": [
+        2,
+        4
+      ],
+      "label": "仓库判题用例 8",
+      "expected": 4,
+      "stdin": "2\n4\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        2,
+        5
+      ],
+      "label": "仓库判题用例 9",
+      "expected": 5,
+      "stdin": "2\n5\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        4,
+        5
+      ],
+      "label": "仓库判题用例 11",
+      "expected": 35,
+      "stdin": "4\n5\n",
+      "stdout": "35\n"
+    },
+    {
+      "input": [
+        4,
+        2
+      ],
+      "label": "仓库判题用例 12",
+      "expected": 4,
+      "stdin": "4\n2\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        2,
+        3
+      ],
+      "label": "仓库判题用例 13",
+      "expected": 3,
+      "stdin": "2\n3\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        3,
+        6
+      ],
+      "label": "仓库判题用例 14",
+      "expected": 21,
+      "stdin": "3\n6\n",
+      "stdout": "21\n"
+    },
+    {
+      "input": [
+        4,
+        3
+      ],
+      "label": "仓库判题用例 15",
+      "expected": 10,
+      "stdin": "4\n3\n",
+      "stdout": "10\n"
+    },
+    {
+      "input": [
+        2,
+        2
+      ],
+      "label": "仓库判题用例 16",
+      "expected": 2,
+      "stdin": "2\n2\n",
+      "stdout": "2\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        3,
+        7
+      ],
+      "expected": 28,
+      "stdin": "3\n7\n",
+      "stdout": "28\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0062.不同路径.md",
+        "index": 1,
+        "input": "m = 3, n = 7",
+        "output": "28"
+      }
+    },
+    {
+      "input": [
+        3,
+        2
+      ],
+      "expected": 3,
+      "stdin": "3\n2\n",
+      "stdout": "3\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0062.不同路径.md",
+        "index": 2,
+        "input": "m = 3, n = 2",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        7,
+        3
+      ],
+      "expected": 28,
+      "stdin": "7\n3\n",
+      "stdout": "28\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0062.不同路径.md",
+        "index": 3,
+        "input": "m = 7, n = 3",
+        "output": "28"
+      }
+    },
+    {
+      "input": [
+        3,
+        3
+      ],
+      "expected": 6,
+      "stdin": "3\n3\n",
+      "stdout": "6\n",
+      "label": "示例 4",
+      "source": {
+        "path": "problems/0062.不同路径.md",
+        "index": 4,
+        "input": "m = 3, n = 3",
+        "output": "6"
+      }
+    }
+  ],
+  "acm": {
+    "description": "一个 m 行 n 列的网格中，机器人从左上角出发，每次只能向右或向下移动一格。求到达右下角的不同路径总数。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. m：整数。\n2. n：整数。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= m, n <= 100",
+      "数据范围：题目数据保证答案小于等于 2 * 10^9"
+    ],
+    "examples": [
+      {
+        "input": "3\n7\n",
+        "output": "28\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "3\n2\n",
+        "output": "3\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "7\n3\n",
+        "output": "28\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "3\n3\n",
+        "output": "6\n",
+        "explanation": "示例 4：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

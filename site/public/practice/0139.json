@@ -1,0 +1,396 @@
+{
+  "id": 139,
+  "name": "单词拆分",
+  "signature": {
+    "fn": "wordBreak",
+    "params": [
+      "string",
+      "List<string>"
+    ],
+    "ret": "bool"
+  },
+  "parameterNames": [
+    "s",
+    "wordDict"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> bool:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction wordBreak(s, wordDict) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction wordBreak(s: string, wordDict: string[]): boolean {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "df3c1e0f",
+    "javascript": "44d145b1",
+    "typescript": "daabe1c0"
+  },
+  "cases": [
+    {
+      "input": [
+        "leetcode",
+        [
+          "leet",
+          "code"
+        ]
+      ],
+      "label": "示例 1",
+      "expected": true,
+      "stdin": "leetcode\n2\nleet\ncode\n",
+      "stdout": "true\n",
+      "source": {
+        "path": "problems/0139.单词拆分.md",
+        "index": 1,
+        "input": "s = \"leetcode\", wordDict = [\"leet\", \"code\"]",
+        "output": "true"
+      }
+    },
+    {
+      "input": [
+        "applepenapple",
+        [
+          "apple",
+          "pen"
+        ]
+      ],
+      "label": "示例 2",
+      "expected": true,
+      "stdin": "applepenapple\n2\napple\npen\n",
+      "stdout": "true\n",
+      "source": {
+        "path": "problems/0139.单词拆分.md",
+        "index": 2,
+        "input": "s = \"applepenapple\", wordDict = [\"apple\", \"pen\"]",
+        "output": "true"
+      }
+    },
+    {
+      "input": [
+        "catsandog",
+        [
+          "cats",
+          "dog",
+          "sand",
+          "and",
+          "cat"
+        ]
+      ],
+      "label": "示例 3",
+      "expected": false,
+      "stdin": "catsandog\n5\ncats\ndog\nsand\nand\ncat\n",
+      "stdout": "false\n",
+      "source": {
+        "path": "problems/0139.单词拆分.md",
+        "index": 3,
+        "input": "s = \"catsandog\", wordDict = [\"cats\", \"dog\", \"sand\", \"and\", \"cat\"]",
+        "output": "false"
+      }
+    },
+    {
+      "input": [
+        "a",
+        [
+          "b"
+        ]
+      ],
+      "label": "仓库判题用例 3 · 边界",
+      "expected": false,
+      "stdin": "a\n1\nb\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        "a",
+        [
+          "a"
+        ]
+      ],
+      "label": "仓库判题用例 4",
+      "expected": true,
+      "stdin": "a\n1\na\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        "aaaaaaab",
+        [
+          "a",
+          "aa",
+          "aaa"
+        ]
+      ],
+      "label": "仓库判题用例 5",
+      "expected": false,
+      "stdin": "aaaaaaab\n3\na\naa\naaa\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        "cars",
+        [
+          "car",
+          "ca",
+          "rs"
+        ]
+      ],
+      "label": "仓库判题用例 6",
+      "expected": true,
+      "stdin": "cars\n3\ncar\nca\nrs\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        "baccbc",
+        [
+          "ab",
+          "cab",
+          "abc",
+          "a"
+        ]
+      ],
+      "label": "仓库判题用例 7",
+      "expected": false,
+      "stdin": "baccbc\n4\nab\ncab\nabc\na\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        "cacab",
+        [
+          "cab",
+          "ca",
+          "ab"
+        ]
+      ],
+      "label": "仓库判题用例 8",
+      "expected": true,
+      "stdin": "cacab\n3\ncab\nca\nab\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        "cbcb",
+        [
+          "ab",
+          "b",
+          "abc"
+        ]
+      ],
+      "label": "仓库判题用例 9",
+      "expected": false,
+      "stdin": "cbcb\n3\nab\nb\nabc\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        "bcbcbc",
+        [
+          "abc",
+          "bc",
+          "ab"
+        ]
+      ],
+      "label": "仓库判题用例 10",
+      "expected": true,
+      "stdin": "bcbcbc\n3\nabc\nbc\nab\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        "cbcab",
+        [
+          "b",
+          "cab",
+          "bc",
+          "a"
+        ]
+      ],
+      "label": "仓库判题用例 11",
+      "expected": false,
+      "stdin": "cbcab\n4\nb\ncab\nbc\na\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        "cbbaaa",
+        [
+          "b",
+          "bc",
+          "ca",
+          "abc"
+        ]
+      ],
+      "label": "仓库判题用例 12",
+      "expected": false,
+      "stdin": "cbbaaa\n4\nb\nbc\nca\nabc\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        "cabbc",
+        [
+          "cab",
+          "a",
+          "bc",
+          "ab"
+        ]
+      ],
+      "label": "仓库判题用例 13",
+      "expected": true,
+      "stdin": "cabbc\n4\ncab\na\nbc\nab\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        "abcabc",
+        [
+          "a",
+          "cab",
+          "abc"
+        ]
+      ],
+      "label": "仓库判题用例 14",
+      "expected": true,
+      "stdin": "abcabc\n3\na\ncab\nabc\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        "abbcbc",
+        [
+          "a",
+          "ca",
+          "bc",
+          "b"
+        ]
+      ],
+      "label": "仓库判题用例 15",
+      "expected": true,
+      "stdin": "abbcbc\n4\na\nca\nbc\nb\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        "baacaaa",
+        [
+          "b",
+          "abc",
+          "bc"
+        ]
+      ],
+      "label": "仓库判题用例 16",
+      "expected": false,
+      "stdin": "baacaaa\n3\nb\nabc\nbc\n",
+      "stdout": "false\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "leetcode",
+        [
+          "leet",
+          "code"
+        ]
+      ],
+      "expected": true,
+      "stdin": "leetcode\n2\nleet\ncode\n",
+      "stdout": "true\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0139.单词拆分.md",
+        "index": 1,
+        "input": "s = \"leetcode\", wordDict = [\"leet\", \"code\"]",
+        "output": "true"
+      }
+    },
+    {
+      "input": [
+        "applepenapple",
+        [
+          "apple",
+          "pen"
+        ]
+      ],
+      "expected": true,
+      "stdin": "applepenapple\n2\napple\npen\n",
+      "stdout": "true\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0139.单词拆分.md",
+        "index": 2,
+        "input": "s = \"applepenapple\", wordDict = [\"apple\", \"pen\"]",
+        "output": "true"
+      }
+    },
+    {
+      "input": [
+        "catsandog",
+        [
+          "cats",
+          "dog",
+          "sand",
+          "and",
+          "cat"
+        ]
+      ],
+      "expected": false,
+      "stdin": "catsandog\n5\ncats\ndog\nsand\nand\ncat\n",
+      "stdout": "false\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0139.单词拆分.md",
+        "index": 3,
+        "input": "s = \"catsandog\", wordDict = [\"cats\", \"dog\", \"sand\", \"and\", \"cat\"]",
+        "output": "false"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定字符串 s 和一个单词字典，判断能否把 s 按顺序分割成若干字典中的单词。字典中的单词可以使用多次，能够完成分割输出 true。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. s：字符串（占完整一行，不加引号，空串用空行）。\n2. wordDict：先一行字符串数量 n，之后 n 行每行一个字符串，不加引号；空字符串占一空行，n = 0 时没有字符串行。",
+    "output": "输出题目要求的结果。格式为：布尔值 true 或 false。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= s.length <= 300",
+      "数据范围：1 <= wordDict.length <= 1000",
+      "数据范围：1 <= wordDict[i].length <= 20",
+      "数据范围：s 和 wordDict[i] 仅由小写英文字母组成",
+      "数据范围：wordDict 中的所有字符串 互不相同",
+      "ACM 使用上述序列格式表示链表或二叉树，程序需自行读取输入并处理这些结构。LeetCode 模式由测试环境建立节点。"
+    ],
+    "examples": [
+      {
+        "input": "leetcode\n2\nleet\ncode\n",
+        "output": "true\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "applepenapple\n2\napple\npen\n",
+        "output": "true\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "catsandog\n5\ncats\ndog\nsand\nand\ncat\n",
+        "output": "false\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}

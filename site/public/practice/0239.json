@@ -1,0 +1,443 @@
+{
+  "id": 239,
+  "name": "滑动窗口最大值",
+  "signature": {
+    "fn": "maxSlidingWindow",
+    "params": [
+      "int[]",
+      "int"
+    ],
+    "ret": "int[]"
+  },
+  "parameterNames": [
+    "nums",
+    "k"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "from typing import *\n\n# ListNode、TreeNode、Node 由测试环境提供。\nclass Solution:\n    def maxSlidingWindow(self, nums: List[int], k: int) -> List[int]:\n        # 在这里编写解法\n        raise NotImplementedError(\"请完成解法\")\n",
+      "javascript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction maxSlidingWindow(nums, k) {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n",
+      "typescript": "// ListNode、TreeNode、_Node 由测试环境提供。\nfunction maxSlidingWindow(nums: number[], k: number): number[] {\n  // 在这里编写解法\n  throw new Error(\"请完成解法\");\n}\n"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "6ec50931",
+    "javascript": "9cd90abf",
+    "typescript": "e7e6b718"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          1,
+          3,
+          -1,
+          -3,
+          5,
+          3,
+          6,
+          7
+        ],
+        3
+      ],
+      "label": "示例 1",
+      "expected": [
+        3,
+        3,
+        5,
+        5,
+        6,
+        7
+      ],
+      "stdin": "8\n1 3 -1 -3 5 3 6 7\n3\n",
+      "stdout": "6\n3 3 5 5 6 7\n",
+      "source": {
+        "path": "problems/0239.滑动窗口最大值.md",
+        "index": 1,
+        "input": "nums = [1,3,-1,-3,5,3,6,7], k = 3",
+        "output": "[3,3,5,5,6,7]"
+      }
+    },
+    {
+      "input": [
+        [
+          1
+        ],
+        1
+      ],
+      "label": "示例 2 · 边界",
+      "expected": [
+        1
+      ],
+      "stdin": "1\n1\n1\n",
+      "stdout": "1\n1\n",
+      "source": {
+        "path": "problems/0239.滑动窗口最大值.md",
+        "index": 2,
+        "input": "nums = [1], k = 1",
+        "output": "[1]"
+      }
+    },
+    {
+      "input": [
+        [
+          9,
+          8,
+          7,
+          6,
+          5
+        ],
+        2
+      ],
+      "label": "题目预设 2 · 一路递减",
+      "expected": [
+        9,
+        8,
+        7,
+        6
+      ],
+      "stdin": "5\n9 8 7 6 5\n2\n",
+      "stdout": "4\n9 8 7 6\n"
+    },
+    {
+      "input": [
+        [
+          9,
+          -1,
+          3,
+          6,
+          9,
+          0,
+          0
+        ],
+        1
+      ],
+      "label": "固定随机用例 1",
+      "expected": [
+        9,
+        -1,
+        3,
+        6,
+        9,
+        0,
+        0
+      ],
+      "stdin": "7\n9 -1 3 6 9 0 0\n1\n",
+      "stdout": "7\n9 -1 3 6 9 0 0\n"
+    },
+    {
+      "input": [
+        [
+          2,
+          2,
+          6,
+          5,
+          -3,
+          -1
+        ],
+        2
+      ],
+      "label": "固定随机用例 2",
+      "expected": [
+        2,
+        6,
+        6,
+        5,
+        -1
+      ],
+      "stdin": "6\n2 2 6 5 -3 -1\n2\n",
+      "stdout": "5\n2 6 6 5 -1\n"
+    },
+    {
+      "input": [
+        [
+          -3,
+          0,
+          7,
+          2,
+          1,
+          8,
+          1,
+          9,
+          9
+        ],
+        1
+      ],
+      "label": "固定随机用例 3",
+      "expected": [
+        -3,
+        0,
+        7,
+        2,
+        1,
+        8,
+        1,
+        9,
+        9
+      ],
+      "stdin": "9\n-3 0 7 2 1 8 1 9 9\n1\n",
+      "stdout": "9\n-3 0 7 2 1 8 1 9 9\n"
+    },
+    {
+      "input": [
+        [
+          3,
+          -2,
+          0,
+          2,
+          5,
+          -1,
+          4,
+          2
+        ],
+        4
+      ],
+      "label": "固定随机用例 4",
+      "expected": [
+        3,
+        5,
+        5,
+        5,
+        5
+      ],
+      "stdin": "8\n3 -2 0 2 5 -1 4 2\n4\n",
+      "stdout": "5\n3 5 5 5 5\n"
+    },
+    {
+      "input": [
+        [
+          -3,
+          -2,
+          3,
+          3,
+          -1,
+          8,
+          -3,
+          5,
+          9
+        ],
+        2
+      ],
+      "label": "固定随机用例 5",
+      "expected": [
+        -2,
+        3,
+        3,
+        3,
+        8,
+        8,
+        5,
+        9
+      ],
+      "stdin": "9\n-3 -2 3 3 -1 8 -3 5 9\n2\n",
+      "stdout": "8\n-2 3 3 3 8 8 5 9\n"
+    },
+    {
+      "input": [
+        [
+          4,
+          3,
+          3,
+          5,
+          4
+        ],
+        1
+      ],
+      "label": "固定随机用例 6",
+      "expected": [
+        4,
+        3,
+        3,
+        5,
+        4
+      ],
+      "stdin": "5\n4 3 3 5 4\n1\n",
+      "stdout": "5\n4 3 3 5 4\n"
+    },
+    {
+      "input": [
+        [
+          3,
+          8,
+          5,
+          -1,
+          1
+        ],
+        2
+      ],
+      "label": "固定随机用例 7",
+      "expected": [
+        8,
+        8,
+        5,
+        1
+      ],
+      "stdin": "5\n3 8 5 -1 1\n2\n",
+      "stdout": "4\n8 8 5 1\n"
+    },
+    {
+      "input": [
+        [
+          -2,
+          8,
+          4,
+          3,
+          -2,
+          3,
+          -2,
+          9,
+          0
+        ],
+        2
+      ],
+      "label": "固定随机用例 8",
+      "expected": [
+        8,
+        8,
+        4,
+        3,
+        3,
+        3,
+        9,
+        9
+      ],
+      "stdin": "9\n-2 8 4 3 -2 3 -2 9 0\n2\n",
+      "stdout": "8\n8 8 4 3 3 3 9 9\n"
+    },
+    {
+      "input": [
+        [
+          6,
+          2,
+          3,
+          -1,
+          2,
+          6
+        ],
+        1
+      ],
+      "label": "固定随机用例 9",
+      "expected": [
+        6,
+        2,
+        3,
+        -1,
+        2,
+        6
+      ],
+      "stdin": "6\n6 2 3 -1 2 6\n1\n",
+      "stdout": "6\n6 2 3 -1 2 6\n"
+    },
+    {
+      "input": [
+        [
+          4,
+          1,
+          2,
+          0,
+          8,
+          7
+        ],
+        4
+      ],
+      "label": "固定随机用例 10",
+      "expected": [
+        4,
+        8,
+        8
+      ],
+      "stdin": "6\n4 1 2 0 8 7\n4\n",
+      "stdout": "3\n4 8 8\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          1,
+          3,
+          -1,
+          -3,
+          5,
+          3,
+          6,
+          7
+        ],
+        3
+      ],
+      "expected": [
+        3,
+        3,
+        5,
+        5,
+        6,
+        7
+      ],
+      "stdin": "8\n1 3 -1 -3 5 3 6 7\n3\n",
+      "stdout": "6\n3 3 5 5 6 7\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0239.滑动窗口最大值.md",
+        "index": 1,
+        "input": "nums = [1,3,-1,-3,5,3,6,7], k = 3",
+        "output": "[3,3,5,5,6,7]"
+      }
+    },
+    {
+      "input": [
+        [
+          1
+        ],
+        1
+      ],
+      "expected": [
+        1
+      ],
+      "stdin": "1\n1\n1\n",
+      "stdout": "1\n1\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0239.滑动窗口最大值.md",
+        "index": 2,
+        "input": "nums = [1], k = 1",
+        "output": "[1]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定整数序列和窗口长度 k，窗口从最左端开始，每次向右移动一个位置。按窗口出现的先后次序，输出每个长度为 k 的连续窗口中的最大值。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. nums：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。\n2. k：整数。",
+    "output": "输出题目要求的结果。格式为：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。"
+    ],
+    "examples": [
+      {
+        "input": "8\n1 3 -1 -3 5 3 6 7\n3\n",
+        "output": "6\n3 3 5 5 6 7\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "1\n1\n1\n",
+        "output": "1\n1\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  }
+}
