@@ -17,6 +17,35 @@
 .practice-sidebar { min-width: 0; margin-top: 40px; }
 
 /*
+ * 加载中的骨架（problem-view.tsx 的 Loading）：和真实页面同一套显示规则。
+ * 正文那一列也是 problem-body 容器，「本页」目录跟着正文宽度出现；入口那一排和右边的练习区只在写代码布局（≥1200、练习区展开）时有。
+ */
+.problem-skeleton { min-width: 0; container: problem-body / inline-size; }
+.problem-skel-study, .problem-skel-practice, .problem-skel-dock-handle { display: none; }
+.problem-skel-study { align-items: center; gap: 4px; min-height: 48px; margin: -8px -8px 0; padding: 8px; }
+/* 稍等一下再淡出来：数据很快就到的时候骨架不闪一下 */
+.problem-skeleton, .problem-skel-practice, .problem-skel-dock-handle { animation: fade-only 220ms ease 90ms both; }
+
+/*
+ * 换题（上一题、下一题，problem-view.tsx 的 useProblemNav）：这一页往后退的方向滑走、淡出，同时读下一题的数据（最多等 0.4 秒），
+ * 新的一页从前进的方向滑进来。右边练习区的框不动，只有里面的编辑器暗一下再亮起来。
+ * 往右最多挪 16px：手机上正文离屏幕右边就 16px，再多页面会临时变宽、能左右晃。
+ */
+.problem-page-layout[data-leaving] > .problem-original { opacity: 0; pointer-events: none; transition: opacity 140ms ease, transform 160ms cubic-bezier(0.4, 0, 1, 1); }
+.problem-page-layout[data-leaving="next"] > .problem-original { transform: translateX(-12px); }
+.problem-page-layout[data-leaving="prev"] > .problem-original { transform: translateX(12px); }
+.problem-page-layout[data-leaving] #practice { opacity: 0.35; transition: opacity 140ms ease; }
+.problem-enter-next { animation: problem-enter-next 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.problem-enter-prev { animation: problem-enter-prev 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.problem-page-layout[data-enter] .practice-sidebar:not(.practice-shell--focus) #practice { animation: fade-only 280ms ease both; }
+@keyframes problem-enter-next { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes problem-enter-prev { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .problem-page-layout[data-leaving] > .problem-original { transform: none !important; }
+  .problem-enter-next, .problem-enter-prev { animation-name: fade-only; }
+}
+
+/*
  * 「写代码」的布局（桌面上练习区展开时，见 problem-view.tsx 的 StudyBar / StudyBubble）：
  * 题面上方一排入口，滚动时停在顶栏下面；点开的内容是挂在入口下面的气泡。
  */
@@ -248,6 +277,11 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
   html:not([data-practice="closed"]) .problem-original-sections { grid-template-columns: minmax(0, 1fr); }
   html:not([data-practice="closed"]) .problem-toc { display: none; }
   html:not([data-practice="closed"]) .problem-learn-inline { display: block; }
+  /* 骨架：写代码布局的入口那一排、拖动条、练习区，位置和真实的一样 */
+  html:not([data-practice="closed"]) .problem-skel-study { display: flex; }
+  html:not([data-practice="closed"]) .problem-skel-practice { display: flex; flex-direction: column; position: fixed; z-index: 10; top: 80px; right: var(--practice-right); width: var(--practice-dock-w); height: calc(100dvh - 96px); }
+  html:not([data-practice="closed"]) .problem-skel-dock-handle { display: flex; align-items: center; justify-content: center; position: fixed; z-index: 10; top: 80px; right: calc(var(--practice-right) + var(--practice-dock-w)); width: 24px; height: calc(100dvh - 96px); }
+  .problem-skel-dock-handle > span { width: 4px; height: 56px; border-radius: 999px; background: var(--border); }
   /* 桌面侧栏：跟着页面滚动停在顶栏下面，高度占满剩下的屏幕，里面的编辑器和控制台按比例分。
      展开时从右边带一点回弹地滑进来（接在把手往左一跳之后），收起时往右滑走、淡出 */
   .practice-sidebar:not(.practice-shell--focus) { position: fixed; z-index: 10; top: 80px; right: var(--practice-right); width: var(--practice-dock-w); display: flex; flex-direction: column; height: calc(100dvh - 96px); margin-top: 0; transition: opacity 220ms ease 40ms, transform 520ms cubic-bezier(0.34, 1.32, 0.64, 1) 20ms, visibility 0s; }

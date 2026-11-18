@@ -223,11 +223,11 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
         </div>
       )}
       {/*
-        够宽（≥ 48rem）且代码展开：左边代码单独一栏，右边上面是演示、下面紧跟着讲解；两栏一样高（代码那栏不撑高度，代码在栏里滚）。
+        够宽（≥ 48rem）且代码展开：左边上面是演示、下面紧跟着讲解，右边代码单独一栏；两栏一样高（代码那栏不撑高度，代码在栏里滚）。
         窄的时候、或者代码收起：演示、讲解、代码从上往下排。
       */}
       <div
-        className={clsx("demo grid gap-5 outline-none", wideCode && "@3xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]")}
+        className={clsx("demo grid gap-5 outline-none", wideCode && "@3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]")}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "ArrowRight") {
@@ -243,8 +243,8 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
         }}
       >
         {wideCode && (
-          // 代码这一栏：窄的时候排在最后；够宽时到左边，绝对定位撑满这一格，高度跟着右边走
-          <div className="order-last flex min-w-0 flex-col gap-2 @3xl:relative @3xl:order-first @3xl:min-h-[22rem]">
+          // 代码这一栏：窄的时候排在最后；够宽时在右边，绝对定位撑满这一格，高度跟着左边的演示走
+          <div className="order-last flex min-w-0 flex-col gap-2 @3xl:relative @3xl:min-h-[22rem]">
             <div className="flex min-h-0 flex-col gap-2 @3xl:absolute @3xl:inset-0">
               {codeHead}
               {codeBody}
