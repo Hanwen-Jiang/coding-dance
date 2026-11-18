@@ -147,7 +147,7 @@ try {
     report[theme].pythonCompletion = await completion("li", `${theme}-python-completion.png`);
     await language("JavaScript");
     report[theme].javascriptCompletion = await completion("fun", `${theme}-javascript-completion-detail.png`);
-    assert(await page.evaluate(() => document.querySelector(".practice-sidebar")?.textContent?.includes("动手练习")));
+    assert(await page.evaluate(() => /^(solution|main)\.(py|js|ts)$/.test(document.querySelector(".practice-sidebar .practice-file-name")?.textContent ?? "")), "Editor tab shows the file name");
     console.log(`✓ ${theme}: Python / JavaScript / TypeScript VS Code colors and styled completion widgets`);
   }
 

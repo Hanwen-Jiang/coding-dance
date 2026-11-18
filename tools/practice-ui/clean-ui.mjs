@@ -61,19 +61,20 @@ try {
   await language("Python");
   assert.equal(await page.getByTestId("practice-test-panel").count(), 0);
   const sidebar = await page.locator(".practice-sidebar").innerText();
-  for (const text of ["solution.py", "solution.js", "solution.ts", "草稿自动保存在本机", "草稿已保存到本机", "Ctrl /", "快捷运行", "代码在浏览器中运行", "测试使用本项目的用例"]) assert(!sidebar.includes(text), text);
+  for (const text of ["草稿自动保存在本机", "草稿已保存到本机", "Ctrl /", "快捷运行", "代码在浏览器中运行", "测试使用本项目的用例"]) assert(!sidebar.includes(text), text);
   assert.equal(await page.getByRole("button", { name: "写代码", exact: true }).count(), 0);
-  const controls = await page.evaluate(() => ({ editorHeight: document.querySelector(".cm-editor").getBoundingClientRect().height, resetY: document.querySelector('[aria-label="重置代码"]').getBoundingClientRect().y, toolbarY: document.querySelector(".practice-editor-toolbar").getBoundingClientRect().y, toolbarH: document.querySelector(".practice-editor-toolbar").getBoundingClientRect().height }));
+  const controls = await page.evaluate(() => ({ editorHeight: document.querySelector(".cm-editor").getBoundingClientRect().height, resetY: document.querySelector('.practice-editor-toolbar [aria-label="编辑器设置"]').getBoundingClientRect().y, toolbarY: document.querySelector(".practice-editor-toolbar").getBoundingClientRect().y, toolbarH: document.querySelector(".practice-editor-toolbar").getBoundingClientRect().height }));
   assert(controls.editorHeight >= 560);
   assert(controls.resetY >= controls.toolbarY && controls.resetY < controls.toolbarY + controls.toolbarH);
   await screenshot("1920-acm-blank-collapsed.png");
   console.log("✓ Blank ACM, two-generation safe migration, language dropdown, toolbar reset and cleaned text");
 
   await language("JavaScript");
-  await page.getByRole("button", { name: "重置代码", exact: true }).click();
+  const resetCode = async () => { await page.getByRole("button", { name: "编辑器设置", exact: true }).click(); await page.getByRole("menuitem", { name: /重置代码/ }).click(); };
+  await resetCode();
   await page.getByRole("button", { name: "取消", exact: true }).click();
   assert((await editor().innerText()).includes("user-owned-code"));
-  await page.getByRole("button", { name: "重置代码", exact: true }).click();
+  await resetCode();
   await page.getByRole("button", { name: "确认重置", exact: true }).click();
   await page.waitForFunction(() => document.querySelector(".cm-content")?.textContent === "");
   await page.getByRole("button", { name: "运行示例", exact: true }).click();
