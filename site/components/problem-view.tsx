@@ -9,7 +9,7 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { CodePanel } from "@/components/code-panel";
-import { PracticeProvider, PracticeStatement } from "@/components/practice/context";
+import { PracticeProvider, PracticeStatement, prefetchPractice } from "@/components/practice/context";
 import { PracticeWorkbench } from "@/components/practice/workbench";
 import { DemoPlayer } from "@/components/demo/demo-player";
 import { AlertIcon, BulbIcon, ChevronDown, ChevronLeft, ChevronRight, CodeIcon, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
@@ -24,15 +24,73 @@ import { usePrefs } from "@/lib/prefs";
 import { useProgress } from "@/lib/progress";
 import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec } from "@/lib/types";
 import { TIER_INFO, TOPIC_KIND } from "@/lib/types";
-import { useApi } from "@/lib/use-api";
+import { fetchApi, useApi } from "@/lib/use-api";
+
+type NavDir = "prev" | "next";
+type ProblemNav = { go: (to: number, dir: NavDir) => void; link: (to: number, dir: NavDir) => Pick<React.ComponentProps<typeof NextLink>, "onClick" | "onFocus" | "onPointerEnter"> };
+/** 上一页换题时往哪边走：新的一页挂上时读一次，用来决定从哪边滑进来（浏览器前进后退、别的链接进来的没有方向，照旧淡入） */
+let enterFrom: NavDir | null = null;
+const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+/** 提前读好一道题：题目数据和练习数据都进内存，换过去时直接出来，不用看骨架 */
+function prefetchProblem(id: number) {
+  fetchApi(`/api/problem/${id}`).catch(() => { /* 真打开时再报错 */ });
+  prefetchPractice(id);
+}
+
+/**
+ * 上一题、下一题（面包屑旁边的按钮、快捷键 [ ]、页面最下面的两张卡片）：
+ * 这一页先往反方向滑走、淡出（practice.css 的 data-leaving），同时把下一题的数据读好，最多等 0.4 秒再换页，
+ * 读好了新的一页直接从前进的方向滑进来；没读好就照常先出骨架。鼠标移到链接上、键盘聚焦时就开始读，页面闲下来也会把前后两题读好。
+ */
+function useProblemNav(d: ProblemDetail | null): ProblemNav & { leaving: NavDir | null } {
+  const router = useRouter();
+  const [leaving, setLeaving] = useState<NavDir | null>(null);
+  const busy = useRef(false);
+  const id = d?.summary.id;
+  useEffect(() => { setLeaving(null); busy.current = false; }, [id]);
+  // 万一换页没成功（比如网络断了），别让这一页一直是透明的
+  useEffect(() => {
+    if (!leaving) return;
+    const t = window.setTimeout(() => { setLeaving(null); busy.current = false; }, 4000);
+    return () => window.clearTimeout(t);
+  }, [leaving]);
+  const prevId = d?.prev?.id, nextId = d?.next?.id;
+  useEffect(() => {
+    if (!id) return;
+    const run = () => { for (const to of [nextId, prevId]) if (to) { prefetchProblem(to); router.prefetch(`/p/${to}/`); } };
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number; cancelIdleCallback?: (h: number) => void };
+    const t = window.setTimeout(() => { if (w.requestIdleCallback) w.requestIdleCallback(run, { timeout: 2000 }); else run(); }, 1200);
+    return () => window.clearTimeout(t);
+  }, [id, prevId, nextId, router]);
+  const go = useCallback((to: number, dir: NavDir) => {
+    if (busy.current) return; // 已经在换了，连按不再排一次
+    busy.current = true;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    enterFrom = dir;
+    setLeaving(dir);
+    const data = Promise.race([fetchApi(`/api/problem/${to}`).catch(() => undefined), sleep(400)]);
+    void Promise.all([data, sleep(reduced ? 0 : 160)]).then(() => router.push(`/p/${to}/`));
+  }, [router]);
+  const link = useCallback<ProblemNav["link"]>((to, dir) => ({
+    onClick: (e) => {
+      // 新标签页、新窗口打开的照浏览器的来
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      go(to, dir);
+    },
+    onFocus: () => prefetchProblem(to),
+    onPointerEnter: () => prefetchProblem(to),
+  }), [go]);
+  return { go, link, leaving };
+}
 
 /**
  * 面包屑那一行右边的「‹ 上一题 · 12 / 100 · 下一题 ›」（按重要程度），不占新的一行。
  * 快捷键 [ 和 ]；光标在编辑器、输入框里时不管。手机上只留箭头。页面最下面的两张卡片照旧留着。
  */
-function ProblemPager({ d }: { d: ProblemDetail }) {
-  const router = useRouter();
+function ProblemPager({ d, nav }: { d: ProblemDetail; nav: ProblemNav }) {
   const { prev, next } = d;
+  const { go, link } = nav;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || (e.key !== "[" && e.key !== "]")) return;
@@ -41,23 +99,23 @@ function ProblemPager({ d }: { d: ProblemDetail }) {
       const to = e.key === "[" ? prev : next;
       if (!to) return;
       e.preventDefault();
-      router.push(`/p/${to.id}/`);
+      if (!e.repeat) go(to.id, e.key === "[" ? "prev" : "next");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [prev, next, router]);
+  }, [prev, next, go]);
   const btn = "inline-flex h-7 items-center gap-1 rounded-lg px-2 text-xs text-muted no-underline outline-none transition-colors hover:bg-surface-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent";
   return (
     <nav aria-label="按重要程度的上一题、下一题" className="flex shrink-0 items-center gap-0.5" data-testid="problem-pager">
       {prev ? (
-        <NextLink aria-label={`上一题：${prev.id}. ${prev.name}（快捷键 [）`} className={btn} href={`/p/${prev.id}/`} title={`${prev.id}. ${prev.name}（[）`}>
+        <NextLink aria-label={`上一题：${prev.id}. ${prev.name}（快捷键 [）`} className={btn} href={`/p/${prev.id}/`} title={`${prev.id}. ${prev.name}（[）`} {...link(prev.id, "prev")}>
           <ChevronLeft height={14} width={14} />
           <span className="max-sm:hidden">上一题</span>
         </NextLink>
       ) : <span aria-hidden className={clsx(btn, "pointer-events-none opacity-40")}><ChevronLeft height={14} width={14} /><span className="max-sm:hidden">上一题</span></span>}
       <span className="px-1 font-mono text-[11px] tabular-nums text-muted" title="在 100 题里按重要程度排第几">{d.summary.order} / 100</span>
       {next ? (
-        <NextLink aria-label={`下一题：${next.id}. ${next.name}（快捷键 ]）`} className={btn} href={`/p/${next.id}/`} title={`${next.id}. ${next.name}（]）`}>
+        <NextLink aria-label={`下一题：${next.id}. ${next.name}（快捷键 ]）`} className={btn} href={`/p/${next.id}/`} title={`${next.id}. ${next.name}（]）`} {...link(next.id, "next")}>
           <span className="max-sm:hidden">下一题</span>
           <ChevronRight height={14} width={14} />
         </NextLink>
@@ -458,33 +516,88 @@ function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | n
   );
 }
 
-/** 和真实页面同样布局的骨架，数据到了原地淡入。外面也套 problem-page-layout：换题时页面和顶栏的宽度不会先缩回去再撑开 */
+/**
+ * 和真实页面一块一块对齐的骨架，数据到了原地淡入。外面也套 problem-page-layout：换题时页面和顶栏的宽度不会先缩回去再撑开。
+ * 拿到数据之前不知道是哪种布局，所以写代码布局（桌面上练习区展开）才有的东西——入口那一排、右边的练习区——
+ * 都放进来，按 <html data-practice> 和屏幕宽度用 CSS 决定显示哪些（practice.css 的 problem-skel-*），和真实页面的规则一样。
+ */
 function Loading() {
   return (
-    <div className="problem-page-layout">
-    <div className="flex flex-col gap-8 pt-8" aria-busy>
-      <div className="flex flex-col gap-4">
-        <Skel className="h-4 w-36" />
-        <div className="flex items-center gap-5">
-          <Skel className="hidden h-[82px] w-[150px] rounded-2xl sm:block" />
-          <div className="flex flex-col gap-3">
-            <Skel className="h-9 w-64 rounded-xl" />
-            <Skel className="h-5 w-44" />
+    <div className="problem-page-layout" aria-busy>
+      <div className="problem-skeleton flex flex-col gap-8 pt-8">
+        <div className="flex flex-col gap-4">
+          <div className="flex min-h-7 items-center justify-between gap-3">
+            <Skel className="h-4 w-36" />
+            <Skel className="h-4 w-16 sm:w-40" />
+          </div>
+          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+            <div className="flex items-center gap-5">
+              <Skel className="hidden h-[82px] w-[110px] shrink-0 rounded-2xl sm:block" />
+              <div className="flex flex-col gap-3">
+                <Skel className="h-8 w-48 rounded-xl sm:h-10 sm:w-64" />
+                <Skel className="h-6 w-56" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Skel className="h-8 w-[86px] rounded-full" />
+              <Skel className="h-8 w-[100px] rounded-full" />
+            </div>
           </div>
         </div>
-      </div>
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_200px]">
-        <div className="flex flex-col gap-4">
-          <Skel className="h-6 w-32" />
-          <Card className="gap-3 p-5 sm:p-7">
-            {["w-[92%]", "w-[84%]", "w-[88%]", "w-[60%]", "", "w-[72%]", "w-[80%]", "w-[50%]"].map((w, i) =>
-              w ? <Skel key={i} className={`h-4 ${w}`} /> : <span key={i} className="h-2" />,
-            )}
-          </Card>
-          <PixelLoader label="LOADING" />
+
+        {/* 写代码布局才有的「卡住了？提示 · 动画 · 题解 …」那一排 */}
+        <div className="problem-skel-study">
+          <Skel className="me-1 h-3.5 w-11" />
+          {["w-[70px]", "w-[46px]", "w-[48px]", "w-[84px]", "w-[76px]", "w-[76px]"].map((w, i) => (
+            <span key={i} className={clsx("flex h-8 items-center px-3", i === 4 && "ms-[13px]")}><Skel className={`h-4 ${w}`} /></span>
+          ))}
+        </div>
+
+        <div className="problem-original-sections">
+          <div className="flex min-w-0 flex-col gap-4">
+            <div className="flex h-7 items-center gap-3">
+              <Skel className="size-4 rounded-[3px]" />
+              <Skel className="h-5 w-24" />
+              <Skel className="h-3 w-20" />
+            </div>
+            <Card className="gap-3 p-5 sm:p-7">
+              {["w-[92%]", "w-[84%]", "w-[88%]", "w-[60%]", "", "w-[30%]", "w-[72%]", "w-[80%]", "", "w-[30%]", "w-[66%]", "w-[50%]"].map((w, i) =>
+                w ? <Skel key={i} className={`h-4 ${w}`} /> : <span key={i} className="h-2" />,
+              )}
+            </Card>
+            <PixelLoader label="LOADING" />
+          </div>
+          {/* 正文够宽时右边的「本页」目录（规则和真实页面一样：problem-toc） */}
+          <aside className="problem-toc">
+            <div className="flex flex-col gap-2">
+              <Skel className="mb-2 h-3 w-10" />
+              {["w-20", "w-20", "w-20", "w-12", "w-28", "w-20", "w-28"].map((w, i) => <Skel key={i} className={`mx-3 my-1.5 h-4 ${w}`} />)}
+            </div>
+          </aside>
         </div>
       </div>
-    </div>
+
+      {/* 右边的练习区：和真实的一样钉在顶栏下面、一样宽（拖动条那一列也留着），里面是模式切换、工具栏、编辑器、运行按钮 */}
+      <div aria-hidden className="problem-skel-dock-handle"><span /></div>
+      <div aria-hidden className="problem-skel-practice">
+        <div className="flex items-center justify-between gap-2 px-1 pb-3">
+          <Skel className="h-8 w-32 rounded-full" />
+          <div className="flex items-center gap-2"><Skel className="h-7 w-20" /><Skel className="h-7 w-14" /></div>
+        </div>
+        <Card className="min-h-0 flex-1 gap-0 overflow-hidden p-0">
+          <div className="flex items-center justify-between gap-2 border-b border-separator px-4 py-3">
+            <Skel className="h-4 w-20" />
+            <div className="flex items-center gap-1.5"><Skel className="h-8 w-36 rounded-xl" /><Skel className="h-8 w-28 rounded-xl" /><Skel className="size-8 rounded-full" /><Skel className="size-8 rounded-full" /></div>
+          </div>
+          <div className="flex min-h-0 flex-1 overflow-hidden">
+            <div className="flex w-12 shrink-0 flex-col items-center gap-[14px] border-r border-separator pt-[22px]">{[0, 1, 2].map((i) => <Skel key={i} className="h-3 w-2.5" />)}</div>
+            <div className="flex flex-1 flex-col gap-[14px] px-2 pt-[22px]"><Skel className="h-3 w-[30%]" /><Skel className="ms-9 h-3 w-[70%]" /><Skel className="ms-9 h-3 w-[22%]" /></div>
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-separator px-4 py-3">
+            <Skel className="h-8 w-16 rounded-full" /><Skel className="h-8 w-24 rounded-full" /><Skel className="h-8 w-36 rounded-full" />
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
@@ -778,6 +891,10 @@ export function ProblemView({ id }: { id: number }) {
     if (key === "solution") setRevealed(true); // 点了「题解」就是要看，不再盖一层
   }, []);
   useEffect(() => setSheet(null), [id, coding]);
+  const nav = useProblemNav(d);
+  // 从上一页的「上一题 / 下一题」过来的：从前进的方向滑进来（只读，不在这里清：开发模式下初始化函数会跑两遍）
+  const [enter] = useState(() => enterFrom);
+  useEffect(() => { enterFrom = null; }, []);
 
   useEffect(() => {
     if (d) document.title = `${d.summary.id}. ${d.summary.name} · 热题 100 题解手册`;
@@ -805,8 +922,8 @@ export function ProblemView({ id }: { id: number }) {
 
   return (
     <PracticeProvider detail={d} key={s.id}>
-    <div className="problem-page-layout">
-    <div className="problem-original reveal flex flex-col gap-8 pt-8">
+    <div className="problem-page-layout" data-enter={enter ?? undefined} data-leaving={nav.leaving ?? undefined}>
+    <div className={clsx("problem-original flex flex-col gap-8 pt-8", enter ? `problem-enter-${enter}` : "reveal")}>
       <div className="flex flex-col gap-4">
         <div className="flex min-h-7 items-center justify-between gap-3">
           <Breadcrumbs>
@@ -815,7 +932,7 @@ export function ProblemView({ id }: { id: number }) {
             </Breadcrumbs.Item>
             <Breadcrumbs.Item>{TIER_INFO[s.tier].label}</Breadcrumbs.Item>
           </Breadcrumbs>
-          <ProblemPager d={d} />
+          <ProblemPager d={d} nav={nav} />
         </div>
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div className="flex items-center gap-5">
@@ -938,7 +1055,7 @@ export function ProblemView({ id }: { id: number }) {
 
           <nav className="grid gap-3 border-t border-separator pt-6 sm:grid-cols-2">
             {d.prev ? (
-              <NextLink className="group flex flex-col gap-1 rounded-2xl border border-border p-4 no-underline transition hover:border-accent" href={`/p/${d.prev.id}/`}>
+              <NextLink className="group flex flex-col gap-1 rounded-2xl border border-border p-4 no-underline transition hover:border-accent" href={`/p/${d.prev.id}/`} {...nav.link(d.prev.id, "prev")}>
                 <span className="flex items-center gap-1 text-xs text-muted">
                   <ChevronLeft height={12} width={12} />
                   上一题（按重要程度）
@@ -951,7 +1068,7 @@ export function ProblemView({ id }: { id: number }) {
               <span />
             )}
             {d.next && (
-              <NextLink className="group flex flex-col items-end gap-1 rounded-2xl border border-border p-4 text-right no-underline transition hover:border-accent" href={`/p/${d.next.id}/`}>
+              <NextLink className="group flex flex-col items-end gap-1 rounded-2xl border border-border p-4 text-right no-underline transition hover:border-accent" href={`/p/${d.next.id}/`} {...nav.link(d.next.id, "next")}>
                 <span className="flex items-center gap-1 text-xs text-muted">
                   下一题（按重要程度）
                   <ChevronRight height={12} width={12} />

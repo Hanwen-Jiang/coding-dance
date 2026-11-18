@@ -163,6 +163,33 @@ try {
   }
   console.log("✓ Cycle/intersection list examples expose official fields and explain node results");
 
+  // 换题：前后两题提前读好，点「下一题」不出骨架、练习区不重新「准备」，新的一页从右边滑进来；
+  // 数据没到时的骨架和真实页面对齐（右边练习区的占位和真的练习区一样大）
+  if (!process.env.PRACTICE_LOCAL_FIXTURES) {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    let slow = false;
+    await page.route("**/api/problem/*", async (route) => { if (slow) await new Promise((r) => setTimeout(r, 1500)); await route.continue(); });
+    slow = true;
+    await page.goto(`${base}/p/49/`);
+    await page.locator(".problem-skeleton").waitFor();
+    const skel = await page.evaluate(() => ["problem-skel-practice", "problem-skel-study"].map((c) => { const b = document.querySelector(`.${c}`).getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round); }));
+    await page.getByRole("heading", { level: 1 }).waitFor();
+    slow = false;
+    await ready();
+    const real = await page.evaluate(() => [".practice-sidebar", ".problem-study-bar"].map((c) => { const b = document.querySelector(c).getBoundingClientRect(); return [b.x, b.y, b.width, b.height].map(Math.round); }));
+    assert.deepEqual(skel, real, "Loading skeleton lines up with the coding layout (practice panel, entry bar)");
+    await page.waitForTimeout(2500); // 页面闲下来时读好前后两题
+    const href = await page.getByTestId("problem-pager").getByRole("link", { name: /^下一题/ }).getAttribute("href");
+    await page.evaluate(() => { window.__sawSkeleton = false; window.__sawPreparing = false; new MutationObserver(() => { if (document.querySelector(".problem-skeleton")) window.__sawSkeleton = true; if (document.body.innerText.includes("正在准备练习")) window.__sawPreparing = true; }).observe(document.body, { childList: true, subtree: true }); });
+    await page.getByTestId("problem-pager").getByRole("link", { name: /^下一题/ }).click();
+    await page.waitForURL(`**${href}`);
+    await page.locator(".problem-original.problem-enter-next").waitFor();
+    await ready();
+    assert.deepEqual(await page.evaluate(() => [window.__sawSkeleton, window.__sawPreparing]), [false, false], "Prefetched next problem: no skeleton, no practice reload");
+    await page.unroute("**/api/problem/*");
+    console.log("✓ Next/previous problem slides in without a skeleton; the skeleton matches the coding layout");
+  }
+
   await page.goto(`${base}/`);
   assert.equal(await page.locator("main").evaluate((node) => node.getBoundingClientRect().width), 1152);
   assert.equal(await page.locator(".problem-page-layout").count(), 0);

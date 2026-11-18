@@ -22,12 +22,49 @@ type PracticeContextValue = {
 };
 const PracticeContext = createContext<PracticeContextValue | null>(null);
 
+/**
+ * 读过的练习数据留在内存里（同一个地址同时只发一个请求）。题目页会提前读好上一题、下一题的，
+ * 换题时编辑器直接出来，不用再等一轮「正在准备练习」。失败的不留，重试会重新读。
+ */
+const practiceCache = new Map<number, PracticeProblem>();
+const practicePending = new Map<number, Promise<PracticeProblem>>();
+function loadPractice(id: number): Promise<PracticeProblem> {
+  const hit = practiceCache.get(id);
+  if (hit) return Promise.resolve(hit);
+  let pending = practicePending.get(id);
+  if (!pending) {
+    pending = fetch(`/api/practice/${id}`)
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`练习数据暂时无法加载（${response.status}）`);
+        const data = await response.json() as PracticeProblem;
+        if (data.id !== id || !data.cases?.length || !data.starters) throw new Error("这道题的练习数据不完整，请稍后重试。");
+        practiceCache.set(id, data);
+        return data;
+      })
+      .finally(() => practicePending.delete(id));
+    practicePending.set(id, pending);
+  }
+  return pending;
+}
+export function prefetchPractice(id: number) {
+  loadPractice(id).catch(() => { /* 真用到时再报错 */ });
+}
+
+function savedOptions(): { mode?: PracticeMode; language?: PracticeLanguage } {
+  try {
+    const saved = JSON.parse(localStorage.getItem(OPTIONS_KEY) || "null") as { mode?: unknown; language?: unknown } | null;
+    return { mode: saved?.mode === "leetcode" || saved?.mode === "acm" ? saved.mode : undefined, language: isLanguage(saved?.language) ? saved.language : undefined };
+  } catch { return {}; }
+}
+
 export function PracticeProvider({ detail, children }: { detail: ProblemDetail; children: React.ReactNode }) {
-  const [problem, setProblem] = useState<PracticeProblem | null>(null);
+  const [problem, setProblem] = useState<PracticeProblem | null>(() => practiceCache.get(detail.summary.id) ?? null);
   const [error, setError] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
-  const [mode, setMode] = useState<PracticeMode>("leetcode");
-  const [language, setLanguage] = useState<PracticeLanguage>("python");
+  // 存过的模式、语言一开始就用上（数据已经在内存里时编辑器第一次渲染就是对的，不会先按默认值建一个再换掉）
+  const [initial] = useState(savedOptions);
+  const [mode, setMode] = useState<PracticeMode>(initial.mode ?? "leetcode");
+  const [language, setLanguage] = useState<PracticeLanguage>(initial.language ?? "python");
   const { langs } = usePrefs();
   const initialized = useRef(false);
 
@@ -42,20 +79,16 @@ export function PracticeProvider({ detail, children }: { detail: ProblemDetail; 
   }, [langs]);
 
   useEffect(() => {
-    const controller = new AbortController();
-    setProblem(null);
+    let alive = true;
+    const id = detail.summary.id;
     setError(null);
-    fetch(`/api/practice/${detail.summary.id}`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) throw new Error(`练习数据暂时无法加载（${response.status}）`);
-        return response.json() as Promise<PracticeProblem>;
-      })
-      .then((data) => {
-        if (data.id !== detail.summary.id || !data.cases?.length || !data.starters) throw new Error("这道题的练习数据不完整，请稍后重试。");
-        if (!controller.signal.aborted) setProblem(data);
-      })
-      .catch((e: Error) => { if (!controller.signal.aborted) setError(e.message); });
-    return () => controller.abort();
+    const hit = practiceCache.get(id);
+    if (hit) { setProblem(hit); return; }
+    setProblem(null);
+    loadPractice(id)
+      .then((data) => { if (alive) setProblem(data); })
+      .catch((e: Error) => { if (alive) setError(e.message); });
+    return () => { alive = false; };
   }, [detail.summary.id, revision]);
 
   const select = (nextMode: PracticeMode, nextLanguage: PracticeLanguage) => {
