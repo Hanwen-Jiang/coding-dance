@@ -49,7 +49,8 @@ def merge_sort(node):
 await fs.mkdir(frameDirectory, { recursive: true });
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe", headless: true });
 const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, colorScheme: "light", reducedMotion: "no-preference" });
-await context.addInitScript(() => { if (window === window.top) { localStorage.setItem("theme", "light"); localStorage.setItem("hot100:practice:options", JSON.stringify({ mode: "acm", language: "python" })); } });
+// 练习区默认收起；这里测的是编辑器，先当作用户展开过
+await context.addInitScript(() => { if (window === window.top) { localStorage.setItem("theme", "light"); localStorage.setItem("hot100:practice:options", JSON.stringify({ mode: "acm", language: "python" })); if (!localStorage.getItem("hot100:practice:dock")) localStorage.setItem("hot100:practice:dock", "open"); } });
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
 const errors = [];

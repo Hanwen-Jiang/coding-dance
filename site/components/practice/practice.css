@@ -205,9 +205,9 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
 /* 正文和练习区之间的竖条（拖动调整练习区宽度）只在桌面并排时有 */
 .practice-dock-handle { display: none; }
 /*
- * 桌面（≥1200）练习区在页面右侧，可以收起（html[data-practice="closed"]，记在浏览器里，layout.tsx 在首屏前就设好）：
+ * 桌面（≥1200）练习区在页面右侧，默认收起（html[data-practice="closed"]；用户展开过就记在浏览器里，layout.tsx 在首屏前就设好）：
  *   展开：题目页撑宽，顶栏也跟着撑宽（内边距 24px，正好和下面正文的左右边缘对齐）；
- *   收起：题目页和首页一样宽（max-w-6xl），顶栏不动，右下角留一个「写代码」按钮召出练习区。
+ *   收起：题目页和首页一样宽（max-w-6xl），顶栏不动，屏幕右边一个像素把手「<」召出练习区（第一次来时它自己演几遍）。
  * 三列：正文 | 拖动条（24px，就是原来的间距）| 练习区。练习区的宽度是占整行的比例 --practice-dock
  * （拖动条调，存在浏览器里，layout.tsx 首屏前就设好），再限制在 360px 和「正文至少留 560px」之间；默认 38%。
  * 收起、展开之间宽度、列宽都有过渡（拖动时关掉），顶栏的过渡写在 globals.css。
@@ -284,18 +284,27 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
 .practice-rail-label { display: flex; gap: 0.5px; font-size: 11px; letter-spacing: 0.06em; line-height: 1; color: var(--muted); }
 .practice-rail-label span { display: inline-block; opacity: 0; transform: translateY(6px); transition: opacity 120ms ease, transform 160ms ease; }
 /* 鼠标移上去、键盘聚焦、拖着的时候：跳成「</>」，再跳出「coding」 */
-.practice-rail:is(:hover, :focus-visible, .is-dragging) .practice-rail-mark .cm-lt { transform: none; animation: none; opacity: 1; }
-.practice-rail:is(:hover, :focus-visible, .is-dragging) .practice-rail-mark :is(.cm-sl, .cm-gt) rect {
+.practice-rail:is(:hover, :focus-visible, .is-dragging, .is-hinting) .practice-rail-mark .cm-lt { transform: none; animation: none; opacity: 1; }
+.practice-rail:is(:hover, :focus-visible, .is-dragging, .is-hinting) .practice-rail-mark :is(.cm-sl, .cm-gt) rect {
   opacity: 1; transform: none;
   transition: opacity 140ms ease calc(var(--d) + 90ms), transform 420ms cubic-bezier(0.34, 2, 0.64, 1) calc(var(--d) + 90ms);
 }
-.practice-rail:is(:hover, :focus-visible, .is-dragging) .practice-rail-label span {
+.practice-rail:is(:hover, :focus-visible, .is-dragging, .is-hinting) .practice-rail-label span {
   opacity: 1; transform: none; color: var(--accent);
   transition: opacity 160ms ease calc(320ms + var(--i) * 55ms), transform 420ms cubic-bezier(0.34, 2.2, 0.64, 1) calc(320ms + var(--i) * 55ms);
 }
 .practice-rail:focus-visible .practice-rail-mark { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 4px; }
 @keyframes practice-rail-breathe { from { opacity: 0.22; } to { opacity: 0.55; } }
 @keyframes practice-rail-in { 0% { opacity: 0; transform: translate(28px, -50%); } 100% { opacity: 1; transform: translate(0, -50%); } }
+/* 第一次来时把手自己演一遍：往左招两下手（translate 和拖动用的 transform 互不干扰），同时跳成「</>」、蹦出「coding」 */
+html[data-practice="closed"] .practice-rail.is-hinting:not([hidden]) { animation: practice-rail-beckon 1.3s cubic-bezier(0.34, 1.56, 0.64, 1) 1; }
+@keyframes practice-rail-beckon {
+  0%, 100% { translate: 0 0; }
+  16% { translate: -14px 0; }
+  34% { translate: 0 0; }
+  50% { translate: -8px 0; }
+  66% { translate: 0 0; }
+}
 @keyframes practice-rail-out { 0% { opacity: 1; transform: translate(var(--rail-pull, 0px), -50%); } 100% { opacity: 0; transform: translate(calc(var(--rail-pull, 0px) - 22px), -50%) scale(0.9); } }
 /* 专注模式的「退出」：并排时在代码那边（退出专注），上下排列（手机）时在屏幕最上面这一行 */
 .practice-focus-exit-top { display: none; }

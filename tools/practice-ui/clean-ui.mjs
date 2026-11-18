@@ -22,6 +22,7 @@ const context = await browser.newContext({ viewport: { width: 1920, height: 1080
 await context.addInitScript(({ old, short, oldTs, edited }) => {
   if (window.top !== window || localStorage.getItem("clean-ui-seeded")) return;
   localStorage.setItem("clean-ui-seeded", "yes");
+  localStorage.setItem("hot100:practice:dock", "open"); // 练习区默认收起；这里测的是编辑器，先当作用户展开过
   localStorage.setItem("hot100:practice:options", JSON.stringify({ mode: "acm", language: "python" }));
   localStorage.setItem("hot100:practice:draft:15:acm:python", short);
   localStorage.setItem("hot100:practice:draft:15:acm:python:before-template-migration", old);
