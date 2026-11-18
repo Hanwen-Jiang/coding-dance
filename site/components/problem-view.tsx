@@ -30,7 +30,6 @@ type NavDir = "prev" | "next";
 type ProblemNav = { go: (to: number, dir: NavDir) => void; link: (to: number, dir: NavDir) => Pick<React.ComponentProps<typeof NextLink>, "onClick" | "onFocus" | "onPointerEnter"> };
 /** 上一页换题时往哪边走：新的一页挂上时读一次，用来决定从哪边滑进来（浏览器前进后退、别的链接进来的没有方向，照旧淡入） */
 let enterFrom: NavDir | null = null;
-const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
 /** 提前读好一道题：题目数据和练习数据都进内存，换过去时直接出来，不用看骨架 */
 function prefetchProblem(id: number) {
   fetchApi(`/api/problem/${id}`).catch(() => { /* 真打开时再报错 */ });
@@ -39,8 +38,9 @@ function prefetchProblem(id: number) {
 
 /**
  * 上一题、下一题（面包屑旁边的按钮、快捷键 [ ]、页面最下面的两张卡片）：
- * 这一页先往反方向滑走、淡出（practice.css 的 data-leaving），同时把下一题的数据读好，最多等 0.4 秒再换页，
- * 读好了新的一页直接从前进的方向滑进来；没读好就照常先出骨架。鼠标移到链接上、键盘聚焦时就开始读，页面闲下来也会把前后两题读好。
+ * 这一页往反方向挪一点、变淡（practice.css 的 data-leaving，不完全消失：等换页的这一下屏幕上不会空着），同时马上换页，
+ * 新的一页从前进的方向滑进来。题目数据提前读好了就直接出内容，没读好照常先出骨架。
+ * 鼠标移到链接上、键盘聚焦时就开始读，页面闲下来也会把前后两题读好。
  */
 function useProblemNav(d: ProblemDetail | null): ProblemNav & { leaving: NavDir | null } {
   const router = useRouter();
@@ -65,11 +65,11 @@ function useProblemNav(d: ProblemDetail | null): ProblemNav & { leaving: NavDir 
   const go = useCallback((to: number, dir: NavDir) => {
     if (busy.current) return; // 已经在换了，连按不再排一次
     busy.current = true;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     enterFrom = dir;
     setLeaving(dir);
-    const data = Promise.race([fetchApi(`/api/problem/${to}`).catch(() => undefined), sleep(400)]);
-    void Promise.all([data, sleep(reduced ? 0 : 160)]).then(() => router.push(`/p/${to}/`));
+    // 马上换页：换页要先读一份页面数据（线上要几百毫秒，提前读的那份 Next 换页时不用），和淡出、读题目数据同时进行
+    prefetchProblem(to);
+    router.push(`/p/${to}/`);
   }, [router]);
   const link = useCallback<ProblemNav["link"]>((to, dir) => ({
     onClick: (e) => {
