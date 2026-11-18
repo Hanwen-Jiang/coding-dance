@@ -1,24 +1,27 @@
 // 沙箱的测试：用练习数据（网站真正发过来的签名和用例）跑官方题解，再测崩溃隔离、超时、输出、ACM、编译报错、调试记录。
 //   本机：node tools/runner/test/sandbox.test.mjs                （不隔离，只测本机装了工具链的语言）
 //   镜像：RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/sandbox.test.mjs   （每个任务一个新容器，六种语言都测，再加安全检查；CI 用）
+//   microVM：RUNNER_TEST_FC_URL=http://127.0.0.1:8097 RUNNER_TEST_FC_TOKEN=… node …   （每个任务一台新的 Firecracker microVM；CI 的 Firecracker 任务）
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { LocalDriver, runInFreshContainer } from "../lib/sandbox.mjs";
+import { FirecrackerDriver, LocalDriver, runInFreshContainer } from "../lib/sandbox.mjs";
 
 const require = createRequire(import.meta.url);
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 const { codesOf, parseCode, pad4 } = require(path.join(ROOT, "tools/illustrations/judge/code.js"));
 const { matches } = require(path.join(ROOT, "tools/illustrations/judge/util.js"));
 
-const IMAGE = process.env.RUNNER_TEST_IMAGE || "";
+const FC = process.env.RUNNER_TEST_FC_URL ? new FirecrackerDriver({ url: process.env.RUNNER_TEST_FC_URL, token: process.env.RUNNER_TEST_FC_TOKEN }) : null;
+// 镜像或 microVM：隔离的环境，六种语言都有、要测安全限制
+const IMAGE = process.env.RUNNER_TEST_IMAGE || (FC ? "firecracker" : "");
 const local = new LocalDriver();
 async function runJob(job) {
   const input = JSON.stringify({ limits: { caseMs: 5000, totalMs: 60000, steps: 1000 }, ...job });
-  const r = IMAGE ? await runInFreshContainer(IMAGE, input, { timeoutMs: 180000, runtime: process.env.RUNNER_TEST_RUNTIME || "" }) : await local.run(input, 180000);
+  const r = FC ? await FC.run(input, 180000) : IMAGE ? await runInFreshContainer(IMAGE, input, { timeoutMs: 180000, runtime: process.env.RUNNER_TEST_RUNTIME || "" }) : await local.run(input, 180000);
   assert.ok(r.ok, "沙箱没有返回结果：" + r.error);
   return r.json;
 }
@@ -236,10 +239,22 @@ print("root", tryit(root))
     const r = await runJob({ lang: "python", mode: "acm", code: probe, cases: [{ stdin: "" }] });
     assert.equal(r.results[0].stdout.trim(), "网络 不通\n写系统文件 不通\nroot 不通", JSON.stringify(r.results[0]));
   });
-  await test("fork 炸弹被进程数限制挡住，结果照常返回", async () => {
+  await test("fork 炸弹：容器里被进程数限制挡住；microVM 里只拖垮它自己那台，下一次照常", async () => {
     const bomb = "import os\nn = 0\ntry:\n    while True:\n        if os.fork() == 0:\n            import time; time.sleep(30)\n        n += 1\nexcept OSError:\n    print('挡住了', n < 400)\n";
-    const r = await runJob({ lang: "python", mode: "acm", code: bomb, cases: [{ stdin: "" }], limits: { caseMs: 5000, totalMs: 20000 } });
-    assert.match(r.results[0].stdout, /挡住了 True/, JSON.stringify(r.results[0]));
+    const input = JSON.stringify({ lang: "python", mode: "acm", code: bomb, cases: [{ stdin: "" }], limits: { caseMs: 5000, totalMs: 20000 } });
+    if (FC) {
+      const r = await FC.run(input, 30000);
+      assert.ok(r.ok || r.error, "要么有结果要么报错");
+    } else {
+      const r = await runJob(JSON.parse(input));
+      assert.match(r.results[0].stdout, /挡住了 True/, JSON.stringify(r.results[0]));
+    }
+    const after = await runJob({ lang: "python", mode: "acm", code: "print(6 * 7)\n", cases: [{ stdin: "" }] });
+    assert.equal(after.results[0].stdout.trim(), "42");
+  });
+  if (FC) await test("microVM 里看到的是它自己的内核", async () => {
+    const r = await runJob({ lang: "python", mode: "acm", code: "import platform\nprint(platform.release())\n", cases: [{ stdin: "" }] });
+    assert.match(r.results[0].stdout, /agentruntime/, "客户机内核的版本号带 -agentruntime：" + r.results[0].stdout);
   });
   await test("内存用太多被停下", async () => {
     const hog = "x = []\nwhile True:\n    x.append(bytearray(50 << 20))\n";

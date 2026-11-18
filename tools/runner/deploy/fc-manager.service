@@ -1,0 +1,27 @@
+# fc-manager（agent-runtime 的 services/rs-fc-manager）：宿主上管 Firecracker microVM 的服务。由 firecracker.sh 安装。
+# 照 agent-runtime 的 deploy/cluster/fc-manager.service 改的：去掉了 k3s 和集群防火墙的依赖（这里只听 127.0.0.1）。
+# 重启时终止上一个进程留下的 VM、不接管（正在跑的那次运行会失败，用户重跑一次就行）：启动前和退出后各清扫一次。
+# 不用 ProtectSystem、PrivateTmp：ip netns 的绑定挂载要在宿主的挂载命名空间里，清扫才看得到。
+[Unit]
+Description=Firecracker microVM manager for lc-hot100 runner (agent-runtime fc-manager)
+ConditionPathExists=/dev/kvm
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/agentruntime/fc-manager.env
+ExecStartPre=/usr/local/bin/fc-manager sweep
+ExecStart=/usr/local/bin/fc-manager serve
+ExecStopPost=/usr/local/bin/fc-manager sweep
+Restart=always
+RestartSec=5
+# fc-manager 自己不提权：jailer 以 root 起、再降到每台 VM 自己的 uid；firecracker 自己装 seccomp。
+NoNewPrivileges=yes
+UMask=0077
+LimitNOFILE=65536
+# 内存紧张时先杀 VM（它们各自有 memory.max），不先杀管它们的进程。
+OOMScoreAdjust=-500
+
+[Install]
+WantedBy=multi-user.target

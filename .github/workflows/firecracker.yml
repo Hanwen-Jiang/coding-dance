@@ -1,0 +1,80 @@
+name: firecracker
+
+# 远端运行器的 Firecracker 这一层（tools/runner/deploy/firecracker.sh，用 agent-runtime 的 fc-manager、sandbox-agent、客户机内核）：
+# 在有 KVM 的 GitHub 机器上照部署脚本装一遍，再把整套沙箱测试放进真的 microVM 里跑（六种语言、调试器、隔离检查）。
+# 要编 Rust、编内核（有缓存），比较慢，所以只在运行器相关的文件变了时跑。
+on:
+  push:
+    branches: [main]
+    paths: ["tools/runner/**", "tools/illustrations/judge/**", ".github/workflows/firecracker.yml"]
+  pull_request:
+    paths: ["tools/runner/**", "tools/illustrations/judge/**", ".github/workflows/firecracker.yml"]
+  workflow_dispatch:
+
+jobs:
+  microvm:
+    name: microVM 里的沙箱测试
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      AGENT_RUNTIME_REF: da58416909fc54f02519de95706df01d9bbd1701
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Hanwen-Jiang/agent-runtime
+          ref: ${{ env.AGENT_RUNTIME_REF }}
+          path: agent-runtime
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: KVM
+        run: |
+          ls -l /dev/kvm || { echo "这台机器没有 /dev/kvm"; exit 1; }
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules && sudo udevadm trigger --name-match=kvm
+      - name: 缓存：Rust 编译
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            fc-target
+          key: fc-rust-${{ env.AGENT_RUNTIME_REF }}
+      - name: 缓存：客户机内核
+        id: kernel
+        uses: actions/cache@v4
+        with:
+          path: fc-kernel
+          key: fc-kernel-${{ hashFiles('agent-runtime/deploy/images/firecracker/kernel.conf', 'agent-runtime/deploy/images/firecracker/agentruntime.config') }}
+      - name: 用缓存的内核
+        if: steps.kernel.outputs.cache-hit == 'true'
+        run: |
+          sudo install -d -m 0700 /var/lib/agentruntime/fc/images
+          sudo install -m 0644 fc-kernel/vmlinux fc-kernel/vmlinux.key /var/lib/agentruntime/fc/images/
+      - uses: docker/setup-buildx-action@v3
+      - name: 构建沙箱镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/runner/image/Dockerfile
+          tags: lc-runner:ci
+          load: true
+          cache-from: type=gha,scope=lc-runner
+          cache-to: type=gha,mode=max,scope=lc-runner
+      - name: 照部署脚本装 Firecracker 这一层
+        run: |
+          sudo -E env "PATH=$PATH" CARGO_HOME="$HOME/.cargo" RUSTUP_HOME="$HOME/.rustup" CARGO_TARGET_DIR="$GITHUB_WORKSPACE/fc-target" \
+            AGENT_RUNTIME_SRC="$GITHUB_WORKSPACE/agent-runtime" RUNNER_IMAGE=lc-runner:ci SKIP_IMAGE_BUILD=1 RUNNER_POOL=2 \
+            bash tools/runner/deploy/firecracker.sh
+          sudo chown -R "$(id -u):$(id -g)" fc-target "$HOME/.cargo" || true
+          mkdir -p fc-kernel
+          sudo install -m 0644 -o "$(id -u)" /var/lib/agentruntime/fc/images/vmlinux /var/lib/agentruntime/fc/images/vmlinux.key fc-kernel/
+      - name: microVM 里跑整套沙箱测试
+        run: |
+          token="$(sudo sed -n 's/.*"sandbox\/fc-manager-token":"\([^"]*\)".*/\1/p' /etc/agentruntime/fc-manager-secrets.json)"
+          echo "::add-mask::$token"
+          RUNNER_TEST_FC_URL=http://127.0.0.1:8097 RUNNER_TEST_FC_TOKEN="$token" node tools/runner/test/sandbox.test.mjs
+      - name: fc-manager 的日志
+        if: always()
+        run: sudo journalctl -u fc-manager --no-pager -n 200 || true

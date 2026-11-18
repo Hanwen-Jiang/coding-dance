@@ -1,7 +1,8 @@
 [Unit]
 Description=lc-hot100 远端运行器（tools/runner）
-After=network-online.target docker.service
-Requires=docker.service
+# 每次运行一台 Firecracker microVM（fc-manager）；开发测试用 Docker 时排在 docker 之后
+After=network-online.target fc-manager.service docker.service
+Wants=fc-manager.service
 
 [Service]
 User=lc-runner

@@ -1,6 +1,9 @@
 // 在隔离环境里跑一次沙箱（sandbox/sandbox.js）：
-//   docker：生产用。预先起好几个空容器（池），来一个任务用一个，用完 docker rm -f，再补一个新的。容器不能上网、根文件系统只读、
-//           限内存 / CPU / 进程数 / 文件大小、去掉所有特权、用普通用户跑；可以换成 gVisor（runsc）或 Kata（每个容器一台小虚拟机）。
+//   firecracker：生产用。每次运行一台全新的 Firecracker microVM（自己的内核，没有网卡），用完就销毁。VM 由 agent-runtime 的
+//           fc-manager 管（jailer：每台 VM 一个 uid、chroot、独立命名空间、cgroup v2 上限、seccomp；预热池），
+//           沙箱程序经客户机里的 sandbox-agent 执行。见 README「Firecracker」。
+//   docker：开发和 CI 用。预先起好几个空容器，来一个任务用一个，用完 docker rm -f。容器不能上网、根文件系统只读、限内存 / CPU /
+//           进程数、去掉所有特权、普通用户；但和宿主共用一个内核，内核漏洞就能逃出来，**不能在生产上跑公开用户的代码**。
 //   local：本机开发用，直接在本机跑，**不隔离**，只能在自己的机器上用。
 import { spawn, execFile } from "node:child_process";
 import crypto from "node:crypto";
@@ -112,6 +115,94 @@ export class DockerPool {
     this.closed = true;
     await this.cleanup();
   }
+}
+
+/**
+ * Firecracker：agent-runtime 的 fc-manager（services/rs-fc-manager）的 HTTP 接口：
+ *   POST   /v1/envs                         {"runtime", "cpu_millis", "memory_mb", "labels"} → 201 {"env_id"}（预热池里有就直接交出一台）
+ *   POST   /v1/envs/<id>/agent/v1/exec      转给客户机里的 sandbox-agent：{"argv", "stdin"(base64), "timeout_ms", "env", "exec_id", "offload_inline_bytes"}
+ *                                            → {"exit_code", "timed_out", "stdout"(base64), "stderr"(base64)}
+ *   DELETE /v1/envs/<id>                    销毁
+ * 认证：Authorization: Bearer <令牌>（fc-manager 的 SecretStore 文件里 _platform 作用域的 sandbox/fc-manager-token），X-Sandbox-Owner。
+ * 客户机的根文件系统是这个镜像转成的只读盘（agent-runtime 的 rootfs.sh），可写的只有 /workspace 和 /tmp；命令以 uid 10001 跑，
+ * 只拿到 PATH、HOME、LANG 这几个环境变量，其余的（RUNNER_WORK 这些）每次随请求给。
+ */
+export class FirecrackerDriver {
+  constructor({ url = "http://127.0.0.1:8097", tokenFile = "", token = "", owner = "lc-hot100", runtime = "lc-runner", cpuMillis = 1000, memoryMb = 1024, log = () => {} } = {}) {
+    Object.assign(this, { url: url.replace(/\/+$/, ""), tokenFile, fixedToken: token, owner, runtime, cpuMillis, memoryMb, log });
+    this.live = 0;
+  }
+
+  /** 每次都重新读：fc-manager 换令牌不用重启，这里也跟着换 */
+  token() {
+    if (this.fixedToken) return this.fixedToken;
+    const file = JSON.parse(fs.readFileSync(this.tokenFile, "utf8"));
+    const t = file?.scopes?._platform?.secrets?.["sandbox/fc-manager-token"];
+    if (!t) throw new Error(`${this.tokenFile} 里没有 _platform 作用域的 sandbox/fc-manager-token`);
+    return t;
+  }
+
+  async call(method, path, body, timeoutMs = 30000) {
+    const res = await fetch(this.url + path, {
+      method,
+      headers: { authorization: `Bearer ${this.token()}`, "x-sandbox-owner": this.owner, ...(body ? { "content-type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const text = await res.text();
+    let json = null;
+    try { json = text ? JSON.parse(text) : null; } catch { /* 下面按状态码说 */ }
+    return { status: res.status, json, text };
+  }
+
+  async init() {
+    const h = await fetch(this.url + "/healthz").catch((e) => { throw new Error(`连不上 fc-manager（${this.url}）：${e.message}`); });
+    if (!h.ok) throw new Error(`fc-manager 的 /healthz 返回 ${h.status}`);
+    this.token();
+  }
+
+  async run(input, timeoutMs) {
+    const t0 = Date.now();
+    let created;
+    try {
+      created = await this.call("POST", "/v1/envs", { runtime: this.runtime, cpu_millis: this.cpuMillis, memory_mb: this.memoryMb, labels: { app: "lc-hot100" } });
+    } catch (e) {
+      return { ok: false, error: "连不上 fc-manager：" + e.message };
+    }
+    if (created.status === 503) return { ok: false, busy: true, error: "这台机器上的 microVM 满了" };
+    if (created.status !== 201 || !created.json?.env_id) return { ok: false, error: `建 microVM 失败（${created.status}）：${created.json?.message || created.text.slice(0, 200)}` };
+    const id = created.json.env_id;
+    this.live++;
+    const bootMs = Date.now() - t0;
+    try {
+      const r = await this.call("POST", `/v1/envs/${id}/agent/v1/exec`, {
+        argv: ["node", SANDBOX_IN_IMAGE],
+        stdin: Buffer.from(input).toString("base64"),
+        timeout_ms: timeoutMs,
+        env: { RUNNER_WORK: "/workspace", RUNNER_PREPARED: "/opt/lc/prepared", PYTHON: "python3", GOTOOLCHAIN: "local", CGO_ENABLED: "0" },
+        exec_id: crypto.randomUUID(),
+        offload_inline_bytes: 0,
+      }, timeoutMs + 15000);
+      if (r.status !== 200 || !r.json) return { ok: false, error: `microVM 里执行失败（${r.status}）：${r.json?.message || r.text.slice(0, 200)}` };
+      if (r.json.timed_out) return { ok: false, error: "这次运行超过了总时间限制，被停下了" };
+      const stdout = Buffer.from(r.json.stdout || "", "base64").toString("utf8");
+      try {
+        return { ok: true, json: JSON.parse(stdout), bootMs };
+      } catch {
+        const stderr = Buffer.from(r.json.stderr || "", "base64").toString("utf8");
+        return { ok: false, error: `沙箱没有返回结果（退出码 ${r.json.exit_code}）` + (stderr ? "：" + stderr.trim().split("\n").slice(-3).join(" | ") : "") };
+      }
+    } catch (e) {
+      return { ok: false, error: "microVM 里执行出错：" + e.message };
+    } finally {
+      this.live--;
+      // 用完就销毁（没了也是 204）；失败了 fc-manager 的回收器和重启时的清扫会兜底
+      this.call("DELETE", `/v1/envs/${id}`, null, 30000).then((d) => { if (d.status !== 204) this.log({ event: "fc-delete", env: id, status: d.status }); }, (e) => this.log({ event: "fc-delete", env: id, error: e.message }));
+    }
+  }
+
+  status() { return { driver: "firecracker", runtime: this.runtime, live: this.live }; }
+  async close() {}
 }
 
 /** 本机开发：不隔离 */

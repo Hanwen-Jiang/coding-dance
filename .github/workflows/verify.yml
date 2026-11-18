@@ -118,3 +118,5 @@ jobs:
         run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/sandbox.test.mjs
       - name: 服务（签名、限流、容器池）
         run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/server.test.mjs
+      - name: Firecracker 驱动的协议（假 fc-manager；真 microVM 见 firecracker.yml）
+        run: node tools/runner/test/firecracker.test.mjs

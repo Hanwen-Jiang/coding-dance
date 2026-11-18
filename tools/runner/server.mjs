@@ -4,7 +4,7 @@
 // 用法和环境变量见 README.md；本机开发：RUNNER_DRIVER=local RUNNER_ALLOW_LOCAL=1 RUNNER_SECRET=<至少 32 个字符> node tools/runner/server.mjs
 import http from "node:http";
 import { verify, NonceCache, NODE_ID } from "./lib/sign.mjs";
-import { DockerPool, LocalDriver } from "./lib/sandbox.mjs";
+import { DockerPool, FirecrackerDriver, LocalDriver } from "./lib/sandbox.mjs";
 
 const env = process.env;
 const num = (v, d) => (Number.isFinite(Number(v)) && v !== undefined && v !== "" ? Number(v) : d);
@@ -14,7 +14,14 @@ export const CONFIG = {
   port: num(env.RUNNER_PORT, 8790),
   host: env.RUNNER_HOST || "127.0.0.1",
   secret: env.RUNNER_SECRET || "",
-  driver: env.RUNNER_DRIVER || "docker",
+  /** firecracker（生产）、docker（开发和 CI，要 RUNNER_ALLOW_DOCKER=1）、local（本机，不隔离，要 RUNNER_ALLOW_LOCAL=1） */
+  driver: env.RUNNER_DRIVER || "firecracker",
+  /** fc-manager 的地址和令牌（令牌就是 fc-manager 的 SecretStore 里 sandbox/fc-manager-token 的值） */
+  fcUrl: env.RUNNER_FC_URL || "http://127.0.0.1:8097",
+  fcToken: env.RUNNER_FC_TOKEN || "",
+  fcRuntime: env.RUNNER_FC_RUNTIME || "lc-runner",
+  fcCpuMillis: num(env.RUNNER_FC_CPU_MILLIS, 1000),
+  fcMemoryMb: num(env.RUNNER_FC_MEMORY_MB, 1024),
   image: env.RUNNER_IMAGE || "lc-runner:latest",
   runtime: env.RUNNER_RUNTIME || "",
   pool: num(env.RUNNER_POOL, 2),
@@ -137,6 +144,8 @@ export function createServer(cfg = CONFIG, driver) {
       const r = await driver.run(JSON.stringify(task), cfg.jobMs);
       const totalMs = Date.now() - t0;
       log({ event: "run", node: cfg.node, user, lang: job.lang, mode: job.mode, debug: !!job.debug, cases: job.cases.length, queueMs, totalMs, ok: r.ok && r.json.ok, compileError: !!(r.ok && r.json.compileError) });
+      // 这台机器的 microVM 满了：503，网站换别的节点
+      if (!r.ok && r.busy) return send(res, 503, { error: r.error }, { "retry-after": "5" });
       if (!r.ok) return send(res, 502, { error: r.error });
       if (!r.json.ok) return send(res, 400, { error: r.json.error || "运行失败" });
       return send(res, 200, { ...r.json, node: cfg.node, queueMs, totalMs });
@@ -155,7 +164,12 @@ async function main() {
   if (CONFIG.secret.length < 32) { console.error("RUNNER_SECRET 要设成至少 32 个字符的随机串（和网站的 RUNNER_SECRET 一样）"); process.exit(1); }
   if (!NODE_ID.test(CONFIG.node)) { console.error("RUNNER_NODE_ID 要设成这个节点的编号（小写字母、数字、横线，比如 lou1），和网站 RUNNER_NODES 里写的一样"); process.exit(1); }
   if (CONFIG.driver === "local" && env.RUNNER_ALLOW_LOCAL !== "1") { console.error("RUNNER_DRIVER=local 不隔离用户代码，只能本机开发用；确定的话再设 RUNNER_ALLOW_LOCAL=1"); process.exit(1); }
-  const driver = CONFIG.driver === "local" ? new LocalDriver() : new DockerPool({ image: CONFIG.image, size: CONFIG.pool, runtime: CONFIG.runtime, memory: CONFIG.memory, cpus: CONFIG.cpus, pids: CONFIG.pids, log });
+  // Docker 和宿主共用内核，挡不住内核漏洞：生产上跑公开用户的代码要用 firecracker（每次一台 microVM）
+  if (CONFIG.driver === "docker" && env.RUNNER_ALLOW_DOCKER !== "1") { console.error("RUNNER_DRIVER=docker 和宿主共用内核，只能开发和测试用；生产上用 firecracker。确定的话再设 RUNNER_ALLOW_DOCKER=1"); process.exit(1); }
+  if (CONFIG.driver === "firecracker" && !CONFIG.fcToken) { console.error("RUNNER_DRIVER=firecracker 要设 RUNNER_FC_TOKEN（fc-manager 的 API 令牌）"); process.exit(1); }
+  const driver = CONFIG.driver === "local" ? new LocalDriver()
+    : CONFIG.driver === "firecracker" ? new FirecrackerDriver({ url: CONFIG.fcUrl, token: CONFIG.fcToken, runtime: CONFIG.fcRuntime, cpuMillis: CONFIG.fcCpuMillis, memoryMb: CONFIG.fcMemoryMb, log })
+      : new DockerPool({ image: CONFIG.image, size: CONFIG.pool, runtime: CONFIG.runtime, memory: CONFIG.memory, cpus: CONFIG.cpus, pids: CONFIG.pids, log });
   await driver.init();
   const server = createServer(CONFIG, driver);
   server.listen(CONFIG.port, CONFIG.host, () => log({ event: "listening", node: CONFIG.node, host: CONFIG.host, port: CONFIG.port, driver: CONFIG.driver, image: CONFIG.image, runtime: CONFIG.runtime || "runc" }));
