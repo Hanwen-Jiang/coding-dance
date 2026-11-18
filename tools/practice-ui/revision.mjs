@@ -34,6 +34,7 @@ await context.addInitScript(({ oldPython, modifiedJs }) => {
   if (window.top !== window) return;
   if (localStorage.getItem("practice-revision-seeded")) return;
   localStorage.setItem("practice-revision-seeded", "yes");
+  localStorage.setItem("hot100:practice:dock", "open"); // 练习区默认收起；这里测的是展开后的布局，先当作用户展开过
   localStorage.setItem("hot100:practice:options", JSON.stringify({ mode: "acm", language: "python" }));
   localStorage.setItem("hot100:practice:draft:15:acm:python", oldPython);
   localStorage.setItem("hot100:practice:draft:15:acm:javascript", modifiedJs);

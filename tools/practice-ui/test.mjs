@@ -107,7 +107,20 @@ for row in answer:
 try {
   await fs.mkdir(screenshots, { recursive: true });
   await page.goto(`${base}/p/15/`);
-  await waitEditor();
+  // 第一次来：练习区默认收起，右边的像素把手自己演一遍（往左招手、跳成 </>、蹦出 coding）提示这里能写代码；点开之后记住
+  {
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.practice), "closed", "New visitors start with practice collapsed");
+    const rail = page.getByRole("button", { name: "展开练习区", exact: true });
+    await rail.waitFor();
+    await page.waitForFunction(() => document.querySelector(".practice-rail")?.classList.contains("is-hinting"), null, { timeout: 6000 });
+    await rail.click();
+    await waitEditor();
+    await page.reload();
+    await waitEditor();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.practice), "open", "Opening practice once is remembered");
+    assert.equal(await page.evaluate(() => localStorage.getItem("hot100:practice:discovered")), "1", "…and the handle stops hinting");
+    console.log("✓ First visit: practice collapsed, the handle hints where to code, opening it is remembered");
+  }
   await mode("LeetCode");
 
   if (!process.env.PRACTICE_UI_ONLY) {

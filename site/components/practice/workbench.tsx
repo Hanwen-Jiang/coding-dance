@@ -15,7 +15,7 @@ import { type DebugRun, PracticeDebugger } from "@/components/practice/debugger"
 import { PracticeResults } from "@/components/practice/results";
 import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice/resize";
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
-import { usePracticeDock } from "@/lib/practice/dock";
+import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
@@ -186,6 +186,28 @@ export function PracticeWorkbench() {
     setRailState("leaving");
     window.setTimeout(() => { summon(); setRailState("idle"); setRailPull(null); }, 150);
   };
+  /*
+   * 第一次来（还没自己展开过练习区）：练习区默认收起，把手自己演几遍——往左招两下手，「<」跳成「</>」，
+   * 下面蹦出「coding」，再缩回去。页面出来 1.4 秒后第一遍，之后隔 7 秒一遍，最多三遍；
+   * 鼠标移上去、展开过一次（setPracticeDocked 记下 DISCOVERED_KEY）就不再演。减少动态效果时不演。
+   */
+  const [hinting, setHinting] = useState(false);
+  useEffect(() => {
+    if (!stowed || reducedMotion) return;
+    try { if (localStorage.getItem(DISCOVERED_KEY)) return; } catch { /* 读不了就照常提示 */ }
+    const timers: number[] = [];
+    const play = (n: number) => {
+      if (n >= 3) return;
+      setHinting(true);
+      timers.push(window.setTimeout(() => setHinting(false), 2200));
+      timers.push(window.setTimeout(() => play(n + 1), 2200 + 7000));
+    };
+    timers.push(window.setTimeout(() => play(0), 1400));
+    const stop = () => { timers.forEach(clearTimeout); setHinting(false); };
+    const el = rail.current;
+    el?.addEventListener("pointerenter", stop, { once: true });
+    return () => { stop(); el?.removeEventListener("pointerenter", stop); };
+  }, [stowed, reducedMotion]);
   return (
     <>
     {/* 正文和练习区之间的竖条：左右拖调整练习区宽度，方向键也行，双击恢复默认；往右拖过最小宽度就收进右边（桌面并排、练习区展开时才有） */}
@@ -281,7 +303,7 @@ export function PracticeWorkbench() {
     */}
     <button
       aria-label="展开练习区"
-      className={clsx("practice-rail", railState === "drag" && "is-dragging", railState === "leaving" && "is-leaving")}
+      className={clsx("practice-rail", railState === "drag" && "is-dragging", railState === "leaving" && "is-leaving", hinting && railState === "idle" && "is-hinting")}
       hidden={!stowed}
       onClick={() => { if (!railMoved.current && railState !== "leaving") summonFromRail(); railMoved.current = false; }}
       onPointerCancel={() => { railDrag.current = null; setRailPull(null); setRailState("idle"); }}
