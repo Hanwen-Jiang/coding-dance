@@ -363,6 +363,13 @@ try {
   {
     const bar = page.locator(".problem-study-bar");
     assert.equal(await page.locator(".problem-original h2#hints").count(), 0, "No serial sections while coding");
+    // 先往下滚到入口那一条停在顶栏下面：入口停在 65px，比 html 的 scroll-padding-top（80px）高，
+    // 这时 Tab 到入口、Playwright 点之前的「滚到看得见」最容易把页面往上挪
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    const barTop = (await bar.boundingBox()).y;
+    await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), barTop - 57 + 40);
+    await page.waitForTimeout(100);
+    assert(Math.abs((await bar.boundingBox()).y - 57) < 1, "The entry bar is pinned under the header");
     const scrollBefore = await page.evaluate(() => scrollY);
     const hintsEntry = bar.getByRole("button", { name: /^提示/ });
     await hintsEntry.click();
@@ -373,7 +380,8 @@ try {
     const [bb, side, eb] = [await bubble.boundingBox(), await page.locator(".practice-sidebar").boundingBox(), await hintsEntry.boundingBox()];
     assert(bb.x + bb.width < side.x && bb.height < side.height - 40 && bb.width <= 522, `Hints open as a content-sized bubble, not a full-height panel (${JSON.stringify(bb)})`);
     assert(bb.y >= eb.y + eb.height - 2 && bb.x <= eb.x + eb.width, "…right under its entry");
-    const hintSteps = () => bubble.locator(".hint-text:visible").count();
+    // 按每层提示的「提示 N」角标数（.hint-text 只是文字样式，题解的说明、易错点也用它）
+    const hintSteps = () => bubble.getByText(/^提示 \d+$/).filter({ visible: true }).count();
     assert.equal(await hintSteps(), 1, "Hints start with one step");
     await bubble.getByRole("button", { name: /再给一点提示/ }).click();
     assert.equal(await hintSteps(), 2, "…and reveal the next on request");
@@ -394,7 +402,11 @@ try {
     assert((await bubble.boundingBox()).width <= 522, "…and the bubble is narrow again");
     await page.keyboard.press("Escape");
     assert.equal(await bubble.isVisible(), false, "Esc closes the bubble");
-    assert.equal(await page.evaluate(() => scrollY), scrollBefore, "The page never moved");
+    await hintsEntry.focus();
+    for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+    await page.waitForTimeout(250);
+    assert.match(await page.evaluate(() => document.activeElement?.closest(".problem-study-entries") ? "entry" : document.activeElement?.tagName), /entry/, "Tab walks along the entries");
+    assert.equal(await page.evaluate(() => scrollY), scrollBefore, "The page never moved (Tab along the pinned entries included)");
     assert(await page.locator(".cm-editor").isVisible(), "Editor stays visible throughout");
     await page.getByRole("button", { name: "收起练习区", exact: true }).click();
     await page.locator(".problem-original h2#hints").waitFor();
