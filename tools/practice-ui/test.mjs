@@ -284,11 +284,12 @@ try {
     await page.getByRole("button", { name: "收起练习区", exact: true }).click();
     await settle();
     assert.equal(await handle.isVisible(), false, "Divider hides when practice is stowed");
-    // 收起后是右下角一个 </> 圆按钮（不再是贴边的一整条）；点它展开
+    // 收起后是屏幕右边、竖着居中的一个小像素把手（不再是贴边的一整条）；点它展开
     const rail = page.getByRole("button", { name: "展开练习区", exact: true });
+    await page.waitForTimeout(800); // 把手晚一点带回弹地弹出来
     const rb = await rail.boundingBox();
     const vp = page.viewportSize();
-    assert(rb.height <= 52 && vp.width - (rb.x + rb.width) < 40 && vp.height - (rb.y + rb.height) < 40, `Stowed practice is a small round button in the bottom-right corner (${JSON.stringify(rb)})`);
+    assert(rb.height <= 110 && rb.width <= 110 && vp.width - (rb.x + rb.width) < 4 && Math.abs(rb.y + rb.height / 2 - vp.height / 2) < 30, `Stowed practice is a small pixel handle on the right edge, vertically centred (${JSON.stringify(rb)})`);
     assert.equal(await page.locator(".practice-launcher").isVisible(), false, "The phone 写代码 launcher stays hidden on desktop");
     await rail.click();
     await settle();
@@ -312,7 +313,7 @@ try {
     assert(Math.abs((await practiceWidth()) - keyed) < 2, "…at the width it had before folding");
     await handle.dblclick();
     await settle();
-    console.log("✓ Desktop divider: drag, min body width, keys, double-click reset, survives reload; drag past min folds into a corner </> button, click/drag brings it back");
+    console.log("✓ Desktop divider: drag, min body width, keys, double-click reset, survives reload; drag past min folds into a pixel handle on the right edge, click/drag brings it back");
   }
 
   // 测试分两档：精简边界（示例 + 边界，几组）和全量（再加随机）；运行示例在前，测试在后；选的档记在浏览器里
@@ -342,8 +343,8 @@ try {
     console.log("✓ Run controls: 运行示例 then test; quick (examples + boundaries) vs full level, remembered");
   }
 
-  // 练习区展开时是「写代码」的布局：题面之外收成一排入口。提示、易错点弹成按内容大小的气泡；
-  // 动画、题解这些长内容在题目这一栏上弹出和编辑器一样高的面板；收起练习区回到从上往下读
+  // 练习区展开时是「写代码」的布局：题面之外收成一排入口，点开都是挂在入口下面的气泡。
+  // 提示、易错点按内容宽；动画、题解这些长内容占满题目这一栏；收起练习区回到从上往下读
   {
     const bar = page.locator(".problem-study-bar");
     assert.equal(await page.locator(".problem-original h2#hints").count(), 0, "No serial sections while coding");
@@ -364,27 +365,28 @@ try {
     assert.equal(await page.evaluate(() => scrollY), scrollBefore, "Revealing a hint doesn't move the page");
     await page.locator(".cm-content").click();
     assert(await bubble.isVisible(), "Clicking into the editor keeps the bubble open (read the hint while coding)");
+    const barBox = await bar.boundingBox();
     await bar.getByRole("button", { name: /^题解/ }).click();
-    const sheet = page.locator(".problem-sheet");
-    await sheet.waitFor();
-    await page.waitForTimeout(300); // 面板有 180ms 的动画
-    assert.equal(await bubble.isVisible(), false, "Opening 题解 closes the bubble");
-    const sb = await sheet.boundingBox();
-    assert(Math.abs(sb.y - side.y) < 2 && sb.x + sb.width < side.x && Math.abs(sb.height - side.height) < 2, `Long content uses the panel level with the editor (${JSON.stringify(sb)} vs ${JSON.stringify(side)})`);
-    assert.equal(await sheet.getByRole("button", { name: "查看题解", exact: true }).count(), 0, "Opening 题解 from the bar shows it directly");
-    await sheet.getByRole("button", { name: /^提示/ }).click();
-    await bubble.waitFor();
-    assert.equal(await sheet.isVisible(), false, "Switching to 提示 closes the panel…");
-    assert.equal(await hintSteps(), 2, "…and the bubble keeps the revealed hints");
+    await page.waitForTimeout(250);
+    assert.equal(await page.locator(".problem-sheet").count(), 0, "No full-height panel any more");
+    const wb = await bubble.boundingBox();
+    assert(wb.width > barBox.width - 40 && wb.x + wb.width < side.x, `题解 opens as a wide bubble across the problem column (${JSON.stringify(wb)})`);
+    assert.equal(await bubble.getByRole("button", { name: "查看题解", exact: true }).count(), 0, "Opening 题解 from the bar shows it directly");
+    assert.equal(await hintSteps(), 0, "Only one entry shows at a time");
+    await hintsEntry.click();
+    await page.waitForTimeout(250);
+    assert.equal(await hintSteps(), 2, "Switching back to 提示 keeps the revealed hints");
+    assert((await bubble.boundingBox()).width <= 522, "…and the bubble is narrow again");
     await page.keyboard.press("Escape");
     assert.equal(await bubble.isVisible(), false, "Esc closes the bubble");
+    assert.equal(await page.evaluate(() => scrollY), scrollBefore, "The page never moved");
     assert(await page.locator(".cm-editor").isVisible(), "Editor stays visible throughout");
     await page.getByRole("button", { name: "收起练习区", exact: true }).click();
     await page.locator(".problem-original h2#hints").waitFor();
     assert.equal(await bar.count(), 0, "Stowed practice: back to the serial reading layout");
     await page.getByRole("button", { name: "展开练习区", exact: true }).click();
     await bar.waitFor();
-    console.log("✓ Coding layout: entry bar, hints in a content-sized bubble (page never moves, stays open while typing), long content in the panel level with the editor, Esc; stowed → serial reading layout");
+    console.log("✓ Coding layout: entry bar, every entry opens a bubble under it (hints narrow, 题解 wide; page never moves, stays open while typing, keeps state), Esc; stowed → serial reading layout");
   }
 
   // 桌面上练习区钉在顶栏下面：滚到页面最底下也不被页脚顶上去，页脚的字不被它盖住
