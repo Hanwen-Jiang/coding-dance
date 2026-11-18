@@ -19,6 +19,7 @@ import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
+import type { RunScope, SolutionLabel } from "@/lib/practice/record";
 import { practiceVerdict } from "@/lib/practice/verdict";
 import { formatPracticeInput, formatPracticeResult, formatPracticeValue, parsePracticeFields, practiceInputFields, starterHash, type PracticeInputField } from "@/lib/practice/format";
 import { useProgress } from "@/lib/progress";
@@ -56,6 +57,10 @@ function readLevel(): TestLevel {
   try { return localStorage.getItem(LEVEL_KEY) === "quick" ? "quick" : "full"; } catch { return "full"; }
 }
 /** 精简边界：练习数据里标了 quick 的几组（示例、预设、边界）；旧数据没有标记时退回到题目示例 */
+/** 一次运行：结果、跑的是哪组用例、当时的代码；unchecked 是没填预期的自定义用例（只运行，不对答案） */
+type RunReport = { result: PracticeRunResult; cases: PracticeCase[]; code: string; unchecked: boolean; scope: RunScope };
+const SCOPE_NAME: Record<RunScope, string> = { full: "全量测试", quick: "精简测试", sample: "运行示例", custom: "自定义用例" };
+
 const quickCasesOf = (cases: PracticeCase[]) => {
   const quick = cases.filter((c) => c.quick);
   return quick.length ? quick : cases.filter((c) => c.source);
@@ -371,7 +376,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [report, setReport] = useState<{ result: PracticeRunResult; cases: PracticeCase[]; code: string; unchecked: boolean } | null>(null);
+  /** 最近一次运行：结果、跑的是哪组用例（scope）、当时的代码；手动保存时按它判断记什么 */
+  const [report, setReport] = useState<RunReport | null>(null);
+  /** 全量测试跑完自动记进尝试记录的那一次（手动「存为尝试记录」时不再重复记） */
+  const autoRecorded = useRef<RunReport | null>(null);
   // 调试：一组输入的执行记录、当前看到第几步、编辑器里的断点；调试用的输入跟着上一次看的是「示例」还是「自定义」
   const [debugRun, setDebugRun] = useState<DebugRun | null>(null);
   const [debugIndex, setDebugIndex] = useState(0);
@@ -413,8 +421,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const { ready: repoReady, refresh: refreshProgress } = useProgress();
   const draftJob = `draft:${problem.id}:${mode}:${language}`;
   const runJob = `run:${problem.id}:${mode}:${language}`;
+  const solutionJob = `solution:${problem.id}:${mode}:${language}`;
   const draftState = useSaveState(draftJob);
   const runState = useSaveState(runJob);
+  const solutionState = useSaveState(solutionJob);
   /** 上一次和进度仓对上的那份草稿的指纹：本地改过之后它就对不上了，说明有没存的改动 */
   const syncedKey = `${draftKey}:synced`;
   const autosave = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -473,16 +483,20 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
     return () => { alive = false; };
   }, [ready, repoReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  /** 「测试全部」跑完：记一条尝试记录，全部通过再存成题解；写好后题目页的两节重新读，状态变了就刷新进度 */
-  const recordRun = (run: PracticeRunResult, cases: PracticeCase[], snapshot: string) => {
-    if (!repoReady) return;
-    const verdict = practiceVerdict(problem, mode, cases, run);
-    if (!verdict) return;
-    void practiceSaves().push(runJob, { kind: "run", id: problem.id, lang: language, mode, code: snapshot, duration: run.duration, ...verdict }, false).then((res) => {
+  /**
+   * 记一条尝试记录：全量测试跑完自动记（全部通过再存成题解）；「存为尝试记录」手动记没通过的那一次（scope 写明是哪组用例）。
+   * 写好后题目页的两节重新读，状态变了就刷新进度。真的发出去了返回 true
+   */
+  const recordRun = (rep: RunReport, manual = false) => {
+    if (!repoReady) return false;
+    const verdict = practiceVerdict(problem, mode, rep.cases, rep.result);
+    if (!verdict) return false;
+    void practiceSaves().push(runJob, { kind: "run", id: problem.id, lang: language, mode, code: rep.code, duration: rep.result.duration, scope: rep.scope, manual, ...verdict }, false).then((res) => {
       if (!res) return;
       window.dispatchEvent(new CustomEvent(PRACTICE_SAVED_EVENT, { detail: { id: problem.id } }));
       if (res.status) void refreshProgress();
     });
+    return true;
   };
   const recordRef = useRef(recordRun);
   recordRef.current = recordRun;
@@ -498,7 +512,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
     }
   };
 
-  const execute = useCallback(async (cases: PracticeCase[], unchecked = false) => {
+  const execute = useCallback(async (cases: PracticeCase[], scope: RunScope, unchecked = false) => {
     if (!ready || running || abortRef.current || !cases.length) return;
     // 模板原样没动（和力扣一样方法体是空的）：不跑，直接提示
     if (codeRef.current.trim() === starter.trim()) {
@@ -523,9 +537,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
       });
-      if (sequenceRef.current === token) setReport({ result, cases, code: snapshot, unchecked });
-      // 「测试全部」相当于一次提交：记进进度仓的尝试记录（示例、自定义用例只是运行，不记）
-      if (cases === problem.cases && !unchecked) recordRef.current(result, cases, snapshot);
+      const rep: RunReport = { result, cases, code: snapshot, unchecked, scope };
+      if (sequenceRef.current === token) setReport(rep);
+      // 全量测试相当于一次提交：自动记进进度仓的尝试记录（示例、精简、自定义用例只是运行，要记就点「保存」）
+      if (scope === "full" && !unchecked && recordRef.current(rep)) autoRecorded.current = rep;
     } catch (e) {
       if (sequenceRef.current === token) setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -555,8 +570,45 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
   const runCustom = () => {
     try {
       const { test, unchecked } = customCase();
-      void execute([test], unchecked);
+      void execute([test], "custom", unchecked);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+  };
+
+  /*
+   * 「保存」：手动把现在这份代码记成尝试记录、或者存成我的题解——没通过也存，有些失败值得被看见。
+   * 存为尝试记录：最近一次运行（示例、精简、自定义、全量都行）没通过，就记下那一次；全部通过但不是全量（或者还没跑），
+   *   先跑一遍全量测试，跑完自动记（「通过」只能来自全量测试）；这次全量已经自动记过就不重复记。
+   * 存为我的题解：不管通没通过都存；没全量通过的写法名标上「未通过」或「未验证」（在「我的历史题解」里看得出来）。
+   */
+  const latest = report && report.code === code && !report.unchecked ? report : null;
+  const latestVerdict = latest ? practiceVerdict(problem, mode, latest.cases, latest.result) : null;
+  const solutionLabel: SolutionLabel = latestVerdict?.result === "通过" && latest?.scope === "full" ? "通过" : latestVerdict && latestVerdict.result !== "通过" ? "未通过" : "未验证";
+  const attemptPlan: "record" | "run" | "done" = !latest || !latestVerdict ? "run"
+    : latest.scope === "full" && autoRecorded.current === latest ? "done"
+    : latestVerdict.result !== "通过" || latest.scope === "full" ? "record" : "run";
+  const attemptHint = !repoReady ? "登录并开通进度仓后可用"
+    : attemptPlan === "done" ? "这次全量测试已经自动记过了"
+    : attemptPlan === "record" && latest && latestVerdict ? `记下这次${SCOPE_NAME[latest.scope]}：${latestVerdict.result}（${latestVerdict.passed}/${latestVerdict.total}）`
+    : "先跑一遍全量测试，跑完记下（没通过也记）";
+  const solutionHint = !repoReady ? "登录并开通进度仓后可用"
+    : solutionLabel === "通过" ? "全量测试已通过，存成题解"
+    : solutionLabel === "未通过" ? "没通过也存，在「我的历史题解」里标「未通过」"
+    : "还没通过全量测试，存的时候标「未验证」";
+  const isStarterCode = () => tidyCode(codeRef.current) === tidyCode(starter);
+  const saveAttempt = () => {
+    if (!repoReady) { setFlash("登录并开通进度仓后才能存进尝试记录；草稿已存在这个浏览器里。"); return; }
+    if (isStarterCode()) { setFlash("还是模板，没有要记的。"); return; }
+    if (attemptPlan === "done") { setFlash("这次全量测试已经记进尝试记录了。"); return; }
+    if (attemptPlan === "record" && latest) { recordRun(latest, true); return; }
+    setFlash("先跑一遍全量测试，跑完自动记进尝试记录（没通过也记）。");
+    void execute(problem.cases, "full");
+  };
+  const saveSolution = () => {
+    if (!repoReady) { setFlash("登录并开通进度仓后才能存成题解；草稿已存在这个浏览器里。"); return; }
+    if (isStarterCode()) { setFlash("还是模板，没有要存的。"); return; }
+    void practiceSaves().push(solutionJob, { kind: "solution", id: problem.id, lang: language, mode, code: codeRef.current, label: solutionLabel }, false).then((res) => {
+      if (res?.saved) window.dispatchEvent(new CustomEvent(PRACTICE_SAVED_EVENT, { detail: { id: problem.id } }));
+    });
   };
 
   /** 调试：用当前的示例（或者自定义输入）跑一遍，记下每一步，在「调试」里一步步看 */
@@ -610,7 +662,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
       if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
         event.preventDefault();
         event.stopPropagation();
-        if (!event.repeat && !running) { if (tab === "custom") runCustom(); else void execute(samples); }
+        if (!event.repeat && !running) { if (tab === "custom") runCustom(); else void execute(samples, "sample"); }
       }
       // Ctrl+S：把草稿存进进度仓（不弹浏览器的「另存网页」）
       if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "s") {
@@ -686,14 +738,30 @@ function PracticeSession({ problem, mode, language, onLanguageChange }: {
       {language === "typescript" && <p className="border-t border-separator px-4 py-2 text-[11px] leading-5 text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
       {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
       <div className="practice-run-controls flex flex-wrap items-center justify-between gap-2 border-y border-separator px-4 py-3">
-        <SaveStatus draft={draftState} flash={flash} repoReady={repoReady} run={runState} />
+        <SaveStatus draft={draftState} flash={flash} repoReady={repoReady} run={runState} solution={solutionState} />
         <div className="ms-auto flex gap-2">
           {running ? <Button onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止运行</Button> : <>
+            {/* 保存：手动记成尝试记录、存成我的题解（没通过也行） */}
+            <Dropdown>
+              <Button aria-label="保存到进度仓" isDisabled={!ready} size="sm" variant="ghost"><SaveIcon />保存</Button>
+              <Dropdown.Popover className="max-w-[300px]" placement="top end">
+                <Dropdown.Menu aria-label="保存到进度仓" disabledKeys={repoReady ? [] : ["attempt", "solution"]} onAction={(key) => { if (key === "attempt") saveAttempt(); else if (key === "solution") saveSolution(); }}>
+                  <Dropdown.Item className="flex flex-col items-start gap-0.5" id="attempt" textValue="存为尝试记录">
+                    <span className="text-sm font-medium">存为尝试记录</span>
+                    <span className="text-xs leading-5 text-muted">{attemptHint}</span>
+                  </Dropdown.Item>
+                  <Dropdown.Item className="flex flex-col items-start gap-0.5" id="solution" textValue="存为我的题解">
+                    <span className="text-sm font-medium">存为我的题解</span>
+                    <span className="text-xs leading-5 text-muted">{solutionHint}</span>
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown.Popover>
+            </Dropdown>
             <Button aria-label={`调试（用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}，一步步看每一行和变量）`} isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="ghost"><BugIcon />调试</Button>
-            <Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples); }} size="sm" variant="outline"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button>
+            <Button isDisabled={!ready} onPress={() => { if (tab === "custom") runCustom(); else void execute(samples, "sample"); }} size="sm" variant="outline"><PlayIcon />{tab === "custom" ? "运行自定义" : "运行示例"}</Button>
             {/* 测试：主按钮跑当前这一档，右边的小箭头换档（精简边界 / 全量），选过的记在浏览器里 */}
             <ButtonGroup size="sm">
-              <Button aria-label={level === "full" ? `全量测试，${problem.cases.length} 组用例，通过可当题解` : `精简边界测试，${quickCases.length} 组用例`} isDisabled={!ready} onPress={() => void execute(level === "full" ? problem.cases : quickCases)}>
+              <Button aria-label={level === "full" ? `全量测试，${problem.cases.length} 组用例，通过可当题解` : `精简边界测试，${quickCases.length} 组用例`} isDisabled={!ready} onPress={() => void execute(level === "full" ? problem.cases : quickCases, level === "full" ? "full" : "quick")}>
                 {level === "full" ? "全量测试" : "精简测试"} · {level === "full" ? problem.cases.length : quickCases.length}
               </Button>
               <Dropdown>
@@ -750,18 +818,21 @@ function ExpandIcon({ collapsed }: { collapsed: boolean }) {
   return <svg aria-hidden fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="14"><path d={collapsed ? "M1.5 5h3.5V1.5M5 5 1.5 1.5M14.5 11H11v3.5M11 11l3.5 3.5" : "M5 1.5H1.5V5M1.5 1.5 5 5M11 14.5h3.5V11M14.5 14.5 11 11"} /></svg>;
 }
 
-/** 运行按钮左边的一行小字：草稿和「测试全部」的记录存到进度仓没有 */
-function SaveStatus({ draft, run, flash, repoReady }: { draft?: SaveJobState; run?: SaveJobState; flash: string | null; repoReady: boolean }) {
+/** 运行按钮左边的一行小字：草稿、尝试记录、手动存的题解存到进度仓没有 */
+function SaveStatus({ draft, run, solution, flash, repoReady }: { draft?: SaveJobState; run?: SaveJobState; solution?: SaveJobState; flash: string | null; repoReady: boolean }) {
   const parts: { text: string; tone?: "danger"; title?: string }[] = [];
   if (flash) parts.push({ text: flash });
   else {
     if (run?.phase === "queued" || run?.phase === "saving") parts.push({ text: "正在记进尝试记录…" });
     else if (run?.phase === "saved") parts.push({ text: run.res.solution ? "已记进尝试记录，并存成题解" : run.res.attempt ? "已记进尝试记录" : "记录已在进度仓里" });
     else if (run?.phase === "error") parts.push({ text: run.retrying ? "记录没存上，稍后重试" : "记录没存上", tone: "danger", title: run.error });
+    if (solution?.phase === "queued" || solution?.phase === "saving") parts.push({ text: "正在存为我的题解…" });
+    else if (solution?.phase === "saved") parts.push({ text: solution.res.saved && solution.res.solution ? `已存为我的题解：${solution.res.solution.split("/").pop()}` : "这份代码已经在「我的历史题解」里了" });
+    else if (solution?.phase === "error") parts.push({ text: solution.retrying ? "题解没存上，稍后重试" : "题解没存上", tone: "danger", title: solution.error });
     if (draft?.phase === "queued" || draft?.phase === "saving") parts.push({ text: "正在存草稿…" });
     else if (draft?.phase === "saved") parts.push({ text: `草稿已存到进度仓 ${clock(draft.at)}` });
     else if (draft?.phase === "error") parts.push({ text: draft.retrying ? "草稿没存上，稍后重试" : "草稿没存上", tone: "danger", title: draft.error });
-    if (!parts.length && repoReady) parts.push({ text: "Ctrl+S 存草稿 · 全量测试会记进尝试记录" });
+    if (!parts.length && repoReady) parts.push({ text: "Ctrl+S 存草稿 · 全量测试自动记进尝试记录 · 没通过的也能「保存」" });
   }
   if (!parts.length) return null;
   return (
@@ -769,6 +840,11 @@ function SaveStatus({ draft, run, flash, repoReady }: { draft?: SaveJobState; ru
       {parts.map((p, i) => <span className={clsx(p.tone === "danger" && "text-danger")} key={i} title={p.title}>{i > 0 && " · "}{p.text}{p.title ? `：${p.title}` : ""}</span>)}
     </p>
   );
+}
+
+/** 保存到进度仓：一个往下的箭头落进托盘 */
+function SaveIcon() {
+  return <svg aria-hidden fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="14"><path d="M8 2v8M4.75 6.75 8 10l3.25-3.25M2.5 10.5v2a1.5 1.5 0 0 0 1.5 1.5h8a1.5 1.5 0 0 0 1.5-1.5v-2" /></svg>;
 }
 
 /** 调试：一只小虫子 */
