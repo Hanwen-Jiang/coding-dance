@@ -84,7 +84,7 @@ wrangler pages secret put SESSION_SECRET --project-name lc-hot100
 wrangler pages secret put RUNNER_SECRET --project-name lc-hot100   # 和虚拟机里 /etc/lc-runner.env 的 RUNNER_SECRET 一样
 ```
 
-再把 `wrangler.toml` 里 `RUNNER_URL` 那一行的注释去掉，重新部署。前面开了 Cloudflare Access 的话，再设 `RUNNER_ACCESS_ID`、`RUNNER_ACCESS_SECRET`。没设时练习区提示「云端运行还没有部署」，其他语言不受影响。签名的测试：`node functions/_lib/test/runner.test.ts`。
+再把 `wrangler.toml` 里 `RUNNER_NODES`（运行器集群的节点表，`编号=地址` 用逗号隔开）那一行的注释去掉，重新部署；以后加节点就往里加一条。前面开了 Cloudflare Access 的话，再设 `RUNNER_ACCESS_ID`、`RUNNER_ACCESS_SECRET`。没设时练习区提示「云端运行还没有部署」，其他语言不受影响。签名的测试：`node functions/_lib/test/runner.test.ts`。
 
 ### 多个域名（https://leetcode.cgent.link、https://codexdance.cn、https://codingdance.cn）
 

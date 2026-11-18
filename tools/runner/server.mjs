@@ -3,12 +3,14 @@
 // 每个任务在一个全新的容器里跑（lib/sandbox.mjs），结果原样交回网站。不保存用户的代码和结果，日志只记谁、什么语言、用了多久。
 // 用法和环境变量见 README.md；本机开发：RUNNER_DRIVER=local RUNNER_ALLOW_LOCAL=1 RUNNER_SECRET=<至少 32 个字符> node tools/runner/server.mjs
 import http from "node:http";
-import { verify, NonceCache } from "./lib/sign.mjs";
+import { verify, NonceCache, NODE_ID } from "./lib/sign.mjs";
 import { DockerPool, LocalDriver } from "./lib/sandbox.mjs";
 
 const env = process.env;
 const num = (v, d) => (Number.isFinite(Number(v)) && v !== undefined && v !== "" ? Number(v) : d);
 export const CONFIG = {
+  /** 这个节点在集群里的编号（网站的 RUNNER_NODES 里写的那个），签名里带着它 */
+  node: env.RUNNER_NODE_ID || "",
   port: num(env.RUNNER_PORT, 8790),
   host: env.RUNNER_HOST || "127.0.0.1",
   secret: env.RUNNER_SECRET || "",
@@ -109,11 +111,12 @@ export function createServer(cfg = CONFIG, driver) {
     if (req.method === "GET" && url.pathname === "/healthz") return send(res, 200, { ok: true });
     const body = await readBody(req, MAX_BODY);
     if (body === null) return send(res, 413, { error: "请求太大了" });
-    const auth = verify(cfg.secret, { method: req.method, path: url.pathname, headers: req.headers, body, nonces });
+    const auth = verify(cfg.secret, { method: req.method, path: url.pathname, headers: req.headers, body, node: cfg.node, nonces });
     if (!auth.ok) { log({ event: "denied", path: url.pathname, reason: auth.reason }); return send(res, 401, { error: auth.reason }); }
 
     if (req.method === "GET" && url.pathname === "/v1/status") {
-      return send(res, 200, { ok: true, version: cfg.version, langs: LANGS, debugLangs: DEBUG_LANGS, pool: driver.status(), busy: slots.busy, queued: slots.waiting.length, limits: { caseMs: cfg.caseMs, totalMs: cfg.totalMs, perMinute: cfg.perMinute, cases: 100, steps: 1000 } });
+      // 网站按这些挑节点：slots 是容量（权重），busy / queued 是现在的负载
+      return send(res, 200, { ok: true, node: cfg.node, version: cfg.version, langs: LANGS, debugLangs: DEBUG_LANGS, pool: driver.status(), slots: cfg.slots, queue: cfg.queue, busy: slots.busy, queued: slots.waiting.length, limits: { caseMs: cfg.caseMs, totalMs: cfg.totalMs, perMinute: cfg.perMinute, cases: 100, steps: 1000 } });
     }
     if (req.method !== "POST" || url.pathname !== "/v1/run") return send(res, 404, { error: "没有这个接口" });
 
@@ -133,10 +136,10 @@ export function createServer(cfg = CONFIG, driver) {
       const task = { lang: job.lang, mode: job.mode, code: job.code, sig: job.sig, cases: job.cases.map((c) => (job.mode === "acm" ? { stdin: c.stdin } : { input: c.input })), debug: !!job.debug, limits: { caseMs: cfg.caseMs, totalMs: cfg.totalMs, steps: 1000 } };
       const r = await driver.run(JSON.stringify(task), cfg.jobMs);
       const totalMs = Date.now() - t0;
-      log({ event: "run", user, lang: job.lang, mode: job.mode, debug: !!job.debug, cases: job.cases.length, queueMs, totalMs, ok: r.ok && r.json.ok, compileError: !!(r.ok && r.json.compileError) });
+      log({ event: "run", node: cfg.node, user, lang: job.lang, mode: job.mode, debug: !!job.debug, cases: job.cases.length, queueMs, totalMs, ok: r.ok && r.json.ok, compileError: !!(r.ok && r.json.compileError) });
       if (!r.ok) return send(res, 502, { error: r.error });
       if (!r.json.ok) return send(res, 400, { error: r.json.error || "运行失败" });
-      return send(res, 200, { ...r.json, queueMs, totalMs });
+      return send(res, 200, { ...r.json, node: cfg.node, queueMs, totalMs });
     } catch (e) {
       log({ event: "error", user, error: String(e.message || e) });
       return send(res, 500, { error: "运行器出错了" });
@@ -150,11 +153,12 @@ export function createServer(cfg = CONFIG, driver) {
 
 async function main() {
   if (CONFIG.secret.length < 32) { console.error("RUNNER_SECRET 要设成至少 32 个字符的随机串（和网站的 RUNNER_SECRET 一样）"); process.exit(1); }
+  if (!NODE_ID.test(CONFIG.node)) { console.error("RUNNER_NODE_ID 要设成这个节点的编号（小写字母、数字、横线，比如 lou1），和网站 RUNNER_NODES 里写的一样"); process.exit(1); }
   if (CONFIG.driver === "local" && env.RUNNER_ALLOW_LOCAL !== "1") { console.error("RUNNER_DRIVER=local 不隔离用户代码，只能本机开发用；确定的话再设 RUNNER_ALLOW_LOCAL=1"); process.exit(1); }
   const driver = CONFIG.driver === "local" ? new LocalDriver() : new DockerPool({ image: CONFIG.image, size: CONFIG.pool, runtime: CONFIG.runtime, memory: CONFIG.memory, cpus: CONFIG.cpus, pids: CONFIG.pids, log });
   await driver.init();
   const server = createServer(CONFIG, driver);
-  server.listen(CONFIG.port, CONFIG.host, () => log({ event: "listening", host: CONFIG.host, port: CONFIG.port, driver: CONFIG.driver, image: CONFIG.image, runtime: CONFIG.runtime || "runc" }));
+  server.listen(CONFIG.port, CONFIG.host, () => log({ event: "listening", node: CONFIG.node, host: CONFIG.host, port: CONFIG.port, driver: CONFIG.driver, image: CONFIG.image, runtime: CONFIG.runtime || "runc" }));
   const stop = async () => { server.close(); await driver.close(); process.exit(0); };
   process.on("SIGTERM", stop);
   process.on("SIGINT", stop);

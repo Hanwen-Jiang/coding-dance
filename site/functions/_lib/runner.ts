@@ -1,26 +1,36 @@
-// 调用远端运行器（tools/runner，部署在 win-gw-lou 的虚拟机里，经 Cloudflare Tunnel 对外）。
-// 每个请求用共享密钥 RUNNER_SECRET 签名（算法和 tools/runner/lib/sign.mjs 一样，两边要一致）；
-// 运行器前面开了 Cloudflare Access 的话，再带上服务令牌 RUNNER_ACCESS_ID / RUNNER_ACCESS_SECRET。
-// 这几个密钥都只放在 Pages 的加密环境变量里；RUNNER_URL 是公开的地址，写在 wrangler.toml。
+// 调用远端运行器集群（tools/runner）。每个节点是一台跑着运行器的虚拟机 / KVM 主机，经 Cloudflare Tunnel 有自己的地址。
+//
+// 节点表 RUNNER_NODES（wrangler.toml，公开）：「编号=地址」用逗号隔开，比如
+//   lou1=https://run-lou1.codingdance.cn,lou2=https://run-lou2.codingdance.cn
+// 各节点共用签名密钥 RUNNER_SECRET（加密环境变量）；签名里带着节点编号，签给 A 的请求在 B 上不认（算法和 tools/runner/lib/sign.mjs 一样）。
+// 运行器前面开了 Cloudflare Access 的话，再带上服务令牌 RUNNER_ACCESS_ID / RUNNER_ACCESS_SECRET（加密环境变量）。
+//
+// 怎么挑节点（pickOrder）：
+//   1. 同一个用户固定先去同一个节点：用「加权最高随机权重」（rendezvous hashing），按 用户名 + 节点编号 算分，权重是节点报的容量（slots）。
+//      这样每个用户的限流在一个节点上算得准，以后的交互式调试会话也能一直落在同一个节点；加减节点只挪动一小部分用户。
+//   2. 那个节点不在线、满了（排队排满返回 503）、连不上，就按顺序换下一个；已经知道忙的、不支持这门语言的往后排。
+//   3. 节点状态（GET /v1/status）在每个 Worker 实例里缓存 15 秒；出错的节点 30 秒内先不找它。
 
 export interface RunnerEnv {
-  /** 运行器的地址，比如 https://run.cgent.link；不设就是还没部署 */
-  RUNNER_URL?: string;
+  RUNNER_NODES?: string;
   RUNNER_SECRET?: string;
   RUNNER_ACCESS_ID?: string;
   RUNNER_ACCESS_SECRET?: string;
 }
+export interface RunnerNode { id: string; url: string }
+export interface NodeStatus { node?: string; langs?: string[]; debugLangs?: string[]; slots?: number; queue?: number; busy?: number; queued?: number; version?: string }
 
 const enc = new TextEncoder();
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+const NODE_ID = /^[a-z0-9][a-z0-9-]{0,31}$/;
 
 export async function sha256(body: string): Promise<string> {
   return hex(await crypto.subtle.digest("SHA-256", enc.encode(body)));
 }
 
-/** 要签的内容：方法、路径、时间、随机串、用户、请求体的 SHA-256，用换行连起来 */
-export function canonical(p: { method: string; path: string; time: number | string; nonce: string; user: string; bodyHash: string }): string {
-  return [p.method.toUpperCase(), p.path, String(p.time), p.nonce, p.user || "", p.bodyHash].join("\n");
+/** 要签的内容：方法、路径、时间、随机串、用户、节点编号、请求体的 SHA-256，用换行连起来 */
+export function canonical(p: { method: string; path: string; time: number | string; nonce: string; user: string; node: string; bodyHash: string }): string {
+  return [p.method.toUpperCase(), p.path, String(p.time), p.nonce, p.user || "", p.node, p.bodyHash].join("\n");
 }
 
 export async function sign(secret: string, p: Parameters<typeof canonical>[0]): Promise<string> {
@@ -28,22 +38,109 @@ export async function sign(secret: string, p: Parameters<typeof canonical>[0]): 
   return hex(await crypto.subtle.sign("HMAC", key, enc.encode(canonical(p))));
 }
 
-export const runnerConfigured = (env: RunnerEnv) => !!(env.RUNNER_URL && env.RUNNER_SECRET && env.RUNNER_SECRET.length >= 32);
+/** 节点表；写错的条目跳过 */
+export function parseNodes(v: string | undefined): RunnerNode[] {
+  const out: RunnerNode[] = [];
+  for (const part of String(v || "").split(",")) {
+    const m = part.trim().match(/^([^=\s]+)=(https?:\/\/\S+)$/);
+    if (m && NODE_ID.test(m[1]) && !out.some((n) => n.id === m[1])) out.push({ id: m[1], url: m[2].replace(/\/+$/, "") });
+  }
+  return out;
+}
 
-/** 带签名调用运行器；返回运行器的原始响应 */
-export async function callRunner(env: RunnerEnv, method: "GET" | "POST", path: string, user: string, body = "", now = Date.now()): Promise<Response> {
-  const time = Math.floor(now / 1000);
+export const runnerConfigured = (env: RunnerEnv) => parseNodes(env.RUNNER_NODES).length > 0 && !!env.RUNNER_SECRET && env.RUNNER_SECRET.length >= 32;
+
+/** 带签名调一个节点；返回它的原始响应 */
+export async function callNode(env: RunnerEnv, node: RunnerNode, method: "GET" | "POST", path: string, user: string, body = "", opts: { now?: number; timeoutMs?: number } = {}): Promise<Response> {
+  const time = Math.floor((opts.now ?? Date.now()) / 1000);
   const nonce = hex(crypto.getRandomValues(new Uint8Array(12)).buffer);
   const headers: Record<string, string> = {
     "x-runner-time": String(time),
     "x-runner-nonce": nonce,
     "x-runner-user": user,
-    "x-runner-signature": await sign(env.RUNNER_SECRET!, { method, path, time, nonce, user, bodyHash: await sha256(body) }),
+    "x-runner-node": node.id,
+    "x-runner-signature": await sign(env.RUNNER_SECRET!, { method, path, time, nonce, user, node: node.id, bodyHash: await sha256(body) }),
   };
   if (method === "POST") headers["content-type"] = "application/json";
   if (env.RUNNER_ACCESS_ID && env.RUNNER_ACCESS_SECRET) {
     headers["cf-access-client-id"] = env.RUNNER_ACCESS_ID;
     headers["cf-access-client-secret"] = env.RUNNER_ACCESS_SECRET;
   }
-  return fetch(env.RUNNER_URL!.replace(/\/+$/, "") + path, { method, headers, body: method === "POST" ? body : undefined });
+  return fetch(node.url + path, { method, headers, body: method === "POST" ? body : undefined, signal: opts.timeoutMs ? AbortSignal.timeout(opts.timeoutMs) : undefined });
+}
+
+// —— 节点状态：每个 Worker 实例里记一份 ——
+type Seen = { at: number; status: NodeStatus | null; downUntil: number; busyUntil: number };
+const seen = new Map<string, Seen>();
+const STATUS_TTL = 15000, DOWN_MS = 30000, BUSY_MS = 5000;
+const entry = (id: string) => seen.get(id) || { at: 0, status: null, downUntil: 0, busyUntil: 0 };
+
+export function markDown(node: RunnerNode, now = Date.now()) { seen.set(node.id, { ...entry(node.id), downUntil: now + DOWN_MS }); }
+export function markBusy(node: RunnerNode, now = Date.now()) { seen.set(node.id, { ...entry(node.id), busyUntil: now + BUSY_MS }); }
+export function forgetNodes() { seen.clear(); }
+
+/** 各节点的状态（过期了才重新问，问的时候并行、每个最多等 2 秒）；不在线的是 null */
+export async function nodeStatuses(env: RunnerEnv, now = Date.now()): Promise<Map<string, NodeStatus | null>> {
+  const nodes = parseNodes(env.RUNNER_NODES);
+  await Promise.all(nodes.map(async (n) => {
+    const e = entry(n.id);
+    if (now - e.at < STATUS_TTL) return;
+    try {
+      const res = await callNode(env, n, "GET", "/v1/status", "", "", { now, timeoutMs: 2000 });
+      const status = res.ok ? ((await res.json()) as NodeStatus) : null;
+      seen.set(n.id, { ...entry(n.id), at: now, status, downUntil: status ? 0 : now + DOWN_MS });
+    } catch {
+      seen.set(n.id, { ...entry(n.id), at: now, status: null, downUntil: now + DOWN_MS });
+    }
+  }));
+  return new Map(nodes.map((n) => [n.id, entry(n.id).status]));
+}
+
+/** 32 位 FNV-1a，换成 (0, 1) 之间的数 */
+function unit(s: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193);
+  return ((h >>> 0) + 0.5) / 4294967296;
+}
+
+/**
+ * 这个用户这次按什么顺序找节点（第一个是他固定的节点）。
+ * 不在线的、知道正忙的、不支持这门语言（或调试）的排到后面，但不丢掉：状态可能是旧的，前面的都不行时还会试一下。
+ */
+export function pickOrder(nodes: RunnerNode[], user: string, opts: { lang?: string; debug?: boolean; now?: number } = {}): RunnerNode[] {
+  const now = opts.now ?? Date.now();
+  const scored = nodes.map((n) => {
+    const e = entry(n.id), s = e.status;
+    const weight = Math.max(1, Number(s?.slots) || 1);
+    const score = -weight / Math.log(unit(`${user}\n${n.id}`));
+    const langs = opts.debug ? s?.debugLangs : s?.langs;
+    const unfit = !!(opts.lang && langs && !langs.includes(opts.lang));
+    const down = e.downUntil > now;
+    const busy = e.busyUntil > now || !!(s && s.slots !== undefined && s.queue !== undefined && (s.busy ?? 0) >= s.slots && (s.queued ?? 0) >= s.queue);
+    return { n, score, rank: unfit ? 3 : down ? 2 : busy ? 1 : 0 };
+  });
+  scored.sort((a, b) => a.rank - b.rank || b.score - a.score);
+  return scored.map((x) => x.n);
+}
+
+/**
+ * 在集群里跑一次：按 pickOrder 的顺序找，节点满了（503）、出错（5xx）、连不上就换下一个。
+ * 401（签名不对，多半是这个节点的密钥或编号配错了）也换下一个，并记成不在线。其他响应（200、400、429）原样返回。
+ */
+export async function runOnCluster(env: RunnerEnv, user: string, body: string, opts: { lang?: string; debug?: boolean } = {}): Promise<{ res: Response | null; node?: RunnerNode; tried: string[] }> {
+  const nodes = parseNodes(env.RUNNER_NODES);
+  await nodeStatuses(env);
+  const tried: string[] = [];
+  for (const node of pickOrder(nodes, user, opts)) {
+    tried.push(node.id);
+    try {
+      const res = await callNode(env, node, "POST", "/v1/run", user, body);
+      if (res.status === 503) { markBusy(node); continue; }
+      if (res.status === 401 || res.status >= 500) { markDown(node); continue; }
+      return { res, node, tried };
+    } catch {
+      markDown(node);
+    }
+  }
+  return { res: null, tried };
 }
