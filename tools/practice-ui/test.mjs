@@ -107,7 +107,20 @@ for row in answer:
 try {
   await fs.mkdir(screenshots, { recursive: true });
   await page.goto(`${base}/p/15/`);
-  await waitEditor();
+  // 第一次来：练习区默认收起，右边的像素把手自己演一遍（往左招手、跳成 </>、蹦出 coding）提示这里能写代码；点开之后记住
+  {
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.practice), "closed", "New visitors start with practice collapsed");
+    const rail = page.getByRole("button", { name: "展开练习区", exact: true });
+    await rail.waitFor();
+    await page.waitForFunction(() => document.querySelector(".practice-rail")?.classList.contains("is-hinting"), null, { timeout: 6000 });
+    await rail.click();
+    await waitEditor();
+    await page.reload();
+    await waitEditor();
+    assert.equal(await page.evaluate(() => document.documentElement.dataset.practice), "open", "Opening practice once is remembered");
+    assert.equal(await page.evaluate(() => localStorage.getItem("hot100:practice:discovered")), "1", "…and the handle stops hinting");
+    console.log("✓ First visit: practice collapsed, the handle hints where to code, opening it is remembered");
+  }
   await mode("LeetCode");
 
   if (!process.env.PRACTICE_UI_ONLY) {
@@ -200,10 +213,12 @@ try {
     await run();
   }
 
-  await page.locator("#practice").getByRole("button", { name: "重置代码", exact: true }).click();
+  // 重置在标签栏的「⋯」（编辑器设置）菜单里
+  const resetCode = async () => { await page.locator("#practice").getByRole("button", { name: "编辑器设置", exact: true }).click(); await page.getByRole("menuitem", { name: /重置代码/ }).click(); };
+  await resetCode();
   await page.getByRole("button", { name: "取消", exact: true }).click();
   assert((await page.locator(".cm-content").innerText()).includes("debug-fixture"));
-  await page.locator("#practice").getByRole("button", { name: "重置代码", exact: true }).click();
+  await resetCode();
   await page.getByRole("button", { name: "确认重置", exact: true }).click();
   await page.waitForFunction(() => { const t = document.querySelector(".cm-content")?.textContent || ""; return !t.includes("debug-fixture") && t.includes("threeSum"); });
   console.log("✓ Reset requires explicit confirmation");
@@ -216,9 +231,9 @@ try {
   // 编辑器提示程度：用真实按键验证（整段插入文字会绕过回车缩进和括号配对）。
   // 两档都有语法颜色、括号配对、自动缩进；「无提示」只补全代码里已有的变量，不提示内置函数、关键字
   const hintLevel = async (pattern) => {
-    await page.locator('.practice-editor-toolbar button[aria-label="编辑器提示"]').click();
-    await page.getByRole("option", { name: pattern }).click();
-    await page.waitForFunction(() => !document.querySelector('[role="listbox"]'));
+    await page.locator('.practice-editor-toolbar button[aria-label="编辑器设置"]').click();
+    await page.getByRole("menuitem", { name: pattern }).click();
+    await page.waitForFunction(() => !document.querySelector('[role="menu"]'));
   };
   const typeAfter = async (head, keys) => {
     await writeCode(head);
@@ -284,11 +299,12 @@ try {
     await page.getByRole("button", { name: "收起练习区", exact: true }).click();
     await settle();
     assert.equal(await handle.isVisible(), false, "Divider hides when practice is stowed");
-    // 收起后是右下角一个 </> 圆按钮（不再是贴边的一整条）；点它展开
+    // 收起后是屏幕右边、竖着居中的一个小像素把手（不再是贴边的一整条）；点它展开
     const rail = page.getByRole("button", { name: "展开练习区", exact: true });
+    await page.waitForTimeout(800); // 把手晚一点带回弹地弹出来
     const rb = await rail.boundingBox();
     const vp = page.viewportSize();
-    assert(rb.height <= 52 && vp.width - (rb.x + rb.width) < 40 && vp.height - (rb.y + rb.height) < 40, `Stowed practice is a small round button in the bottom-right corner (${JSON.stringify(rb)})`);
+    assert(rb.height <= 110 && rb.width <= 110 && vp.width - (rb.x + rb.width) < 4 && Math.abs(rb.y + rb.height / 2 - vp.height / 2) < 30, `Stowed practice is a small pixel handle on the right edge, vertically centred (${JSON.stringify(rb)})`);
     assert.equal(await page.locator(".practice-launcher").isVisible(), false, "The phone 写代码 launcher stays hidden on desktop");
     await rail.click();
     await settle();
@@ -312,7 +328,7 @@ try {
     assert(Math.abs((await practiceWidth()) - keyed) < 2, "…at the width it had before folding");
     await handle.dblclick();
     await settle();
-    console.log("✓ Desktop divider: drag, min body width, keys, double-click reset, survives reload; drag past min folds into a corner </> button, click/drag brings it back");
+    console.log("✓ Desktop divider: drag, min body width, keys, double-click reset, survives reload; drag past min folds into a pixel handle on the right edge, click/drag brings it back");
   }
 
   // 测试分两档：精简边界（示例 + 边界，几组）和全量（再加随机）；运行示例在前，测试在后；选的档记在浏览器里
@@ -342,11 +358,18 @@ try {
     console.log("✓ Run controls: 运行示例 then test; quick (examples + boundaries) vs full level, remembered");
   }
 
-  // 练习区展开时是「写代码」的布局：题面之外收成一排入口。提示、易错点弹成按内容大小的气泡；
-  // 动画、题解这些长内容在题目这一栏上弹出和编辑器一样高的面板；收起练习区回到从上往下读
+  // 练习区展开时是「写代码」的布局：题面之外收成一排入口，点开都是挂在入口下面的气泡。
+  // 提示、易错点按内容宽；动画、题解这些长内容占满题目这一栏；收起练习区回到从上往下读
   {
     const bar = page.locator(".problem-study-bar");
     assert.equal(await page.locator(".problem-original h2#hints").count(), 0, "No serial sections while coding");
+    // 先往下滚到入口那一条停在顶栏下面：入口停在 65px，比 html 的 scroll-padding-top（80px）高，
+    // 这时 Tab 到入口、Playwright 点之前的「滚到看得见」最容易把页面往上挪
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    const barTop = (await bar.boundingBox()).y;
+    await page.evaluate((y) => window.scrollTo({ top: y, behavior: "instant" }), barTop - 57 + 40);
+    await page.waitForTimeout(100);
+    assert(Math.abs((await bar.boundingBox()).y - 57) < 1, "The entry bar is pinned under the header");
     const scrollBefore = await page.evaluate(() => scrollY);
     const hintsEntry = bar.getByRole("button", { name: /^提示/ });
     await hintsEntry.click();
@@ -357,34 +380,40 @@ try {
     const [bb, side, eb] = [await bubble.boundingBox(), await page.locator(".practice-sidebar").boundingBox(), await hintsEntry.boundingBox()];
     assert(bb.x + bb.width < side.x && bb.height < side.height - 40 && bb.width <= 522, `Hints open as a content-sized bubble, not a full-height panel (${JSON.stringify(bb)})`);
     assert(bb.y >= eb.y + eb.height - 2 && bb.x <= eb.x + eb.width, "…right under its entry");
-    const hintSteps = () => bubble.locator(".hint-text:visible").count();
+    // 按每层提示的「提示 N」角标数（.hint-text 只是文字样式，题解的说明、易错点也用它）
+    const hintSteps = () => bubble.getByText(/^提示 \d+$/).filter({ visible: true }).count();
     assert.equal(await hintSteps(), 1, "Hints start with one step");
     await bubble.getByRole("button", { name: /再给一点提示/ }).click();
     assert.equal(await hintSteps(), 2, "…and reveal the next on request");
     assert.equal(await page.evaluate(() => scrollY), scrollBefore, "Revealing a hint doesn't move the page");
     await page.locator(".cm-content").click();
     assert(await bubble.isVisible(), "Clicking into the editor keeps the bubble open (read the hint while coding)");
+    const barBox = await bar.boundingBox();
     await bar.getByRole("button", { name: /^题解/ }).click();
-    const sheet = page.locator(".problem-sheet");
-    await sheet.waitFor();
-    await page.waitForTimeout(300); // 面板有 180ms 的动画
-    assert.equal(await bubble.isVisible(), false, "Opening 题解 closes the bubble");
-    const sb = await sheet.boundingBox();
-    assert(Math.abs(sb.y - side.y) < 2 && sb.x + sb.width < side.x && Math.abs(sb.height - side.height) < 2, `Long content uses the panel level with the editor (${JSON.stringify(sb)} vs ${JSON.stringify(side)})`);
-    assert.equal(await sheet.getByRole("button", { name: "查看题解", exact: true }).count(), 0, "Opening 题解 from the bar shows it directly");
-    await sheet.getByRole("button", { name: /^提示/ }).click();
-    await bubble.waitFor();
-    assert.equal(await sheet.isVisible(), false, "Switching to 提示 closes the panel…");
-    assert.equal(await hintSteps(), 2, "…and the bubble keeps the revealed hints");
+    await page.waitForTimeout(250);
+    assert.equal(await page.locator(".problem-sheet").count(), 0, "No full-height panel any more");
+    const wb = await bubble.boundingBox();
+    assert(wb.width > barBox.width - 40 && wb.x + wb.width < side.x, `题解 opens as a wide bubble across the problem column (${JSON.stringify(wb)})`);
+    assert.equal(await bubble.getByRole("button", { name: "查看题解", exact: true }).count(), 0, "Opening 题解 from the bar shows it directly");
+    assert.equal(await hintSteps(), 0, "Only one entry shows at a time");
+    await hintsEntry.click();
+    await page.waitForTimeout(250);
+    assert.equal(await hintSteps(), 2, "Switching back to 提示 keeps the revealed hints");
+    assert((await bubble.boundingBox()).width <= 522, "…and the bubble is narrow again");
     await page.keyboard.press("Escape");
     assert.equal(await bubble.isVisible(), false, "Esc closes the bubble");
+    await hintsEntry.focus();
+    for (let i = 0; i < 3; i++) await page.keyboard.press("Tab");
+    await page.waitForTimeout(250);
+    assert.match(await page.evaluate(() => document.activeElement?.closest(".problem-study-entries") ? "entry" : document.activeElement?.tagName), /entry/, "Tab walks along the entries");
+    assert.equal(await page.evaluate(() => scrollY), scrollBefore, "The page never moved (Tab along the pinned entries included)");
     assert(await page.locator(".cm-editor").isVisible(), "Editor stays visible throughout");
     await page.getByRole("button", { name: "收起练习区", exact: true }).click();
     await page.locator(".problem-original h2#hints").waitFor();
     assert.equal(await bar.count(), 0, "Stowed practice: back to the serial reading layout");
     await page.getByRole("button", { name: "展开练习区", exact: true }).click();
     await bar.waitFor();
-    console.log("✓ Coding layout: entry bar, hints in a content-sized bubble (page never moves, stays open while typing), long content in the panel level with the editor, Esc; stowed → serial reading layout");
+    console.log("✓ Coding layout: entry bar, every entry opens a bubble under it (hints narrow, 题解 wide; page never moves, stays open while typing, keeps state), Esc; stowed → serial reading layout");
   }
 
   // 桌面上练习区钉在顶栏下面：滚到页面最底下也不被页脚顶上去，页脚的字不被它盖住
@@ -428,15 +457,15 @@ try {
     assert(gutters.width <= 56, `Gutters stay narrow (${gutters.width}px)`);
     const scroller = page.locator(".practice-editor .cm-scroller");
     const overflows = () => scroller.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
-    const wrapButton = page.getByRole("button", { name: "自动换行", exact: true });
-    assert.equal(await wrapButton.getAttribute("aria-pressed"), "true", "Wrapping is on by default");
+    // 自动换行在标签栏的「⋯」（编辑器设置）菜单里
+    const toggleWrap = async () => { await page.locator("#practice").getByRole("button", { name: "编辑器设置", exact: true }).click(); await page.getByRole("menuitem", { name: /自动换行/ }).click(); };
     assert.equal(await overflows(), false, "Long lines wrap by default");
-    await wrapButton.click();
+    await toggleWrap();
     assert.equal(await overflows(), true, "Turning wrapping off scrolls long lines sideways");
     await page.reload();
     await waitEditor();
-    assert.equal(await page.getByRole("button", { name: "自动换行", exact: true }).getAttribute("aria-pressed"), "false", "Wrap choice survives reload");
-    await page.getByRole("button", { name: "自动换行", exact: true }).click();
+    assert.equal(await overflows(), true, "Wrap choice survives reload");
+    await toggleWrap();
     await mode("LeetCode");
     console.log("✓ Breakpoints: line numbers, column and F9; long lines wrap by default and can be switched off");
   }

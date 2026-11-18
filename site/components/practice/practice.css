@@ -17,8 +17,37 @@
 .practice-sidebar { min-width: 0; margin-top: 40px; }
 
 /*
- * 「写代码」的布局（桌面上练习区展开时，见 problem-view.tsx 的 StudyBar / StudySheet）：
- * 题面上方一排入口，滚动时停在顶栏下面；点开的面板盖在题目这一栏上，和右边的编辑器一样钉在顶栏下面、一样高。
+ * 加载中的骨架（problem-view.tsx 的 Loading）：和真实页面同一套显示规则。
+ * 正文那一列也是 problem-body 容器，「本页」目录跟着正文宽度出现；入口那一排和右边的练习区只在写代码布局（≥1200、练习区展开）时有。
+ */
+.problem-skeleton { min-width: 0; container: problem-body / inline-size; }
+.problem-skel-study, .problem-skel-practice, .problem-skel-dock-handle { display: none; }
+.problem-skel-study { align-items: center; gap: 4px; min-height: 48px; margin: -8px -8px 0; padding: 8px; }
+/* 稍等一下再淡出来：数据很快就到的时候骨架不闪一下 */
+.problem-skeleton, .problem-skel-practice, .problem-skel-dock-handle { animation: fade-only 220ms ease 90ms both; }
+
+/*
+ * 换题（上一题、下一题，problem-view.tsx 的 useProblemNav）：这一页往后退的方向挪一点、变淡（不完全消失：
+ * 下一题的数据还没到时最多等 0.4 秒，屏幕不空着），新的一页从前进的方向滑进来。右边练习区的框不动，只有里面的编辑器暗一下再亮起来。
+ * 往右最多挪 16px：手机上正文离屏幕右边就 16px，再多页面会临时变宽、能左右晃。
+ */
+.problem-page-layout[data-leaving] > .problem-original { opacity: 0.25; pointer-events: none; transition: opacity 180ms ease, transform 200ms cubic-bezier(0.4, 0, 0.2, 1); }
+.problem-page-layout[data-leaving="next"] > .problem-original { transform: translateX(-12px); }
+.problem-page-layout[data-leaving="prev"] > .problem-original { transform: translateX(12px); }
+.problem-page-layout[data-leaving] #practice { opacity: 0.35; transition: opacity 140ms ease; }
+.problem-enter-next { animation: problem-enter-next 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.problem-enter-prev { animation: problem-enter-prev 380ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.problem-page-layout[data-enter] .practice-sidebar:not(.practice-shell--focus) #practice { animation: fade-only 280ms ease both; }
+@keyframes problem-enter-next { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+@keyframes problem-enter-prev { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .problem-page-layout[data-leaving] > .problem-original { transform: none !important; }
+  .problem-enter-next, .problem-enter-prev { animation-name: fade-only; }
+}
+
+/*
+ * 「写代码」的布局（桌面上练习区展开时，见 problem-view.tsx 的 StudyBar / StudyBubble）：
+ * 题面上方一排入口，滚动时停在顶栏下面；点开的内容是挂在入口下面的气泡。
  */
 .problem-study-bar {
   position: sticky; top: 57px; z-index: 20;
@@ -27,15 +56,20 @@
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
 }
 .problem-study-entries { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.problem-study-entry { gap: 6px; }
+/*
+ * 入口停在顶栏下面 65px 处（57 + 内边距 8），比 html 的 scroll-padding-top（5rem，给标题跳转留的）高 15px：
+ * 不抵掉的话浏览器当它被顶栏挡住，Tab 到每个入口都把页面往上滚 15px（入口还停在原地，题面跟着挪）。多留 5px 余量
+ */
+.problem-study-entry { gap: 6px; scroll-margin-top: calc(60px - 5rem); }
 .problem-study-entry.is-open { background: color-mix(in oklch, var(--accent) 12%, transparent); color: var(--accent); }
 /* 「我的题解」「尝试记录」是自己的东西，和前面隔开一点 */
 .problem-study-entry--mine { position: relative; margin-inline-start: 13px; }
 .problem-study-entry--mine::before { content: ""; position: absolute; inset-inline-start: -8px; top: 25%; height: 50%; width: 1px; background: var(--separator); }
 .problem-study-count { min-width: 18px; padding: 0 5px; border-radius: 999px; background: color-mix(in oklch, var(--foreground) 8%, transparent); font-family: var(--font-mono); font-size: 11px; line-height: 18px; text-align: center; }
 /*
- * 提示、易错点的气泡：挂在入口那一条下面，对准点开它的入口（--bubble-x、箭头 --bubble-arrow 由 problem-view.tsx 量好），
- * 宽度按内容、最宽 520px，高度按内容、最高到屏幕底下（--bubble-max），超出才在气泡里面滚。
+ * 气泡（提示、动画、题解、易错点、我的题解、尝试记录都用它）：挂在入口那一条下面，小三角对准点开它的入口
+ * （--bubble-x、--bubble-arrow 由 problem-view.tsx 量好），高度按内容、最高到屏幕底下（--bubble-max），超出在气泡里滚。
+ * 提示、易错点按内容宽、最宽 520px；动画、题解、我的题解、尝试记录（--wide）占满这一栏，换演示步骤时宽度不跳。
  * overflow-anchor: none：新给一层提示时浏览器不自作主张挪滚动条。
  */
 .problem-bubble {
@@ -45,9 +79,12 @@
   border: 1px solid var(--border); border-radius: 16px; background: var(--surface);
   box-shadow: 0 12px 32px color-mix(in oklch, var(--foreground) 14%, transparent);
   transform-origin: var(--bubble-arrow, 24px) top;
-  animation: problem-bubble-in 150ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation: problem-bubble-in 160ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
+.problem-bubble--wide { width: calc(100% - 16px); max-width: none; }
 .problem-bubble[hidden] { display: none; }
+/* 专注模式盖住整个屏幕，气泡不用露出来 */
+body:has(.practice-shell--focus) .problem-bubble { display: none; }
 /* 指向入口的小三角 */
 .problem-bubble::before {
   content: ""; position: absolute; top: -6px; left: calc(var(--bubble-arrow, 24px) - 6px);
@@ -58,26 +95,9 @@
 .problem-bubble-head { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 6px 6px 2px 14px; font-size: 13px; font-weight: 600; }
 .problem-bubble-head svg { flex-shrink: 0; }
 .problem-bubble-body { position: relative; min-height: 0; overflow: auto; overscroll-behavior: contain; overflow-anchor: none; padding: 4px 14px 14px; }
+.problem-bubble--wide .problem-bubble-body { padding: 6px 18px 18px; }
 @keyframes problem-bubble-in { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .problem-bubble { animation: none; } }
-.problem-sheet { display: none; }
-@media (min-width: 1200px) {
-  .problem-sheet:not([hidden]) {
-    position: fixed; z-index: 25; top: 80px; bottom: 16px;
-    left: var(--practice-right); width: calc(var(--practice-row) - var(--practice-dock-w) - 24px);
-    display: flex; flex-direction: column; overflow: hidden;
-    border: 1px solid var(--border); border-radius: 24px; background: var(--surface);
-    box-shadow: 0 18px 48px color-mix(in oklch, var(--foreground) 12%, transparent);
-    animation: problem-sheet-in 180ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
-  }
-  /* 专注模式盖住整个屏幕，面板不用露出来 */
-  body:has(.practice-shell--focus) .problem-sheet { display: none; }
-}
-.problem-sheet-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; flex-shrink: 0; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--separator); }
-.problem-sheet-head h2 svg { flex-shrink: 0; }
-.problem-sheet-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding: 20px 24px 24px; }
-@keyframes problem-sheet-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .problem-sheet:not([hidden]) { animation: none; } }
 .practice-focus-statement { display: none; }
 
 /*
@@ -86,16 +106,62 @@
  */
 .practice-editor-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .practice-editor-column > #practice { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
-.practice-editor-toolbar, .practice-run-controls { flex-shrink: 0; }
 .practice-editor, .practice-editor-loading { flex: 1 1 0; min-height: 120px; }
-.practice-console { flex: 0 0 var(--practice-console-size, 40%); min-height: 96px; overflow: auto; }
-.practice-run-controls { background: var(--surface); border-radius: 0 0 24px 24px; }
-#practice:has([data-testid="practice-test-panel"]) > .practice-run-controls { border-radius: 0; }
 
+/*
+ * 编辑器的样子（workbench.tsx 的 PracticeSession）：
+ *   标签栏 34px：文件名标签（顶上一道强调色）、LeetCode / ACM、语言；右边运行、调试、测试、保存、「⋯」，再是专注、收起。按钮都是 24px 高；
+ *   控制台从编辑器底部弹出：标签 30px，内容自己滚；
+ *   状态栏 24px：语言和模式、存没存、上次结果、控制台开关。
+ * 练习区窄的时候（容器查询）先藏文件名，再藏按钮上的字，只留图标。
+ */
+.practice-ide { container-type: inline-size; }
+.practice-tabbar { display: flex; flex-shrink: 0; align-items: center; gap: 2px; height: 34px; padding-right: 4px; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); }
+.practice-file-tab { display: flex; flex-shrink: 0; flex-direction: column; justify-content: center; align-self: stretch; width: auto; border-right: 1px solid var(--separator); background: var(--surface); box-shadow: inset 0 2px 0 var(--accent); }
+.practice-file-trigger { display: inline-flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important; width: auto !important; height: 34px !important; min-height: 34px !important; gap: 6px; padding: 0 22px 0 10px !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--foreground); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.practice-file-trigger > svg:first-child { flex-shrink: 0; color: var(--accent); }
+.practice-file-trigger [data-slot="select-value"] { flex: 0 1 auto; min-width: 0; }
+.practice-file-tab, .practice-file-tab > * { min-width: 0; }
+.practice-tabbar-scroll { display: flex; flex: 0 1 auto; min-width: 0; align-items: center; gap: 4px; overflow: hidden; padding-left: 4px; }
+.practice-tabbar [aria-label="编程模式"] { height: 24px; min-height: 24px; padding: 2px; }
+.practice-tabbar [aria-label="编程模式"] [role="radio"] { height: 20px; min-height: 20px; padding: 0 6px; font-size: 11px; }
+.practice-run-controls { display: flex; flex-shrink: 0; align-items: center; gap: 2px; }
+.practice-tb-btn { height: 24px !important; min-height: 24px !important; gap: 4px; padding: 0 8px !important; border-radius: 6px !important; font-size: 12px; }
+.practice-tb-icon { width: 24px !important; min-width: 24px !important; height: 24px !important; min-height: 24px !important; padding: 0 !important; border-radius: 6px !important; }
+.practice-tb-run { background: color-mix(in oklch, var(--accent) 12%, transparent) !important; color: var(--accent) !important; }
+.practice-tb-run:hover { background: color-mix(in oklch, var(--accent) 18%, transparent) !important; }
+.practice-tb-group { gap: 0; }
+.practice-tb-caret { width: 18px !important; min-width: 18px !important; height: 24px !important; min-height: 24px !important; padding: 0 !important; border-radius: 6px !important; }
+.practice-tb-sep { width: 1px; height: 16px; margin: 0 3px; background: var(--separator); }
+/* 窄的时候按顺序让位：先藏测试按钮上的字，再藏「运行」两个字，最后藏文件名（只留图标和箭头） */
+@container (max-width: 600px) { .practice-tb-group .practice-tb-label { display: none; } }
+@container (max-width: 520px) { .practice-tb-run .practice-tb-label { display: none; } }
+@container (max-width: 470px) { .practice-file-name { display: none; } }
+.practice-notice { display: flex; flex-shrink: 0; align-items: center; gap: 6px; padding: 3px 10px; border-top: 1px solid var(--separator); font-size: 11px; line-height: 18px; }
+.practice-notice[role="status"] { border-top: 0; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--warning) 10%, transparent); }
+/* 控制台：从编辑器底部弹出来的子窗口 */
+.practice-console { display: flex; flex: 0 0 var(--practice-console-size, 40%); flex-direction: column; min-height: 96px; overflow: hidden; }
+.practice-console-tabs { display: flex; flex-shrink: 0; align-items: center; height: 30px; padding: 0 4px 0 6px; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); }
+.practice-console-segment { height: 24px; min-height: 24px; padding: 2px; }
+.practice-console-segment [role="radio"] { height: 20px; min-height: 20px; padding: 0 8px; font-size: 12px; }
+.practice-console-body { display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; padding: 8px 10px 10px; }
+/* 状态栏 */
+.practice-statusbar { display: flex; flex-shrink: 0; align-items: center; gap: 10px; height: 24px; padding: 0 4px 0 10px; border-top: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); color: var(--muted); font-size: 11px; }
+.practice-statusbar [data-testid="practice-save-status"] { font-size: 11px; line-height: 24px; }
+.practice-status-lang { flex-shrink: 0; white-space: nowrap; }
+.practice-status-result { flex-shrink: 0; font-family: var(--font-mono); white-space: nowrap; }
+.practice-console-toggle { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; height: 20px; margin-left: auto; padding: 0 6px; border-radius: 4px; color: var(--muted); font-size: 11px; }
+.practice-console-toggle:hover { background: color-mix(in oklch, var(--foreground) 6%, transparent); color: var(--foreground); }
+.practice-console-toggle[aria-expanded="true"] { color: var(--foreground); }
+.practice-console-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* 拖动条 */
 .practice-resize-handle { position: relative; display: flex; flex-shrink: 0; align-items: center; justify-content: center; touch-action: none; outline: none; user-select: none; }
 .practice-resize-handle[hidden] { display: none !important; }
 .practice-resize-handle--y { height: 12px; cursor: row-resize; }
+/* 控制台上沿：一条细线，鼠标移上去才显示把手 */
+.practice-console-handle.practice-resize-handle--y { height: 6px; }
+.practice-console-handle .practice-resize-grip { width: 32px !important; height: 3px !important; opacity: 0; transition: opacity 120ms ease, background-color 120ms ease; }
+.practice-console-handle:hover .practice-resize-grip, .practice-console-handle.practice-resize-handle--active .practice-resize-grip, .practice-console-handle:focus-visible .practice-resize-grip { opacity: 1; }
 .practice-resize-handle--x { width: 16px; cursor: col-resize; }
 .practice-resize-grip { border-radius: 999px; background: var(--border); transition: background-color 120ms ease; }
 .practice-resize-handle--y .practice-resize-grip { width: 44px; height: 4px; }
@@ -143,14 +209,11 @@
 .practice-shell--focus > .practice-split-handle:hover .practice-resize-grip,
 .practice-shell--focus > .practice-split-handle:focus-visible .practice-resize-grip,
 .practice-shell--focus > .practice-split-handle.practice-resize-handle--active .practice-resize-grip { opacity: 1; }
-.practice-focus-statement-heading { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--separator); }
-.practice-shell--focus .practice-focus-statement-heading,
-.practice-shell--focus .practice-editor-column > :first-child { min-height: 57px; }
-.practice-focus-statement-body { min-height: 0; overflow: auto; padding: 24px; }
-/* 代码这一侧：模式切换那一行当标题栏，下面的练习卡片去掉边框和圆角，直接铺在工作区上 */
-.practice-shell--focus .practice-editor-column > :first-child { align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--separator); }
+.practice-focus-statement-heading { display: flex; align-items: center; gap: 6px; flex-shrink: 0; height: 34px; padding: 0 6px 0 14px; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); font-size: 13px; }
+.practice-focus-statement-heading .button { height: 24px; min-height: 24px; padding: 0 8px; font-size: 12px; }
+.practice-focus-statement-body { min-height: 0; overflow: auto; padding: 16px 20px; }
+/* 代码这一侧：编辑器卡片去掉边框和圆角，直接铺在工作区上；标签栏和左边题面的标题栏一样高（34px） */
 .practice-shell--focus .practice-editor-column > #practice { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
-.practice-shell--focus .practice-run-controls { border-radius: 0; }
 
 /* 1200px 以下页面里不放编辑器：右下角常驻一个只有图标的圆按钮「写代码」（不挡正文中间），点开进入全屏的题面 + 编辑器 */
 .practice-launcher { display: none; }
@@ -194,18 +257,44 @@
 .practice-editor .cm-breakpoint-gutter .cm-gutterElement:hover::after { content: ""; width: 8px; height: 8px; border-radius: 999px; background: color-mix(in oklch, var(--danger) 35%, transparent); }
 .practice-editor .cm-breakpoint-gutter .cm-gutterElement:has(.cm-breakpoint-dot):hover::after { display: none; }
 .cm-breakpoint-dot { display: block; width: 8px; height: 8px; border-radius: 999px; background: var(--danger); }
-.practice-debug-value { white-space: pre-wrap; overflow-wrap: anywhere; }
-.practice-debug-changed > * { background: color-mix(in oklch, var(--accent) 7%, transparent); }
-.practice-debug-range { accent-color: var(--accent); }
+/* 调试面板（debugger.tsx）：一行图标按钮 + 进度条；变量一行一个，值太长省略、点开换行；★ 钉住的变量列出它每次变的值 */
+.practice-debug { display: flex; flex-direction: column; gap: 6px; }
+.practice-debug-bar { display: flex; flex-wrap: nowrap; align-items: center; gap: 1px; min-width: 0; }
+.practice-debug-next { background: color-mix(in oklch, var(--accent) 12%, transparent) !important; color: var(--accent) !important; }
+.practice-debug-range { flex: 1 1 60px; min-width: 40px; height: 4px; margin: 0 6px; accent-color: var(--accent); }
+.practice-debug-pos { flex-shrink: 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+.practice-debug-badge { flex-shrink: 0; margin-left: 6px; font-size: 11px; }
+.practice-debug-meta { display: flex; min-width: 0; gap: 10px; color: var(--muted); font-size: 11px; }
+.practice-vars, .practice-watch { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-mono); font-size: 12px; line-height: 20px; }
+.practice-var, .practice-watch-row { display: grid; grid-template-columns: 22px minmax(40px, max-content) minmax(0, 1fr); align-items: start; border-bottom: 1px solid var(--separator); }
+.practice-var:last-child, .practice-watch-row:last-child { border-bottom: 0; }
+.practice-var.is-changed { background: color-mix(in oklch, var(--accent) 7%, transparent); }
+.practice-var.is-changed .practice-var-value { color: var(--accent); }
+.practice-pin { width: 22px; height: 22px; color: var(--muted); font-size: 12px; line-height: 22px; text-align: center; opacity: 0.18; transition: opacity 120ms ease, color 120ms ease; }
+.practice-var:hover .practice-pin, .practice-pin:focus-visible { opacity: 1; }
+.practice-pin.is-on { color: var(--warning); opacity: 1; }
+.practice-var-name { max-width: 140px; overflow: hidden; padding: 1px 10px 1px 2px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.practice-var-value { min-width: 0; overflow: hidden; padding: 1px 8px 1px 0; color: var(--foreground); font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.practice-var.is-open .practice-var-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+.practice-var-value.is-static { cursor: default; white-space: pre-wrap; overflow-wrap: anywhere; }
+.practice-var-tag { margin-right: 6px; color: var(--muted); font-size: 11px; }
+.practice-watch { background: color-mix(in oklch, var(--warning) 6%, var(--surface)); }
+.practice-watch-row { align-items: center; }
+.practice-watch-points { display: flex; min-width: 0; gap: 4px; overflow-x: auto; padding: 2px 6px 2px 0; scrollbar-width: thin; }
+.practice-watch-point { flex-shrink: 0; max-width: 160px; height: 20px; overflow: hidden; padding: 0 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--muted); font: inherit; font-size: 11px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.practice-watch-point:hover { color: var(--foreground); }
+.practice-watch-point.is-current { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 10%, var(--surface)); color: var(--accent); }
+.practice-debug-output summary { color: var(--muted); font-size: 11px; cursor: pointer; }
+.practice-debug-output .practice-output { margin-top: 4px; }
 .practice-editor .cm-scroller { scrollbar-gutter: stable; font-family: var(--font-mono); }
 .practice-output {
   max-height: 210px;
   min-height: 42px;
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: color-mix(in oklch, var(--foreground) 3%, var(--surface));
-  padding: 10px 12px;
+  padding: 6px 10px;
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.7;
@@ -218,9 +307,9 @@
 /* 正文和练习区之间的竖条（拖动调整练习区宽度）只在桌面并排时有 */
 .practice-dock-handle { display: none; }
 /*
- * 桌面（≥1200）练习区在页面右侧，可以收起（html[data-practice="closed"]，记在浏览器里，layout.tsx 在首屏前就设好）：
+ * 桌面（≥1200）练习区在页面右侧，默认收起（html[data-practice="closed"]；用户展开过就记在浏览器里，layout.tsx 在首屏前就设好）：
  *   展开：题目页撑宽，顶栏也跟着撑宽（内边距 24px，正好和下面正文的左右边缘对齐）；
- *   收起：题目页和首页一样宽（max-w-6xl），顶栏不动，右下角留一个「写代码」按钮召出练习区。
+ *   收起：题目页和首页一样宽（max-w-6xl），顶栏不动，屏幕右边一个像素把手「<」召出练习区（第一次来时它自己演几遍）。
  * 三列：正文 | 拖动条（24px，就是原来的间距）| 练习区。练习区的宽度是占整行的比例 --practice-dock
  * （拖动条调，存在浏览器里，layout.tsx 首屏前就设好），再限制在 360px 和「正文至少留 560px」之间；默认 38%。
  * 收起、展开之间宽度、列宽都有过渡（拖动时关掉），顶栏的过渡写在 globals.css。
@@ -261,35 +350,69 @@
   html:not([data-practice="closed"]) .problem-original-sections { grid-template-columns: minmax(0, 1fr); }
   html:not([data-practice="closed"]) .problem-toc { display: none; }
   html:not([data-practice="closed"]) .problem-learn-inline { display: block; }
-  /* 桌面侧栏：跟着页面滚动停在顶栏下面，高度占满剩下的屏幕，里面的编辑器和控制台按比例分 */
-  .practice-sidebar:not(.practice-shell--focus) { position: fixed; z-index: 10; top: 80px; right: var(--practice-right); width: var(--practice-dock-w); display: flex; flex-direction: column; height: calc(100dvh - 96px); margin-top: 0; transition: opacity 200ms ease 120ms, visibility 0s; }
+  /* 骨架：写代码布局的入口那一排、拖动条、练习区，位置和真实的一样 */
+  html:not([data-practice="closed"]) .problem-skel-study { display: flex; }
+  html:not([data-practice="closed"]) .problem-skel-practice { display: flex; flex-direction: column; position: fixed; z-index: 10; top: 80px; right: var(--practice-right); width: var(--practice-dock-w); height: calc(100dvh - 96px); }
+  html:not([data-practice="closed"]) .problem-skel-dock-handle { display: flex; align-items: center; justify-content: center; position: fixed; z-index: 10; top: 80px; right: calc(var(--practice-right) + var(--practice-dock-w)); width: 24px; height: calc(100dvh - 96px); }
+  .problem-skel-dock-handle > span { width: 4px; height: 56px; border-radius: 999px; background: var(--border); }
+  /* 桌面侧栏：跟着页面滚动停在顶栏下面，高度占满剩下的屏幕，里面的编辑器和控制台按比例分。
+     展开时从右边带一点回弹地滑进来（接在把手往左一跳之后），收起时往右滑走、淡出 */
+  .practice-sidebar:not(.practice-shell--focus) { position: fixed; z-index: 10; top: 80px; right: var(--practice-right); width: var(--practice-dock-w); display: flex; flex-direction: column; height: calc(100dvh - 96px); margin-top: 0; transition: opacity 220ms ease 40ms, transform 520ms cubic-bezier(0.34, 1.32, 0.64, 1) 20ms, visibility 0s; }
   .practice-sidebar:not(.practice-shell--focus) > .practice-editor-column { flex: 1 1 auto; }
-  html[data-practice="closed"] .practice-sidebar:not(.practice-shell--focus) { overflow: hidden; opacity: 0; visibility: hidden; transition: opacity 120ms ease, visibility 0s 120ms; }
+  html[data-practice="closed"] .practice-sidebar:not(.practice-shell--focus) { overflow: hidden; opacity: 0; visibility: hidden; transform: translateX(56px); transition: opacity 160ms ease, transform 240ms cubic-bezier(0.5, 0, 0.75, 0), visibility 0s 240ms; }
   /*
-   * 收起后：右下角一个 </> 圆按钮（和手机上的「写代码」一个样子），不占一整条边。
-   * 鼠标移上去或键盘聚焦时往左展开出「写代码」三个字；点一下或按住往左拖就展开练习区。
+   * 收起后：屏幕右边、竖着居中，一个若隐若现的像素「<」（和 logo 同一套像素，见 pixel.tsx 的 PixelCodeMark）。
+   * 鼠标移上去 / 键盘聚焦 / 按住拖：「<」往左一跳，「/」「>」一格一格带回弹地蹦出来成「</>」，
+   * 稍等一下，下面「coding」一个字母一个字母跳出来。往左拖时整个把手跟着手走（--rail-pull，workbench.tsx 设），
+   * 拖够了或点一下：把手往左一跳、淡出，练习区紧接着从右边滑进来。收起时把手晚一点、带回弹地弹回来。
    */
   html[data-practice="closed"] .practice-rail:not([hidden]) {
-    position: fixed; z-index: 30; right: 24px; bottom: 24px;
-    display: inline-flex; align-items: center; gap: 0;
-    height: 44px; padding: 0 13px; border: 0; border-radius: 999px;
-    background: var(--accent); color: var(--accent-foreground, #fff);
-    box-shadow: 0 6px 18px color-mix(in oklch, var(--foreground) 18%, transparent);
-    cursor: pointer; touch-action: none;
-    transition: gap 200ms ease, box-shadow 160ms ease, transform 160ms ease;
-    animation: practice-rail-in 200ms ease both;
+    position: fixed; z-index: 30; right: 0; top: 50%;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 6px;
+    padding: 22px 14px 22px 26px; border: 0; background: transparent; color: var(--foreground);
+    cursor: grab; touch-action: none; outline: none;
+    transform: translate(var(--rail-pull, 0px), -50%);
+    transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    /* backwards 而不是 both：动画结束后要让出 transform，拖动时 --rail-pull 才生效 */
+    animation: practice-rail-in 560ms cubic-bezier(0.34, 1.56, 0.64, 1) 180ms backwards;
   }
-  html[data-practice="closed"] .practice-rail:not([hidden]):hover,
-  html[data-practice="closed"] .practice-rail:not([hidden]):focus-visible { gap: 6px; box-shadow: 0 8px 22px color-mix(in oklch, var(--foreground) 24%, transparent); }
-  html[data-practice="closed"] .practice-rail:not([hidden]):active { transform: scale(0.97); }
-  html[data-practice="closed"] .practice-rail:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
-  html[data-practice="closed"] .practice-rail:hover .practice-rail-label,
-  html[data-practice="closed"] .practice-rail:focus-visible .practice-rail-label { max-width: 4em; }
+  html[data-practice="closed"] .practice-rail.is-dragging { cursor: grabbing; transition: none; }
+  html[data-practice="closed"] .practice-rail.is-leaving { animation: practice-rail-out 180ms cubic-bezier(0.5, 0, 0.75, 0) both; }
 }
 /* 只在桌面、练习区收起时出现 */
 .practice-rail { display: none; }
-.practice-rail-label { max-width: 0; overflow: hidden; white-space: nowrap; font-size: 13px; font-weight: 600; transition: max-width 200ms ease; }
-@keyframes practice-rail-in { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+.practice-rail-mark { display: block; width: 52px; height: 28px; overflow: visible; }
+.practice-rail-mark rect { transform-box: fill-box; transform-origin: center; }
+.practice-rail-mark .cm-lt rect, .practice-rail-mark .cm-gt rect { fill: currentColor; }
+.practice-rail-mark .cm-sl rect { fill: var(--accent); }
+/* 平时：只有「<」，挪到最右边（9 列 × 4），淡淡地一明一暗 */
+.practice-rail-mark .cm-lt { transform: translateX(36px); transition: transform 460ms cubic-bezier(0.34, 1.7, 0.64, 1); animation: practice-rail-breathe 2.8s ease-in-out infinite alternate; }
+.practice-rail-mark .cm-sl rect, .practice-rail-mark .cm-gt rect { opacity: 0; transform: translateY(-5px) scale(0); transition: opacity 120ms ease, transform 160ms ease; }
+.practice-rail-label { display: flex; gap: 0.5px; font-size: 11px; letter-spacing: 0.06em; line-height: 1; color: var(--muted); }
+.practice-rail-label span { display: inline-block; opacity: 0; transform: translateY(6px); transition: opacity 120ms ease, transform 160ms ease; }
+/* 鼠标移上去、键盘聚焦、拖着的时候：跳成「</>」，再跳出「coding」 */
+.practice-rail:is(:hover, :focus-visible, .is-dragging, .is-hinting) .practice-rail-mark .cm-lt { transform: none; animation: none; opacity: 1; }
+.practice-rail:is(:hover, :focus-visible, .is-dragging, .is-hinting) .practice-rail-mark :is(.cm-sl, .cm-gt) rect {
+  opacity: 1; transform: none;
+  transition: opacity 140ms ease calc(var(--d) + 90ms), transform 420ms cubic-bezier(0.34, 2, 0.64, 1) calc(var(--d) + 90ms);
+}
+.practice-rail:is(:hover, :focus-visible, .is-dragging, .is-hinting) .practice-rail-label span {
+  opacity: 1; transform: none; color: var(--accent);
+  transition: opacity 160ms ease calc(320ms + var(--i) * 55ms), transform 420ms cubic-bezier(0.34, 2.2, 0.64, 1) calc(320ms + var(--i) * 55ms);
+}
+.practice-rail:focus-visible .practice-rail-mark { outline: 2px solid var(--accent); outline-offset: 6px; border-radius: 4px; }
+@keyframes practice-rail-breathe { from { opacity: 0.22; } to { opacity: 0.55; } }
+@keyframes practice-rail-in { 0% { opacity: 0; transform: translate(28px, -50%); } 100% { opacity: 1; transform: translate(0, -50%); } }
+/* 第一次来时把手自己演一遍：往左招两下手（translate 和拖动用的 transform 互不干扰），同时跳成「</>」、蹦出「coding」 */
+html[data-practice="closed"] .practice-rail.is-hinting:not([hidden]) { animation: practice-rail-beckon 1.3s cubic-bezier(0.34, 1.56, 0.64, 1) 1; }
+@keyframes practice-rail-beckon {
+  0%, 100% { translate: 0 0; }
+  16% { translate: -14px 0; }
+  34% { translate: 0 0; }
+  50% { translate: -8px 0; }
+  66% { translate: 0 0; }
+}
+@keyframes practice-rail-out { 0% { opacity: 1; transform: translate(var(--rail-pull, 0px), -50%); } 100% { opacity: 0; transform: translate(calc(var(--rail-pull, 0px) - 22px), -50%) scale(0.9); } }
 /* 专注模式的「退出」：并排时在代码那边（退出专注），上下排列（手机）时在屏幕最上面这一行 */
 .practice-focus-exit-top { display: none; }
 @media (max-width: 639px) {
@@ -303,8 +426,8 @@
 }
 @media (min-width: 1200px) and (prefers-reduced-motion: reduce) {
   .problem-page-layout, .practice-sidebar:not(.practice-shell--focus) { transition: none !important; }
-  html[data-practice="closed"] .practice-rail:not([hidden]) { animation: none; }
-  .practice-rail, .practice-rail-label { transition: none !important; }
+  .practice-rail, .practice-rail * { transition: none !important; animation: none !important; }
+  .practice-rail-mark .cm-lt { opacity: 0.45; }
 }
 /* 上下排列（<1024，手机和竖着的平板）：铺满整个屏幕；题面在上，可以拖动调整高度、收起、只看题目 */
 @media (max-width: 1023px) {

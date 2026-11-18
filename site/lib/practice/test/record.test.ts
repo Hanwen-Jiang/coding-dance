@@ -1,7 +1,7 @@
 // node lib/practice/test/record.test.ts：练习区写进度仓（草稿、「测试全部」的记录、题解、状态），用假的 GitHub 跑一遍服务端
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { draftPath, existingSolutions, findDraft, gitBlobSha, pickSolutionPath, planSave, renderPracticeAttempt, solutionPath, validateSave } from "../record.ts";
+import { draftPath, existingSolutions, findDraft, gitBlobSha, pickLabeledSolutionPath, pickSolutionPath, planSave, renderPracticeAttempt, solutionPath, validateSave } from "../record.ts";
 import { loadPracticeDraft, savePractice } from "../server.ts";
 import { matchExisting, parseAttemptPath, readAttempt, validateAttempt } from "../../sync/core.ts";
 import { SyncError } from "../../sync/server.ts";
@@ -107,6 +107,67 @@ await test("全部通过存题解：已有的题解一个都不动，同一份�
   // ACM 模式：.ACM 被占了存成 .ACM2（写法名只有一段）
   const acm = "solutions/typescript/0001.两数之和.ACM.ts";
   assert.equal(pickSolutionPath(P1, "typescript", "acm", "let x = 1", [acm], { [acm]: "let y = 2" }), "solutions/typescript/0001.两数之和.ACM2.ts");
+});
+
+await test("手动存为尝试记录：精简、示例、自定义没通过的也能记；「通过」只能来自全量测试", () => {
+  throws(() => validateSave(run({ scope: "everything" })), /scope/);
+  throws(() => validateSave(run({ scope: "quick" })), /只有全量/);
+  const old = validateSave(run());
+  assert.equal(old.kind === "run" && old.scope, "full", "以前的请求没有 scope，当作全量");
+  const s = validateSave(run({ scope: "quick", manual: true, result: "答案错误", passed: 4, total: 6, notes: ["用例 5：预期 2，实际 3"] }));
+  if (s.kind !== "run") throw new Error();
+  const plan = planSave(s, { problem: P1, paths: [], progress: null, now: NOW });
+  assert.equal(plan.attempt, "attempts/0001.两数之和/2026-11-17.1.答案错误.md");
+  assert.equal(plan.solution, undefined);
+  assert.equal(plan.status, "尝试过");
+  assert.match(plan.message, /答案错误（4\/6） · 精简测试 · 手动保存$/);
+  const text = plan.files[0].content;
+  assert.deepEqual(validateAttempt(text), []);
+  assert.match(text, /^网站练习区「精简测试」，手动保存，力扣模式 · 答案错误：通过 4 \/ 6 个用例/m);
+  // 全量测试自动记的那条还是原来的样子
+  const auto = renderPracticeAttempt(old.kind === "run" ? old : (null as never), { date: "2026-11-17", time: "23:30:00" });
+  assert.match(auto, /^网站练习区「全量测试」，力扣模式 · 全部通过/m);
+});
+
+await test("手动存为我的题解：不管通没通过都存，没全量通过的写法名标上「未通过」「未验证」，同一份代码不再存", () => {
+  throws(() => validateSave({ kind: "solution", id: 1, lang: "python", mode: "leetcode", code: CODE, label: "差一点" }), /label/);
+  const sol = (label: string, mode = "leetcode", lang = "python") => validateSave({ kind: "solution", id: 1, lang, mode, code: CODE, label });
+  const failing = planSave(sol("未通过"), { problem: P1, paths: [], progress: null, now: NOW });
+  assert.equal(failing.solution, "solutions/python/0001.两数之和.未通过.py");
+  assert.deepEqual(failing.files.map((f) => f.path), [failing.solution], "只存题解，不记尝试、不改状态");
+  assert.equal(failing.status, undefined);
+  assert.match(failing.message, /存为我的题解（未通过）$/);
+  // 名字被别的代码占了：.未通过2；ACM 模式写法名只有一段：.ACM未验证
+  const taken = "solutions/python/0001.两数之和.未通过.py";
+  assert.equal(pickLabeledSolutionPath(P1, "python", "leetcode", CODE, "未通过", [taken], { [taken]: "print(1)\n" }), "solutions/python/0001.两数之和.未通过2.py");
+  assert.equal(planSave(sol("未验证", "acm", "typescript"), { problem: P1, paths: [], progress: null, now: NOW }).solution, "solutions/typescript/0001.两数之和.ACM未验证.ts");
+  // 全量通过的和自动存的一样，不标
+  assert.equal(planSave(sol("通过"), { problem: P1, paths: [], progress: null, now: NOW }).solution, "solutions/python/0001.两数之和.py");
+  // 同一份代码已经存过（任何写法名，比如之前存的「未通过」）：不再存
+  const dup = planSave(sol("未通过"), { problem: P1, paths: [taken], progress: null, now: NOW, solutions: { [taken]: CODE } });
+  assert.equal(dup.solution, undefined);
+  assert.deepEqual(dup.files, []);
+  // 进度仓的规则认这样的写法名，网站「我的历史题解」显示成「Python · 未通过」
+  assert.equal(existingSolutions([taken], 1, "python").length, 1);
+});
+
+await test("服务端：手动存为我的题解只写题解；再存一次同一份代码不产生 commit", async () => {
+  const gh = mockGitHub({ "hot100.json": JSON.stringify(hot), "progress.json": JSON.stringify({ version: 1, problems: {} }) });
+  const body = { kind: "solution", id: 1, lang: "python", mode: "leetcode", code: CODE, label: "未通过" };
+  const r1 = await savePractice(gh.api, gh.repo, body, () => NOW);
+  assert.equal(r1.saved, true);
+  assert.equal(r1.solution, "solutions/python/0001.两数之和.未通过.py");
+  assert.deepEqual(r1.files, [r1.solution]);
+  assert.deepEqual(JSON.parse(gh.files()["progress.json"]).problems, {}, "状态不变");
+  const commits = gh.log().length;
+  const r2 = await savePractice(gh.api, gh.repo, body, () => NOW);
+  assert.equal(r2.saved, false);
+  assert.equal(r2.solution, undefined);
+  assert.equal(gh.log().length, commits);
+  // 手动记一条精简测试没通过的尝试
+  const r3 = await savePractice(gh.api, gh.repo, run({ scope: "sample", manual: true, result: "运行出错", passed: 0, total: 2 }), () => NOW);
+  assert.equal(r3.attempt, "attempts/0001.两数之和/2026-11-17.1.运行出错.md");
+  assert.deepEqual(JSON.parse(gh.files()["progress.json"]).problems, { 1: { status: "尝试过", updatedAt: "2026-11-17" } });
 });
 
 await test("git 的 blob sha 和 git 算的一样", async () => {

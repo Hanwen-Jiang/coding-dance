@@ -25,8 +25,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // 字体变量要定义在 <html> 上：globals.css 的 --font-sans / --font-mono 也定义在 :root，引用它们
     <html suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable} ${silkscreen.variable}`} lang="zh-CN">
       <head>
-        {/* 题目页的练习区上次是收起的、或者拖过宽度：首屏前就标上，页面直接按上次的样子画，不会先按默认画再跳（见 practice/workbench.tsx） */}
-        <script dangerouslySetInnerHTML={{ __html: `try{var h=document.documentElement;if(localStorage.getItem("hot100:practice:dock")==="closed")h.dataset.practice="closed";var w=Number(localStorage.getItem("hot100:practice:dock-size"));if(w>=0.15&&w<=0.8)h.style.setProperty("--practice-dock",String(w))}catch(e){}` }} />
+        {/* 题目页的练习区默认收起（右边一个像素把手，见 practice/workbench.tsx）；用户展开过、或者拖过宽度：首屏前就标上，页面直接按上次的样子画，不会先按默认画再跳 */}
+        <script dangerouslySetInnerHTML={{ __html: `var h=document.documentElement;h.dataset.practice="closed";try{if(localStorage.getItem("hot100:practice:dock")==="open")h.dataset.practice="open";var w=Number(localStorage.getItem("hot100:practice:dock-size"));if(w>=0.15&&w<=0.8)h.style.setProperty("--practice-dock",String(w))}catch(e){}` }} />
       </head>
       <body className="min-h-screen font-sans text-foreground antialiased">
         <Providers>

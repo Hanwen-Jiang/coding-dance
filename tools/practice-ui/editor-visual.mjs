@@ -12,7 +12,10 @@ const screenshots = path.join(os.tmpdir(), "leetcode-editor-visual");
 const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe", headless: true });
 const context = await browser.newContext({ viewport: { width: 1920, height: 1080 }, colorScheme: "light" });
 await context.addInitScript(() => {
-  if (window.top === window) localStorage.setItem("hot100:practice:options", JSON.stringify({ mode: "acm", language: "python" }));
+  if (window.top !== window) return;
+  localStorage.setItem("hot100:practice:options", JSON.stringify({ mode: "acm", language: "python" }));
+  // 练习区默认收起；这里测的是编辑器，先当作用户展开过
+  if (!localStorage.getItem("hot100:practice:dock")) localStorage.setItem("hot100:practice:dock", "open");
 });
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
@@ -144,7 +147,7 @@ try {
     report[theme].pythonCompletion = await completion("li", `${theme}-python-completion.png`);
     await language("JavaScript");
     report[theme].javascriptCompletion = await completion("fun", `${theme}-javascript-completion-detail.png`);
-    assert(await page.evaluate(() => document.querySelector(".practice-sidebar")?.textContent?.includes("动手练习")));
+    assert(await page.evaluate(() => /^(solution|main)\.(py|js|ts)$/.test(document.querySelector(".practice-sidebar .practice-file-name")?.textContent ?? "")), "Editor tab shows the file name");
     console.log(`✓ ${theme}: Python / JavaScript / TypeScript VS Code colors and styled completion widgets`);
   }
 

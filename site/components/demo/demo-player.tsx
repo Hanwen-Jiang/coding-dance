@@ -167,8 +167,44 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
   // 这一步对应的代码行：at 里的每个标记在当前语言里标了哪些行
   const active = text ? (s.at == null ? [] : [s.at].flat()).flatMap((t) => text.marks?.[t] ?? []) : [];
 
+  // 「这一步的代码」：展开时单独一栏（够宽时在左边，和右边的演示一样高，代码在栏里滚），收起时只剩一行标题放在讲解下面
+  const wideCode = !!text && showCode;
+  const codeHead = text && (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <button
+        aria-expanded={showCode}
+        className="font-pixel inline-flex items-center gap-1.5 rounded-md text-[11px] tracking-wider text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
+        type="button"
+        onClick={toggleCode}
+      >
+        <span aria-hidden className={clsx("inline-block transition-transform", showCode ? "rotate-90" : "")}>▸</span>
+        这一步的代码{codeLangs.length < 2 && ` · ${langLabel(lang)}`}
+      </button>
+      {showCode && <LangTabs label="代码的语言" langs={codeLangs} value={lang} onChange={setPicked} />}
+    </div>
+  );
+  const fill = "@3xl:max-h-none @3xl:min-h-0 @3xl:flex-1";
+  const codeBody = text && showCode && (codeRevealed ? (
+    <StepCode active={active} className={fill} code={text.code} lang={lang} />
+  ) : (
+    <div className={clsx("relative overflow-hidden rounded-2xl", "@3xl:flex @3xl:min-h-0 @3xl:flex-1 @3xl:flex-col")}>
+      <div aria-hidden className="pointer-events-none select-none blur-[5px] @3xl:flex @3xl:min-h-0 @3xl:flex-1 @3xl:flex-col">
+        <StepCode active={active} className={fill} code={text.code} lang={lang} />
+      </div>
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/30">
+        <span className="font-pixel text-[11px] tracking-widest text-muted">SPOILER</span>
+        <Button size="sm" onPress={onRevealCode}>
+          <EyeIcon />
+          查看代码
+        </Button>
+        <span className="text-xs text-muted">和题解里的代码一起显示</span>
+      </div>
+    </div>
+  ));
+
   return (
-    <div className="flex flex-col gap-4">
+    // 按演示自己有多宽排（不看屏幕）：放在题目页、写代码布局的弹出面板、单独打开的页面里都一样
+    <div className="@container flex flex-col gap-4">
       {methods.length > 1 && (
         <div className="flex flex-col gap-2">
           <Tabs className="w-full" selectedKey={String(mi)} onSelectionChange={(k) => setMi(Number(k))}>
@@ -186,8 +222,12 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
           {method.note && <p className="hint-text text-sm leading-6 text-muted" dangerouslySetInnerHTML={{ __html: method.note }} />}
         </div>
       )}
+      {/*
+        够宽（≥ 48rem）且代码展开：左边上面是演示、下面紧跟着讲解，右边代码单独一栏；两栏一样高（代码那栏不撑高度，代码在栏里滚）。
+        窄的时候、或者代码收起：演示、讲解、代码从上往下排。
+      */}
       <div
-        className={clsx("demo grid gap-5 outline-none", text && showCode ? "lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]" : "lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]")}
+        className={clsx("demo grid gap-5 outline-none", wideCode && "@3xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]")}
         tabIndex={0}
         onKeyDown={(e) => {
           if (e.key === "ArrowRight") {
@@ -202,6 +242,16 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
           }
         }}
       >
+        {wideCode && (
+          // 代码这一栏：窄的时候排在最后；够宽时在右边，绝对定位撑满这一格，高度跟着左边的演示走
+          <div className="order-last flex min-w-0 flex-col gap-2 @3xl:relative @3xl:min-h-[22rem]">
+            <div className="flex min-h-0 flex-col gap-2 @3xl:absolute @3xl:inset-0">
+              {codeHead}
+              {codeBody}
+            </div>
+          </div>
+        )}
+        <div className="flex min-w-0 flex-col gap-5">
         <Card className="min-w-0 gap-4 p-4 sm:p-5">
           {(demo.presets.length > 1 || random) && (
             <div className="flex flex-wrap items-center gap-2">
@@ -309,41 +359,9 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
           >
             {s.phase}
           </span>
-          <p key={`${sel}-${mi}-${idx}`} className="dm-msg min-h-[5.5em] text-base leading-7" dangerouslySetInnerHTML={{ __html: s.msg }} />
-          {text && (
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <button
-                  aria-expanded={showCode}
-                  className="font-pixel inline-flex items-center gap-1.5 rounded-md text-[11px] tracking-wider text-muted outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-accent"
-                  type="button"
-                  onClick={toggleCode}
-                >
-                  <span aria-hidden className={clsx("inline-block transition-transform", showCode ? "rotate-90" : "")}>▸</span>
-                  这一步的代码{codeLangs.length < 2 && ` · ${langLabel(lang)}`}
-                </button>
-                {showCode && <LangTabs label="代码的语言" langs={codeLangs} value={lang} onChange={setPicked} />}
-              </div>
-              {showCode &&
-                (codeRevealed ? (
-                  <StepCode active={active} code={text.code} lang={lang} />
-                ) : (
-                  <div className="relative overflow-hidden rounded-2xl">
-                    <div aria-hidden className="pointer-events-none select-none blur-[5px]">
-                      <StepCode active={active} code={text.code} lang={lang} />
-                    </div>
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-background/30">
-                      <span className="font-pixel text-[11px] tracking-widest text-muted">SPOILER</span>
-                      <Button size="sm" onPress={onRevealCode}>
-                        <EyeIcon />
-                        查看代码
-                      </Button>
-                      <span className="text-xs text-muted">和题解里的代码一起显示</span>
-                    </div>
-                  </div>
-                ))}
-            </div>
-          )}
+          <p key={`${sel}-${mi}-${idx}`} className="dm-msg min-h-[3.5em] text-base leading-7" dangerouslySetInnerHTML={{ __html: s.msg }} />
+          {/* 代码收起时，「这一步的代码」那一行留在讲解下面，点开后代码单独成一栏 */}
+          {text && !showCode && codeHead}
           {method.legend.length > 0 && (
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted">
               {method.legend.map(([cls, t]) => (
@@ -355,6 +373,7 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
             </div>
           )}
           <span className="hidden text-[11px] text-muted lg:block">点一下演示区域后，可以用 ← → 切换步骤，空格键播放 / 暂停。</span>
+        </div>
         </div>
       </div>
     </div>
