@@ -101,6 +101,13 @@ async function main() {
   });
   assert.deepEqual(decodeAcmInput("\n", { fn: "f", params: ["string"], ret: "string" }), [""]);
   assert.equal(parseAcmOutput("\n", { fn: "f", params: [], ret: "string" }), "");
+  // Python print() emits capitalized booleans, including in multi-result output.
+  assert.equal(parseAcmOutput("True\r\n", { ret: "bool" }), true);
+  assert.equal(parseAcmOutput("False\n", { ret: "bool" }), false);
+  assert.deepEqual(parseAcmOutput("2\nTrue False\n", { ret: "bool[]" }), [true, false]);
+  assert.deepEqual(parseAcmOutput("null\nTrue\nFalse\n0\n1\n", { cls: "Example" }), [null, true, false, 0, 1]);
+  assert.equal(parseAcmOutput("True\n", { ret: "string" }), "True");
+  assert.throws(() => parseAcmOutput("yes\n", { ret: "bool" }), /布尔值/);
   assert.throws(() => decodeAcmInput("2\n1\n", { fn: "f", params: ["int[]"], ret: "int" }));
   assert.throws(() => parseAcmOutput("1\n2\nextra\n", { fn: "f", params: [], ret: "int[]" }));
   assert.throws(() => parseAcmOutput("not-a-number\n", { fn: "f", params: [], ret: "int" }));
