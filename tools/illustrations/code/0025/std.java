@@ -10,16 +10,16 @@ class Solution {
                     return dummy.next;              // 不够 k 个，剩下的不动 //@done
                 }
             }
-            ListNode groupNext = kth.next;          //@rev
-            ListNode prev = groupNext, cur = groupPrev.next;    //@rev
-            while (cur != groupNext) {              // 组内反转 //@rev
-                ListNode nxt = cur.next;            //@rev
-                cur.next = prev;                    //@rev
-                prev = cur;                         //@rev
-                cur = nxt;                          //@rev
+            ListNode groupNext = kth.next;          // 下一组的开头 //@cut
+            ListNode prev = groupNext, cur = groupPrev.next;    // prev 从 groupNext 开始 //@setup
+            while (cur != groupNext) {              // 组内反转 //@flip
+                ListNode nxt = cur.next;            // 先记住下一个 //@flip
+                cur.next = prev;                    // 箭头掉头 //@flip
+                prev = cur;                         //@move
+                cur = nxt;                          //@move
             }
-            ListNode first = groupPrev.next;        // 这组原来的头，现在是尾 //@rev
-            groupPrev.next = kth;                   // 前面接上新的头 //@rev
+            ListNode first = groupPrev.next;        // 这组原来的头，现在是尾 //@link
+            groupPrev.next = kth;                   // 前面接上新的头 //@link
             groupPrev = first;                      //@next
         }
     }
