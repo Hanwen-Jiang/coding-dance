@@ -56,7 +56,11 @@
   backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
 }
 .problem-study-entries { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.problem-study-entry { gap: 6px; }
+/*
+ * 入口停在顶栏下面 65px 处（57 + 内边距 8），比 html 的 scroll-padding-top（5rem，给标题跳转留的）高 15px：
+ * 不抵掉的话浏览器当它被顶栏挡住，Tab 到每个入口都把页面往上滚 15px（入口还停在原地，题面跟着挪）。多留 5px 余量
+ */
+.problem-study-entry { gap: 6px; scroll-margin-top: calc(60px - 5rem); }
 .problem-study-entry.is-open { background: color-mix(in oklch, var(--accent) 12%, transparent); color: var(--accent); }
 /* 「我的题解」「尝试记录」是自己的东西，和前面隔开一点 */
 .problem-study-entry--mine { position: relative; margin-inline-start: 13px; }
