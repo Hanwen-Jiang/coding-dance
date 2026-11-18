@@ -6,7 +6,7 @@ import clsx from "clsx";
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { CodePanel } from "@/components/code-panel";
 import { PracticeProvider, PracticeStatement } from "@/components/practice/context";
@@ -627,22 +627,33 @@ function StudyBar({ entries, open, onOpen, label = true }: { entries: StudyEntry
   );
 }
 
-/** 提示一层一层给：先只给第一层，「再给一点提示」才往下 */
+/**
+ * 提示一层一层给：先只给第一层，「再给一点提示」才往下。
+ * 新给的一层只在自己所在的滚动框（气泡）里滚到看得见，不动整个页面。
+ */
 function HintSteps({ spec }: { spec: Spec }) {
   const [shown, setShown] = useState(1);
   const hints = spec.hints;
+  const newest = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = newest.current;
+    const box = el?.closest<HTMLElement>(".problem-bubble-body");
+    if (shown < 2 || !el || !box) return;
+    const top = el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 8;
+    if (top + el.offsetHeight > box.scrollTop + box.clientHeight) box.scrollTo({ top, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  }, [shown]);
   return (
     <div className="flex flex-col gap-3">
       {hints.slice(0, shown).map((h, i) => (
-        <Card className="gap-2 p-4" key={i}>
+        <div className="flex flex-col gap-1.5 rounded-xl bg-surface-secondary px-3.5 py-3" key={i} ref={i === shown - 1 ? newest : undefined}>
           <div className="flex items-center gap-2">
             <span className="shrink-0 rounded-full bg-accent/10 px-2 py-0.5 font-mono text-xs font-semibold text-accent">提示 {i + 1}</span>
             <span className="text-sm font-semibold">{h.t}</span>
           </div>
-          <div className="hint-text flex flex-col gap-2 text-[15px] leading-7 text-muted">
+          <div className="hint-text flex flex-col gap-2 text-sm leading-6 text-muted">
             {h.body.map((p, k) => <p dangerouslySetInnerHTML={{ __html: p }} key={k} />)}
           </div>
-        </Card>
+        </div>
       ))}
       {shown < hints.length ? (
         <Button className="self-start" onPress={() => setShown(shown + 1)} size="sm" variant="secondary">
@@ -651,6 +662,82 @@ function HintSteps({ spec }: { spec: Spec }) {
       ) : (
         <p className="text-xs text-muted">提示就这些了；还卡着可以看看动画演示。</p>
       )}
+    </div>
+  );
+}
+
+/** 提示和易错点内容短，弹成气泡（有多少占多少）；动画、题解、我的题解、尝试记录内容长，用下面的大面板 */
+const BUBBLE_KEYS: StudyKey[] = ["hints", "points"];
+const isBubble = (k: StudyKey | null): k is StudyKey => !!k && BUBBLE_KEYS.includes(k);
+
+/**
+ * 气泡：挂在那排入口下面（入口那一条停在顶栏下面，气泡跟着它），对准点开它的那个入口，宽高按内容来，最高到屏幕底下。
+ * 点外面不关（看着提示写代码时要点进编辑器），再点一下入口、点 ✕ 或按 Esc 才关。
+ * 打开过的留在里面（提示给到第几层还在）。不抢焦点、不滚页面。
+ */
+function StudyBubble({ d, entries, open, onOpen }: { d: ProblemDetail; entries: StudyEntry[]; open: StudyKey | null; onOpen: (key: StudyKey | null) => void }) {
+  const key = isBubble(open) ? open : null;
+  const box = useRef<HTMLDivElement>(null);
+  const [seen, setSeen] = useState<Set<StudyKey>>(() => new Set());
+  const [pos, setPos] = useState({ x: 8, arrow: 24, max: 480 });
+  useEffect(() => {
+    if (key) setSeen((s) => (s.has(key) ? s : new Set(s).add(key)));
+  }, [key]);
+  // 第一次打开就把内容画出来（不等 seen 更新），量宽度时已经是最终的样子
+  const has = (k: StudyKey) => seen.has(k) || key === k;
+  // 对准点开它的入口；气泡比入口右边剩的地方宽时往左挪，箭头还指着入口
+  useLayoutEffect(() => {
+    const el = box.current, bar = el?.parentElement;
+    const entry = bar?.querySelector<HTMLElement>(".problem-study-entries [aria-pressed='true']");
+    if (!key || !el || !bar || !entry) return;
+    const b = bar.getBoundingClientRect(), e = entry.getBoundingClientRect();
+    const center = e.left + e.width / 2 - b.left;
+    const x = Math.max(8, Math.min(e.left - b.left - 4, b.width - el.offsetWidth - 8));
+    // 最高到屏幕底下留 16px（入口那一条停在顶栏下面之后只会更往上，这个高度一直够用）
+    setPos({ x, arrow: Math.max(16, Math.min(el.offsetWidth - 16, center - x)), max: Math.max(220, window.innerHeight - b.bottom - 24) });
+  }, [key]);
+  useEffect(() => {
+    if (!key) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented || (e.target as Element | null)?.closest?.(".cm-editor, [role=dialog]:not(.problem-bubble)")) return;
+      onOpen(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [key, onOpen]);
+  if (!key && !seen.size) return null;
+  const current = entries.find((e) => e.key === key);
+  return (
+    <div
+      aria-label={current?.title}
+      className="problem-bubble"
+      hidden={!key}
+      ref={box}
+      role="dialog"
+      style={{ "--bubble-x": `${pos.x}px`, "--bubble-arrow": `${pos.arrow}px`, "--bubble-max": `${pos.max}px` } as React.CSSProperties}
+    >
+      <div className="problem-bubble-head">
+        {current && <current.icon aria-hidden />}
+        <span className="min-w-0 flex-1 truncate">{current?.title}</span>
+        <Button aria-label="关闭" className="shrink-0" isIconOnly onPress={() => onOpen(null)} size="sm" variant="ghost"><CloseIcon /></Button>
+      </div>
+      <div className="problem-bubble-body">
+        {has("hints") && (
+          <div hidden={key !== "hints"}>
+            {d.spec?.hints?.length ? <HintSteps key={d.summary.id} spec={d.spec} /> : <p className="text-sm text-muted">这道题还没有提示。</p>}
+          </div>
+        )}
+        {has("points") && d.spec?.points?.length ? (
+          <ul className="flex flex-col gap-2.5" hidden={key !== "points"}>
+            {d.spec.points.map((p, i) => (
+              <li className="flex flex-col gap-1 rounded-xl bg-surface-secondary px-3.5 py-3" key={i}>
+                <div className="text-sm font-semibold">{p.t}</div>
+                <p className="hint-text text-[13px] leading-6 text-muted" dangerouslySetInnerHTML={{ __html: p.body }} />
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -822,7 +909,12 @@ export function ProblemView({ id }: { id: number }) {
       </div>
 
       {/* 写代码的布局：一排入口停在顶栏下面，用到时弹出面板 */}
-      {coding && <div className="problem-study-bar"><StudyBar entries={studyEntries(d, mine)} onOpen={openSheet} open={sheet} /></div>}
+      {coding && (
+        <div className="problem-study-bar">
+          <StudyBar entries={studyEntries(d, mine)} onOpen={openSheet} open={sheet} />
+          <StudyBubble d={d} entries={studyEntries(d, mine)} onOpen={openSheet} open={sheet} />
+        </div>
+      )}
 
       <div className="problem-original-sections">
         <div className={clsx("flex min-w-0 flex-col", coding ? "gap-8" : "gap-12")}>
@@ -934,7 +1026,7 @@ export function ProblemView({ id }: { id: number }) {
       </div>
     </div>
     <PracticeWorkbench />
-    {coding && <StudySheet d={d} entries={studyEntries(d, mine)} mine={mine} onOpen={openSheet} onReveal={reveal} open={sheet} revealed={revealed} />}
+    {coding && <StudySheet d={d} entries={studyEntries(d, mine)} mine={mine} onOpen={openSheet} onReveal={reveal} open={isBubble(sheet) ? null : sheet} revealed={revealed} />}
     </div>
     </PracticeProvider>
   );
