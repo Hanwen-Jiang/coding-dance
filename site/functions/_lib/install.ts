@@ -8,7 +8,7 @@ export interface Installation {
   selection: "all" | "selected";
   /** 这次授权带不带「建仓库」的权限（App 后来才加的权限，老的授权要用户同意之后才有） */
   canCreate: boolean;
-  /** 第一次授权的时间（判断是不是创始会员用） */
+  /** 第一次授权的时间（判断是不是首批用户用） */
   createdAt: string | null;
 }
 

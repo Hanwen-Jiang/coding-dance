@@ -34,7 +34,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
   const accessible = !!inst && rr.ok && (inst.selection === "all" || (await installationCovers(s.t, inst, repo)));
   // 每个仓库 Star 了没有
   const stars = list.map((r, i) => ({ repo: r, starred: starred[i].status === 204 }));
-  // 会员档位：按第一次授权网站、建好进度仓的时间判断是不是创始会员
+  // 会员档位：按第一次授权网站、建好进度仓的时间判断是不是首批用户
   const repoCreated = rr.ok ? ((await rr.json().catch(() => ({}))) as { created_at?: string }).created_at : null;
   const member = membership(env, [inst?.createdAt, repoCreated]);
   return privateJson(
