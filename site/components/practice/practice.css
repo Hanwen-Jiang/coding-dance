@@ -27,8 +27,8 @@
 .problem-skeleton, .problem-skel-practice, .problem-skel-dock-handle { animation: fade-only 220ms ease 90ms both; }
 
 /*
- * 换题（上一题、下一题，problem-view.tsx 的 useProblemNav）：这一页往后退的方向挪一点、变淡（不完全消失，
- * 线上换页要等几百毫秒，屏幕不空着），新的一页从前进的方向滑进来。右边练习区的框不动，只有里面的编辑器暗一下再亮起来。
+ * 换题（上一题、下一题，problem-view.tsx 的 useProblemNav）：这一页往后退的方向挪一点、变淡（不完全消失：
+ * 下一题的数据还没到时最多等 0.4 秒，屏幕不空着），新的一页从前进的方向滑进来。右边练习区的框不动，只有里面的编辑器暗一下再亮起来。
  * 往右最多挪 16px：手机上正文离屏幕右边就 16px，再多页面会临时变宽、能左右晃。
  */
 .problem-page-layout[data-leaving] > .problem-original { opacity: 0.25; pointer-events: none; transition: opacity 180ms ease, transform 200ms cubic-bezier(0.4, 0, 0.2, 1); }
