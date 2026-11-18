@@ -8,7 +8,7 @@ import { useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { flushSync } from "react-dom";
 
-import { ChevronDown, ChevronLeft, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
+import { ChevronDown, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
 import { PixelLoader, Skel } from "@/components/pixel";
 import { PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
 import { type DebugRun, PracticeDebugger } from "@/components/practice/debugger";
@@ -262,7 +262,7 @@ export function PracticeWorkbench() {
         <CodeIcon height={20} width={20} />
       </Button>
     </div>
-    {/* 桌面上练习区收起时：贴在屏幕右边的一条窄边（和练习区一样高），点一下或按住往左拖就展开 */}
+    {/* 桌面上练习区收起时：右下角一个 </> 圆按钮（和手机上的「写代码」一样），鼠标移上去展开成「写代码」；点一下或按住往左拖就展开练习区 */}
     <button
       aria-label="展开练习区"
       className="practice-rail"
@@ -272,12 +272,11 @@ export function PracticeWorkbench() {
       onPointerMove={(e) => { const d = railDrag.current; if (d && !d.done && d.x - e.clientX > 24) { d.done = true; summon(); } }}
       onPointerUp={() => { setTimeout(() => { railDrag.current = null; }, 0); }}
       ref={rail}
-      title="展开练习区（点一下或往左拖）"
+      title="展开练习区"
       type="button"
     >
-      <ChevronLeft aria-hidden className="practice-rail-chevron" height={14} width={14} />
-      <CodeIcon aria-hidden />
-      <span className="practice-rail-label">动手练习</span>
+      <CodeIcon aria-hidden height={18} width={18} />
+      <span aria-hidden className="practice-rail-label">写代码</span>
     </button>
     </>
   );
