@@ -28,6 +28,13 @@
     "反转这一组时，让 <code>prev</code> 的初始值是 <code>group_next</code> 而不是空。",
     "这样这一组原来的第一个节点（反转后的尾巴）会自动指向下一组，少接一次。"
    ]
+  },
+  {
+   "t": "组内反转每一轮做什么",
+   "body": [
+    "和 206 题一样，三步：<code>nxt = cur.next</code> 先记住下一个；<code>cur.next = prev</code> 箭头掉头；<code>prev, cur = cur, nxt</code> 两个指针往前走。",
+    "<code>cur</code> 走到 <code>group_next</code> 就停：这一组正好 k 个箭头掉了头，<code>prev</code> 停在 <code>kth</code>。"
+   ]
   }
  ],
  "points": [
@@ -202,7 +209,7 @@
    "kind": null,
    "note": null,
    "key": "std",
-   "code": "class Solution:\n    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        dummy = ListNode(0, head)\n        group_prev = dummy\n        while True:\n            kth = group_prev\n            for _ in range(k):          # 往前数 k 个\n                kth = kth.next\n                if not kth:\n                    return dummy.next   # 不够 k 个，剩下的不动\n            group_next = kth.next\n            prev, cur = group_next, group_prev.next\n            while cur is not group_next:    # 组内反转\n                cur.next, prev, cur = prev, cur, cur.next\n            first = group_prev.next     # 这组原来的头，现在是尾\n            group_prev.next = kth       # 前面接上新的头\n            group_prev = first",
+   "code": "class Solution:\n    def reverseKGroup(self, head: Optional[ListNode], k: int) -> Optional[ListNode]:\n        dummy = ListNode(0, head)\n        group_prev = dummy\n        while True:\n            kth = group_prev\n            for _ in range(k):          # 往前数 k 个\n                kth = kth.next\n                if not kth:\n                    return dummy.next   # 不够 k 个，剩下的不动\n            group_next = kth.next       # 下一组的开头\n            prev, cur = group_next, group_prev.next  # prev 从 group_next 开始\n            while cur is not group_next:    # 组内反转\n                nxt = cur.next          # 先记住下一个\n                cur.next = prev         # 箭头掉头\n                prev, cur = cur, nxt    # 两个指针往前走\n            first = group_prev.next     # 这组原来的头，现在是尾\n            group_prev.next = kth       # 前面接上新的头\n            group_prev = first",
    "marks": {
     "init": [
      3,
@@ -218,21 +225,31 @@
     "done": [
      10
     ],
-    "rev": [
-     11,
-     12,
+    "cut": [
+     11
+    ],
+    "setup": [
+     12
+    ],
+    "flip": [
      13,
      14,
-     15,
+     15
+    ],
+    "move": [
      16
     ],
+    "link": [
+     17,
+     18
+    ],
     "next": [
-     17
+     19
     ]
    },
    "langs": {
     "java": {
-     "code": "class Solution {\n    public ListNode reverseKGroup(ListNode head, int k) {\n        ListNode dummy = new ListNode(0, head);\n        ListNode groupPrev = dummy;\n        while (true) {\n            ListNode kth = groupPrev;\n            for (int i = 0; i < k; i++) {           // 往前数 k 个\n                kth = kth.next;\n                if (kth == null) {\n                    return dummy.next;              // 不够 k 个，剩下的不动\n                }\n            }\n            ListNode groupNext = kth.next;\n            ListNode prev = groupNext, cur = groupPrev.next;\n            while (cur != groupNext) {              // 组内反转\n                ListNode nxt = cur.next;\n                cur.next = prev;\n                prev = cur;\n                cur = nxt;\n            }\n            ListNode first = groupPrev.next;        // 这组原来的头，现在是尾\n            groupPrev.next = kth;                   // 前面接上新的头\n            groupPrev = first;\n        }\n    }\n}",
+     "code": "class Solution {\n    public ListNode reverseKGroup(ListNode head, int k) {\n        ListNode dummy = new ListNode(0, head);\n        ListNode groupPrev = dummy;\n        while (true) {\n            ListNode kth = groupPrev;\n            for (int i = 0; i < k; i++) {           // 往前数 k 个\n                kth = kth.next;\n                if (kth == null) {\n                    return dummy.next;              // 不够 k 个，剩下的不动\n                }\n            }\n            ListNode groupNext = kth.next;          // 下一组的开头\n            ListNode prev = groupNext, cur = groupPrev.next;    // prev 从 groupNext 开始\n            while (cur != groupNext) {              // 组内反转\n                ListNode nxt = cur.next;            // 先记住下一个\n                cur.next = prev;                    // 箭头掉头\n                prev = cur;\n                cur = nxt;\n            }\n            ListNode first = groupPrev.next;        // 这组原来的头，现在是尾\n            groupPrev.next = kth;                   // 前面接上新的头\n            groupPrev = first;\n        }\n    }\n}",
      "marks": {
       "init": [
        3,
@@ -248,14 +265,22 @@
       "done": [
        10
       ],
-      "rev": [
-       13,
-       14,
+      "cut": [
+       13
+      ],
+      "setup": [
+       14
+      ],
+      "flip": [
        15,
        16,
-       17,
+       17
+      ],
+      "move": [
        18,
-       19,
+       19
+      ],
+      "link": [
        21,
        22
       ],
@@ -265,7 +290,7 @@
      }
     },
     "cpp": {
-     "code": "class Solution {\npublic:\n    ListNode* reverseKGroup(ListNode* head, int k) {\n        ListNode dummy(0, head);\n        ListNode* groupPrev = &dummy;\n        while (true) {\n            ListNode* kth = groupPrev;\n            for (int i = 0; i < k; i++) {           // 往前数 k 个\n                kth = kth->next;\n                if (!kth) {\n                    return dummy.next;              // 不够 k 个，剩下的不动\n                }\n            }\n            ListNode* groupNext = kth->next;\n            ListNode *prev = groupNext, *cur = groupPrev->next;\n            while (cur != groupNext) {              // 组内反转\n                ListNode* nxt = cur->next;\n                cur->next = prev;\n                prev = cur;\n                cur = nxt;\n            }\n            ListNode* first = groupPrev->next;      // 这组原来的头，现在是尾\n            groupPrev->next = kth;                  // 前面接上新的头\n            groupPrev = first;\n        }\n    }\n};",
+     "code": "class Solution {\npublic:\n    ListNode* reverseKGroup(ListNode* head, int k) {\n        ListNode dummy(0, head);\n        ListNode* groupPrev = &dummy;\n        while (true) {\n            ListNode* kth = groupPrev;\n            for (int i = 0; i < k; i++) {           // 往前数 k 个\n                kth = kth->next;\n                if (!kth) {\n                    return dummy.next;              // 不够 k 个，剩下的不动\n                }\n            }\n            ListNode* groupNext = kth->next;        // 下一组的开头\n            ListNode *prev = groupNext, *cur = groupPrev->next;     // prev 从 groupNext 开始\n            while (cur != groupNext) {              // 组内反转\n                ListNode* nxt = cur->next;          // 先记住下一个\n                cur->next = prev;                   // 箭头掉头\n                prev = cur;\n                cur = nxt;\n            }\n            ListNode* first = groupPrev->next;      // 这组原来的头，现在是尾\n            groupPrev->next = kth;                  // 前面接上新的头\n            groupPrev = first;\n        }\n    }\n};",
      "marks": {
       "init": [
        4,
@@ -281,14 +306,22 @@
       "done": [
        11
       ],
-      "rev": [
-       14,
-       15,
+      "cut": [
+       14
+      ],
+      "setup": [
+       15
+      ],
+      "flip": [
        16,
        17,
-       18,
+       18
+      ],
+      "move": [
        19,
-       20,
+       20
+      ],
+      "link": [
        22,
        23
       ],
@@ -298,7 +331,7 @@
      }
     },
     "go": {
-     "code": "func reverseKGroup(head *ListNode, k int) *ListNode {\n\tdummy := &ListNode{Next: head}\n\tgroupPrev := dummy\n\tfor {\n\t\tkth := groupPrev\n\t\tfor i := 0; i < k; i++ {   // 往前数 k 个\n\t\t\tkth = kth.Next\n\t\t\tif kth == nil {\n\t\t\t\treturn dummy.Next  // 不够 k 个，剩下的不动\n\t\t\t}\n\t\t}\n\t\tgroupNext := kth.Next\n\t\tprev, cur := groupNext, groupPrev.Next\n\t\tfor cur != groupNext {                   // 组内反转\n\t\t\tcur.Next, prev, cur = prev, cur, cur.Next\n\t\t}\n\t\tfirst := groupPrev.Next // 这组原来的头，现在是尾\n\t\tgroupPrev.Next = kth    // 前面接上新的头\n\t\tgroupPrev = first\n\t}\n}",
+     "code": "func reverseKGroup(head *ListNode, k int) *ListNode {\n\tdummy := &ListNode{Next: head}\n\tgroupPrev := dummy\n\tfor {\n\t\tkth := groupPrev\n\t\tfor i := 0; i < k; i++ {   // 往前数 k 个\n\t\t\tkth = kth.Next\n\t\t\tif kth == nil {\n\t\t\t\treturn dummy.Next  // 不够 k 个，剩下的不动\n\t\t\t}\n\t\t}\n\t\tgroupNext := kth.Next                  // 下一组的开头\n\t\tprev, cur := groupNext, groupPrev.Next // prev 从 groupNext 开始\n\t\tfor cur != groupNext {                 // 组内反转\n\t\t\tnxt := cur.Next                    // 先记住下一个\n\t\t\tcur.Next = prev                    // 箭头掉头\n\t\t\tprev, cur = cur, nxt\n\t\t}\n\t\tfirst := groupPrev.Next // 这组原来的头，现在是尾\n\t\tgroupPrev.Next = kth    // 前面接上新的头\n\t\tgroupPrev = first\n\t}\n}",
      "marks": {
       "init": [
        2,
@@ -314,21 +347,31 @@
       "done": [
        9
       ],
-      "rev": [
-       12,
-       13,
+      "cut": [
+       12
+      ],
+      "setup": [
+       13
+      ],
+      "flip": [
        14,
        15,
-       17,
-       18
+       16
+      ],
+      "move": [
+       17
+      ],
+      "link": [
+       19,
+       20
       ],
       "next": [
-       19
+       21
       ]
      }
     },
     "javascript": {
-     "code": "var reverseKGroup = function(head, k) {\n    const dummy = new ListNode(0, head);\n    let groupPrev = dummy;\n    while (true) {\n        let kth = groupPrev;\n        for (let i = 0; i < k; i++) {               // 往前数 k 个\n            kth = kth.next;\n            if (!kth) {\n                return dummy.next;                  // 不够 k 个，剩下的不动\n            }\n        }\n        const groupNext = kth.next;\n        let prev = groupNext, cur = groupPrev.next;\n        while (cur !== groupNext) {                 // 组内反转\n            [cur.next, prev, cur] = [prev, cur, cur.next];\n        }\n        const first = groupPrev.next;               // 这组原来的头，现在是尾\n        groupPrev.next = kth;                       // 前面接上新的头\n        groupPrev = first;\n    }\n};",
+     "code": "var reverseKGroup = function(head, k) {\n    const dummy = new ListNode(0, head);\n    let groupPrev = dummy;\n    while (true) {\n        let kth = groupPrev;\n        for (let i = 0; i < k; i++) {               // 往前数 k 个\n            kth = kth.next;\n            if (!kth) {\n                return dummy.next;                  // 不够 k 个，剩下的不动\n            }\n        }\n        const groupNext = kth.next;                 // 下一组的开头\n        let prev = groupNext, cur = groupPrev.next; // prev 从 groupNext 开始\n        while (cur !== groupNext) {                 // 组内反转\n            const nxt = cur.next;                   // 先记住下一个\n            cur.next = prev;                        // 箭头掉头\n            prev = cur;\n            cur = nxt;\n        }\n        const first = groupPrev.next;               // 这组原来的头，现在是尾\n        groupPrev.next = kth;                       // 前面接上新的头\n        groupPrev = first;\n    }\n};",
      "marks": {
       "init": [
        2,
@@ -344,21 +387,32 @@
       "done": [
        9
       ],
-      "rev": [
-       12,
-       13,
+      "cut": [
+       12
+      ],
+      "setup": [
+       13
+      ],
+      "flip": [
        14,
        15,
+       16
+      ],
+      "move": [
        17,
        18
       ],
+      "link": [
+       20,
+       21
+      ],
       "next": [
-       19
+       22
       ]
      }
     },
     "typescript": {
-     "code": "function reverseKGroup(head: ListNode | null, k: number): ListNode | null {\n    const dummy = new ListNode(0, head);\n    let groupPrev: ListNode = dummy;\n    while (true) {\n        let kth: ListNode | null = groupPrev;\n        for (let i = 0; i < k; i++) {               // 往前数 k 个\n            kth = kth!.next;\n            if (!kth) {\n                return dummy.next;                  // 不够 k 个，剩下的不动\n            }\n        }\n        const groupNext = kth!.next;\n        let prev = groupNext, cur = groupPrev.next!;\n        while (cur !== groupNext) {                 // 组内反转\n            const nxt = cur.next!;\n            cur.next = prev;\n            prev = cur;\n            cur = nxt;\n        }\n        const first = groupPrev.next!;              // 这组原来的头，现在是尾\n        groupPrev.next = kth;                       // 前面接上新的头\n        groupPrev = first;\n    }\n}",
+     "code": "function reverseKGroup(head: ListNode | null, k: number): ListNode | null {\n    const dummy = new ListNode(0, head);\n    let groupPrev: ListNode = dummy;\n    while (true) {\n        let kth: ListNode | null = groupPrev;\n        for (let i = 0; i < k; i++) {               // 往前数 k 个\n            kth = kth!.next;\n            if (!kth) {\n                return dummy.next;                  // 不够 k 个，剩下的不动\n            }\n        }\n        const groupNext = kth!.next;                // 下一组的开头\n        let prev = groupNext, cur = groupPrev.next!;    // prev 从 groupNext 开始\n        while (cur !== groupNext) {                 // 组内反转\n            const nxt = cur.next!;                  // 先记住下一个\n            cur.next = prev;                        // 箭头掉头\n            prev = cur;\n            cur = nxt;\n        }\n        const first = groupPrev.next!;              // 这组原来的头，现在是尾\n        groupPrev.next = kth;                       // 前面接上新的头\n        groupPrev = first;\n    }\n}",
      "marks": {
       "init": [
        2,
@@ -374,14 +428,22 @@
       "done": [
        9
       ],
-      "rev": [
-       12,
-       13,
+      "cut": [
+       12
+      ],
+      "setup": [
+       13
+      ],
+      "flip": [
        14,
        15,
-       16,
+       16
+      ],
+      "move": [
        17,
-       18,
+       18
+      ],
+      "link": [
        20,
        21
       ],
@@ -408,11 +470,19 @@
    ],
    [
     "e",
-    "当前这一组"
+    "这一组还没掉头"
+   ],
+   [
+    "a",
+    "cur"
+   ],
+   [
+    "b",
+    "prev"
    ],
    [
     "k",
-    "已经翻转好"
+    "已经掉头 / 翻转好"
    ],
    [
     "w",
@@ -466,7 +536,7 @@
     "note": "head = [1,2,3,4,5,6,7,8], k = 3"
    }
   ],
-  "build": "build(a, snap) {\n    const o = [\"D\", ...a.v], k = a.k; let p = 0, tail = false;\n    const view = (lo, hi) => [{ t: \"list\", label: \"链表（D 是哑节点）\", nodes: o.map((v, i) => ({ v, cls: i === p ? \"g\" : i >= lo && i <= hi ? (tail ? \"w\" : \"e\") : i < p ? \"k\" : \"\" })), ptrs: { group_prev: p, kth: tail ? null : hi } }];\n    snap(\"开始\", `k = ${k}。group_prev 从哑节点 D 出发。`, view(-1, -1), { at: \"init\", facts: [[\"k\", k]] });\n    for (;;) {\n      if (p + k >= o.length) {\n        tail = true;\n        snap(\"不够 k 个\", p + 1 < o.length ? `从 group_prev 往后数，只剩 ${o.length - 1 - p} 个节点，不够 ${k} 个。这几个保持原样，结束。` : \"后面没有节点了，结束。\", view(p + 1, o.length - 1), { at: [\"count\", \"done\"], kind: \"warn\", facts: [[\"k\", k]] });\n        break;\n      }\n      const lo = p + 1, hi = p + k;\n      snap(\"数出一组\", `从 group_prev 往后走 ${k} 步，kth 停在 ${o[hi]}。这一组是 [${o.slice(lo, hi + 1).join(\", \")}]。`, view(lo, hi), { at: \"count\", facts: [[\"k\", k]] });\n      const first = o[lo], seg = o.slice(lo, hi + 1).reverse();\n      for (let i = 0; i < k; i++) o[lo + i] = seg[i];\n      snap(\"组内反转并接好\", `把这一组反转成 [${seg.join(\", \")}]。group_prev 接上新的头 ${seg[0]}，新的尾巴 ${first} 接着后面的节点。`, view(lo, hi), { at: \"rev\", facts: [[\"k\", k]] });\n      p = hi;\n      snap(\"下一组\", `group_prev 移到这一组的尾巴 ${o[p]}。`, view(-1, -1), { at: \"next\", facts: [[\"k\", k]] });\n    }\n    snap(\"完成\", `结果是 [${o.slice(1).join(\", \")}]。`, view(-1, -1), { at: \"done\", kind: \"ok\", ans: o.slice(1), facts: [[\"k\", k]] });\n  }",
+  "build": "build(a, snap) {\n    const k = a.k;\n    let o = [\"D\", ...a.v], nx = o.map((_, i) => (i + 1 < o.length ? i + 1 : null)), done = 0; // done：前面已经翻好的到第几号（不含 group_prev）\n    const name = (i) => (i === null || i === undefined ? \"空\" : o[i]);\n    // st：这一步的指针（位置下标）和一些标记；hot：箭头刚改过的那个节点\n    const view = (st = {}, hot = []) => [{\n      t: \"list\", label: \"链表（D 是哑节点；掉头的箭头画在下面）\",\n      nodes: o.map((v, i) => {\n        let cls = \"\";\n        if (i === st.gp) cls = \"g\";\n        else if (st.tail && i > st.gp) cls = \"w\";\n        else if (st.lo !== undefined && i >= st.lo && i <= st.hi) cls = i === st.cur ? \"a\" : i === st.prev ? \"b\" : st.flipped && st.flipped.has(i) ? \"k\" : \"e\";\n        else if (i > 0 && i <= done) cls = \"k\";\n        return { v, cls, ...(hot.includes(i) ? { ecls: \"on\" } : {}) };\n      }),\n      next: nx.slice(),\n      ptrs: { group_prev: st.gp, kth: st.kth, group_next: st.gn, prev: st.prev, cur: st.cur, nxt: st.nxt, first: st.first },\n    }];\n    const facts = (st) => [[\"k\", k], ...(st.gnName !== undefined ? [[\"group_next\", st.gnName]] : [])];\n    let gp = 0;\n    snap(\"开始\", `k = ${k}。前面放一个哑节点 D，group_prev 从 D 出发：它永远是「这一组前面的那个节点」，第一组前面没有节点，就用 D 代替。`, view({ gp }), { at: \"init\", facts: [[\"k\", k]] });\n    for (;;) {\n      // 一、往前数 k 个\n      if (gp + k >= o.length) {\n        const left = o.length - 1 - gp;\n        snap(\"不够 k 个\", left ? `从 group_prev 往后数，只剩 ${left} 个节点，不够 ${k} 个。数的时候走到了空，直接返回 dummy.next，这几个保持原样。` : \"group_prev 后面没有节点了，数的时候第一步就走到空，返回 dummy.next。\", view({ gp, tail: true }), { at: [\"count\", \"done\"], kind: \"warn\", facts: [[\"k\", k]] });\n        break;\n      }\n      const lo = gp + 1, hi = gp + k, gn = hi + 1 < o.length ? hi + 1 : null;\n      snap(\"数出一组\", `从 group_prev（${name(gp)}）往后走 ${k} 步，kth 停在 ${o[hi]}，够 ${k} 个。这一组是 ${o.slice(lo, hi + 1).join(\" → \")}。`, view({ gp, lo, hi, kth: hi }), { at: \"count\", facts: [[\"k\", k]] });\n      // 二、记下下一组的开头\n      snap(\"记下 group_next\", `group_next = kth.next = ${name(gn)}${gn === null ? \"：后面没有节点了\" : \"，是下一组的开头\"}。反转时 kth 的 next 会被改掉，所以要先记下来。`, view({ gp, lo, hi, kth: hi, gn }), { at: \"cut\", facts: facts({ gnName: name(gn) }) });\n      // 三、组内反转：prev 从 group_next 开始\n      let prev = gn, cur = lo;\n      const flipped = new Set();\n      snap(\"准备反转\", `cur 从这一组的第一个节点 ${o[lo]} 开始。prev 不从空开始，而是从 group_next（${name(gn)}）开始：${o[lo]} 反转后是这一组的尾巴，它的 next 正好该指向下一组，这样省得最后再接一次。`, view({ gp, lo, hi, kth: hi, gn, prev, cur }), { at: \"setup\", facts: facts({ gnName: name(gn) }) });\n      while (cur !== gn) {\n        const nxt = nx[cur];\n        nx[cur] = prev;\n        flipped.add(cur);\n        snap(\"箭头掉头\", `先用 nxt 记住 ${o[cur]} 的下一个（${name(nxt)}），再把 ${o[cur]}.next 改成指向 prev（${name(prev)}）。${cur === lo ? `${o[cur]} 现在直接接上了下一组（这就是 prev 从 group_next 开始的好处）。` : \"箭头从往后指变成往前指。\"}`, view({ gp, lo, hi, kth: hi, gn, prev, cur, nxt, flipped }, [cur]), { at: \"flip\", facts: facts({ gnName: name(gn) }) });\n        prev = cur; cur = nxt;\n        snap(\"往前走\", cur === gn\n          ? `prev 移到 ${o[prev]}，cur 移到 ${name(cur)}——走到了 group_next，这一组的 ${k} 个箭头都掉了头，循环结束。prev 停在 kth（${o[hi]}），它是这一组新的头。`\n          : `prev 移到 ${o[prev]}，cur 移到 ${o[cur]}。注意 group_prev（${name(gp)}）还指着 ${o[lo]}：这一组还没接回去。`,\n        view({ gp, lo, hi, kth: hi, gn, prev, cur, flipped }), { at: \"move\", facts: facts({ gnName: name(gn) }) });\n      }\n      // 四、接回前面\n      nx[gp] = hi;\n      snap(\"接回前面\", `这时 group_prev（${name(gp)}）的 next 还是这一组原来的头 ${o[lo]}，先用 first 记住它（它现在是尾巴）。再让 group_prev.next = kth，前面接上新的头 ${o[hi]}。`, view({ gp, lo, hi, kth: hi, gn, prev, first: lo, flipped }, [gp]), { at: \"link\", facts: facts({ gnName: name(gn) }) });\n      // 按新的链接顺序重新排一遍，group_prev 移到 first\n      const order = []; for (let i = 0; i !== null; i = nx[i]) order.push(i);\n      const firstLabel = o[lo];\n      o = order.map((i) => o[i]);\n      nx = o.map((_, i) => (i + 1 < o.length ? i + 1 : null));\n      done = hi;\n      gp = o.indexOf(firstLabel);\n      snap(\"下一组\", `按新的链接顺序排一下：${o.slice(1).join(\" → \")}。group_prev 移到 first（${firstLabel}），下一组从它后面开始。`, view({ gp }), { at: \"next\", facts: [[\"k\", k]] });\n    }\n    snap(\"完成\", `返回 dummy.next，结果是 [${o.slice(1).join(\", \")}]。`, view({}), { at: \"done\", kind: \"ok\", ans: o.slice(1), facts: [[\"k\", k]] });\n  }",
   "methods": [
    {
     "t": "标准解法",
@@ -478,11 +548,19 @@
      ],
      [
       "e",
-      "当前这一组"
+      "这一组还没掉头"
+     ],
+     [
+      "a",
+      "cur"
+     ],
+     [
+      "b",
+      "prev"
      ],
      [
       "k",
-      "已经翻转好"
+      "已经掉头 / 翻转好"
      ],
      [
       "w",
@@ -490,7 +568,7 @@
      ]
     ],
     "code": "std",
-    "build": "build(a, snap) {\n    const o = [\"D\", ...a.v], k = a.k; let p = 0, tail = false;\n    const view = (lo, hi) => [{ t: \"list\", label: \"链表（D 是哑节点）\", nodes: o.map((v, i) => ({ v, cls: i === p ? \"g\" : i >= lo && i <= hi ? (tail ? \"w\" : \"e\") : i < p ? \"k\" : \"\" })), ptrs: { group_prev: p, kth: tail ? null : hi } }];\n    snap(\"开始\", `k = ${k}。group_prev 从哑节点 D 出发。`, view(-1, -1), { at: \"init\", facts: [[\"k\", k]] });\n    for (;;) {\n      if (p + k >= o.length) {\n        tail = true;\n        snap(\"不够 k 个\", p + 1 < o.length ? `从 group_prev 往后数，只剩 ${o.length - 1 - p} 个节点，不够 ${k} 个。这几个保持原样，结束。` : \"后面没有节点了，结束。\", view(p + 1, o.length - 1), { at: [\"count\", \"done\"], kind: \"warn\", facts: [[\"k\", k]] });\n        break;\n      }\n      const lo = p + 1, hi = p + k;\n      snap(\"数出一组\", `从 group_prev 往后走 ${k} 步，kth 停在 ${o[hi]}。这一组是 [${o.slice(lo, hi + 1).join(\", \")}]。`, view(lo, hi), { at: \"count\", facts: [[\"k\", k]] });\n      const first = o[lo], seg = o.slice(lo, hi + 1).reverse();\n      for (let i = 0; i < k; i++) o[lo + i] = seg[i];\n      snap(\"组内反转并接好\", `把这一组反转成 [${seg.join(\", \")}]。group_prev 接上新的头 ${seg[0]}，新的尾巴 ${first} 接着后面的节点。`, view(lo, hi), { at: \"rev\", facts: [[\"k\", k]] });\n      p = hi;\n      snap(\"下一组\", `group_prev 移到这一组的尾巴 ${o[p]}。`, view(-1, -1), { at: \"next\", facts: [[\"k\", k]] });\n    }\n    snap(\"完成\", `结果是 [${o.slice(1).join(\", \")}]。`, view(-1, -1), { at: \"done\", kind: \"ok\", ans: o.slice(1), facts: [[\"k\", k]] });\n  }"
+    "build": "build(a, snap) {\n    const k = a.k;\n    let o = [\"D\", ...a.v], nx = o.map((_, i) => (i + 1 < o.length ? i + 1 : null)), done = 0; // done：前面已经翻好的到第几号（不含 group_prev）\n    const name = (i) => (i === null || i === undefined ? \"空\" : o[i]);\n    // st：这一步的指针（位置下标）和一些标记；hot：箭头刚改过的那个节点\n    const view = (st = {}, hot = []) => [{\n      t: \"list\", label: \"链表（D 是哑节点；掉头的箭头画在下面）\",\n      nodes: o.map((v, i) => {\n        let cls = \"\";\n        if (i === st.gp) cls = \"g\";\n        else if (st.tail && i > st.gp) cls = \"w\";\n        else if (st.lo !== undefined && i >= st.lo && i <= st.hi) cls = i === st.cur ? \"a\" : i === st.prev ? \"b\" : st.flipped && st.flipped.has(i) ? \"k\" : \"e\";\n        else if (i > 0 && i <= done) cls = \"k\";\n        return { v, cls, ...(hot.includes(i) ? { ecls: \"on\" } : {}) };\n      }),\n      next: nx.slice(),\n      ptrs: { group_prev: st.gp, kth: st.kth, group_next: st.gn, prev: st.prev, cur: st.cur, nxt: st.nxt, first: st.first },\n    }];\n    const facts = (st) => [[\"k\", k], ...(st.gnName !== undefined ? [[\"group_next\", st.gnName]] : [])];\n    let gp = 0;\n    snap(\"开始\", `k = ${k}。前面放一个哑节点 D，group_prev 从 D 出发：它永远是「这一组前面的那个节点」，第一组前面没有节点，就用 D 代替。`, view({ gp }), { at: \"init\", facts: [[\"k\", k]] });\n    for (;;) {\n      // 一、往前数 k 个\n      if (gp + k >= o.length) {\n        const left = o.length - 1 - gp;\n        snap(\"不够 k 个\", left ? `从 group_prev 往后数，只剩 ${left} 个节点，不够 ${k} 个。数的时候走到了空，直接返回 dummy.next，这几个保持原样。` : \"group_prev 后面没有节点了，数的时候第一步就走到空，返回 dummy.next。\", view({ gp, tail: true }), { at: [\"count\", \"done\"], kind: \"warn\", facts: [[\"k\", k]] });\n        break;\n      }\n      const lo = gp + 1, hi = gp + k, gn = hi + 1 < o.length ? hi + 1 : null;\n      snap(\"数出一组\", `从 group_prev（${name(gp)}）往后走 ${k} 步，kth 停在 ${o[hi]}，够 ${k} 个。这一组是 ${o.slice(lo, hi + 1).join(\" → \")}。`, view({ gp, lo, hi, kth: hi }), { at: \"count\", facts: [[\"k\", k]] });\n      // 二、记下下一组的开头\n      snap(\"记下 group_next\", `group_next = kth.next = ${name(gn)}${gn === null ? \"：后面没有节点了\" : \"，是下一组的开头\"}。反转时 kth 的 next 会被改掉，所以要先记下来。`, view({ gp, lo, hi, kth: hi, gn }), { at: \"cut\", facts: facts({ gnName: name(gn) }) });\n      // 三、组内反转：prev 从 group_next 开始\n      let prev = gn, cur = lo;\n      const flipped = new Set();\n      snap(\"准备反转\", `cur 从这一组的第一个节点 ${o[lo]} 开始。prev 不从空开始，而是从 group_next（${name(gn)}）开始：${o[lo]} 反转后是这一组的尾巴，它的 next 正好该指向下一组，这样省得最后再接一次。`, view({ gp, lo, hi, kth: hi, gn, prev, cur }), { at: \"setup\", facts: facts({ gnName: name(gn) }) });\n      while (cur !== gn) {\n        const nxt = nx[cur];\n        nx[cur] = prev;\n        flipped.add(cur);\n        snap(\"箭头掉头\", `先用 nxt 记住 ${o[cur]} 的下一个（${name(nxt)}），再把 ${o[cur]}.next 改成指向 prev（${name(prev)}）。${cur === lo ? `${o[cur]} 现在直接接上了下一组（这就是 prev 从 group_next 开始的好处）。` : \"箭头从往后指变成往前指。\"}`, view({ gp, lo, hi, kth: hi, gn, prev, cur, nxt, flipped }, [cur]), { at: \"flip\", facts: facts({ gnName: name(gn) }) });\n        prev = cur; cur = nxt;\n        snap(\"往前走\", cur === gn\n          ? `prev 移到 ${o[prev]}，cur 移到 ${name(cur)}——走到了 group_next，这一组的 ${k} 个箭头都掉了头，循环结束。prev 停在 kth（${o[hi]}），它是这一组新的头。`\n          : `prev 移到 ${o[prev]}，cur 移到 ${o[cur]}。注意 group_prev（${name(gp)}）还指着 ${o[lo]}：这一组还没接回去。`,\n        view({ gp, lo, hi, kth: hi, gn, prev, cur, flipped }), { at: \"move\", facts: facts({ gnName: name(gn) }) });\n      }\n      // 四、接回前面\n      nx[gp] = hi;\n      snap(\"接回前面\", `这时 group_prev（${name(gp)}）的 next 还是这一组原来的头 ${o[lo]}，先用 first 记住它（它现在是尾巴）。再让 group_prev.next = kth，前面接上新的头 ${o[hi]}。`, view({ gp, lo, hi, kth: hi, gn, prev, first: lo, flipped }, [gp]), { at: \"link\", facts: facts({ gnName: name(gn) }) });\n      // 按新的链接顺序重新排一遍，group_prev 移到 first\n      const order = []; for (let i = 0; i !== null; i = nx[i]) order.push(i);\n      const firstLabel = o[lo];\n      o = order.map((i) => o[i]);\n      nx = o.map((_, i) => (i + 1 < o.length ? i + 1 : null));\n      done = hi;\n      gp = o.indexOf(firstLabel);\n      snap(\"下一组\", `按新的链接顺序排一下：${o.slice(1).join(\" → \")}。group_prev 移到 first（${firstLabel}），下一组从它后面开始。`, view({ gp }), { at: \"next\", facts: [[\"k\", k]] });\n    }\n    snap(\"完成\", `返回 dummy.next，结果是 [${o.slice(1).join(\", \")}]。`, view({}), { at: \"done\", kind: \"ok\", ans: o.slice(1), facts: [[\"k\", k]] });\n  }"
    }
   ],
   "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const v = R.distinct(R.int(4, 8), 1, 9), k = R.int(2, 3);\n    return { args: { v, k }, note: `head = ${R.fmt(v)}, k = ${k}`, py: `toL(Solution().reverseKGroup(L(${R.py(v)}), ${k}))` };\n  })(R); return { args: r.args, note: r.note }; }"

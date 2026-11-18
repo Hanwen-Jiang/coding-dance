@@ -15,7 +15,8 @@ function tokStyle(t: Tok): React.CSSProperties | undefined {
   return { color: t.color, fontStyle: t.fontStyle && t.fontStyle & 1 ? "italic" : undefined, fontWeight: t.fontStyle && t.fontStyle & 2 ? 600 : undefined };
 }
 
-export function StepCode({ code, lang, active }: { code: string; lang: string; active: number[] }) {
+/** className：放在演示左边那一栏时让它撑满整栏高度（默认最高 24rem，超出在面板里滚） */
+export function StepCode({ code, lang, active, className }: { code: string; lang: string; active: number[]; className?: string }) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -51,7 +52,7 @@ export function StepCode({ code, lang, active }: { code: string; lang: string; a
   }, [sig, key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <div ref={box} className="relative max-h-[24rem] overflow-auto rounded-2xl border border-border bg-surface font-mono text-[12.5px] leading-[1.6] [tab-size:4]">
+    <div ref={box} className={clsx("relative max-h-[24rem] overflow-auto rounded-2xl border border-border bg-surface font-mono text-[12.5px] leading-[1.6] [tab-size:4]", className)}>
       <div className="min-w-max py-2">
         {lines.map((line, i) => {
           const n = i + 1, hit = on.has(n);

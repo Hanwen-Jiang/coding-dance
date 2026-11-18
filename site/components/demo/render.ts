@@ -57,9 +57,15 @@ function vGrid(v: View) {
   return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-grid" style="grid-template-columns:${cols}">${h}</div></div></div>`;
 }
 
-/** 几张图并排，中间用 sep（默认 →）隔开。题面配图里「变换前 → 变换后」用 */
+/**
+ * 几张图并排，中间用 sep（默认 →）隔开。题面配图里「变换前 → 变换后」用。
+ * 每张图最大是原来的尺寸，地方不够时先一起缩小，缩到 70% 还放不下就折到下一行（长链表、宽的树不会被挤得很小）。
+ */
 function vRow(v: View) {
-  const parts = (v.items as View[]).map((x) => `<div class="dm-ri">${renderViews([x])}</div>`);
+  const parts = (v.items as View[]).map((x) => {
+    const html = renderViews([x]), w = Number(html.match(/viewBox="0 0 ([\d.]+) /)?.[1]);
+    return `<div class="dm-ri"${w ? ` style="flex:1 1 ${Math.round(w * 0.7)}px;max-width:${Math.round(w)}px"` : ""}>${html}</div>`;
+  });
   return `<div class="dm-v">${lab(v)}<div class="dm-row">${parts.join(`<div class="dm-sep">${E(v.sep ?? "→")}</div>`)}</div></div>`;
 }
 
@@ -146,7 +152,8 @@ function vList(v: View) {
       s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`;
     });
   });
-  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;
+  // 长链表：地方不够时先等比缩小，最多缩到 74%（字还看得清），再窄才在框里横着滚
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:100%;min-width:${Math.round(W * 0.74)}px"><g>${s}</g></svg></div></div>`;
 }
 
 function vTree(v: View) {

@@ -114,13 +114,12 @@ html {
 /* 并排的几张图（题面配图里「变换前 → 变换后」） */
 .demo .dm-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .demo .dm-row > .dm-ri { min-width: 0; }
+/* 并排的图按这一格的宽度画（格子的宽度由 render.ts 的 vRow 定：最大原尺寸，最小 70%，再小就折行） */
+.demo .dm-row > .dm-ri svg.dm-g2 { width: 100% !important; max-width: 100% !important; min-width: 0 !important; }
 .demo .dm-sep { font-size: 20px; color: var(--muted); }
 /* 题面里的配图：原来是力扣的图片，换成和演示同一套画法，深浅色都跟着站点走 */
 .statement .lc-fig { margin: 0.75rem 0 1rem; display: flex; flex-direction: column; gap: 4px; }
 .statement .lc-fig .dm-v { animation: none; }
-/* 并排的树、链表缩小一点，两张图能放在一行里（演示里它们是按原尺寸画的，不能缩） */
-/* 用固定像素：百分比的上限在排版时算不进内容宽度，两张图还是会被挤成两行 */
-.statement .lc-fig .dm-row svg.dm-g2 { max-width: 300px !important; }
 .statement .lc-fig .lc-orig { align-self: flex-start; font-size: 11px; color: var(--muted); text-decoration: none; }
 .statement .lc-fig .lc-orig:hover { color: var(--accent); }
 @keyframes dm-fade {
