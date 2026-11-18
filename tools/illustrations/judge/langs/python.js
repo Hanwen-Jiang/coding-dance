@@ -25,6 +25,8 @@ function write(job, dir) {
 
 module.exports = {
   id: "python",
+  /** 远端运行器（tools/runner）拼练习用的程序时用 */
+  parts: { prelude, runner, NODE },
   available: () => hasTool(cmd()[0], [...cmd().slice(1), "--version"]),
   /** build.js 用：同步跑一段代码，返回每个用例的输出 */
   runSync(job, dir) {

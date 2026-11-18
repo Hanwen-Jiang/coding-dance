@@ -79,7 +79,8 @@ function lit(t, v) {
   }
 }
 
-function caseBody(sig, c) {
+/** 一个用例的语句；emit 把「结果的 JSON 字符串表达式」变成输出它的语句（练习的远端运行器换成带分隔标记的输出） */
+function caseBody(sig, c, emit = (json) => `System.out.println(${json});`) {
   if (sig.kind === "design") {
     const [ops, argv] = c;
     const L = ["List<Object> out = new ArrayList<>();", "out.add(null);", `${sig.cls} obj = new ${sig.cls}(${argv[0].map((v, i) => lit(sig.ctor[i], v)).join(", ")});`];
@@ -87,11 +88,11 @@ function caseBody(sig, c) {
       const m = sig.methods[ops[k]], call = `obj.${ops[k]}(${argv[k].map((v, i) => lit(m.params[i], v)).join(", ")})`;
       L.push(m.ret.base === "void" ? `${call}; out.add(null);` : `out.add(${outExpr(m.ret, call)});`);
     }
-    return L.concat("System.out.println(H.json(out));");
+    return L.concat(emit("H.json(out)"));
   }
   const L = c.map((v, i) => `${jt(sig.params[i])} a${i} = ${lit(sig.params[i], v)};`), call = `new Solution().${sig.fn}(${c.map((_, i) => `a${i}`).join(", ")})`;
-  if (sig.ret.base === "void") return L.concat(`${call};`, `System.out.println(H.json(${outExpr(sig.params[sig.out], `a${sig.out}`)}));`);
-  return L.concat(`System.out.println(H.json(${outExpr(sig.ret, call)}));`);
+  if (sig.ret.base === "void") return L.concat(`${call};`, emit(`H.json(${outExpr(sig.params[sig.out], `a${sig.out}`)})`));
+  return L.concat(emit(`H.json(${outExpr(sig.ret, call)})`));
 }
 
 function source(job) {
@@ -121,6 +122,8 @@ const pkg = (job) => "j" + job.name.replace(/[^\w]/g, "_");
 
 module.exports = {
   id: "java",
+  /** 远端运行器（tools/runner）拼练习用的程序时用 */
+  parts: { prelude, NODE, caseBody, lit, jt },
   available: () => hasTool("javac", ["-version"]),
   async runAll(jobs, dir) {
     const src = path.join(dir, "src"), out = path.join(dir, "out");

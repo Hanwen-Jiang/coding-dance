@@ -65,6 +65,8 @@ function make(id, ext, head, tail) {
   const ts = ext === "ts";
   return {
     id,
+    /** 远端运行器（tools/runner）拼练习用的程序时用 */
+    parts: { prelude, node: NODE[ext], head },
     available: () => hasTool("node"),
     async runAll(jobs, dir, opts = {}) {
       fs.mkdirSync(dir, { recursive: true });

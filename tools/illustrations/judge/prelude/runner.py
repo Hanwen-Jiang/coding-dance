@@ -77,27 +77,32 @@ def __jout(t, v):
         return out
     return v
 
+def __jcase(sig, case):
+    """跑一个用例，返回要输出的结果（远端运行器的练习程序也用它）"""
+    __reset()
+    if sig["kind"] == "design":
+        ops, argv = case
+        obj = globals()[sig["cls"]](*[__jin(t, v) for t, v in zip(sig["ctor"], argv[0])])
+        out = [None]
+        for name, a in zip(ops[1:], argv[1:]):
+            m = sig["methods"][name]
+            r = getattr(obj, name)(*[__jin(t, v) for t, v in zip(m["params"], a)])
+            out.append(None if m["ret"] == "void" else __jout(m["ret"], r))
+        return out
+    args = [__jin(t, v) for t, v in zip(sig["params"], case)]
+    r = getattr(Solution(), sig["fn"])(*args)
+    return __jout(sig["params"][sig["out"]], args[sig["out"]]) if sig["ret"] == "void" else __jout(sig["ret"], r)
+
 def __jmain():
     spec = __json.loads(open(__sys.argv[1], encoding="utf-8").read())
     sig = spec["sig"]
     for case in spec["cases"]:
-        __reset()
         try:
-            if sig["kind"] == "design":
-                ops, argv = case
-                obj = globals()[sig["cls"]](*[__jin(t, v) for t, v in zip(sig["ctor"], argv[0])])
-                out = [None]
-                for name, a in zip(ops[1:], argv[1:]):
-                    m = sig["methods"][name]
-                    r = getattr(obj, name)(*[__jin(t, v) for t, v in zip(m["params"], a)])
-                    out.append(None if m["ret"] == "void" else __jout(m["ret"], r))
-            else:
-                args = [__jin(t, v) for t, v in zip(sig["params"], case)]
-                r = getattr(Solution(), sig["fn"])(*args)
-                out = __jout(sig["params"][sig["out"]], args[sig["out"]]) if sig["ret"] == "void" else __jout(sig["ret"], r)
-            print(__json.dumps(out))
+            print(__json.dumps(__jcase(sig, case)))
         except Exception as e:
             print(__json.dumps({"__error": repr(e)}))
         __sys.stdout.flush()
 
-__jmain()
+# 远端运行器在前面设了 __JUDGE_PRACTICE，自己接着写入口
+if not globals().get("__JUDGE_PRACTICE"):
+    __jmain()
