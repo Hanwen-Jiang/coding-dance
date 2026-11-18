@@ -70,6 +70,12 @@ class Reader {
   }
 }
 
+function parseBooleanWord(word: string): boolean | undefined {
+  if (word === "true" || word === "True") return true;
+  if (word === "false" || word === "False") return false;
+  return undefined;
+}
+
 function parseAtom(text: string, type: string): unknown {
   const s = text.trim();
   if (type === "string") return text;
@@ -84,9 +90,10 @@ function parseAtom(text: string, type: string): unknown {
   if ((type === "TreeVal" || type === "nullable-int") && s === "null") return null;
   if (type === "NodeIndex" && (s === "-1" || s === "null")) return null;
   if (type === "bool") {
-    if (s === "true" || s === "1") return true;
-    if (s === "false" || s === "0") return false;
-    throw new Error(`布尔值应为 true 或 false，实际读到：${s}`);
+    const value = parseBooleanWord(s);
+    if (value !== undefined) return value;
+    if (s === "1" || s === "0") return s === "1";
+    throw new Error(`布尔值应为 true 或 false（也接受 True 或 False），实际读到：${s}`);
   }
   if (!s || !Number.isFinite(Number(s))) throw new Error(`应为数值，实际读到：${s}`);
   const n = Number(s);
@@ -146,8 +153,7 @@ export function parseAcmOutput(stdout: string, signature: PracticeSignature): un
   if (signature.cls) return stdout.trim().split(/\r?\n/).filter((line) => line.trim()).map((line) => {
     const s = line.trim();
     if (s === "null") return null;
-    if (s === "true" || s === "false") return s === "true";
-    return parseAtom(s, "double");
+    return parseBooleanWord(s) ?? parseAtom(s, "double");
   });
   const r = new Reader(stdout), value = readValue(r, outputType(signature));
   r.done();
