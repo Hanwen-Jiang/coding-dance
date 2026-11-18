@@ -25,8 +25,8 @@ GITHUB_APP_SLUG = "coding-dance"
 SITE_ORIGINS = "https://leetcode.cgent.link,https://codexdance.cn,https://codingdance.cn"
 # 云端运行（Java / C++ / Go）的运行器集群：「节点编号=地址」用逗号隔开，见 tools/runner/README.md 和 functions/_lib/runner.ts。
 # 各节点共用的签名密钥 RUNNER_SECRET 是加密环境变量；运行器前面开了 Cloudflare Access 的话，服务令牌 RUNNER_ACCESS_ID / RUNNER_ACCESS_SECRET 也是。
-# 节点部署好之后取消下面这行的注释；没设时练习区的 Java / C++ / Go 会提示「云端运行还没有部署」。
-# RUNNER_NODES = "lou1=https://run-lou1.codingdance.cn"
+# 加节点就往这里加一条（新节点用同一个 RUNNER_SECRET）；没设时练习区的 Java / C++ / Go 会提示「云端运行还没有部署」。
+RUNNER_NODES = "lou1=https://run-lou1.codingdance.cn"
 
 # 同一次登录在几个域名上共用一套 GitHub 令牌；refresh token 只能用一次，换新后把新令牌（加密）存在这里给别的域名取
 [[kv_namespaces]]
