@@ -21,7 +21,11 @@ const run = (over: Record<string, unknown> = {}) => ({ kind: "run", id: 1, lang:
 
 await test("检查页面传来的内容", () => {
   throws(() => validateSave(null), /kind/);
-  throws(() => validateSave({ kind: "draft", id: 1, lang: "java", mode: "leetcode", code: "x" }), /lang/);
+  // Java / C++ / Go 在云端运行，也能存；练习区没有的语言不行
+  throws(() => validateSave({ kind: "draft", id: 1, lang: "rust", mode: "leetcode", code: "x" }), /lang/);
+  assert.equal(validateSave({ kind: "draft", id: 1, lang: "java", mode: "leetcode", code: "x" }).lang, "java");
+  assert.equal(solutionPath({ id: 1, name: "两数之和" }, "cpp", "acm"), "solutions/cpp/0001.两数之和.ACM.cpp");
+  assert.equal(draftPath({ id: 1, name: "两数之和" }, "go", "leetcode"), "drafts/go/0001.两数之和.go");
   throws(() => validateSave({ kind: "draft", id: 1, lang: "python", mode: "x", code: "x" }), /mode/);
   throws(() => validateSave({ kind: "draft", id: 1, lang: "python", mode: "acm", code: "   " }), /code/);
   throws(() => validateSave({ kind: "draft", id: 1, lang: "python", mode: "acm", code: "x".repeat(100_001) }), /太长/);
