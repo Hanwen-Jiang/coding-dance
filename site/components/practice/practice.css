@@ -102,16 +102,62 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
  */
 .practice-editor-column { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .practice-editor-column > #practice { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: hidden; }
-.practice-editor-toolbar, .practice-run-controls { flex-shrink: 0; }
 .practice-editor, .practice-editor-loading { flex: 1 1 0; min-height: 120px; }
-.practice-console { flex: 0 0 var(--practice-console-size, 40%); min-height: 96px; overflow: auto; }
-.practice-run-controls { background: var(--surface); border-radius: 0 0 24px 24px; }
-#practice:has([data-testid="practice-test-panel"]) > .practice-run-controls { border-radius: 0; }
 
+/*
+ * 编辑器的样子（workbench.tsx 的 PracticeSession）：
+ *   标签栏 34px：文件名标签（顶上一道强调色）、LeetCode / ACM、语言；右边运行、调试、测试、保存、「⋯」，再是专注、收起。按钮都是 24px 高；
+ *   控制台从编辑器底部弹出：标签 30px，内容自己滚；
+ *   状态栏 24px：语言和模式、存没存、上次结果、控制台开关。
+ * 练习区窄的时候（容器查询）先藏文件名，再藏按钮上的字，只留图标。
+ */
+.practice-ide { container-type: inline-size; }
+.practice-tabbar { display: flex; flex-shrink: 0; align-items: center; gap: 2px; height: 34px; padding-right: 4px; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); }
+.practice-file-tab { display: flex; flex-shrink: 0; flex-direction: column; justify-content: center; align-self: stretch; width: auto; border-right: 1px solid var(--separator); background: var(--surface); box-shadow: inset 0 2px 0 var(--accent); }
+.practice-file-trigger { display: inline-flex !important; flex-direction: row !important; flex-wrap: nowrap !important; align-items: center !important; width: auto !important; height: 34px !important; min-height: 34px !important; gap: 6px; padding: 0 22px 0 10px !important; border: 0 !important; border-radius: 0 !important; background: transparent !important; box-shadow: none !important; color: var(--foreground); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.practice-file-trigger > svg:first-child { flex-shrink: 0; color: var(--accent); }
+.practice-file-trigger [data-slot="select-value"] { flex: 0 1 auto; min-width: 0; }
+.practice-file-tab, .practice-file-tab > * { min-width: 0; }
+.practice-tabbar-scroll { display: flex; flex: 0 1 auto; min-width: 0; align-items: center; gap: 4px; overflow: hidden; padding-left: 4px; }
+.practice-tabbar [aria-label="编程模式"] { height: 24px; min-height: 24px; padding: 2px; }
+.practice-tabbar [aria-label="编程模式"] [role="radio"] { height: 20px; min-height: 20px; padding: 0 6px; font-size: 11px; }
+.practice-run-controls { display: flex; flex-shrink: 0; align-items: center; gap: 2px; }
+.practice-tb-btn { height: 24px !important; min-height: 24px !important; gap: 4px; padding: 0 8px !important; border-radius: 6px !important; font-size: 12px; }
+.practice-tb-icon { width: 24px !important; min-width: 24px !important; height: 24px !important; min-height: 24px !important; padding: 0 !important; border-radius: 6px !important; }
+.practice-tb-run { background: color-mix(in oklch, var(--accent) 12%, transparent) !important; color: var(--accent) !important; }
+.practice-tb-run:hover { background: color-mix(in oklch, var(--accent) 18%, transparent) !important; }
+.practice-tb-group { gap: 0; }
+.practice-tb-caret { width: 18px !important; min-width: 18px !important; height: 24px !important; min-height: 24px !important; padding: 0 !important; border-radius: 6px !important; }
+.practice-tb-sep { width: 1px; height: 16px; margin: 0 3px; background: var(--separator); }
+/* 窄的时候按顺序让位：先藏测试按钮上的字，再藏「运行」两个字，最后藏文件名（只留图标和箭头） */
+@container (max-width: 600px) { .practice-tb-group .practice-tb-label { display: none; } }
+@container (max-width: 520px) { .practice-tb-run .practice-tb-label { display: none; } }
+@container (max-width: 470px) { .practice-file-name { display: none; } }
+.practice-notice { display: flex; flex-shrink: 0; align-items: center; gap: 6px; padding: 3px 10px; border-top: 1px solid var(--separator); font-size: 11px; line-height: 18px; }
+.practice-notice[role="status"] { border-top: 0; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--warning) 10%, transparent); }
+/* 控制台：从编辑器底部弹出来的子窗口 */
+.practice-console { display: flex; flex: 0 0 var(--practice-console-size, 40%); flex-direction: column; min-height: 96px; overflow: hidden; }
+.practice-console-tabs { display: flex; flex-shrink: 0; align-items: center; height: 30px; padding: 0 4px 0 6px; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); }
+.practice-console-segment { height: 24px; min-height: 24px; padding: 2px; }
+.practice-console-segment [role="radio"] { height: 20px; min-height: 20px; padding: 0 8px; font-size: 12px; }
+.practice-console-body { display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; min-height: 0; overflow: auto; padding: 8px 10px 10px; }
+/* 状态栏 */
+.practice-statusbar { display: flex; flex-shrink: 0; align-items: center; gap: 10px; height: 24px; padding: 0 4px 0 10px; border-top: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); color: var(--muted); font-size: 11px; }
+.practice-statusbar [data-testid="practice-save-status"] { font-size: 11px; line-height: 24px; }
+.practice-status-lang { flex-shrink: 0; white-space: nowrap; }
+.practice-status-result { flex-shrink: 0; font-family: var(--font-mono); white-space: nowrap; }
+.practice-console-toggle { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; height: 20px; margin-left: auto; padding: 0 6px; border-radius: 4px; color: var(--muted); font-size: 11px; }
+.practice-console-toggle:hover { background: color-mix(in oklch, var(--foreground) 6%, transparent); color: var(--foreground); }
+.practice-console-toggle[aria-expanded="true"] { color: var(--foreground); }
+.practice-console-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 /* 拖动条 */
 .practice-resize-handle { position: relative; display: flex; flex-shrink: 0; align-items: center; justify-content: center; touch-action: none; outline: none; user-select: none; }
 .practice-resize-handle[hidden] { display: none !important; }
 .practice-resize-handle--y { height: 12px; cursor: row-resize; }
+/* 控制台上沿：一条细线，鼠标移上去才显示把手 */
+.practice-console-handle.practice-resize-handle--y { height: 6px; }
+.practice-console-handle .practice-resize-grip { width: 32px !important; height: 3px !important; opacity: 0; transition: opacity 120ms ease, background-color 120ms ease; }
+.practice-console-handle:hover .practice-resize-grip, .practice-console-handle.practice-resize-handle--active .practice-resize-grip, .practice-console-handle:focus-visible .practice-resize-grip { opacity: 1; }
 .practice-resize-handle--x { width: 16px; cursor: col-resize; }
 .practice-resize-grip { border-radius: 999px; background: var(--border); transition: background-color 120ms ease; }
 .practice-resize-handle--y .practice-resize-grip { width: 44px; height: 4px; }
@@ -159,14 +205,11 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
 .practice-shell--focus > .practice-split-handle:hover .practice-resize-grip,
 .practice-shell--focus > .practice-split-handle:focus-visible .practice-resize-grip,
 .practice-shell--focus > .practice-split-handle.practice-resize-handle--active .practice-resize-grip { opacity: 1; }
-.practice-focus-statement-heading { display: flex; align-items: center; gap: 8px; flex-shrink: 0; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--separator); }
-.practice-shell--focus .practice-focus-statement-heading,
-.practice-shell--focus .practice-editor-column > :first-child { min-height: 57px; }
-.practice-focus-statement-body { min-height: 0; overflow: auto; padding: 24px; }
-/* 代码这一侧：模式切换那一行当标题栏，下面的练习卡片去掉边框和圆角，直接铺在工作区上 */
-.practice-shell--focus .practice-editor-column > :first-child { align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--separator); }
+.practice-focus-statement-heading { display: flex; align-items: center; gap: 6px; flex-shrink: 0; height: 34px; padding: 0 6px 0 14px; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); font-size: 13px; }
+.practice-focus-statement-heading .button { height: 24px; min-height: 24px; padding: 0 8px; font-size: 12px; }
+.practice-focus-statement-body { min-height: 0; overflow: auto; padding: 16px 20px; }
+/* 代码这一侧：编辑器卡片去掉边框和圆角，直接铺在工作区上；标签栏和左边题面的标题栏一样高（34px） */
 .practice-shell--focus .practice-editor-column > #practice { border: 0; border-radius: 0; box-shadow: none; background: transparent; }
-.practice-shell--focus .practice-run-controls { border-radius: 0; }
 
 /* 1200px 以下页面里不放编辑器：右下角常驻一个只有图标的圆按钮「写代码」（不挡正文中间），点开进入全屏的题面 + 编辑器 */
 .practice-launcher { display: none; }
@@ -210,18 +253,44 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
 .practice-editor .cm-breakpoint-gutter .cm-gutterElement:hover::after { content: ""; width: 8px; height: 8px; border-radius: 999px; background: color-mix(in oklch, var(--danger) 35%, transparent); }
 .practice-editor .cm-breakpoint-gutter .cm-gutterElement:has(.cm-breakpoint-dot):hover::after { display: none; }
 .cm-breakpoint-dot { display: block; width: 8px; height: 8px; border-radius: 999px; background: var(--danger); }
-.practice-debug-value { white-space: pre-wrap; overflow-wrap: anywhere; }
-.practice-debug-changed > * { background: color-mix(in oklch, var(--accent) 7%, transparent); }
-.practice-debug-range { accent-color: var(--accent); }
+/* 调试面板（debugger.tsx）：一行图标按钮 + 进度条；变量一行一个，值太长省略、点开换行；★ 钉住的变量列出它每次变的值 */
+.practice-debug { display: flex; flex-direction: column; gap: 6px; }
+.practice-debug-bar { display: flex; flex-wrap: nowrap; align-items: center; gap: 1px; min-width: 0; }
+.practice-debug-next { background: color-mix(in oklch, var(--accent) 12%, transparent) !important; color: var(--accent) !important; }
+.practice-debug-range { flex: 1 1 60px; min-width: 40px; height: 4px; margin: 0 6px; accent-color: var(--accent); }
+.practice-debug-pos { flex-shrink: 0; color: var(--muted); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+.practice-debug-badge { flex-shrink: 0; margin-left: 6px; font-size: 11px; }
+.practice-debug-meta { display: flex; min-width: 0; gap: 10px; color: var(--muted); font-size: 11px; }
+.practice-vars, .practice-watch { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); border-radius: 8px; font-family: var(--font-mono); font-size: 12px; line-height: 20px; }
+.practice-var, .practice-watch-row { display: grid; grid-template-columns: 22px minmax(40px, max-content) minmax(0, 1fr); align-items: start; border-bottom: 1px solid var(--separator); }
+.practice-var:last-child, .practice-watch-row:last-child { border-bottom: 0; }
+.practice-var.is-changed { background: color-mix(in oklch, var(--accent) 7%, transparent); }
+.practice-var.is-changed .practice-var-value { color: var(--accent); }
+.practice-pin { width: 22px; height: 22px; color: var(--muted); font-size: 12px; line-height: 22px; text-align: center; opacity: 0.18; transition: opacity 120ms ease, color 120ms ease; }
+.practice-var:hover .practice-pin, .practice-pin:focus-visible { opacity: 1; }
+.practice-pin.is-on { color: var(--warning); opacity: 1; }
+.practice-var-name { max-width: 140px; overflow: hidden; padding: 1px 10px 1px 2px; color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.practice-var-value { min-width: 0; overflow: hidden; padding: 1px 8px 1px 0; color: var(--foreground); font: inherit; text-align: left; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.practice-var.is-open .practice-var-value { white-space: pre-wrap; overflow-wrap: anywhere; }
+.practice-var-value.is-static { cursor: default; white-space: pre-wrap; overflow-wrap: anywhere; }
+.practice-var-tag { margin-right: 6px; color: var(--muted); font-size: 11px; }
+.practice-watch { background: color-mix(in oklch, var(--warning) 6%, var(--surface)); }
+.practice-watch-row { align-items: center; }
+.practice-watch-points { display: flex; min-width: 0; gap: 4px; overflow-x: auto; padding: 2px 6px 2px 0; scrollbar-width: thin; }
+.practice-watch-point { flex-shrink: 0; max-width: 160px; height: 20px; overflow: hidden; padding: 0 6px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--muted); font: inherit; font-size: 11px; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+.practice-watch-point:hover { color: var(--foreground); }
+.practice-watch-point.is-current { border-color: var(--accent); background: color-mix(in oklch, var(--accent) 10%, var(--surface)); color: var(--accent); }
+.practice-debug-output summary { color: var(--muted); font-size: 11px; cursor: pointer; }
+.practice-debug-output .practice-output { margin-top: 4px; }
 .practice-editor .cm-scroller { scrollbar-gutter: stable; font-family: var(--font-mono); }
 .practice-output {
   max-height: 210px;
   min-height: 42px;
   overflow: auto;
   border: 1px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: color-mix(in oklch, var(--foreground) 3%, var(--surface));
-  padding: 10px 12px;
+  padding: 6px 10px;
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.7;

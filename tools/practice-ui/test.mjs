@@ -213,10 +213,12 @@ try {
     await run();
   }
 
-  await page.locator("#practice").getByRole("button", { name: "重置代码", exact: true }).click();
+  // 重置在标签栏的「⋯」（编辑器设置）菜单里
+  const resetCode = async () => { await page.locator("#practice").getByRole("button", { name: "编辑器设置", exact: true }).click(); await page.getByRole("menuitem", { name: /重置代码/ }).click(); };
+  await resetCode();
   await page.getByRole("button", { name: "取消", exact: true }).click();
   assert((await page.locator(".cm-content").innerText()).includes("debug-fixture"));
-  await page.locator("#practice").getByRole("button", { name: "重置代码", exact: true }).click();
+  await resetCode();
   await page.getByRole("button", { name: "确认重置", exact: true }).click();
   await page.waitForFunction(() => { const t = document.querySelector(".cm-content")?.textContent || ""; return !t.includes("debug-fixture") && t.includes("threeSum"); });
   console.log("✓ Reset requires explicit confirmation");
@@ -229,9 +231,9 @@ try {
   // 编辑器提示程度：用真实按键验证（整段插入文字会绕过回车缩进和括号配对）。
   // 两档都有语法颜色、括号配对、自动缩进；「无提示」只补全代码里已有的变量，不提示内置函数、关键字
   const hintLevel = async (pattern) => {
-    await page.locator('.practice-editor-toolbar button[aria-label="编辑器提示"]').click();
-    await page.getByRole("option", { name: pattern }).click();
-    await page.waitForFunction(() => !document.querySelector('[role="listbox"]'));
+    await page.locator('.practice-editor-toolbar button[aria-label="编辑器设置"]').click();
+    await page.getByRole("menuitem", { name: pattern }).click();
+    await page.waitForFunction(() => !document.querySelector('[role="menu"]'));
   };
   const typeAfter = async (head, keys) => {
     await writeCode(head);
@@ -443,15 +445,15 @@ try {
     assert(gutters.width <= 56, `Gutters stay narrow (${gutters.width}px)`);
     const scroller = page.locator(".practice-editor .cm-scroller");
     const overflows = () => scroller.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
-    const wrapButton = page.getByRole("button", { name: "自动换行", exact: true });
-    assert.equal(await wrapButton.getAttribute("aria-pressed"), "true", "Wrapping is on by default");
+    // 自动换行在标签栏的「⋯」（编辑器设置）菜单里
+    const toggleWrap = async () => { await page.locator("#practice").getByRole("button", { name: "编辑器设置", exact: true }).click(); await page.getByRole("menuitem", { name: /自动换行/ }).click(); };
     assert.equal(await overflows(), false, "Long lines wrap by default");
-    await wrapButton.click();
+    await toggleWrap();
     assert.equal(await overflows(), true, "Turning wrapping off scrolls long lines sideways");
     await page.reload();
     await waitEditor();
-    assert.equal(await page.getByRole("button", { name: "自动换行", exact: true }).getAttribute("aria-pressed"), "false", "Wrap choice survives reload");
-    await page.getByRole("button", { name: "自动换行", exact: true }).click();
+    assert.equal(await overflows(), true, "Wrap choice survives reload");
+    await toggleWrap();
     await mode("LeetCode");
     console.log("✓ Breakpoints: line numbers, column and F9; long lines wrap by default and can be switched off");
   }

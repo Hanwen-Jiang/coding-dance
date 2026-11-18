@@ -57,6 +57,12 @@ const TWO = { fn: "twoSum", params: ["int[]", "int"], ret: "int[]" };
   assert.deepEqual(list.actual, [3, 2, 1]);
   assert.equal(vars(list.trace.steps.at(-1)).prev, "ListNode(3 → 2 → 1)");
 
+  // Counter 这类 dict 子类按容器缩短、带类型名，不再从中间截（以前是「Counter({0: 1, 1'..., 19: 1})」）；长字符串截后面
+  const many = runPython("from collections import Counter\nclass Solution:\n    def twoSum(self, nums, target):\n        c = Counter(nums)\n        s = 'x' * 100\n        return [0, 1]\n", "leetcode", TWO, { input: [Array.from({ length: 20 }, (_, i) => i), 1] });
+  const last = vars(many.trace.steps.at(-1));
+  assert.match(last.c, /^Counter\(\{0: 1, 1: 1, .*9: 1, …\}\)$/, last.c);
+  assert.ok(last.s.startsWith("'xxxx") && last.s.endsWith("…'") && last.s.length === 63, last.s);
+
   const lru = runPython("class LRUCache:\n    def __init__(self, capacity):\n        self.cap = capacity\n        self.d = {}\n    def get(self, key):\n        return self.d.get(key, -1)\n    def put(self, key, value):\n        self.d[key] = value\n", "leetcode",
     { cls: "LRUCache", ctor: ["int"], methods: { get: [["int"], "int"], put: [["int", "int"], "void"] } }, { input: [["LRUCache", "put", "get"], [[2], [1, 1], [1]]] });
   assert.deepEqual(lru.actual, [null, null, 1]);

@@ -14,7 +14,29 @@ _PRACTICE_TRACE_BYTES = 600000
 
 
 def _practice_short_repr():
-    r = _practice_reprlib.Repr()
+    class Short(_practice_reprlib.Repr):
+        # Counter、defaultdict、OrderedDict 这些 dict / list / set 的子类：reprlib 默认把整串 repr 从中间截掉
+        # （「Counter({'A': 1, 'B'..., 'E': -2})」），这里按容器缩短，前面带上类型名：Counter({'A': 1, 'B': 2, …})
+        def repr_instance(self, x, level):
+            for base, method in ((dict, self.repr_dict), (list, self.repr_list), (set, self.repr_set), (frozenset, self.repr_frozenset), (tuple, self.repr_tuple)):
+                if isinstance(x, base):
+                    try:
+                        return f"{type(x).__name__}({method(base(x), level)})"
+                    except BaseException:
+                        break
+            try:
+                s = repr(x)
+            except BaseException:
+                return "<无法显示>"
+            return s if len(s) <= self.maxother else s[: self.maxother - 1] + "…"
+
+        # 长字符串截掉后面，留开头（默认是两头留、中间截）
+        def repr_str(self, x, level):
+            s = repr(x[: self.maxstring])
+            return s if len(x) <= self.maxstring else s[:-1] + "…" + s[-1]
+
+    r = Short()
+    r.fillvalue = "…"
     r.maxlevel, r.maxstring, r.maxother, r.maxlong = 3, 60, 60, 40
     r.maxlist = r.maxtuple = r.maxdeque = r.maxarray = 12
     r.maxdict = r.maxset = r.maxfrozenset = 10
