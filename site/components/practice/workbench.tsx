@@ -9,7 +9,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { flushSync } from "react-dom";
 
 import { ChevronDown, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
-import { PixelLoader, Skel } from "@/components/pixel";
+import { PixelCodeMark, PixelLoader, Skel } from "@/components/pixel";
 import { PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
 import { type DebugRun, PracticeDebugger } from "@/components/practice/debugger";
 import { PracticeResults } from "@/components/practice/results";
@@ -171,8 +171,21 @@ export function PracticeWorkbench() {
   const rail = useRef<HTMLButtonElement>(null);
   const stow = () => { setDocked(false); requestAnimationFrame(() => rail.current?.focus({ preventScroll: true })); };
   const summon = () => { setDocked(true); requestAnimationFrame(() => dockButton.current?.focus({ preventScroll: true })); };
-  // 收起后右边那条窄边：点一下、或者按住往左拖一点就展开
-  const railDrag = useRef<{ x: number; done: boolean } | null>(null);
+  /*
+   * 收起后右边的像素把手：点一下、或者按住往左拖就展开。拖的时候把手跟着手走（越拖越沉），
+   * 拖过 RAIL_PULL 就展开；没拖够松手弹回去。展开时把手先往左一跳、淡出，练习区紧接着从右边滑进来。
+   */
+  const RAIL_PULL = 56;
+  const railDrag = useRef<{ x: number; moved: boolean } | null>(null);
+  const railMoved = useRef(false);
+  const [railState, setRailState] = useState<"idle" | "drag" | "leaving">("idle");
+  const setRailPull = (px: number | null) => { if (px === null) rail.current?.style.removeProperty("--rail-pull"); else rail.current?.style.setProperty("--rail-pull", `${px}px`); };
+  const summonFromRail = () => {
+    railDrag.current = null;
+    if (reducedMotion) { setRailPull(null); setRailState("idle"); summon(); return; }
+    setRailState("leaving");
+    window.setTimeout(() => { summon(); setRailState("idle"); setRailPull(null); }, 150);
+  };
   return (
     <>
     {/* 正文和练习区之间的竖条：左右拖调整练习区宽度，方向键也行，双击恢复默认；往右拖过最小宽度就收进右边（桌面并排、练习区展开时才有） */}
@@ -262,21 +275,44 @@ export function PracticeWorkbench() {
         <CodeIcon height={20} width={20} />
       </Button>
     </div>
-    {/* 桌面上练习区收起时：右下角一个 </> 圆按钮（和手机上的「写代码」一样），鼠标移上去展开成「写代码」；点一下或按住往左拖就展开练习区 */}
+    {/*
+      桌面上练习区收起时：屏幕右边若隐若现的一个像素「<」。鼠标移上去（或键盘聚焦、拖动时）「<」往左跳开，
+      「/」「>」一格一格蹦出来成「</>」，稍后下面一个字母一个字母跳出「coding」；点一下或按住往左拖就展开练习区。
+    */}
     <button
       aria-label="展开练习区"
-      className="practice-rail"
+      className={clsx("practice-rail", railState === "drag" && "is-dragging", railState === "leaving" && "is-leaving")}
       hidden={!stowed}
-      onClick={() => { if (!railDrag.current?.done) summon(); }}
-      onPointerDown={(e) => { if (e.button === 0) { railDrag.current = { x: e.clientX, done: false }; e.currentTarget.setPointerCapture(e.pointerId); } }}
-      onPointerMove={(e) => { const d = railDrag.current; if (d && !d.done && d.x - e.clientX > 24) { d.done = true; summon(); } }}
-      onPointerUp={() => { setTimeout(() => { railDrag.current = null; }, 0); }}
+      onClick={() => { if (!railMoved.current && railState !== "leaving") summonFromRail(); railMoved.current = false; }}
+      onPointerCancel={() => { railDrag.current = null; setRailPull(null); setRailState("idle"); }}
+      onPointerDown={(e) => {
+        if (e.button !== 0) return;
+        railDrag.current = { x: e.clientX, moved: false };
+        railMoved.current = false;
+        e.currentTarget.setPointerCapture(e.pointerId);
+      }}
+      onPointerMove={(e) => {
+        const d = railDrag.current;
+        if (!d) return;
+        const dx = d.x - e.clientX;
+        if (!d.moved && Math.abs(dx) > 4) { d.moved = true; railMoved.current = true; setRailState("drag"); }
+        if (!d.moved) return;
+        if (dx > RAIL_PULL) { summonFromRail(); return; }
+        // 跟着手往左走，越拖越沉；往右拖不动
+        setRailPull(-Math.max(0, dx) * 0.6);
+      }}
+      onPointerUp={() => {
+        if (railDrag.current?.moved) { setRailPull(null); setRailState("idle"); }
+        railDrag.current = null;
+      }}
       ref={rail}
-      title="展开练习区"
+      title="展开练习区（点一下或往左拖）"
       type="button"
     >
-      <CodeIcon aria-hidden height={18} width={18} />
-      <span aria-hidden className="practice-rail-label">写代码</span>
+      <PixelCodeMark className="practice-rail-mark" />
+      <span aria-hidden className="practice-rail-label font-pixel">
+        {[..."coding"].map((ch, i) => <span key={i} style={{ "--i": i } as React.CSSProperties}>{ch}</span>)}
+      </span>
     </button>
     </>
   );

@@ -370,6 +370,31 @@ const LOGO_ROWS = (() => {
   return lt.map((_, r) => lt[r] + "." + sl[r] + "." + gt[r]);
 })();
 
+/**
+ * 练习区收起后右边的把手：和 logo 同一套像素，分成 <、/、> 三组，样式（平时只露一个淡淡的 <，
+ * 鼠标移上去 < 往左跳开、/ 和 > 一格一格蹦出来）写在 practice.css 的 .practice-rail。--d 是按列错开的延迟。
+ */
+export function PixelCodeMark({ className }: { className?: string }) {
+  const C = 4, S = 3;
+  const part = (x: number) => (x <= 3 ? "lt" : x <= 7 ? "sl" : "gt");
+  const groups: Record<string, React.ReactNode[]> = { lt: [], sl: [], gt: [] };
+  LOGO_ROWS.forEach((row, y) =>
+    [...row].forEach((ch, x) => {
+      if (ch !== "#") return;
+      groups[part(x)].push(
+        <rect key={`${x}-${y}`} height={S} rx={0.6} style={{ "--d": `${(x - 4) * 30 + y * 8}ms` } as React.CSSProperties} width={S} x={x * C + 0.5} y={y * C + 0.5} />,
+      );
+    }),
+  );
+  return (
+    <svg aria-hidden className={clsx("pixel-codemark", className)} viewBox={`0 0 ${13 * C} ${7 * C}`}>
+      <g className="cm-lt">{groups.lt}</g>
+      <g className="cm-sl">{groups.sl}</g>
+      <g className="cm-gt">{groups.gt}</g>
+    </svg>
+  );
+}
+
 export function PixelLogo({ className }: { className?: string }) {
   const rows = LOGO_ROWS;
   const C = 4, S = 3;
