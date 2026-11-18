@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def setZeroes(self, matrix: List[List[int]]) -> None:\n        ",
       "javascript": "/**\n * @param {number[][]} matrix\n * @return {void}\n */\nvar setZeroes = function(matrix) {\n  \n};",
-      "typescript": "function setZeroes(matrix: number[][]): void {\n  \n};"
+      "typescript": "function setZeroes(matrix: number[][]): void {\n  \n};",
+      "java": "class Solution {\n    public void setZeroes(int[][] matrix) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    void setZeroes(vector<vector<int>>& matrix) {\n        \n    }\n};",
+      "go": "func setZeroes(matrix [][]int)  {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def spiralOrder(self, matrix: List[List[int]]) -> List[int]:\n        ",
       "javascript": "/**\n * @param {number[][]} matrix\n * @return {number[]}\n */\nvar spiralOrder = function(matrix) {\n  \n};",
-      "typescript": "function spiralOrder(matrix: number[][]): number[] {\n  \n};"
+      "typescript": "function spiralOrder(matrix: number[][]): number[] {\n  \n};",
+      "java": "class Solution {\n    public List<Integer> spiralOrder(int[][] matrix) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<int> spiralOrder(vector<vector<int>>& matrix) {\n        \n    }\n};",
+      "go": "func spiralOrder(matrix [][]int) []int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

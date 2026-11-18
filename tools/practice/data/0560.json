@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def subarraySum(self, nums: List[int], k: int) -> int:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @param {number} k\n * @return {number}\n */\nvar subarraySum = function(nums, k) {\n  \n};",
-      "typescript": "function subarraySum(nums: number[], k: number): number {\n  \n};"
+      "typescript": "function subarraySum(nums: number[], k: number): number {\n  \n};",
+      "java": "class Solution {\n    public int subarraySum(int[] nums, int k) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int subarraySum(vector<int>& nums, int k) {\n        \n    }\n};",
+      "go": "func subarraySum(nums []int, k int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

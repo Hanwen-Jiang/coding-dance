@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def largestRectangleArea(self, heights: List[int]) -> int:\n        ",
       "javascript": "/**\n * @param {number[]} heights\n * @return {number}\n */\nvar largestRectangleArea = function(heights) {\n  \n};",
-      "typescript": "function largestRectangleArea(heights: number[]): number {\n  \n};"
+      "typescript": "function largestRectangleArea(heights: number[]): number {\n  \n};",
+      "java": "class Solution {\n    public int largestRectangleArea(int[] heights) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int largestRectangleArea(vector<int>& heights) {\n        \n    }\n};",
+      "go": "func largestRectangleArea(heights []int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

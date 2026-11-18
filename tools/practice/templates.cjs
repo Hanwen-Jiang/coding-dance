@@ -44,6 +44,84 @@ const DEFS = {
   },
 };
 
+// —— Java / C++ / Go（在云端运行）：类型写法和判题器一样（tools/illustrations/judge/langs/*.js） ——
+const JAVA_BASE = { int: "int", long: "long", double: "double", bool: "boolean", string: "String", char: "char", void: "void", ListNode: "ListNode", CycleList: "ListNode", JoinList: "ListNode", NodeIndex: "ListNode", TreeNode: "TreeNode", TreeRef: "TreeNode", TreeVal: "TreeNode", RandomList: "Node" };
+const JAVA_BOX = { int: "Integer", long: "Long", double: "Double", bool: "Boolean", char: "Character" };
+const javaType = (t) => {
+  if (t.endsWith("[]")) return `${javaType(t.slice(0, -2))}[]`;
+  const item = /^List<(.+)>$/.exec(t)?.[1];
+  if (item) return `List<${JAVA_BOX[item] || javaType(item)}>`;
+  return JAVA_BASE[t] || "Object";
+};
+const CPP_BASE = { int: "int", long: "long long", double: "double", bool: "bool", string: "string", char: "char", void: "void", ListNode: "ListNode*", CycleList: "ListNode*", JoinList: "ListNode*", NodeIndex: "ListNode*", TreeNode: "TreeNode*", TreeRef: "TreeNode*", TreeVal: "TreeNode*", RandomList: "Node*" };
+const cppType = (t) => { const item = itemType(t); return item ? `vector<${cppType(item)}>` : CPP_BASE[t] || "auto"; };
+/** 力扣的 C++ 模板：vector 参数传引用，其他传值 */
+const cppParam = (t) => (itemType(t) ? `${cppType(t)}&` : cppType(t));
+const GO_BASE = { int: "int", long: "int64", double: "float64", bool: "bool", string: "string", char: "byte", void: "", ListNode: "*ListNode", CycleList: "*ListNode", JoinList: "*ListNode", NodeIndex: "*ListNode", TreeNode: "*TreeNode", TreeRef: "*TreeNode", TreeVal: "*TreeNode", RandomList: "*Node" };
+const goType = (t) => { const item = itemType(t); return item ? `[]${goType(item)}` : GO_BASE[t] ?? "any"; };
+const cap = (s) => s[0].toUpperCase() + s.slice(1);
+const NATIVE_DEFS = {
+  java: {
+    list: "/**\n * Definition for singly-linked list.\n * public class ListNode {\n *     int val;\n *     ListNode next;\n *     ListNode() {}\n *     ListNode(int val) { this.val = val; }\n *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }\n * }\n */\n",
+    tree: "/**\n * Definition for a binary tree node.\n * public class TreeNode {\n *     int val;\n *     TreeNode left;\n *     TreeNode right;\n *     TreeNode() {}\n *     TreeNode(int val) { this.val = val; }\n *     TreeNode(int val, TreeNode left, TreeNode right) {\n *         this.val = val;\n *         this.left = left;\n *         this.right = right;\n *     }\n * }\n */\n",
+    random: "/*\n// Definition for a Node.\nclass Node {\n    int val;\n    Node next;\n    Node random;\n\n    public Node(int val) {\n        this.val = val;\n        this.next = null;\n        this.random = null;\n    }\n}\n*/\n\n",
+  },
+  cpp: {
+    list: "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\n",
+    tree: "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\n",
+    random: "/*\n// Definition for a Node.\nclass Node {\npublic:\n    int val;\n    Node* next;\n    Node* random;\n    \n    Node(int _val) {\n        val = _val;\n        next = NULL;\n        random = NULL;\n    }\n};\n*/\n\n",
+  },
+  go: {
+    list: "/**\n * Definition for singly-linked list.\n * type ListNode struct {\n *     Val int\n *     Next *ListNode\n * }\n */\n",
+    tree: "/**\n * Definition for a binary tree node.\n * type TreeNode struct {\n *     Val int\n *     Left *TreeNode\n *     Right *TreeNode\n * }\n */\n",
+    random: "/**\n * Definition for a Node.\n * type Node struct {\n *     Val int\n *     Next *Node\n *     Random *Node\n * }\n */\n\n",
+  },
+};
+
+/** Java / C++ / Go 的力扣模式起始代码，和力扣网站上的一样 */
+function nativeTemplate(sig, parameterNames, language, methodNames, names) {
+  const kinds = nodeKinds(sig), defs = NATIVE_DEFS[language];
+  const head = (kinds.random ? defs.random : "") + (kinds.list ? defs.list : "") + (kinds.tree ? defs.tree : "");
+  const methods = Object.entries(sig.methods || {});
+  const ctorNames = names(sig.ctor || [], true);
+  if (language === "java") {
+    if (sig.cls) {
+      const usage = [`${sig.cls} obj = new ${sig.cls}(${ctorNames.join(",")});`];
+      let n = 0;
+      for (const [m, [ps, ret]] of methods) { const call = `obj.${m}(${(methodNames[m] || names(ps)).join(",")});`; usage.push(ret === "void" ? call : `${javaType(ret)} param_${++n} = ${call}`); }
+      return `class ${sig.cls} {\n\n    public ${sig.cls}(${(sig.ctor || []).map((t, i) => `${javaType(t)} ${ctorNames[i]}`).join(", ")}) {\n        \n    }\n` + methods.map(([m, [ps, ret]]) => {
+        const ns = methodNames[m] || names(ps);
+        return `    \n    public ${javaType(ret)} ${m}(${ps.map((t, i) => `${javaType(t)} ${ns[i]}`).join(", ")}) {\n        \n    }\n`;
+      }).join("") + `}\n\n/**\n * Your ${sig.cls} object will be instantiated and called as such:\n${usage.map((l) => ` * ${l}`).join("\n")}\n */`;
+    }
+    return head + `class Solution {\n    public ${javaType(sig.ret)} ${sig.fn}(${sig.params.map((t, i) => `${javaType(t)} ${parameterNames[i]}`).join(", ")}) {\n        \n    }\n}`;
+  }
+  if (language === "cpp") {
+    if (sig.cls) {
+      const usage = [`${sig.cls}* obj = new ${sig.cls}(${ctorNames.join(", ")});`];
+      let n = 0;
+      for (const [m, [ps, ret]] of methods) { const call = `obj->${m}(${(methodNames[m] || names(ps)).join(",")});`; usage.push(ret === "void" ? call : `${cppType(ret)} param_${++n} = ${call}`); }
+      return `class ${sig.cls} {\npublic:\n    ${sig.cls}(${(sig.ctor || []).map((t, i) => `${cppParam(t)} ${ctorNames[i]}`).join(", ")}) {\n        \n    }\n` + methods.map(([m, [ps, ret]]) => {
+        const ns = methodNames[m] || names(ps);
+        return `    \n    ${cppType(ret)} ${m}(${ps.map((t, i) => `${cppParam(t)} ${ns[i]}`).join(", ")}) {\n        \n    }\n`;
+      }).join("") + `};\n\n/**\n * Your ${sig.cls} object will be instantiated and called as such:\n${usage.map((l) => ` * ${l}`).join("\n")}\n */`;
+    }
+    return head + `class Solution {\npublic:\n    ${cppType(sig.ret)} ${sig.fn}(${sig.params.map((t, i) => `${cppParam(t)} ${parameterNames[i]}`).join(", ")}) {\n        \n    }\n};`;
+  }
+  // Go
+  if (sig.cls) {
+    const usage = [`obj := Constructor(${ctorNames.join(", ")});`];
+    let n = 0;
+    for (const [m, [ps, ret]] of methods) { const call = `obj.${cap(m)}(${(methodNames[m] || names(ps)).join(",")});`; usage.push(ret === "void" ? call : `param_${++n} := ${call}`); }
+    return `type ${sig.cls} struct {\n    \n}\n\n\nfunc Constructor(${(sig.ctor || []).map((t, i) => `${ctorNames[i]} ${goType(t)}`).join(", ")}) ${sig.cls} {\n    \n}\n` + methods.map(([m, [ps, ret]]) => {
+      const ns = methodNames[m] || names(ps);
+      return `\n\nfunc (this *${sig.cls}) ${cap(m)}(${ps.map((t, i) => `${ns[i]} ${goType(t)}`).join(", ")}) ${goType(ret)} {\n    \n}\n`;
+    }).join("") + `\n\n/**\n * Your ${sig.cls} object will be instantiated and called as such:\n${usage.map((l) => ` * ${l}`).join("\n")}\n */`;
+  }
+  const ret = goType(sig.ret);
+  return head + `func ${sig.fn}(${sig.params.map((t, i) => `${parameterNames[i]} ${goType(t)}`).join(", ")}) ${ret} {\n    \n}`;
+}
+
 /**
  * 力扣模式的起始代码：和力扣网站上一模一样——开头是注释掉的节点定义，方法体留空，
  * 不加 import（运行环境和力扣一样预先导入了 typing、collections、heapq 等），也不加 raise / throw。
@@ -51,6 +129,7 @@ const DEFS = {
 function leetcodeTemplate(signature, parameterNames, language, methodNames = {}) {
   const sig = signature;
   const names = (types, isConstructor = false) => types.map((_, i) => isConstructor && sig.cls === "LRUCache" ? "capacity" : ["key", "value"][i] || `arg${i + 1}`);
+  if (language === "java" || language === "cpp" || language === "go") return nativeTemplate(sig, parameterNames, language, methodNames, names);
   const kinds = nodeKinds(sig), defs = DEFS[language];
   const head = (kinds.random ? defs.random : "") + (kinds.list ? defs.list : "") + (kinds.tree ? defs.tree : "");
   const methods = Object.entries(sig.methods || {});

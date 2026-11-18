@@ -33,12 +33,18 @@
     "leetcode": {
       "python": "class Trie:\n\n    def __init__(self):\n        \n\n    def insert(self, word: str) -> None:\n        \n\n    def search(self, word: str) -> bool:\n        \n\n    def startsWith(self, prefix: str) -> bool:\n        \n\n\n# Your Trie object will be instantiated and called as such:\n# obj = Trie()\n# obj.insert(word)\n# param_1 = obj.search(word)\n# param_2 = obj.startsWith(prefix)\n",
       "javascript": "var Trie = function() {\n  \n};\n\n/**\n * @param {string} word\n * @return {void}\n */\nTrie.prototype.insert = function(word) {\n  \n};\n\n/**\n * @param {string} word\n * @return {boolean}\n */\nTrie.prototype.search = function(word) {\n  \n};\n\n/**\n * @param {string} prefix\n * @return {boolean}\n */\nTrie.prototype.startsWith = function(prefix) {\n  \n};\n\n/**\n * Your Trie object will be instantiated and called as such:\n * var obj = new Trie()\n * obj.insert(word)\n * var param_1 = obj.search(word)\n * var param_2 = obj.startsWith(prefix)\n */\n",
-      "typescript": "class Trie {\n  constructor() {\n    \n  }\n\n  insert(word: string): void {\n    \n  }\n\n  search(word: string): boolean {\n    \n  }\n\n  startsWith(prefix: string): boolean {\n    \n  }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * var obj = new Trie()\n * obj.insert(word)\n * var param_1 = obj.search(word)\n * var param_2 = obj.startsWith(prefix)\n */\n"
+      "typescript": "class Trie {\n  constructor() {\n    \n  }\n\n  insert(word: string): void {\n    \n  }\n\n  search(word: string): boolean {\n    \n  }\n\n  startsWith(prefix: string): boolean {\n    \n  }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * var obj = new Trie()\n * obj.insert(word)\n * var param_1 = obj.search(word)\n * var param_2 = obj.startsWith(prefix)\n */\n",
+      "java": "class Trie {\n\n    public Trie() {\n        \n    }\n    \n    public void insert(String word) {\n        \n    }\n    \n    public boolean search(String word) {\n        \n    }\n    \n    public boolean startsWith(String prefix) {\n        \n    }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * Trie obj = new Trie();\n * obj.insert(word);\n * boolean param_1 = obj.search(word);\n * boolean param_2 = obj.startsWith(prefix);\n */",
+      "cpp": "class Trie {\npublic:\n    Trie() {\n        \n    }\n    \n    void insert(string word) {\n        \n    }\n    \n    bool search(string word) {\n        \n    }\n    \n    bool startsWith(string prefix) {\n        \n    }\n};\n\n/**\n * Your Trie object will be instantiated and called as such:\n * Trie* obj = new Trie();\n * obj->insert(word);\n * bool param_1 = obj->search(word);\n * bool param_2 = obj->startsWith(prefix);\n */",
+      "go": "type Trie struct {\n    \n}\n\n\nfunc Constructor() Trie {\n    \n}\n\n\nfunc (this *Trie) Insert(word string)  {\n    \n}\n\n\nfunc (this *Trie) Search(word string) bool {\n    \n}\n\n\nfunc (this *Trie) StartsWith(prefix string) bool {\n    \n}\n\n\n/**\n * Your Trie object will be instantiated and called as such:\n * obj := Constructor();\n * obj.Insert(word);\n * param_1 := obj.Search(word);\n * param_2 := obj.StartsWith(prefix);\n */"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

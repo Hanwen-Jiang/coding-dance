@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def coinChange(self, coins: List[int], amount: int) -> int:\n        ",
       "javascript": "/**\n * @param {number[]} coins\n * @param {number} amount\n * @return {number}\n */\nvar coinChange = function(coins, amount) {\n  \n};",
-      "typescript": "function coinChange(coins: number[], amount: number): number {\n  \n};"
+      "typescript": "function coinChange(coins: number[], amount: number): number {\n  \n};",
+      "java": "class Solution {\n    public int coinChange(int[] coins, int amount) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        \n    }\n};",
+      "go": "func coinChange(coins []int, amount int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

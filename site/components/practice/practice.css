@@ -138,6 +138,8 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
 @container (max-width: 520px) { .practice-tb-run .practice-tb-label { display: none; } }
 @container (max-width: 470px) { .practice-file-name { display: none; } }
 .practice-notice { display: flex; flex-shrink: 0; align-items: center; gap: 6px; padding: 3px 10px; border-top: 1px solid var(--separator); font-size: 11px; line-height: 18px; }
+/* 语言列表里「云端」的小标签 */
+.practice-cloud-tag { margin-left: 6px; padding: 0 5px; border: 1px solid var(--separator); border-radius: 4px; color: var(--muted); font-size: 10px; line-height: 16px; }
 .practice-notice[role="status"] { border-top: 0; border-bottom: 1px solid var(--separator); background: color-mix(in oklch, var(--warning) 10%, transparent); }
 /* 控制台：从编辑器底部弹出来的子窗口 */
 .practice-console { display: flex; flex: 0 0 var(--practice-console-size, 40%); flex-direction: column; min-height: 96px; overflow: hidden; }

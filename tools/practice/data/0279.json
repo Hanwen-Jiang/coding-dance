@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def numSquares(self, n: int) -> int:\n        ",
       "javascript": "/**\n * @param {number} n\n * @return {number}\n */\nvar numSquares = function(n) {\n  \n};",
-      "typescript": "function numSquares(n: number): number {\n  \n};"
+      "typescript": "function numSquares(n: number): number {\n  \n};",
+      "java": "class Solution {\n    public int numSquares(int n) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int numSquares(int n) {\n        \n    }\n};",
+      "go": "func numSquares(n int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def decodeString(self, s: str) -> str:\n        ",
       "javascript": "/**\n * @param {string} s\n * @return {string}\n */\nvar decodeString = function(s) {\n  \n};",
-      "typescript": "function decodeString(s: string): string {\n  \n};"
+      "typescript": "function decodeString(s: string): string {\n  \n};",
+      "java": "class Solution {\n    public String decodeString(String s) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    string decodeString(string s) {\n        \n    }\n};",
+      "go": "func decodeString(s string) string {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

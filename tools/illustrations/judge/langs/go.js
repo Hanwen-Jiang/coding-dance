@@ -152,6 +152,8 @@ ${job.cases.map((c) => `\tjudgeRun(func() any {\n\t\tjudgeReset()\n\t\t${caseBod
 
 module.exports = {
   id: "go",
+  /** 远端运行器（tools/runner）拼练习用的程序时用 */
+  parts: { prelude, NODE, caseBody, withImports, PKGS },
   available: () => hasTool("go", ["version"]),
   async runAll(jobs, dir) {
     fs.mkdirSync(path.join(dir, "bin"), { recursive: true });

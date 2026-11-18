@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def exist(self, board: List[List[str]], word: str) -> bool:\n        ",
       "javascript": "/**\n * @param {character[][]} board\n * @param {string} word\n * @return {boolean}\n */\nvar exist = function(board, word) {\n  \n};",
-      "typescript": "function exist(board: string[][], word: string): boolean {\n  \n};"
+      "typescript": "function exist(board: string[][], word: string): boolean {\n  \n};",
+      "java": "class Solution {\n    public boolean exist(char[][] board, String word) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    bool exist(vector<vector<char>>& board, string word) {\n        \n    }\n};",
+      "go": "func exist(board [][]byte, word string) bool {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -16,12 +16,18 @@
     "leetcode": {
       "python": "class Solution:\n    def threeSum(self, nums: List[int]) -> List[List[int]]:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @return {number[][]}\n */\nvar threeSum = function(nums) {\n  \n};",
-      "typescript": "function threeSum(nums: number[]): number[][] {\n  \n};"
+      "typescript": "function threeSum(nums: number[]): number[][] {\n  \n};",
+      "java": "class Solution {\n    public List<List<Integer>> threeSum(int[] nums) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<vector<int>> threeSum(vector<int>& nums) {\n        \n    }\n};",
+      "go": "func threeSum(nums []int) [][]int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def lengthOfLongestSubstring(self, s: str) -> int:\n        ",
       "javascript": "/**\n * @param {string} s\n * @return {number}\n */\nvar lengthOfLongestSubstring = function(s) {\n  \n};",
-      "typescript": "function lengthOfLongestSubstring(s: string): number {\n  \n};"
+      "typescript": "function lengthOfLongestSubstring(s: string): number {\n  \n};",
+      "java": "class Solution {\n    public int lengthOfLongestSubstring(String s) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int lengthOfLongestSubstring(string s) {\n        \n    }\n};",
+      "go": "func lengthOfLongestSubstring(s string) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

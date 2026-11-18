@@ -14,7 +14,7 @@ import { attemptPath, cnParts, codeKey, fence, nextStatus, parseAttemptPath, wri
 import { SyncError } from "../sync/server.ts";
 
 /** 练习区能跑的语言 → 进度仓里的后缀 */
-export const PRACTICE_EXT: Record<string, string> = { python: ".py", javascript: ".js", typescript: ".ts" };
+export const PRACTICE_EXT: Record<string, string> = { python: ".py", javascript: ".js", typescript: ".ts", java: ".java", cpp: ".cpp", go: ".go" };
 const LABEL: Record<string, string> = { python: "Python", javascript: "JavaScript", typescript: "TypeScript" };
 /** 练习区的尝试记录开头写的来源；从力扣同步时不拿它们去和力扣提交对（结果是按本站用例判的，不是力扣的判题结果） */
 export const PRACTICE_SOURCE = "practice";

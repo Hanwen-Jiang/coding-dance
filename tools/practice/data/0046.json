@@ -16,12 +16,18 @@
     "leetcode": {
       "python": "class Solution:\n    def permute(self, nums: List[int]) -> List[List[int]]:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @return {number[][]}\n */\nvar permute = function(nums) {\n  \n};",
-      "typescript": "function permute(nums: number[]): number[][] {\n  \n};"
+      "typescript": "function permute(nums: number[]): number[][] {\n  \n};",
+      "java": "class Solution {\n    public List<List<Integer>> permute(int[] nums) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<vector<int>> permute(vector<int>& nums) {\n        \n    }\n};",
+      "go": "func permute(nums []int) [][]int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

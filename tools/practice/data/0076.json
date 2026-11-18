@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def minWindow(self, s: str, t: str) -> str:\n        ",
       "javascript": "/**\n * @param {string} s\n * @param {string} t\n * @return {string}\n */\nvar minWindow = function(s, t) {\n  \n};",
-      "typescript": "function minWindow(s: string, t: string): string {\n  \n};"
+      "typescript": "function minWindow(s: string, t: string): string {\n  \n};",
+      "java": "class Solution {\n    public String minWindow(String s, String t) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    string minWindow(string s, string t) {\n        \n    }\n};",
+      "go": "func minWindow(s string, t string) string {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

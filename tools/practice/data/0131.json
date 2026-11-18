@@ -16,12 +16,18 @@
     "leetcode": {
       "python": "class Solution:\n    def partition(self, s: str) -> List[List[str]]:\n        ",
       "javascript": "/**\n * @param {string} s\n * @return {string[][]}\n */\nvar partition = function(s) {\n  \n};",
-      "typescript": "function partition(s: string): string[][] {\n  \n};"
+      "typescript": "function partition(s: string): string[][] {\n  \n};",
+      "java": "class Solution {\n    public List<List<String>> partition(String s) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<vector<string>> partition(string s) {\n        \n    }\n};",
+      "go": "func partition(s string) [][]string {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

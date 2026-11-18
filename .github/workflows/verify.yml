@@ -30,6 +30,7 @@ jobs:
           node lib/sync/test/sync.test.ts
           node lib/practice/test/record.test.ts
           node lib/practice/test/save-queue.test.ts
+          node functions/_lib/test/runner.test.ts
       - name: 多域名登录的测试
         working-directory: site
         run: node functions/_lib/test/sso.test.ts
@@ -93,3 +94,29 @@ jobs:
         run: npm install -g typescript@5.6
       - name: 判题
         run: node tools/illustrations/judge/run.js --require --lang ${{ matrix.lang }}
+
+  # 远端运行器（tools/runner）：构建沙箱镜像，在新容器里跑六种语言的练习、调试和安全检查，再经服务完整跑一遍
+  runner:
+    name: 远端运行器
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: docker/setup-buildx-action@v3
+      - name: 构建沙箱镜像
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/runner/image/Dockerfile
+          tags: lc-runner:ci
+          load: true
+          cache-from: type=gha,scope=lc-runner
+          cache-to: type=gha,mode=max,scope=lc-runner
+      - name: 沙箱（六种语言、调试、容器限制）
+        run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/sandbox.test.mjs
+      - name: 服务（签名、限流、容器池）
+        run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/server.test.mjs
+      - name: Firecracker 驱动的协议（假 fc-manager；真 microVM 见 firecracker.yml）
+        run: node tools/runner/test/firecracker.test.mjs

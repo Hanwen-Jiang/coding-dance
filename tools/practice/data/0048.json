@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def rotate(self, matrix: List[List[int]]) -> None:\n        ",
       "javascript": "/**\n * @param {number[][]} matrix\n * @return {void}\n */\nvar rotate = function(matrix) {\n  \n};",
-      "typescript": "function rotate(matrix: number[][]): void {\n  \n};"
+      "typescript": "function rotate(matrix: number[][]): void {\n  \n};",
+      "java": "class Solution {\n    public void rotate(int[][] matrix) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    void rotate(vector<vector<int>>& matrix) {\n        \n    }\n};",
+      "go": "func rotate(matrix [][]int)  {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -25,12 +25,18 @@
     "leetcode": {
       "python": "class MedianFinder:\n\n    def __init__(self):\n        \n\n    def addNum(self, num: int) -> None:\n        \n\n    def findMedian(self) -> float:\n        \n\n\n# Your MedianFinder object will be instantiated and called as such:\n# obj = MedianFinder()\n# obj.addNum(num)\n# param_1 = obj.findMedian()\n",
       "javascript": "var MedianFinder = function() {\n  \n};\n\n/**\n * @param {number} num\n * @return {void}\n */\nMedianFinder.prototype.addNum = function(num) {\n  \n};\n\n/**\n * @return {number}\n */\nMedianFinder.prototype.findMedian = function() {\n  \n};\n\n/**\n * Your MedianFinder object will be instantiated and called as such:\n * var obj = new MedianFinder()\n * obj.addNum(num)\n * var param_1 = obj.findMedian()\n */\n",
-      "typescript": "class MedianFinder {\n  constructor() {\n    \n  }\n\n  addNum(num: number): void {\n    \n  }\n\n  findMedian(): number {\n    \n  }\n}\n\n/**\n * Your MedianFinder object will be instantiated and called as such:\n * var obj = new MedianFinder()\n * obj.addNum(num)\n * var param_1 = obj.findMedian()\n */\n"
+      "typescript": "class MedianFinder {\n  constructor() {\n    \n  }\n\n  addNum(num: number): void {\n    \n  }\n\n  findMedian(): number {\n    \n  }\n}\n\n/**\n * Your MedianFinder object will be instantiated and called as such:\n * var obj = new MedianFinder()\n * obj.addNum(num)\n * var param_1 = obj.findMedian()\n */\n",
+      "java": "class MedianFinder {\n\n    public MedianFinder() {\n        \n    }\n    \n    public void addNum(int num) {\n        \n    }\n    \n    public double findMedian() {\n        \n    }\n}\n\n/**\n * Your MedianFinder object will be instantiated and called as such:\n * MedianFinder obj = new MedianFinder();\n * obj.addNum(num);\n * double param_1 = obj.findMedian();\n */",
+      "cpp": "class MedianFinder {\npublic:\n    MedianFinder() {\n        \n    }\n    \n    void addNum(int num) {\n        \n    }\n    \n    double findMedian() {\n        \n    }\n};\n\n/**\n * Your MedianFinder object will be instantiated and called as such:\n * MedianFinder* obj = new MedianFinder();\n * obj->addNum(num);\n * double param_1 = obj->findMedian();\n */",
+      "go": "type MedianFinder struct {\n    \n}\n\n\nfunc Constructor() MedianFinder {\n    \n}\n\n\nfunc (this *MedianFinder) AddNum(num int)  {\n    \n}\n\n\nfunc (this *MedianFinder) FindMedian() float64 {\n    \n}\n\n\n/**\n * Your MedianFinder object will be instantiated and called as such:\n * obj := Constructor();\n * obj.AddNum(num);\n * param_1 := obj.FindMedian();\n */"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

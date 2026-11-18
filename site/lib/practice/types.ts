@@ -1,4 +1,5 @@
-export type PracticeLanguage = "python" | "javascript" | "typescript";
+/** python / javascript / typescript 在浏览器里运行；java / cpp / go 交给云端的运行器（tools/runner，经 /api/run） */
+export type PracticeLanguage = "python" | "javascript" | "typescript" | "java" | "cpp" | "go";
 /** 编辑器补全：完整（关键字、内置函数、库函数、类型都提示）/ 无提示（只补全代码里已有的变量和函数） */
 export type PracticeHints = "full" | "none";
 export type PracticeMode = "leetcode" | "acm";
@@ -38,11 +39,11 @@ export interface PracticeProblem {
   cases: PracticeCase[];
   examples: PracticeCase[];
   /** FNV-1a of the previous generated ACM starters; only untouched defaults are migrated. */
-  legacyAcmStarterHashes: Record<PracticeLanguage, string>;
+  legacyAcmStarterHashes: Partial<Record<PracticeLanguage, string>>;
   /** Other earlier untouched defaults, including the former short main/fs skeletons. */
-  previousAcmStarterHashes: Record<PracticeLanguage, string[]>;
+  previousAcmStarterHashes: Partial<Record<PracticeLanguage, string[]>>;
   /** 上一版力扣模式起始代码（带 from typing import * 和 raise / throw）的指纹：没改过的旧草稿换成新模板 */
-  previousLeetcodeStarterHashes?: Record<PracticeLanguage, string[]>;
+  previousLeetcodeStarterHashes?: Partial<Record<PracticeLanguage, string[]>>;
   acm: {
     description: string;
     input: string;

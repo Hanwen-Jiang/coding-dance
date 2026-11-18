@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def findKthLargest(self, nums: List[int], k: int) -> int:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @param {number} k\n * @return {number}\n */\nvar findKthLargest = function(nums, k) {\n  \n};",
-      "typescript": "function findKthLargest(nums: number[], k: number): number {\n  \n};"
+      "typescript": "function findKthLargest(nums: number[], k: number): number {\n  \n};",
+      "java": "class Solution {\n    public int findKthLargest(int[] nums, int k) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int findKthLargest(vector<int>& nums, int k) {\n        \n    }\n};",
+      "go": "func findKthLargest(nums []int, k int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

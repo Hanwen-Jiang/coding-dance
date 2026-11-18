@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def minDistance(self, word1: str, word2: str) -> int:\n        ",
       "javascript": "/**\n * @param {string} word1\n * @param {string} word2\n * @return {number}\n */\nvar minDistance = function(word1, word2) {\n  \n};",
-      "typescript": "function minDistance(word1: string, word2: string): number {\n  \n};"
+      "typescript": "function minDistance(word1: string, word2: string): number {\n  \n};",
+      "java": "class Solution {\n    public int minDistance(String word1, String word2) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int minDistance(string word1, string word2) {\n        \n    }\n};",
+      "go": "func minDistance(word1 string, word2 string) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

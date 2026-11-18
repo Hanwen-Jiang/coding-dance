@@ -16,12 +16,18 @@
     "leetcode": {
       "python": "class Solution:\n    def generateParenthesis(self, n: int) -> List[str]:\n        ",
       "javascript": "/**\n * @param {number} n\n * @return {string[]}\n */\nvar generateParenthesis = function(n) {\n  \n};",
-      "typescript": "function generateParenthesis(n: number): string[] {\n  \n};"
+      "typescript": "function generateParenthesis(n: number): string[] {\n  \n};",
+      "java": "class Solution {\n    public List<String> generateParenthesis(int n) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<string> generateParenthesis(int n) {\n        \n    }\n};",
+      "go": "func generateParenthesis(n int) []string {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

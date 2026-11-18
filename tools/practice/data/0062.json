@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def uniquePaths(self, m: int, n: int) -> int:\n        ",
       "javascript": "/**\n * @param {number} m\n * @param {number} n\n * @return {number}\n */\nvar uniquePaths = function(m, n) {\n  \n};",
-      "typescript": "function uniquePaths(m: number, n: number): number {\n  \n};"
+      "typescript": "function uniquePaths(m: number, n: number): number {\n  \n};",
+      "java": "class Solution {\n    public int uniquePaths(int m, int n) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int uniquePaths(int m, int n) {\n        \n    }\n};",
+      "go": "func uniquePaths(m int, n int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

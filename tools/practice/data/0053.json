@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar maxSubArray = function(nums) {\n  \n};",
-      "typescript": "function maxSubArray(nums: number[]): number {\n  \n};"
+      "typescript": "function maxSubArray(nums: number[]): number {\n  \n};",
+      "java": "class Solution {\n    public int maxSubArray(int[] nums) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int maxSubArray(vector<int>& nums) {\n        \n    }\n};",
+      "go": "func maxSubArray(nums []int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {
