@@ -25,8 +25,9 @@ export async function savePractice(api: Api, repo: string, body: unknown, now = 
     const sha = new Map(head.files.map((f) => [f.path, f.sha]));
     if (!sha.has("hot100.json")) throw new SyncError("进度仓里没有 hot100.json：确认这个仓库是用模板建的", 409);
     const want = ["hot100.json", "progress.json"].filter((p) => sha.has(p));
-    // 全部通过时要和已有的题解比一比（同一份代码不再存）；最多读 40 份
-    const mine = s.kind === "run" && s.result === "通过" ? existingSolutions(head.files.map((f) => f.path), s.id, s.lang).slice(0, 40) : [];
+    // 要存题解时（全量通过、或者手动存为我的题解）和已有的题解比一比（同一份代码不再存）；最多读 40 份
+    const wantSolution = (s.kind === "run" && s.result === "通过") || s.kind === "solution";
+    const mine = wantSolution ? existingSolutions(head.files.map((f) => f.path), s.id, s.lang).slice(0, 40) : [];
     const texts = await readBlobs(api, repo, [...new Set([...want, ...mine].map((p) => sha.get(p)!))]);
     const read = (p: string) => (sha.has(p) ? texts[sha.get(p)!] : null);
     let hot: Problem[], progress: ProgressFile | null;
