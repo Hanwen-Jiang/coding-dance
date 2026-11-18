@@ -84,6 +84,8 @@ wrangler pages secret put SESSION_SECRET --project-name lc-hot100
 wrangler pages secret put RUNNER_SECRET --project-name lc-hot100   # 和虚拟机里 /etc/lc-runner.env 的 RUNNER_SECRET 一样
 ```
 
+运行时按提示粘贴密钥。不要在 Windows PowerShell 5.1 里用管道传（`"…" | wrangler pages secret put …`）：它会在前面加一个看不见的 UTF-8 BOM，wrangler 只去掉末尾的空白，存进去的密钥就多了一个字符，网站发的签名节点都不认，`GET /api/run` 显示「云端运行器暂时都不在线」（2026-11-18 踩过）。改了密钥要重新部署一次才生效。
+
 再把 `wrangler.toml` 里 `RUNNER_NODES`（运行器集群的节点表，`编号=地址` 用逗号隔开）那一行的注释去掉，重新部署；以后加节点就往里加一条。前面开了 Cloudflare Access 的话，再设 `RUNNER_ACCESS_ID`、`RUNNER_ACCESS_SECRET`。没设时练习区提示「云端运行还没有部署」，其他语言不受影响。签名的测试：`node functions/_lib/test/runner.test.ts`。
 
 ### 多个域名（https://leetcode.cgent.link、https://codexdance.cn、https://codingdance.cn）

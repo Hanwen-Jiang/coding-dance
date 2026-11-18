@@ -174,7 +174,7 @@
 - [x] 集群：每个节点有编号和自己的地址（`run-<编号>.codingdance.cn`），签名带节点编号；网站按用户固定节点（加权 rendezvous 哈希，权重是节点容量），满了、下线了、连不上就换下一个；加节点 = 新机器上跑 `setup.sh` + 网站 `RUNNER_NODES` 加一条
 - [x] Tunnel win-gw-lou 加了 `run-lou1.codingdance.cn` → `http://localhost:8790`，DNS 也加了（2026-11-18）
 - [x] 部署第一个节点 lou1：win-gw-lou 上开虚拟机并打开嵌套虚拟化（要 /dev/kvm）、`RUNNER_NODE_ID=lou1 … setup.sh`、Pages 设 `RUNNER_SECRET`、`RUNNER_NODES` 取消注释（2026-11-18 核对：`https://run-lou1.codingdance.cn/healthz` 返回 ok，带签名的 `/v1/status` 返回 lou1、firecracker、4 个槽位，错的密钥 401）
-- [ ] 分支 `remote-runner` 合进 main、部署网站，然后 `GET /api/run` 应返回 `"available": true, "up": 1`，题目页换 Java 跑一下
+- [x] 分支 `remote-runner` 合进 main（#44）、部署网站：`GET /api/run` 返回 `"available": true, "up": 1`（两个域名都是）；带签名直接给 lou1 发一次 Java 运行，两组输入都对（约 3 秒）。没登录的 POST 返回 401。题目页上用 Java 跑还没在浏览器里试（要登录）
 - [x] 防滥用（一部分）：按 GitHub 用户名限流（每分钟 20 次、同时一个）、全站排队上限
 - [ ] 每天的额度、预算开关：要在服务端记用量，等「待决定 1」
 - [x] 调试：Java（JDI）、C++（gdb）、Go（dlv）用真调试器一次跑完、记下每一步（行号、调用栈、变量、返回值、异常），格式和浏览器的执行记录一样，调试面板直接用
@@ -202,7 +202,7 @@
 
 ## 变更记录
 
-- 2026-11-18：第一个运行器节点 lou1 接到网站：Pages 生产环境设了加密环境变量 `RUNNER_SECRET`（和 lou1 的 `/etc/lc-runner.env` 同一个值，以后加节点也用它），`wrangler.toml` 的 `RUNNER_NODES` 设成 `lou1=https://run-lou1.codingdance.cn`。Tunnel 的 `run-lou1.codingdance.cn` → `http://localhost:8790` 早先已经加好，没改。网站这边要等 `remote-runner` 合进 main 部署后才生效。
+- 2026-11-18：第一个运行器节点 lou1 接到网站：Pages 生产环境设了加密环境变量 `RUNNER_SECRET`（和 lou1 的 `/etc/lc-runner.env` 同一个值，以后加节点也用它），`wrangler.toml` 的 `RUNNER_NODES` 设成 `lou1=https://run-lou1.codingdance.cn`。Tunnel 的 `run-lou1.codingdance.cn` → `http://localhost:8790` 早先已经加好，没改。网站这边要等 `remote-runner` 合进 main 部署后才生效。同一天合进 main（#44）并部署；第一次部署后 `/api/run` 显示节点不在线，原因是用 PowerShell 管道设密钥时前面多了个 UTF-8 BOM，重设（原样传字节）、再部署后在线（`site/README.md` 里记了这个坑）。
 
 - 2026-11-18：阶段 6 的运行器和网站部分（分支 `remote-runner`）：`tools/runner/`（服务、沙箱、镜像、一键安装）；Java / C++ / Go 的调试器记执行记录；判题器各语言导出拼程序的部分（`parts`），`caseBody` 可以换输出语句；练习数据加 Java / C++ / Go 的起始代码（1598 组用例不变）；练习区加这三种语言，经 `/api/run` 在云端运行。CI 新增「远端运行器」：构建镜像，在新容器里跑 6 种语言 × 12 道题的官方题解、崩溃 / 超时隔离、ACM、编译报错行号、调试记录、容器限制。还没部署到 win-gw-lou。同一天改成集群：节点编号、签名带节点、网站按用户固定节点并在满了 / 下线时换节点（`site/functions/_lib/runner.ts`，测试起几个本机节点）；Tunnel 加了 `run-lou1.codingdance.cn`。之后改成每次运行一台 Firecracker microVM：用 agent-runtime 的 fc-manager 和 sandbox-agent（`FirecrackerDriver`、`deploy/firecracker.sh`），Docker 只留给开发和 CI。
 - 2026-11-18：ACM 判题接受 Python `print` 输出的 `True` 和 `False`，和小写 `true`、`false` 一样按布尔值比较。练习数据回归通过，浏览器里第 234 题的正反两个示例都通过。
