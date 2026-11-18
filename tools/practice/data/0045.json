@@ -18,7 +18,16 @@
       "typescript": "function jump(nums: number[]): number {\n  \n};",
       "java": "class Solution {\n    public int jump(int[] nums) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int jump(vector<int>& nums) {\n        \n    }\n};",
-      "go": "func jump(nums []int) int {\n    \n}"
+      "go": "func jump(nums []int) int {\n    \n}",
+      "c": "int jump(int* nums, int numsSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int Jump(int[] nums) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun jump(nums: IntArray): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func jump(_ nums: [Int]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn jump(nums: Vec<i32>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @return {Integer}\ndef jump(nums)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @return Integer\n     */\n    function jump($nums) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def jump(nums: Array[Int]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int jump(List<int> nums) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

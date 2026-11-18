@@ -27,6 +27,7 @@ export interface ProgressFile { version: number; problems: Record<string, Progre
 export const LC_LANG: Record<string, string> = {
   python3: "python", python: "python", java: "java", cpp: "cpp", c: "c", golang: "go",
   javascript: "javascript", typescript: "typescript", rust: "rust", kotlin: "kotlin", swift: "swift", csharp: "csharp",
+  ruby: "ruby", php: "php", scala: "scala", dart: "dart",
 };
 const LANG_DIRS = new Set(Object.values(LC_LANG));
 export const RESULTS: Result[] = ["通过", "答案错误", "超时", "运行出错", "思路不成立"];

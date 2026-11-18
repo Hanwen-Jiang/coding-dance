@@ -20,7 +20,16 @@
       "typescript": "function twoSum(nums: number[], target: number): number[] {\n  \n};",
       "java": "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) {\n        \n    }\n};",
-      "go": "func twoSum(nums []int, target int) []int {\n    \n}"
+      "go": "func twoSum(nums []int, target int) []int {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* twoSum(int* nums, int numsSize, int target, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int[] TwoSum(int[] nums, int target) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun twoSum(nums: IntArray, target: Int): IntArray {\n        \n    }\n}",
+      "swift": "class Solution {\n    func twoSum(_ nums: [Int], _ target: Int) -> [Int] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn two_sum(nums: Vec<i32>, target: i32) -> Vec<i32> {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @param {Integer} target\n# @return {Integer[]}\ndef two_sum(nums, target)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @param Integer $target\n     * @return Integer[]\n     */\n    function twoSum($nums, $target) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def twoSum(nums: Array[Int], target: Int): Array[Int] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<int> twoSum(List<int> nums, int target) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

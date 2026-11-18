@@ -18,7 +18,16 @@
       "typescript": "function partitionLabels(s: string): number[] {\n  \n};",
       "java": "class Solution {\n    public List<Integer> partitionLabels(String s) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<int> partitionLabels(string s) {\n        \n    }\n};",
-      "go": "func partitionLabels(s string) []int {\n    \n}"
+      "go": "func partitionLabels(s string) []int {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* partitionLabels(char* s, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<int> PartitionLabels(string s) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun partitionLabels(s: String): List<Int> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func partitionLabels(_ s: String) -> [Int] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn partition_labels(s: String) -> Vec<i32> {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @return {Integer[]}\ndef partition_labels(s)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @return Integer[]\n     */\n    function partitionLabels($s) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def partitionLabels(s: String): List[Int] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<int> partitionLabels(String s) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

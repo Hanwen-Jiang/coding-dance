@@ -18,7 +18,16 @@
       "typescript": "function maxProfit(prices: number[]): number {\n  \n};",
       "java": "class Solution {\n    public int maxProfit(int[] prices) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int maxProfit(vector<int>& prices) {\n        \n    }\n};",
-      "go": "func maxProfit(prices []int) int {\n    \n}"
+      "go": "func maxProfit(prices []int) int {\n    \n}",
+      "c": "int maxProfit(int* prices, int pricesSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int MaxProfit(int[] prices) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun maxProfit(prices: IntArray): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func maxProfit(_ prices: [Int]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn max_profit(prices: Vec<i32>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} prices\n# @return {Integer}\ndef max_profit(prices)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $prices\n     * @return Integer\n     */\n    function maxProfit($prices) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def maxProfit(prices: Array[Int]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int maxProfit(List<int> prices) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

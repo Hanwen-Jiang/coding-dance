@@ -391,7 +391,7 @@ const RESULT_STYLE: Record<AttemptResult, { dot: string; chip: string }> = {
 };
 const LANG_NAME: Record<string, string> = {
   python: "Python", java: "Java", go: "Go", cpp: "C++", c: "C", javascript: "JavaScript", typescript: "TypeScript",
-  rust: "Rust", kotlin: "Kotlin", swift: "Swift", csharp: "C#",
+  rust: "Rust", kotlin: "Kotlin", swift: "Swift", csharp: "C#", ruby: "Ruby", php: "PHP", scala: "Scala", dart: "Dart",
 };
 
 /** 尝试记录：attempts/ 里每一次提交，按时间排成一条线 */

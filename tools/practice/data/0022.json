@@ -19,7 +19,16 @@
       "typescript": "function generateParenthesis(n: number): string[] {\n  \n};",
       "java": "class Solution {\n    public List<String> generateParenthesis(int n) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<string> generateParenthesis(int n) {\n        \n    }\n};",
-      "go": "func generateParenthesis(n int) []string {\n    \n}"
+      "go": "func generateParenthesis(n int) []string {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nchar** generateParenthesis(int n, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<string> GenerateParenthesis(int n) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun generateParenthesis(n: Int): List<String> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func generateParenthesis(_ n: Int) -> [String] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn generate_parenthesis(n: i32) -> Vec<String> {\n        \n    }\n}",
+      "ruby": "# @param {Integer} n\n# @return {String[]}\ndef generate_parenthesis(n)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer $n\n     * @return String[]\n     */\n    function generateParenthesis($n) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def generateParenthesis(n: Int): List[String] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<String> generateParenthesis(int n) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -27,7 +36,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

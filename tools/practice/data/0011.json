@@ -18,7 +18,16 @@
       "typescript": "function maxArea(height: number[]): number {\n  \n};",
       "java": "class Solution {\n    public int maxArea(int[] height) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int maxArea(vector<int>& height) {\n        \n    }\n};",
-      "go": "func maxArea(height []int) int {\n    \n}"
+      "go": "func maxArea(height []int) int {\n    \n}",
+      "c": "int maxArea(int* height, int heightSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int MaxArea(int[] height) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun maxArea(height: IntArray): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func maxArea(_ height: [Int]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn max_area(height: Vec<i32>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} height\n# @return {Integer}\ndef max_area(height)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $height\n     * @return Integer\n     */\n    function maxArea($height) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def maxArea(height: Array[Int]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int maxArea(List<int> height) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

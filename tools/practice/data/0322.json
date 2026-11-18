@@ -20,7 +20,16 @@
       "typescript": "function coinChange(coins: number[], amount: number): number {\n  \n};",
       "java": "class Solution {\n    public int coinChange(int[] coins, int amount) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int coinChange(vector<int>& coins, int amount) {\n        \n    }\n};",
-      "go": "func coinChange(coins []int, amount int) int {\n    \n}"
+      "go": "func coinChange(coins []int, amount int) int {\n    \n}",
+      "c": "int coinChange(int* coins, int coinsSize, int amount) {\n    \n}",
+      "csharp": "public class Solution {\n    public int CoinChange(int[] coins, int amount) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun coinChange(coins: IntArray, amount: Int): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func coinChange(_ coins: [Int], _ amount: Int) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn coin_change(coins: Vec<i32>, amount: i32) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} coins\n# @param {Integer} amount\n# @return {Integer}\ndef coin_change(coins, amount)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $coins\n     * @param Integer $amount\n     * @return Integer\n     */\n    function coinChange($coins, $amount) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def coinChange(coins: Array[Int], amount: Int): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int coinChange(List<int> coins, int amount) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

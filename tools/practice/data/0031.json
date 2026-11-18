@@ -18,7 +18,16 @@
       "typescript": "function nextPermutation(nums: number[]): void {\n  \n};",
       "java": "class Solution {\n    public void nextPermutation(int[] nums) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    void nextPermutation(vector<int>& nums) {\n        \n    }\n};",
-      "go": "func nextPermutation(nums []int)  {\n    \n}"
+      "go": "func nextPermutation(nums []int)  {\n    \n}",
+      "c": "void nextPermutation(int* nums, int numsSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public void NextPermutation(int[] nums) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun nextPermutation(nums: IntArray): Unit {\n        \n    }\n}",
+      "swift": "class Solution {\n    func nextPermutation(_ nums: inout [Int]) {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn next_permutation(nums: &mut Vec<i32>) {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @return {Void} Do not return anything, modify nums in-place instead.\ndef next_permutation(nums)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @return NULL\n     */\n    function nextPermutation(&$nums) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def nextPermutation(nums: Array[Int]): Unit = {\n        \n    }\n}",
+      "dart": "class Solution {\n  void nextPermutation(List<int> nums) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

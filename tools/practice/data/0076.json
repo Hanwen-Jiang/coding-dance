@@ -20,7 +20,16 @@
       "typescript": "function minWindow(s: string, t: string): string {\n  \n};",
       "java": "class Solution {\n    public String minWindow(String s, String t) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    string minWindow(string s, string t) {\n        \n    }\n};",
-      "go": "func minWindow(s string, t string) string {\n    \n}"
+      "go": "func minWindow(s string, t string) string {\n    \n}",
+      "c": "char* minWindow(char* s, char* t) {\n    \n}",
+      "csharp": "public class Solution {\n    public string MinWindow(string s, string t) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun minWindow(s: String, t: String): String {\n        \n    }\n}",
+      "swift": "class Solution {\n    func minWindow(_ s: String, _ t: String) -> String {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn min_window(s: String, t: String) -> String {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @param {String} t\n# @return {String}\ndef min_window(s, t)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @param String $t\n     * @return String\n     */\n    function minWindow($s, $t) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def minWindow(s: String, t: String): String = {\n        \n    }\n}",
+      "dart": "class Solution {\n  String minWindow(String s, String t) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

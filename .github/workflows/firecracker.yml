@@ -1,7 +1,7 @@
 name: firecracker
 
 # 远端运行器的 Firecracker 这一层（tools/runner/deploy/firecracker.sh，用 agent-runtime 的 fc-manager、sandbox-agent、客户机内核）：
-# 在有 KVM 的 GitHub 机器上照部署脚本装一遍，再把整套沙箱测试放进真的 microVM 里跑（六种语言、调试器、隔离检查）。
+# 在有 KVM 的 GitHub 机器上照部署脚本装一遍，再把整套沙箱测试放进真的 microVM 里跑（十五种语言、调试器、隔离检查）。
 # 要编 Rust、编内核（有缓存），比较慢，所以只在运行器相关的文件变了时跑。
 on:
   push:
@@ -28,6 +28,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: 腾出磁盘空间（镜像好几 GB，还要再转成一份 ext4 根文件系统）
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium
+          docker image prune -af > /dev/null
+          df -h /
       - name: KVM
         run: |
           ls -l /dev/kvm || { echo "这台机器没有 /dev/kvm"; exit 1; }

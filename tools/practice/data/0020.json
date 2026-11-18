@@ -18,7 +18,16 @@
       "typescript": "function isValid(s: string): boolean {\n  \n};",
       "java": "class Solution {\n    public boolean isValid(String s) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    bool isValid(string s) {\n        \n    }\n};",
-      "go": "func isValid(s string) bool {\n    \n}"
+      "go": "func isValid(s string) bool {\n    \n}",
+      "c": "bool isValid(char* s) {\n    \n}",
+      "csharp": "public class Solution {\n    public bool IsValid(string s) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun isValid(s: String): Boolean {\n        \n    }\n}",
+      "swift": "class Solution {\n    func isValid(_ s: String) -> Bool {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn is_valid(s: String) -> bool {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @return {Boolean}\ndef is_valid(s)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @return Boolean\n     */\n    function isValid($s) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def isValid(s: String): Boolean = {\n        \n    }\n}",
+      "dart": "class Solution {\n  bool isValid(String s) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

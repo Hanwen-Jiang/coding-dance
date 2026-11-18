@@ -30,7 +30,7 @@ function check(job) {
   if (!Array.isArray(job.cases) || !job.cases.length || job.cases.length > 100) throw new Error("用例要有 1 到 100 组");
   if (job.mode === "leetcode" && (!job.sig || typeof job.sig !== "object")) throw new Error("力扣模式要有函数签名");
   if (job.mode === "leetcode" && job.cases.some((c) => !Array.isArray(c.input))) throw new Error("力扣模式的用例要有 input");
-  if (job.debug && !DEBUG_LANGS.includes(job.lang)) throw new Error("这门语言在浏览器里调试，不用云端");
+  if (job.debug && !DEBUG_LANGS.includes(job.lang)) throw new Error("这门语言不能在云端调试（Python、JavaScript、TypeScript 在浏览器里调试；后加的九种语言还没有调试器）");
   if (job.debug && job.cases.length !== 1) throw new Error("调试一次只跑一组用例");
 }
 

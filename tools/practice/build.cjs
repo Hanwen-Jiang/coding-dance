@@ -7,7 +7,23 @@ const pyJudge = require("../illustrations/judge/langs/python");
 const { parseCode } = require("../illustrations/judge/code");
 const { GEN, makeR } = require("../illustrations/random");
 const descriptions = require("./descriptions.cjs"), boundaries = require("./boundaries.cjs");
-const { leetcodeTemplate, previousLeetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash } = require("./templates.cjs");
+const { leetcodeTemplate, previousLeetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash, CLOUD_LANGS, AUTHORED_STARTERS, LEETCODE_UNAVAILABLE } = require("./templates.cjs");
+const LEETCODE_STARTERS = require("./leetcode-starters.json");
+const { fnName, methodName, lcFirst } = require("../illustrations/judge/langs/names");
+/** 练习区的语言：前三种在浏览器里跑，其余在云端（tools/runner） */
+const PRACTICE_LANGS = ["python", "javascript", "typescript", "java", "cpp", "go", ...CLOUD_LANGS];
+
+/** 力扣原样的起始代码（没有的用 AUTHORED_STARTERS 补）；核对里面的函数名和判题程序调用的一样 */
+function cloudStarter(id, sig, lang) {
+  const code = LEETCODE_STARTERS[id]?.[lang] ?? AUTHORED_STARTERS[id]?.[lang];
+  if (code == null) throw new Error(`${id}: 没有 ${lang} 的起始代码（tools/practice/leetcode-starters.json 或 templates.cjs 的 AUTHORED_STARTERS）`);
+  if (LEETCODE_UNAVAILABLE[id]?.[lang]) return code;
+  const names = sig.cls
+    ? [...(lang === "c" ? [`${lcFirst(sig.cls)}Create`, `${lcFirst(sig.cls)}Free`] : []), ...Object.keys(sig.methods).map((m) => methodName(lang, sig.cls, m))]
+    : [fnName(lang, sig.fn)];
+  for (const n of names) if (!new RegExp(`\\b${n}\\s*\\(`).test(code)) throw new Error(`${id} ${lang}：起始代码里没有 ${n}(…)，判题程序会找不到它（见 tools/illustrations/judge/langs/names.js）`);
+  return code;
+}
 const root = path.resolve(__dirname, "../.."), output = path.join(root, "tools/practice/data");
 const pad = (id) => String(id).padStart(4, "0");
 const clone = (v) => JSON.parse(JSON.stringify(v));
@@ -196,13 +212,15 @@ async function main() {
         if (JSON.stringify(decodeAcmInput(c.stdin, sig)) !== JSON.stringify(c.input)) throw new Error(`${s.id}: input codec roundtrip failed`);
         if (JSON.stringify(parseAcmOutput(c.stdout, sig)) !== JSON.stringify(c.expected)) throw new Error(`${s.id}: output codec roundtrip failed`);
       }
-      // Java / C++ / Go 在云端运行（tools/runner），起始代码也放在这里
-      const starters = Object.fromEntries(["leetcode", "acm"].map((mode) => [mode, Object.fromEntries(["python", "javascript", "typescript", "java", "cpp", "go"].map((language) => [language, mode === "leetcode" ? leetcodeTemplate(sig, names, language, methodNames) : acmTemplate(sig, names, language)]))]));
+      // Java / C++ / Go 和后加的九种在云端运行（tools/runner），起始代码也放在这里；后九种用力扣原样的
+      const starters = Object.fromEntries(["leetcode", "acm"].map((mode) => [mode, Object.fromEntries(PRACTICE_LANGS.map((language) => [language,
+        mode === "acm" ? acmTemplate(sig, names, language) : CLOUD_LANGS.includes(language) ? cloudStarter(s.id, sig, language) : leetcodeTemplate(sig, names, language, methodNames)]))]));
+      const unavailable = LEETCODE_UNAVAILABLE[s.id];
       const legacyAcmStarterHashes = Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, starterHash(legacyAcmTemplate(sig, names, language))]));
       const previousAcmStarterHashes = Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, [starterHash(previousAcmTemplate(sig, names, language))]]));
       // 上一版力扣模式起始代码的指纹：用户没改过的旧草稿换成新模板
       const previousLeetcodeStarterHashes = Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, [starterHash(previousLeetcodeTemplate(sig, names, language, methodNames))]]));
-      const result = { id: s.id, name: s.name, signature: sig, parameterNames: names, starters, legacyAcmStarterHashes, cases, examples, acm: statement(s, sig, names, examples, methodNames), previousAcmStarterHashes, previousLeetcodeStarterHashes };
+      const result = { id: s.id, name: s.name, signature: sig, parameterNames: names, starters, ...(unavailable ? { leetcodeUnavailable: unavailable } : {}), legacyAcmStarterHashes, cases, examples, acm: statement(s, sig, names, examples, methodNames), previousAcmStarterHashes, previousLeetcodeStarterHashes };
       fs.writeFileSync(path.join(output, pad(s.id) + ".json"), JSON.stringify(result, null, 2) + "\n");
       total += cases.length;
       officialTotal += examples.length;
@@ -213,7 +231,7 @@ async function main() {
     if (path.dirname(temp) !== path.resolve(os.tmpdir()) || !path.basename(temp).startsWith("hot100-practice-data-")) throw new Error("Unexpected temporary directory");
     fs.rmSync(temp, { recursive: true, force: true });
   }
-  console.log(`Generated ${files.length} practice problems, ${officialTotal} verified official examples, ${total} cases, and 1200 starter templates.`);
+  console.log(`Generated ${files.length} practice problems, ${officialTotal} verified official examples, ${total} cases, and ${files.length * PRACTICE_LANGS.length * 2} starter templates.`);
 }
 function updateAcmStarters() {
   const files = fs.readdirSync(output).filter((f) => /^\d{4}\.json$/.test(f));

@@ -2,7 +2,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs"), path = require("node:path"), vm = require("node:vm"), cp = require("node:child_process");
 const { pathToFileURL } = require("node:url");
-const { legacyAcmTemplate, previousAcmTemplate, starterHash } = require("./templates.cjs");
+const { legacyAcmTemplate, previousAcmTemplate, starterHash, CLOUD_LANGS } = require("./templates.cjs");
 const root = path.resolve(__dirname, "../..");
 const dir = path.join(root, "tools/practice/data");
 
@@ -29,6 +29,12 @@ async function main() {
     assert(p.cases.filter((c) => /^示例|边界/.test(c.label)).every((c) => c.quick), `${p.id}: examples and boundary cases must be quick`);
     assert.equal(p.examples.length, official[p.id].length);
     assert.equal(p.acm.examples.length, p.examples.length);
+    // 云端运行的语言（Java / C++ / Go 和后加的九种）：每道题都有力扣模式的起始代码，ACM 模式是空的
+    for (const lang of ["java", "cpp", "go", ...CLOUD_LANGS]) {
+      assert(typeof p.starters.leetcode[lang] === "string" && p.starters.leetcode[lang].trim(), `${p.id} ${lang}: LeetCode starter required`);
+      assert.equal(p.starters.acm[lang], "", `${p.id} ${lang}: ACM starter must be exactly empty`);
+      if (p.leetcodeUnavailable?.[lang]) assert(CLOUD_LANGS.includes(lang) && /ACM/.test(p.leetcodeUnavailable[lang]), `${p.id} ${lang}: unavailable note must point to ACM mode`);
+    }
     for (const lang of ["python", "javascript", "typescript"]) {
       // 力扣模式的起始代码要和力扣一样：不 import、不放 raise / throw 占位，方法体留空
       const lc = p.starters.leetcode[lang], declared = p.signature.cls || (lang === "python" ? p.signature.pythonFn || p.signature.fn : p.signature.fn);

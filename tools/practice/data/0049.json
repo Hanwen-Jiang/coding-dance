@@ -19,7 +19,16 @@
       "typescript": "function groupAnagrams(strs: string[]): string[][] {\n  \n};",
       "java": "class Solution {\n    public List<List<String>> groupAnagrams(String[] strs) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<vector<string>> groupAnagrams(vector<string>& strs) {\n        \n    }\n};",
-      "go": "func groupAnagrams(strs []string) [][]string {\n    \n}"
+      "go": "func groupAnagrams(strs []string) [][]string {\n    \n}",
+      "c": "/**\n * Return an array of arrays of size *returnSize.\n * The sizes of the arrays are returned as *returnColumnSizes array.\n * Note: Both returned array and *columnSizes array must be malloced, assume caller calls free().\n */\nchar*** groupAnagrams(char** strs, int strsSize, int* returnSize, int** returnColumnSizes) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<IList<string>> GroupAnagrams(string[] strs) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun groupAnagrams(strs: Array<String>): List<List<String>> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func groupAnagrams(_ strs: [String]) -> [[String]] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn group_anagrams(strs: Vec<String>) -> Vec<Vec<String>> {\n        \n    }\n}",
+      "ruby": "# @param {String[]} strs\n# @return {String[][]}\ndef group_anagrams(strs)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String[] $strs\n     * @return String[][]\n     */\n    function groupAnagrams($strs) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def groupAnagrams(strs: Array[String]): List[List[String]] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<List<String>> groupAnagrams(List<String> strs) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -27,7 +36,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

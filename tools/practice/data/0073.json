@@ -18,7 +18,16 @@
       "typescript": "function setZeroes(matrix: number[][]): void {\n  \n};",
       "java": "class Solution {\n    public void setZeroes(int[][] matrix) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    void setZeroes(vector<vector<int>>& matrix) {\n        \n    }\n};",
-      "go": "func setZeroes(matrix [][]int)  {\n    \n}"
+      "go": "func setZeroes(matrix [][]int)  {\n    \n}",
+      "c": "void setZeroes(int** matrix, int matrixSize, int* matrixColSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public void SetZeroes(int[][] matrix) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun setZeroes(matrix: Array<IntArray>): Unit {\n        \n    }\n}",
+      "swift": "class Solution {\n    func setZeroes(_ matrix: inout [[Int]]) {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn set_zeroes(matrix: &mut Vec<Vec<i32>>) {\n        \n    }\n}",
+      "ruby": "# @param {Integer[][]} matrix\n# @return {Void} Do not return anything, modify matrix in-place instead.\ndef set_zeroes(matrix)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[][] $matrix\n     * @return NULL\n     */\n    function setZeroes(&$matrix) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def setZeroes(matrix: Array[Array[Int]]): Unit = {\n        \n    }\n}",
+      "dart": "class Solution {\n  void setZeroes(List<List<int>> matrix) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

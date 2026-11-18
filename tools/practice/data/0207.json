@@ -20,7 +20,16 @@
       "typescript": "function canFinish(numCourses: number, prerequisites: number[][]): boolean {\n  \n};",
       "java": "class Solution {\n    public boolean canFinish(int numCourses, int[][] prerequisites) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    bool canFinish(int numCourses, vector<vector<int>>& prerequisites) {\n        \n    }\n};",
-      "go": "func canFinish(numCourses int, prerequisites [][]int) bool {\n    \n}"
+      "go": "func canFinish(numCourses int, prerequisites [][]int) bool {\n    \n}",
+      "c": "bool canFinish(int numCourses, int** prerequisites, int prerequisitesSize, int* prerequisitesColSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public bool CanFinish(int numCourses, int[][] prerequisites) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun canFinish(numCourses: Int, prerequisites: Array<IntArray>): Boolean {\n        \n    }\n}",
+      "swift": "class Solution {\n    func canFinish(_ numCourses: Int, _ prerequisites: [[Int]]) -> Bool {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn can_finish(num_courses: i32, prerequisites: Vec<Vec<i32>>) -> bool {\n        \n    }\n}",
+      "ruby": "# @param {Integer} num_courses\n# @param {Integer[][]} prerequisites\n# @return {Boolean}\ndef can_finish(num_courses, prerequisites)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer $numCourses\n     * @param Integer[][] $prerequisites\n     * @return Boolean\n     */\n    function canFinish($numCourses, $prerequisites) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def canFinish(numCourses: Int, prerequisites: Array[Array[Int]]): Boolean = {\n        \n    }\n}",
+      "dart": "class Solution {\n  bool canFinish(int numCourses, List<List<int>> prerequisites) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

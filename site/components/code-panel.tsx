@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 
 const SHIKI_LANG: Record<string, string> = {
   python: "python", java: "java", go: "go", cpp: "cpp", c: "c", javascript: "javascript", typescript: "typescript",
-  rust: "rust", kotlin: "kotlin", swift: "swift", csharp: "csharp",
+  rust: "rust", kotlin: "kotlin", swift: "swift", csharp: "csharp", ruby: "ruby", php: "php", scala: "scala", dart: "dart",
 };
 
 export function CodePanel({ code, lang, label }: { code: string; lang: string; label: string }) {

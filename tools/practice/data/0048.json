@@ -18,7 +18,16 @@
       "typescript": "function rotate(matrix: number[][]): void {\n  \n};",
       "java": "class Solution {\n    public void rotate(int[][] matrix) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    void rotate(vector<vector<int>>& matrix) {\n        \n    }\n};",
-      "go": "func rotate(matrix [][]int)  {\n    \n}"
+      "go": "func rotate(matrix [][]int)  {\n    \n}",
+      "c": "void rotate(int** matrix, int matrixSize, int* matrixColSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public void Rotate(int[][] matrix) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun rotate(matrix: Array<IntArray>): Unit {\n        \n    }\n}",
+      "swift": "class Solution {\n    func rotate(_ matrix: inout [[Int]]) {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn rotate(matrix: &mut Vec<Vec<i32>>) {\n        \n    }\n}",
+      "ruby": "# @param {Integer[][]} matrix\n# @return {Void} Do not return anything, modify matrix in-place instead.\ndef rotate(matrix)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[][] $matrix\n     * @return NULL\n     */\n    function rotate(&$matrix) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def rotate(matrix: Array[Array[Int]]): Unit = {\n        \n    }\n}",
+      "dart": "class Solution {\n  void rotate(List<List<int>> matrix) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

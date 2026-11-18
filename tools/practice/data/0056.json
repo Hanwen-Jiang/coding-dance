@@ -18,7 +18,16 @@
       "typescript": "function merge(intervals: number[][]): number[][] {\n  \n};",
       "java": "class Solution {\n    public int[][] merge(int[][] intervals) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<vector<int>> merge(vector<vector<int>>& intervals) {\n        \n    }\n};",
-      "go": "func merge(intervals [][]int) [][]int {\n    \n}"
+      "go": "func merge(intervals [][]int) [][]int {\n    \n}",
+      "c": "/**\n * Return an array of arrays of size *returnSize.\n * The sizes of the arrays are returned as *returnColumnSizes array.\n * Note: Both returned array and *columnSizes array must be malloced, assume caller calls free().\n */\nint** merge(int** intervals, int intervalsSize, int* intervalsColSize, int* returnSize, int** returnColumnSizes) {\n    \n}",
+      "csharp": "public class Solution {\n    public int[][] Merge(int[][] intervals) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun merge(intervals: Array<IntArray>): Array<IntArray> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func merge(_ intervals: [[Int]]) -> [[Int]] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn merge(intervals: Vec<Vec<i32>>) -> Vec<Vec<i32>> {\n        \n    }\n}",
+      "ruby": "# @param {Integer[][]} intervals\n# @return {Integer[][]}\ndef merge(intervals)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[][] $intervals\n     * @return Integer[][]\n     */\n    function merge($intervals) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def merge(intervals: Array[Array[Int]]): Array[Array[Int]] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<List<int>> merge(List<List<int>> intervals) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

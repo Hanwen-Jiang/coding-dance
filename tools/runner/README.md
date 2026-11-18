@@ -1,6 +1,6 @@
 # 远端运行器（云端运行 / 判题 / 调试）
 
-Java、C++、Go 的练习交给这里运行和调试（Python、JavaScript、TypeScript 在浏览器里跑）。ROADMAP 阶段 6。
+Java、C++、Go 的练习交给这里运行和调试，C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart 交给这里运行（Python、JavaScript、TypeScript 在浏览器里跑）。ROADMAP 阶段 6。
 
 ```
 浏览器 ──POST /api/run──▶ 网站（Pages Functions：认登录、挑节点、签名）
@@ -30,10 +30,26 @@ Java、C++、Go 的练习交给这里运行和调试（Python、JavaScript、Typ
 | `sandbox/toolchain.js` | 各语言怎么编译运行、报错怎么换成编辑器里的行号、崩溃怎么说 |
 | `sandbox/exec.js` | 跑子进程、分隔标记、一组崩溃从下一组接着跑 |
 | `sandbox/trace/` | 调试器：`gdb_trace.py`、`JdiTrace.java`、`dlv.js` |
-| `sandbox/prepare.js` | 构建镜像时预先做好：C++ 预编译头、Go 标准库归档、Java 调试器 |
-| `image/Dockerfile` | 沙箱镜像（Ubuntu 24.04、Python 3.12、OpenJDK 21、g++ 13 + gdb、Go 1.23 + Delve、Node 24）；部署时转成 microVM 的根文件系统 |
+| `sandbox/prepare.js` | 构建镜像时预先做好：C++ 预编译头、Go 标准库归档、Java 调试器、C# 的引用程序集列表、Kotlin / Scala 编译器的 CDS 归档，再把每种新语言编一个例子跑一下 |
+| `image/Dockerfile` | 沙箱镜像（Ubuntu 24.04、Python 3.12、OpenJDK 21、gcc / g++ 13 + gdb + uthash、Go 1.23 + Delve、Node 24、.NET 8、Kotlin 2.1、Scala 2.13、Swift 6.1、Rust 1.86、Ruby 3.2、PHP 8.3、Dart 3.7）；部署时转成 microVM 的根文件系统 |
 | `deploy/` | 一键安装节点（`setup.sh`）、Firecracker 这一层（`firecracker.sh`）、两个 systemd 服务 |
-| `test/` | `sandbox.test.mjs`（六种语言、调试、隔离检查；本机 / 容器 / microVM 都能跑）、`server.test.mjs`（签名、限流）、`firecracker.test.mjs`（驱动的协议，对着假 fc-manager） |
+| `test/` | `sandbox.test.mjs`（十五种语言、调试、隔离检查；本机 / 容器 / microVM 都能跑；没有官方题解的九种用 `languages.mjs` 里手写的题解）、`starters.test.mjs`（九种云端语言 × 100 题的起始代码和判题程序对得上）、`server.test.mjs`（签名、限流）、`firecracker.test.mjs`（驱动的协议，对着假 fc-manager） |
+
+### 后加的九种语言
+
+起始代码是力扣原样的（`tools/practice/leetcode-starters.json`，`tools/practice/fetch-starters.mjs` 从 leetcode.cn 取；力扣没有的：Dart 的 138、141、142、160、236、240 照力扣 Dart 的写法补，Rust 的 138、141、142、160 力扣模式做不了，只能用 ACM 模式）。判题程序（`tools/illustrations/judge/langs/<语言>.js` 和 `prelude/`）按同样的类型、同样的函数名调用：
+
+| 语言 | 参数怎么给 | 结果怎么写成 JSON | 编译 / 运行 |
+| --- | --- | --- | --- |
+| C | 按签名生成：数组带长度（`nums, numsSize`），返回数组用 `returnSize`、`returnColumnSizes` | 按签名生成 | gcc，和 C++ 一样开 AddressSanitizer、UBSan |
+| C# | 字面量（`int[]`、`IList<T>`） | 运行时按类型 | Roslyn（`csc.dll`）直接编，`dotnet prog.dll` 跑；用例在 256 MB 栈的线程里跑 |
+| Kotlin / Scala | 字面量（`IntArray`、`Array[Int]`、`List[String]`） | 运行时按类型 | 编译器跑在 JDK 21 上，只用 C1 + CDS 归档（冷启动从 5 秒降到 2 秒左右）；运行和 Java 一样 `-Xss64m` |
+| Swift | 带类型的字面量，原地修改的数组是 `inout` | 按静态类型（协议 `JJ`） | `swiftc -Onone -g`：`-O` 下越界只会 ud2，不说原因、没有行号；崩溃时 `SWIFT_BACKTRACE` 打出带行号的调用栈 |
+| Rust | 带类型的字面量，原地修改传 `&mut` | 按静态类型（trait `J`） | `rustc -O`；`catch_unwind` 接住每组的 panic，用例在 256 MB 栈的线程里跑 |
+| Dart | 带类型的字面量 | 运行时按类型 | `dart compile kernel` + JIT（AOT 的调用栈没有行号） |
+| Ruby / PHP | 和 Python 一样运行时读 JSON、按签名转换 | 运行时 | `ruby -c` / `php -l` 查语法；Ruby 用例在线程里跑（栈 128 MB） |
+
+调试只有 Java、C++、Go（真调试器）；其余云端语言只能运行。网站按 `/v1/status` 报的 `langs` 判断哪些语言能在云端跑，节点还没更新到新镜像时，新语言在练习区显示成暂时不能用。
 
 ## Firecracker：为什么、用了什么
 
@@ -105,6 +121,19 @@ win-gw-lou 是 Windows，用它当虚拟机的宿主：开一台 Ubuntu 24.04 �
    用 Hyper-V 的话要把它改成 `http://<虚拟机 IP>:8790`（控制台 → Zero Trust → Networks → Tunnels → win-gw-lou → Public Hostname），并在虚拟机里 `ufw allow from <宿主 IP> to any port 8790` 只放宿主进来。不要动已有的 `test-code.cgent.link`。
 4. **网站**：`site/wrangler.toml` 的 `RUNNER_NODES` 设成 `lou1=https://run-lou1.codingdance.cn`；Pages 的加密环境变量 `RUNNER_SECRET` 设成虚拟机 `/etc/lc-runner.env` 里的那个值（`sudo grep RUNNER_SECRET /etc/lc-runner.env`），重新部署网站。
 5. **验证**：`curl https://run-lou1.codingdance.cn/healthz` 返回 `{"ok":true}`；网站的 `GET /api/run` 返回 `"available": true, "up": 1`；在题目页把语言换成 Java 跑一下。
+
+### 更新节点（改了镜像、加了语言之后）
+
+在节点的虚拟机里，到仓库目录下（第一次装时 clone 的那份）：
+
+```bash
+git fetch origin && git checkout main && git pull --ff-only
+RUNNER_NODE_ID=lou1 sudo -E bash tools/runner/deploy/setup.sh
+```
+
+它会重新构建镜像（第一次带上九种新语言要下载 2 GB 左右的工具链）、把镜像转成新的 ext4 根文件系统、重启 fc-manager 和运行器；密钥和节点编号不变。要留出 25 GB 左右的磁盘（镜像 7 GB 多、转换时的临时目录和 ext4 各一份），耗时 10–30 分钟。更新时这个节点会下线一会儿，网站显示云端运行器不在线（只有一个节点时）。
+
+装好后核对：网站的 `GET /api/run` 返回的 `langs` 里有 `kotlin`、`rust` 这些（节点的 `/v1/status` 要签名，直接看网站的就行）；题目页换成 Kotlin 跑一下两数之和。在这之前，新语言在练习区显示「云端运行器还没装上它」，不会去跑。
 
 ### 集群：加节点
 

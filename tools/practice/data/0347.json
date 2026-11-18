@@ -21,7 +21,16 @@
       "typescript": "function topKFrequent(nums: number[], k: number): number[] {\n  \n};",
       "java": "class Solution {\n    public int[] topKFrequent(int[] nums, int k) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<int> topKFrequent(vector<int>& nums, int k) {\n        \n    }\n};",
-      "go": "func topKFrequent(nums []int, k int) []int {\n    \n}"
+      "go": "func topKFrequent(nums []int, k int) []int {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* topKFrequent(int* nums, int numsSize, int k, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int[] TopKFrequent(int[] nums, int k) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun topKFrequent(nums: IntArray, k: Int): IntArray {\n        \n    }\n}",
+      "swift": "class Solution {\n    func topKFrequent(_ nums: [Int], _ k: Int) -> [Int] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn top_k_frequent(nums: Vec<i32>, k: i32) -> Vec<i32> {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @param {Integer} k\n# @return {Integer[]}\ndef top_k_frequent(nums, k)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @param Integer $k\n     * @return Integer[]\n     */\n    function topKFrequent($nums, $k) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def topKFrequent(nums: Array[Int], k: Int): Array[Int] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<int> topKFrequent(List<int> nums, int k) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -29,7 +38,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

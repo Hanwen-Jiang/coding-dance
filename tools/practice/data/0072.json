@@ -20,7 +20,16 @@
       "typescript": "function minDistance(word1: string, word2: string): number {\n  \n};",
       "java": "class Solution {\n    public int minDistance(String word1, String word2) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int minDistance(string word1, string word2) {\n        \n    }\n};",
-      "go": "func minDistance(word1 string, word2 string) int {\n    \n}"
+      "go": "func minDistance(word1 string, word2 string) int {\n    \n}",
+      "c": "int minDistance(char* word1, char* word2) {\n    \n}",
+      "csharp": "public class Solution {\n    public int MinDistance(string word1, string word2) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun minDistance(word1: String, word2: String): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func minDistance(_ word1: String, _ word2: String) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn min_distance(word1: String, word2: String) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {String} word1\n# @param {String} word2\n# @return {Integer}\ndef min_distance(word1, word2)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $word1\n     * @param String $word2\n     * @return Integer\n     */\n    function minDistance($word1, $word2) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def minDistance(word1: String, word2: String): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int minDistance(String word1, String word2) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -20,7 +20,16 @@
       "typescript": "function exist(board: string[][], word: string): boolean {\n  \n};",
       "java": "class Solution {\n    public boolean exist(char[][] board, String word) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    bool exist(vector<vector<char>>& board, string word) {\n        \n    }\n};",
-      "go": "func exist(board [][]byte, word string) bool {\n    \n}"
+      "go": "func exist(board [][]byte, word string) bool {\n    \n}",
+      "c": "bool exist(char** board, int boardSize, int* boardColSize, char* word) {\n    \n}",
+      "csharp": "public class Solution {\n    public bool Exist(char[][] board, string word) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun exist(board: Array<CharArray>, word: String): Boolean {\n        \n    }\n}",
+      "swift": "class Solution {\n    func exist(_ board: [[Character]], _ word: String) -> Bool {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn exist(board: Vec<Vec<char>>, word: String) -> bool {\n        \n    }\n}",
+      "ruby": "# @param {Character[][]} board\n# @param {String} word\n# @return {Boolean}\ndef exist(board, word)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String[][] $board\n     * @param String $word\n     * @return Boolean\n     */\n    function exist($board, $word) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def exist(board: Array[Array[Char]], word: String): Boolean = {\n        \n    }\n}",
+      "dart": "class Solution {\n  bool exist(List<List<String>> board, String word) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

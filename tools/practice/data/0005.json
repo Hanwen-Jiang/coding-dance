@@ -19,7 +19,16 @@
       "typescript": "function longestPalindrome(s: string): string {\n  \n};",
       "java": "class Solution {\n    public String longestPalindrome(String s) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    string longestPalindrome(string s) {\n        \n    }\n};",
-      "go": "func longestPalindrome(s string) string {\n    \n}"
+      "go": "func longestPalindrome(s string) string {\n    \n}",
+      "c": "char* longestPalindrome(char* s) {\n    \n}",
+      "csharp": "public class Solution {\n    public string LongestPalindrome(string s) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun longestPalindrome(s: String): String {\n        \n    }\n}",
+      "swift": "class Solution {\n    func longestPalindrome(_ s: String) -> String {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn longest_palindrome(s: String) -> String {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @return {String}\ndef longest_palindrome(s)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @return String\n     */\n    function longestPalindrome($s) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def longestPalindrome(s: String): String = {\n        \n    }\n}",
+      "dart": "class Solution {\n  String longestPalindrome(String s) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -27,7 +36,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {
