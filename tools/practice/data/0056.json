@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def merge(self, intervals: List[List[int]]) -> List[List[int]]:\n        ",
       "javascript": "/**\n * @param {number[][]} intervals\n * @return {number[][]}\n */\nvar merge = function(intervals) {\n  \n};",
-      "typescript": "function merge(intervals: number[][]): number[][] {\n  \n};"
+      "typescript": "function merge(intervals: number[][]): number[][] {\n  \n};",
+      "java": "class Solution {\n    public int[][] merge(int[][] intervals) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<vector<int>> merge(vector<vector<int>>& intervals) {\n        \n    }\n};",
+      "go": "func merge(intervals [][]int) [][]int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

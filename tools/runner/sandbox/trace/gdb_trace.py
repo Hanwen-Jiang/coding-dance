@@ -245,7 +245,8 @@ def frame_vars(frame, line_abs):
         for s in b:
             if not (s.is_argument or s.is_variable) or s.name in seen or s.name.startswith("__"):
                 continue
-            if not s.is_argument and s.line > line_abs:
+            # 还没执行到声明（停在这一行的开头时，这一行声明的变量也还没初始化）
+            if not s.is_argument and s.line >= line_abs:
                 continue
             seen.add(s.name)
             found.append((0 if s.is_argument else 1, len(chain) - depth, s.line, s))

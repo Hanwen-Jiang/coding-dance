@@ -196,7 +196,8 @@ async function main() {
         if (JSON.stringify(decodeAcmInput(c.stdin, sig)) !== JSON.stringify(c.input)) throw new Error(`${s.id}: input codec roundtrip failed`);
         if (JSON.stringify(parseAcmOutput(c.stdout, sig)) !== JSON.stringify(c.expected)) throw new Error(`${s.id}: output codec roundtrip failed`);
       }
-      const starters = Object.fromEntries(["leetcode", "acm"].map((mode) => [mode, Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, mode === "leetcode" ? leetcodeTemplate(sig, names, language, methodNames) : acmTemplate(sig, names, language)]))]));
+      // Java / C++ / Go 在云端运行（tools/runner），起始代码也放在这里
+      const starters = Object.fromEntries(["leetcode", "acm"].map((mode) => [mode, Object.fromEntries(["python", "javascript", "typescript", "java", "cpp", "go"].map((language) => [language, mode === "leetcode" ? leetcodeTemplate(sig, names, language, methodNames) : acmTemplate(sig, names, language)]))]));
       const legacyAcmStarterHashes = Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, starterHash(legacyAcmTemplate(sig, names, language))]));
       const previousAcmStarterHashes = Object.fromEntries(["python", "javascript", "typescript"].map((language) => [language, [starterHash(previousAcmTemplate(sig, names, language))]]));
       // 上一版力扣模式起始代码的指纹：用户没改过的旧草稿换成新模板
@@ -212,7 +213,7 @@ async function main() {
     if (path.dirname(temp) !== path.resolve(os.tmpdir()) || !path.basename(temp).startsWith("hot100-practice-data-")) throw new Error("Unexpected temporary directory");
     fs.rmSync(temp, { recursive: true, force: true });
   }
-  console.log(`Generated ${files.length} practice problems, ${officialTotal} verified official examples, ${total} cases, and 600 starter templates.`);
+  console.log(`Generated ${files.length} practice problems, ${officialTotal} verified official examples, ${total} cases, and 1200 starter templates.`);
 }
 function updateAcmStarters() {
   const files = fs.readdirSync(output).filter((f) => /^\d{4}\.json$/.test(f));

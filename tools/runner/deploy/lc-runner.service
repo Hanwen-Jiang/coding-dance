@@ -1,0 +1,21 @@
+[Unit]
+Description=lc-hot100 远端运行器（tools/runner）
+After=network-online.target docker.service
+Requires=docker.service
+
+[Service]
+User=lc-runner
+Group=lc-runner
+EnvironmentFile=/etc/lc-runner.env
+Environment=HOME=/tmp DOCKER_CONFIG=/tmp/docker
+WorkingDirectory=/opt/lc-runner
+ExecStart=/usr/local/bin/node /opt/lc-runner/server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

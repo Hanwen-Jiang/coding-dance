@@ -149,7 +149,7 @@ const BROKEN = {
   python: "class Solution:\n    def twoSum(self, nums, target):\n        return [0, 1\n",
   javascript: "var twoSum = function(nums, target) {\n  const x = 1;\n  return [0, 1;\n};\n",
   java: "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        int x = 1\n        return new int[]{0, 1};\n    }\n}\n",
-  cpp: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) { int x = 1\n        return {0, 1};\n    }\n};\n",
+  cpp: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) { int x = y;\n        return {0, 1};\n    }\n};\n",
   go: "func twoSum(nums []int, target int) []int {\n\tx := 1\n\treturn []int{0, y}\n}\n",
 };
 
@@ -195,6 +195,9 @@ for (const lang of DEBUG.filter(want)) {
     assert.ok(steps.every((s) => s.line >= 1 && s.line <= n), "行号超出用户代码：" + JSON.stringify(steps.map((s) => s.line)));
     const withNeed = steps.find((s) => s.vars.some(([k]) => k === "need"));
     assert.ok(withNeed, "没有记到变量 need：" + JSON.stringify(steps.slice(0, 6)));
+    // need 第一次出现时已经算好了（target - nums[i]），不是没初始化的值
+    const need = withNeed.vars.find(([k]) => k === "need")[1], i = withNeed.vars.find(([k]) => k === "i");
+    if (i) assert.equal(Number(need), 6 - [3, 2, 4][Number(i[1])], "need 的值：" + JSON.stringify(withNeed.vars));
     assert.ok(steps.some((s) => s.vars.some(([k, v]) => k === "nums" && /3/.test(v))), "nums 的值：" + JSON.stringify(steps[0].vars));
     assert.ok(steps.every((s) => s.stack.length >= 1 && s.stack[s.stack.length - 1][0] === "twoSum"), "调用栈：" + JSON.stringify(steps[0].stack));
     const ret = steps.find((s) => s.event === "return");

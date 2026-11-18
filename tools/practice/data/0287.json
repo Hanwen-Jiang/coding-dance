@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def findDuplicate(self, nums: List[int]) -> int:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar findDuplicate = function(nums) {\n  \n};",
-      "typescript": "function findDuplicate(nums: number[]): number {\n  \n};"
+      "typescript": "function findDuplicate(nums: number[]): number {\n  \n};",
+      "java": "class Solution {\n    public int findDuplicate(int[] nums) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int findDuplicate(vector<int>& nums) {\n        \n    }\n};",
+      "go": "func findDuplicate(nums []int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def generate(self, numRows: int) -> List[List[int]]:\n        ",
       "javascript": "/**\n * @param {number} numRows\n * @return {number[][]}\n */\nvar generate = function(numRows) {\n  \n};",
-      "typescript": "function generate(numRows: number): number[][] {\n  \n};"
+      "typescript": "function generate(numRows: number): number[][] {\n  \n};",
+      "java": "class Solution {\n    public List<List<Integer>> generate(int numRows) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<vector<int>> generate(int numRows) {\n        \n    }\n};",
+      "go": "func generate(numRows int) [][]int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

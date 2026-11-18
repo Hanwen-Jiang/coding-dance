@@ -30,6 +30,7 @@ jobs:
           node lib/sync/test/sync.test.ts
           node lib/practice/test/record.test.ts
           node lib/practice/test/save-queue.test.ts
+          node functions/_lib/test/runner.test.ts
       - name: 多域名登录的测试
         working-directory: site
         run: node functions/_lib/test/sso.test.ts

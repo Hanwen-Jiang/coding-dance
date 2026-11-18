@@ -16,12 +16,18 @@
     "leetcode": {
       "python": "class Solution:\n    def subsets(self, nums: List[int]) -> List[List[int]]:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @return {number[][]}\n */\nvar subsets = function(nums) {\n  \n};",
-      "typescript": "function subsets(nums: number[]): number[][] {\n  \n};"
+      "typescript": "function subsets(nums: number[]): number[][] {\n  \n};",
+      "java": "class Solution {\n    public List<List<Integer>> subsets(int[] nums) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<vector<int>> subsets(vector<int>& nums) {\n        \n    }\n};",
+      "go": "func subsets(nums []int) [][]int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

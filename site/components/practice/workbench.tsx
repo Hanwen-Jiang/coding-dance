@@ -17,6 +17,7 @@ import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
 import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
+import { isRemote, remoteStatus, type RemoteStatus } from "@/lib/practice/remote";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
 import type { RunScope, SolutionLabel } from "@/lib/practice/record";
@@ -30,10 +31,14 @@ const CodeEditor = dynamic(() => import("./editor"), {
   ssr: false,
   loading: () => <div className="practice-editor-loading flex items-center justify-center"><PixelLoader label="EDITOR" /></div>,
 });
-const LANGUAGES: { id: PracticeLanguage; label: string }[] = [
+/** remote：在云端运行（tools/runner，要登录）；其余在浏览器里运行 */
+const LANGUAGES: { id: PracticeLanguage; label: string; remote?: boolean }[] = [
   { id: "python", label: "Python" },
   { id: "javascript", label: "JavaScript" },
   { id: "typescript", label: "TypeScript" },
+  { id: "java", label: "Java", remote: true },
+  { id: "cpp", label: "C++", remote: true },
+  { id: "go", label: "Go", remote: true },
 ];
 type TestTab = "examples" | "custom" | "results" | "debug";
 /** 编辑器提示程度，存在浏览器里，换题、换语言都不变 */
@@ -61,7 +66,7 @@ function readLevel(): TestLevel {
 type RunReport = { result: PracticeRunResult; cases: PracticeCase[]; code: string; unchecked: boolean; scope: RunScope };
 const SCOPE_NAME: Record<RunScope, string> = { full: "全量测试", quick: "精简测试", sample: "运行示例", custom: "自定义用例" };
 /** 标签栏上的文件名后缀 */
-const FILE_EXT: Record<PracticeLanguage, string> = { python: "py", javascript: "js", typescript: "ts" };
+const FILE_EXT: Record<PracticeLanguage, string> = { python: "py", javascript: "js", typescript: "ts", java: "java", cpp: "cpp", go: "go" };
 
 const quickCasesOf = (cases: PracticeCase[]) => {
   const quick = cases.filter((c) => c.quick);
@@ -382,6 +387,14 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   const [error, setError] = useState<string | null>(null);
   /** 最近一次运行：结果、跑的是哪组用例（scope）、当时的代码；手动保存时按它判断记什么 */
   const [report, setReport] = useState<RunReport | null>(null);
+  // 云端语言：看一眼运行器在不在线（缓存一分钟），不在线就在编辑器下面说一声
+  const [cloud, setCloud] = useState<RemoteStatus | null>(null);
+  useEffect(() => {
+    if (!isRemote(language)) return;
+    let alive = true;
+    void remoteStatus().then((s) => { if (alive) setCloud(s); });
+    return () => { alive = false; };
+  }, [language]);
   /** 全量测试跑完自动记进尝试记录的那一次（手动「存为尝试记录」时不再重复记） */
   const autoRecorded = useRef<RunReport | null>(null);
   // 调试：一组输入的执行记录、当前看到第几步、编辑器里的断点；调试用的输入跟着上一次看的是「示例」还是「自定义」
@@ -534,7 +547,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     const snapshot = codeRef.current;
     setError(null);
     setReport(null);
-    setStatus(language === "python" ? "正在准备 Python 运行环境，首次运行请稍候…" : "正在运行测试…");
+    setStatus(isRemote(language) ? "正在云端编译运行…" : language === "python" ? "正在准备 Python 运行环境，首次运行请稍候…" : "正在运行测试…");
     setPanelOpen(true);
     setRunning(true);
     setTab("results");
@@ -697,7 +710,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             <Select.Value>{({ selectedText }) => <><span className="practice-file-name">{fileName}</span><span className="sr-only">{selectedText}</span></>}</Select.Value>
             <Select.Indicator />
           </Select.Trigger>
-          <Select.Popover className="min-w-36" style={{ zIndex: 120 }}><ListBox aria-label="可选练习语言">{LANGUAGES.map((entry) => <ListBox.Item id={entry.id} key={entry.id} textValue={entry.label}>{entry.label}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+          <Select.Popover className="min-w-36" style={{ zIndex: 120 }}><ListBox aria-label="可选练习语言">{LANGUAGES.map((entry) => <ListBox.Item id={entry.id} key={entry.id} textValue={entry.label}>{entry.label}{entry.remote && <span className="practice-cloud-tag" title="在云端编译运行，要登录">云端</span>}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
         </Select>
         <div className="practice-tabbar-scroll">
           <PracticeModeSwitch />
@@ -805,6 +818,9 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       <CodeEditor code={code} debugLine={debugLine} hints={hints} language={language} onBreakpoints={setBreakpoints} onChange={changeCode} ready={ready} wrap={wrap} />
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="practice-notice text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
+      {isRemote(language) && <p className="practice-notice text-muted" data-testid="practice-cloud-note">{cloud && !cloud.available
+        ? `${LANGUAGES.find((entry) => entry.id === language)?.label} 在云端编译运行，${cloud.reason || "云端运行器暂时不在线"}。`
+        : `${LANGUAGES.find((entry) => entry.id === language)?.label} 在云端编译运行（要登录），调试用真调试器一步步记下来。`}</p>}
       {/* 控制台：从编辑器底部弹出来的子窗口，拖上沿调高度，✕ 或者状态栏上的「控制台」整个收起 */}
       {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
       {panelOpen && <div className="practice-console" data-testid="practice-test-panel">

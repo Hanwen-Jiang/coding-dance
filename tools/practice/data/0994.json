@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def orangesRotting(self, grid: List[List[int]]) -> int:\n        ",
       "javascript": "/**\n * @param {number[][]} grid\n * @return {number}\n */\nvar orangesRotting = function(grid) {\n  \n};",
-      "typescript": "function orangesRotting(grid: number[][]): number {\n  \n};"
+      "typescript": "function orangesRotting(grid: number[][]): number {\n  \n};",
+      "java": "class Solution {\n    public int orangesRotting(int[][] grid) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int orangesRotting(vector<vector<int>>& grid) {\n        \n    }\n};",
+      "go": "func orangesRotting(grid [][]int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

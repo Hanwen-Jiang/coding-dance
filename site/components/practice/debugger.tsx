@@ -23,7 +23,8 @@ export interface DebugRun {
 
 /** 把记录里的值拆成「类型名」和「内容」：Counter({...})、defaultdict(...)、Map(3) {...} 这类前面带上类型 */
 function split(value: string): { tag: string; body: string } {
-  const js = value.match(/^((?:Map|Set|[A-Z]\w*Array)\(\d+\)) ([\s\S]*)$/);
+  // 带长度的容器：JS 的 Map(3) / Set(3)，云端调试的 ArrayList(3)、vector(3)、map[int]int(3)、[]int(3) 这些
+  const js = value.match(/^([A-Za-z_[][^\s(]*\(\d+\)) ([\s\S]*)$/);
   if (js) return { tag: js[1].replace("(", "·").replace(")", ""), body: js[2] };
   const py = value.match(/^([A-Za-z_][\w.]*)\(([\s\S]*)\)$/);
   if (py && !/^(ListNode|TreeNode|Node)$/.test(py[1])) return { tag: py[1], body: py[2] };

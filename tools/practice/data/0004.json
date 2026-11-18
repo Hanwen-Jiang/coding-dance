@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def findMedianSortedArrays(self, nums1: List[int], nums2: List[int]) -> float:\n        ",
       "javascript": "/**\n * @param {number[]} nums1\n * @param {number[]} nums2\n * @return {number}\n */\nvar findMedianSortedArrays = function(nums1, nums2) {\n  \n};",
-      "typescript": "function findMedianSortedArrays(nums1: number[], nums2: number[]): number {\n  \n};"
+      "typescript": "function findMedianSortedArrays(nums1: number[], nums2: number[]): number {\n  \n};",
+      "java": "class Solution {\n    public double findMedianSortedArrays(int[] nums1, int[] nums2) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    double findMedianSortedArrays(vector<int>& nums1, vector<int>& nums2) {\n        \n    }\n};",
+      "go": "func findMedianSortedArrays(nums1 []int, nums2 []int) float64 {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

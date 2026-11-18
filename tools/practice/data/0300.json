@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def lengthOfLIS(self, nums: List[int]) -> int:\n        ",
       "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar lengthOfLIS = function(nums) {\n  \n};",
-      "typescript": "function lengthOfLIS(nums: number[]): number {\n  \n};"
+      "typescript": "function lengthOfLIS(nums: number[]): number {\n  \n};",
+      "java": "class Solution {\n    public int lengthOfLIS(int[] nums) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int lengthOfLIS(vector<int>& nums) {\n        \n    }\n};",
+      "go": "func lengthOfLIS(nums []int) int {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

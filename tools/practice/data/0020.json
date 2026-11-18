@@ -15,12 +15,18 @@
     "leetcode": {
       "python": "class Solution:\n    def isValid(self, s: str) -> bool:\n        ",
       "javascript": "/**\n * @param {string} s\n * @return {boolean}\n */\nvar isValid = function(s) {\n  \n};",
-      "typescript": "function isValid(s: string): boolean {\n  \n};"
+      "typescript": "function isValid(s: string): boolean {\n  \n};",
+      "java": "class Solution {\n    public boolean isValid(String s) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    bool isValid(string s) {\n        \n    }\n};",
+      "go": "func isValid(s string) bool {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {

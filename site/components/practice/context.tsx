@@ -10,7 +10,7 @@ import type { PracticeLanguage, PracticeMode, PracticeProblem } from "@/lib/prac
 import type { ProblemDetail } from "@/lib/types";
 
 const OPTIONS_KEY = "hot100:practice:options";
-const isLanguage = (value: unknown): value is PracticeLanguage => ["python", "javascript", "typescript"].includes(String(value));
+const isLanguage = (value: unknown): value is PracticeLanguage => ["python", "javascript", "typescript", "java", "cpp", "go"].includes(String(value));
 type PracticeContextValue = {
   detail: ProblemDetail;
   problem: PracticeProblem | null;

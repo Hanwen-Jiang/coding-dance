@@ -1,10 +1,14 @@
 "use client";
 
 import CodeMirror, { keymap, Prec } from "@uiw/react-codemirror";
-import { acceptCompletion, autocompletion } from "@codemirror/autocomplete";
+import { acceptCompletion, autocompletion, completeAnyWord } from "@codemirror/autocomplete";
+import { cpp } from "@codemirror/lang-cpp";
+import { go, localCompletionSource as goLocals } from "@codemirror/lang-go";
+import { java } from "@codemirror/lang-java";
 import { javascript, localCompletionSource as jsLocals } from "@codemirror/lang-javascript";
 import { localCompletionSource as pyLocals, python } from "@codemirror/lang-python";
 import { indentUnit } from "@codemirror/language";
+import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef } from "react";
@@ -13,6 +17,17 @@ import type { PracticeHints, PracticeLanguage } from "@/lib/practice/types";
 import { debugExtensions, setDebugLine } from "./editor-debug";
 import { practiceEditorTheme } from "./editor-theme";
 import { practiceIndentGuides } from "./editor-guides";
+
+const LANG: Record<PracticeLanguage, () => ReturnType<typeof python>> = {
+  python: () => python(),
+  javascript: () => javascript(),
+  typescript: () => javascript({ typescript: true }),
+  java: () => java(),
+  cpp: () => cpp(),
+  go: () => go(),
+};
+/** 「无提示」时唯一的补全来源：代码里已有的名字 */
+const LOCALS: Record<PracticeLanguage, typeof completeAnyWord> = { python: pyLocals, javascript: jsLocals, typescript: jsLocals, java: completeAnyWord, cpp: completeAnyWord, go: goLocals };
 
 /**
  * hints：补全给多少。语法颜色、括号配对、自动缩进、缩进线两档都有。
@@ -46,12 +61,14 @@ export function PracticeEditor({ language, code, onChange, ready, hints = "full"
   }, [debugLine]);
   const extensions = useMemo(() => [
     debug,
-    language === "python" ? python() : javascript({ typescript: language === "typescript" }),
-    indentUnit.of(language === "python" ? "    " : "  "),
+    LANG[language](),
+    indentUnit.of(language === "python" || language === "java" || language === "cpp" ? "    " : language === "go" ? "\t" : "  "),
     practiceIndentGuides,
     ...(wrap ? [EditorView.lineWrapping] : []),
+    // Java / C++ 的语言包不带补全：完整提示时补全文档里出现过的词
+    ...(full && (language === "java" || language === "cpp") ? [EditorState.languageData.of(() => [{ autocomplete: completeAnyWord }])] : []),
     // 「无提示」：用自己的补全代替语言自带的，只留局部变量这一个来源
-    ...(full ? [] : [autocompletion({ override: [language === "python" ? pyLocals : jsLocals] })]),
+    ...(full ? [] : [autocompletion({ override: [LOCALS[language]] })]),
     EditorView.contentAttributes.of({ "aria-label": "代码编辑器", spellcheck: "false", "data-testid": "practice-code", "data-hints": hints }),
     Prec.highest(keymap.of([{ key: "Tab", run: acceptCompletion }])),
     ...practiceEditorTheme(resolvedTheme === "dark"),

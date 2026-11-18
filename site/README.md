@@ -76,6 +76,16 @@ wrangler pages secret put SESSION_SECRET --project-name lc-hot100
 
 这几项没设齐时，网站照常能看，只是不显示登录入口。
 
+### 云端运行（Java / C++ / Go）
+
+练习区的 Java、C++、Go 经 `/api/run`（`functions/api/run.ts`）转给远端运行器（`tools/runner/`，部署方法见它的 README）。运行器部署好之后：
+
+```bash
+wrangler pages secret put RUNNER_SECRET --project-name lc-hot100   # 和虚拟机里 /etc/lc-runner.env 的 RUNNER_SECRET 一样
+```
+
+再把 `wrangler.toml` 里 `RUNNER_URL` 那一行的注释去掉，重新部署。前面开了 Cloudflare Access 的话，再设 `RUNNER_ACCESS_ID`、`RUNNER_ACCESS_SECRET`。没设时练习区提示「云端运行还没有部署」，其他语言不受影响。签名的测试：`node functions/_lib/test/runner.test.ts`。
+
 ### 多个域名（https://leetcode.cgent.link、https://codexdance.cn、https://codingdance.cn）
 
 三个域名都是 Pages 项目 `lc-hot100` 的自定义域名，内容一样。浏览器不让不同域名共用 Cookie，所以登录状态靠整页跳转在几个域名之间传（`functions/_lib/sso.ts`，测试 `functions/_lib/test/sso.test.ts`）：

@@ -17,12 +17,18 @@
     "leetcode": {
       "python": "class Solution:\n    def wordBreak(self, s: str, wordDict: List[str]) -> bool:\n        ",
       "javascript": "/**\n * @param {string} s\n * @param {string[]} wordDict\n * @return {boolean}\n */\nvar wordBreak = function(s, wordDict) {\n  \n};",
-      "typescript": "function wordBreak(s: string, wordDict: string[]): boolean {\n  \n};"
+      "typescript": "function wordBreak(s: string, wordDict: string[]): boolean {\n  \n};",
+      "java": "class Solution {\n    public boolean wordBreak(String s, List<String> wordDict) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    bool wordBreak(string s, vector<string>& wordDict) {\n        \n    }\n};",
+      "go": "func wordBreak(s string, wordDict []string) bool {\n    \n}"
     },
     "acm": {
       "python": "",
       "javascript": "",
-      "typescript": ""
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": ""
     }
   },
   "legacyAcmStarterHashes": {
