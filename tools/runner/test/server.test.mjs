@@ -96,7 +96,7 @@ await test("同一个用户一分钟内跑太多次被限流", async () => {
   assert.equal(r.status, 429, JSON.stringify(r.json));
 });
 await test("参数不对返回 400", async () => {
-  const r = await call("/v1/run", { body: JSON.stringify({ lang: "rust", mode: "acm", code: "x", cases: [{ stdin: "" }] }), user: "carol" });
+  const r = await call("/v1/run", { body: JSON.stringify({ lang: "cobol", mode: "acm", code: "x", cases: [{ stdin: "" }] }), user: "carol" });
   assert.equal(r.status, 400);
 });
 
