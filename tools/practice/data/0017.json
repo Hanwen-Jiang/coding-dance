@@ -19,7 +19,16 @@
       "typescript": "function letterCombinations(digits: string): string[] {\n  \n};",
       "java": "class Solution {\n    public List<String> letterCombinations(String digits) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<string> letterCombinations(string digits) {\n        \n    }\n};",
-      "go": "func letterCombinations(digits string) []string {\n    \n}"
+      "go": "func letterCombinations(digits string) []string {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nchar** letterCombinations(char* digits, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<string> LetterCombinations(string digits) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun letterCombinations(digits: String): List<String> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func letterCombinations(_ digits: String) -> [String] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn letter_combinations(digits: String) -> Vec<String> {\n        \n    }\n}",
+      "ruby": "# @param {String} digits\n# @return {String[]}\ndef letter_combinations(digits)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $digits\n     * @return String[]\n     */\n    function letterCombinations($digits) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def letterCombinations(digits: String): List[String] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<String> letterCombinations(String digits) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -27,7 +36,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

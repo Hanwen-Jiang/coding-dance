@@ -21,7 +21,16 @@
       "typescript": "function combinationSum(candidates: number[], target: number): number[][] {\n  \n};",
       "java": "class Solution {\n    public List<List<Integer>> combinationSum(int[] candidates, int target) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<vector<int>> combinationSum(vector<int>& candidates, int target) {\n        \n    }\n};",
-      "go": "func combinationSum(candidates []int, target int) [][]int {\n    \n}"
+      "go": "func combinationSum(candidates []int, target int) [][]int {\n    \n}",
+      "c": "/**\n * Return an array of arrays of size *returnSize.\n * The sizes of the arrays are returned as *returnColumnSizes array.\n * Note: Both returned array and *columnSizes array must be malloced, assume caller calls free().\n */\nint** combinationSum(int* candidates, int candidatesSize, int target, int* returnSize, int** returnColumnSizes) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<IList<int>> CombinationSum(int[] candidates, int target) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun combinationSum(candidates: IntArray, target: Int): List<List<Int>> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func combinationSum(_ candidates: [Int], _ target: Int) -> [[Int]] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn combination_sum(candidates: Vec<i32>, target: i32) -> Vec<Vec<i32>> {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} candidates\n# @param {Integer} target\n# @return {Integer[][]}\ndef combination_sum(candidates, target)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $candidates\n     * @param Integer $target\n     * @return Integer[][]\n     */\n    function combinationSum($candidates, $target) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def combinationSum(candidates: Array[Int], target: Int): List[List[Int]] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<List<int>> combinationSum(List<int> candidates, int target) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -29,7 +38,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

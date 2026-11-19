@@ -20,7 +20,16 @@
       "typescript": "function maxSlidingWindow(nums: number[], k: number): number[] {\n  \n};",
       "java": "class Solution {\n    public int[] maxSlidingWindow(int[] nums, int k) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<int> maxSlidingWindow(vector<int>& nums, int k) {\n        \n    }\n};",
-      "go": "func maxSlidingWindow(nums []int, k int) []int {\n    \n}"
+      "go": "func maxSlidingWindow(nums []int, k int) []int {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* maxSlidingWindow(int* nums, int numsSize, int k, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int[] MaxSlidingWindow(int[] nums, int k) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun maxSlidingWindow(nums: IntArray, k: Int): IntArray {\n        \n    }\n}",
+      "swift": "class Solution {\n    func maxSlidingWindow(_ nums: [Int], _ k: Int) -> [Int] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn max_sliding_window(nums: Vec<i32>, k: i32) -> Vec<i32> {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @param {Integer} k\n# @return {Integer[]}\ndef max_sliding_window(nums, k)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @param Integer $k\n     * @return Integer[]\n     */\n    function maxSlidingWindow($nums, $k) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def maxSlidingWindow(nums: Array[Int], k: Int): Array[Int] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<int> maxSlidingWindow(List<int> nums, int k) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

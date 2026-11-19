@@ -18,7 +18,16 @@
       "typescript": "function longestValidParentheses(s: string): number {\n  \n};",
       "java": "class Solution {\n    public int longestValidParentheses(String s) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        \n    }\n};",
-      "go": "func longestValidParentheses(s string) int {\n    \n}"
+      "go": "func longestValidParentheses(s string) int {\n    \n}",
+      "c": "int longestValidParentheses(char* s) {\n    \n}",
+      "csharp": "public class Solution {\n    public int LongestValidParentheses(string s) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun longestValidParentheses(s: String): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func longestValidParentheses(_ s: String) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn longest_valid_parentheses(s: String) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @return {Integer}\ndef longest_valid_parentheses(s)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @return Integer\n     */\n    function longestValidParentheses($s) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def longestValidParentheses(s: String): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int longestValidParentheses(String s) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

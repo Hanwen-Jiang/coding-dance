@@ -179,6 +179,13 @@
 - [ ] 每天的额度、预算开关：要在服务端记用量，等「待决定 1」
 - [x] 调试：Java（JDI）、C++（gdb）、Go（dlv）用真调试器一次跑完、记下每一步（行号、调用栈、变量、返回值、异常），格式和浏览器的执行记录一样，调试面板直接用
 - [ ] 交互式调试（断点停住、求值）：DAP 会话 + WebSocket 转发、会话回收
+- [x] 云端加九种语言：C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart（只运行、不调试） — 认领：Claude（分支 `more-langs`）
+  - [x] 起始代码用力扣原样的（`tools/practice/leetcode-starters.json`、`fetch-starters.mjs`）；力扣没有的 Dart 6 道照写，Rust 的 138、141、142、160 力扣模式做不了（`leetcodeUnavailable`，提示用 ACM 模式）
+  - [x] 判题程序各语言的部分（`tools/illustrations/judge/langs/`、`prelude/`），镜像装上九种工具链，Kotlin / Scala 编译器做 CDS 归档
+  - [x] CI：手写题解 6 道 × 9 种、崩溃 / 超时 / ACM / 编译报错行号；九种 × 100 题的起始代码和判题程序对得上（`starters.test.mjs`）
+  - [x] 网站：练习区语言菜单、编辑器上色、进度仓规则（模板仓 README、`check.mjs`、`progress.ts`）、从力扣同步的语言对照
+  - [ ] lou1 换上新镜像（重跑 `setup.sh`）；在这之前新语言在练习区显示「云端运行器还没装上」
+  - [ ] 新语言的调试器（C 用 gdb、Rust 用 gdb / lldb、C# / Kotlin / Scala 用 JDI 或 netcoredbg……）
 
 ### 阶段 7：订阅
 - [ ] 档位和价格定稿；支付渠道；先用兑换码内测
@@ -202,6 +209,7 @@
 
 ## 变更记录
 
+- 2026-11-18：练习区加九种云端语言（C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart，分支 `more-langs`）。起始代码不自己生成，用 leetcode.cn 公开接口取的力扣原样模板（`tools/practice/fetch-starters.mjs` → `leetcode-starters.json`），判题程序按同样的类型和函数名调用，`build.cjs` 逐题核对函数名，CI 再把九种 × 100 题的起始代码补上「还没写」编译、跑一组（896 组，Rust 少 4 道）。力扣没有 Rust 版本的 138、141、142、160（Box 表示不了成环、共用节点、random 指针）在力扣模式下提示改用 ACM 模式；Dart 没有的 138、141、142、160、236、240 照力扣 Dart 的写法补。各语言实测（本机 1 核）：编译 C 0.1 秒、Rust 0.2 秒、C# 0.5 秒、Swift 0.3–1 秒、Dart 0.4 秒、Scala 1.6 秒、Kotlin 2.1 秒（Kotlin、Scala 原来要 5 秒、3 秒，只用 C1 加 CDS 归档省了一半）。踩过的坑：Swift `-O` 下越界只会 ud2、不说原因，加了 `-assert-config Debug` 调用栈又在断言那里断了，改用 `-Onone -g`；Dart AOT 的调用栈没有行号，改用 kernel + JIT；Ruby 的几道链表题力扣用的是驼峰函数名（`hasCycle`）。镜像从 6 种语言变成 15 种，Swift 去掉 SourceKit、LLDB 等省 1 GB 多。网站：`/v1/status` 报的 `langs` 里没有的语言，练习区显示「云端运行器还没装上」，不去跑；新语言暂时不能调试。顺手修了练习区存进度仓时 Java / C++ / Go 的提交说明里语言名是 undefined。
 - 2026-11-18：第一个运行器节点 lou1 接到网站：Pages 生产环境设了加密环境变量 `RUNNER_SECRET`（和 lou1 的 `/etc/lc-runner.env` 同一个值，以后加节点也用它），`wrangler.toml` 的 `RUNNER_NODES` 设成 `lou1=https://run-lou1.codingdance.cn`。Tunnel 的 `run-lou1.codingdance.cn` → `http://localhost:8790` 早先已经加好，没改。网站这边要等 `remote-runner` 合进 main 部署后才生效。同一天合进 main（#44）并部署；第一次部署后 `/api/run` 显示节点不在线，原因是用 PowerShell 管道设密钥时前面多了个 UTF-8 BOM，重设（原样传字节）、再部署后在线（`site/README.md` 里记了这个坑）。
 
 - 2026-11-18：阶段 6 的运行器和网站部分（分支 `remote-runner`）：`tools/runner/`（服务、沙箱、镜像、一键安装）；Java / C++ / Go 的调试器记执行记录；判题器各语言导出拼程序的部分（`parts`），`caseBody` 可以换输出语句；练习数据加 Java / C++ / Go 的起始代码（1598 组用例不变）；练习区加这三种语言，经 `/api/run` 在云端运行。CI 新增「远端运行器」：构建镜像，在新容器里跑 6 种语言 × 12 道题的官方题解、崩溃 / 超时隔离、ACM、编译报错行号、调试记录、容器限制。还没部署到 win-gw-lou。同一天改成集群：节点编号、签名带节点、网站按用户固定节点并在满了 / 下线时换节点（`site/functions/_lib/runner.ts`，测试起几个本机节点）；Tunnel 加了 `run-lou1.codingdance.cn`。之后改成每次运行一台 Firecracker microVM：用 agent-runtime 的 fc-manager 和 sandbox-agent（`FirecrackerDriver`、`deploy/firecracker.sh`），Docker 只留给开发和 CI。

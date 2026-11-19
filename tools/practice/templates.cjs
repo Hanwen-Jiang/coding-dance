@@ -229,10 +229,33 @@ function acmTemplate() {
   return "";
 }
 
+// —— C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart（在云端运行）——
+// 力扣模式的起始代码直接用力扣网站上的（leetcode-starters.json，fetch-starters.mjs 取的，原样不改）；
+// 判题程序（tools/illustrations/judge/langs/<语言>.js）按同样的类型和函数名调用，build.cjs 逐题核对函数名。
+const CLOUD_LANGS = ["c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
+const DART_LIST = "/**\n * Definition for singly-linked list.\n * class ListNode {\n *   int val;\n *   ListNode? next;\n *   ListNode([this.val = 0, this.next]);\n * }\n */\n";
+const DART_TREE = "/**\n * Definition for a binary tree node.\n * class TreeNode {\n *   int val;\n *   TreeNode? left;\n *   TreeNode? right;\n *   TreeNode([this.val = 0, this.left, this.right]);\n * }\n */\n";
+const rustUnavailable = (why) => `// 力扣没有这道题的 Rust 版本：${why}，\n// Rust 的 Option<Box<ListNode>> 表示不了。可以切到 ACM 模式用 Rust 写，或者换一种语言。\n`;
+const RUST_WHY = { 138: "每个节点还有一个可以指向任意节点的 random 指针", 141: "链表的最后一个节点可能接回前面的节点，成环", 142: "链表的最后一个节点可能接回前面的节点，成环", 160: "两条链表从某个节点开始共用后面的节点" };
+/**
+ * 力扣没有提供的几种（题目 → 语言 → 起始代码）：Dart 的这几道照力扣 Dart 模板的写法补上；
+ * Rust 的这几道力扣模式做不了（见 RUST_WHY），起始代码只是一段说明，网站上提示切到 ACM 模式。
+ */
+const AUTHORED_STARTERS = {
+  138: { dart: "/**\n * Definition for a Node.\n * class Node {\n *   int val;\n *   Node? next;\n *   Node? random;\n *   Node([this.val = 0, this.next, this.random]);\n * }\n */\nclass Solution {\n  Node? copyRandomList(Node? head) {\n    \n  }\n}", rust: rustUnavailable(RUST_WHY[138]) },
+  141: { dart: DART_LIST + "class Solution {\n  bool hasCycle(ListNode? head) {\n    \n  }\n}", rust: rustUnavailable(RUST_WHY[141]) },
+  142: { dart: DART_LIST + "class Solution {\n  ListNode? detectCycle(ListNode? head) {\n    \n  }\n}", rust: rustUnavailable(RUST_WHY[142]) },
+  160: { dart: DART_LIST + "class Solution {\n  ListNode? getIntersectionNode(ListNode? headA, ListNode? headB) {\n    \n  }\n}", rust: rustUnavailable(RUST_WHY[160]) },
+  236: { dart: DART_TREE + "class Solution {\n  TreeNode? lowestCommonAncestor(TreeNode? root, TreeNode? p, TreeNode? q) {\n    \n  }\n}" },
+  240: { dart: "class Solution {\n  bool searchMatrix(List<List<int>> matrix, int target) {\n    \n  }\n}" },
+};
+/** 力扣模式做不了的（题目 → 语言 → 原因），网站上运行前就提示 */
+const LEETCODE_UNAVAILABLE = Object.fromEntries(Object.entries(RUST_WHY).map(([id, why]) => [id, { rust: `力扣没有这道题的 Rust 版本：${why}，Option<Box<ListNode>> 表示不了。可以切到 ACM 模式用 Rust 写` }]));
+
 function starterHash(value) {
   let hash = 0x811c9dc5;
   for (let i = 0; i < value.length; i++) hash = Math.imul(hash ^ value.charCodeAt(i), 0x01000193);
   return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
-module.exports = { leetcodeTemplate, previousLeetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash, javascriptPrelude, javascriptEpilogue, pythonPrelude, pythonEpilogue };
+module.exports = { leetcodeTemplate, previousLeetcodeTemplate, acmTemplate, legacyAcmTemplate, previousAcmTemplate, starterHash, javascriptPrelude, javascriptEpilogue, pythonPrelude, pythonEpilogue, CLOUD_LANGS, AUTHORED_STARTERS, LEETCODE_UNAVAILABLE };

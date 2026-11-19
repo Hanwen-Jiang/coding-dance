@@ -95,7 +95,8 @@ jobs:
       - name: 判题
         run: node tools/illustrations/judge/run.js --require --lang ${{ matrix.lang }}
 
-  # 远端运行器（tools/runner）：构建沙箱镜像，在新容器里跑六种语言的练习、调试和安全检查，再经服务完整跑一遍
+  # 远端运行器（tools/runner）：构建沙箱镜像，在新容器里跑十五种语言的练习、调试和安全检查，
+  # 九种只在云端的语言再把 100 道题的起始代码都编译一遍，最后经服务完整跑一遍
   runner:
     name: 远端运行器
     runs-on: ubuntu-latest
@@ -104,6 +105,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: 腾出磁盘空间（镜像里有十几种语言的工具链，好几 GB）
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium
+          docker image prune -af > /dev/null
+          df -h /
       - uses: docker/setup-buildx-action@v3
       - name: 构建沙箱镜像
         uses: docker/build-push-action@v6
@@ -114,8 +120,10 @@ jobs:
           load: true
           cache-from: type=gha,scope=lc-runner
           cache-to: type=gha,mode=max,scope=lc-runner
-      - name: 沙箱（六种语言、调试、容器限制）
+      - name: 沙箱（十五种语言、调试、容器限制）
         run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/sandbox.test.mjs
+      - name: 起始代码和判题程序对得上（C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart × 100 题）
+        run: docker run --rm -v "$PWD:/src:ro" -w /src -e RUNNER_WORK=/tmp/work lc-runner:ci node tools/runner/test/starters.test.mjs
       - name: 服务（签名、限流、容器池）
         run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/server.test.mjs
       - name: Firecracker 驱动的协议（假 fc-manager；真 microVM 见 firecracker.yml）

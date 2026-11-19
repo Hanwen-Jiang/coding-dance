@@ -18,7 +18,16 @@
       "typescript": "/**\n * Definition for singly-linked list.\n * class ListNode {\n *     val: number\n *     next: ListNode | null\n *     constructor(val?: number, next?: ListNode | null) {\n *         this.val = (val===undefined ? 0 : val)\n *         this.next = (next===undefined ? null : next)\n *     }\n * }\n */\n\nfunction hasCycle(head: ListNode | null): boolean {\n  \n};",
       "java": "/**\n * Definition for singly-linked list.\n * public class ListNode {\n *     int val;\n *     ListNode next;\n *     ListNode() {}\n *     ListNode(int val) { this.val = val; }\n *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }\n * }\n */\nclass Solution {\n    public boolean hasCycle(ListNode head) {\n        \n    }\n}",
       "cpp": "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\nclass Solution {\npublic:\n    bool hasCycle(ListNode* head) {\n        \n    }\n};",
-      "go": "/**\n * Definition for singly-linked list.\n * type ListNode struct {\n *     Val int\n *     Next *ListNode\n * }\n */\nfunc hasCycle(head *ListNode) bool {\n    \n}"
+      "go": "/**\n * Definition for singly-linked list.\n * type ListNode struct {\n *     Val int\n *     Next *ListNode\n * }\n */\nfunc hasCycle(head *ListNode) bool {\n    \n}",
+      "c": "/**\n * Definition for singly-linked list.\n * struct ListNode {\n *     int val;\n *     struct ListNode *next;\n * };\n */\nbool hasCycle(struct ListNode *head) {\n    \n}",
+      "csharp": "/**\n * Definition for singly-linked list.\n * public class ListNode {\n *     public int val;\n *     public ListNode next;\n *     public ListNode(int x) {\n *         val = x;\n *         next = null;\n *     }\n * }\n */\npublic class Solution {\n    public bool HasCycle(ListNode head) {\n        \n    }\n}",
+      "kotlin": "/**\n * Example:\n * var li = ListNode(5)\n * var v = li.`val`\n * Definition for singly-linked list.\n * class ListNode(var `val`: Int) {\n *     var next: ListNode? = null\n * }\n */\n\nclass Solution {\n    fun hasCycle(head: ListNode?): Boolean {\n        \n    }\n}",
+      "swift": "/**\n * Definition for singly-linked list.\n * public class ListNode {\n *     public var val: Int\n *     public var next: ListNode?\n *     public init(_ val: Int) {\n *         self.val = val\n *         self.next = nil\n *     }\n * }\n */\n\nclass Solution {\n    func hasCycle(_ head: ListNode?) -> Bool {\n        \n    }\n}",
+      "rust": "// 力扣没有这道题的 Rust 版本：链表的最后一个节点可能接回前面的节点，成环，\n// Rust 的 Option<Box<ListNode>> 表示不了。可以切到 ACM 模式用 Rust 写，或者换一种语言。\n",
+      "ruby": "# Definition for singly-linked list.\n# class ListNode\n#     attr_accessor :val, :next\n#     def initialize(val)\n#         @val = val\n#         @next = nil\n#     end\n# end\n\n# @param {ListNode} head\n# @return {Boolean}\ndef hasCycle(head)\n    \nend",
+      "php": "/**\n * Definition for a singly-linked list.\n * class ListNode {\n *     public $val = 0;\n *     public $next = null;\n *     function __construct($val) { $this->val = $val; }\n * }\n */\n\nclass Solution {\n    /**\n     * @param ListNode $head\n     * @return Boolean\n     */\n    function hasCycle($head) {\n        \n    }\n}",
+      "scala": "/**\n * Definition for singly-linked list.\n * class ListNode(var _x: Int = 0) {\n *   var next: ListNode = null\n *   var x: Int = _x\n * }\n */\n\nobject Solution {\n    def hasCycle(head: ListNode): Boolean = {\n        \n    }\n}",
+      "dart": "/**\n * Definition for singly-linked list.\n * class ListNode {\n *   int val;\n *   ListNode? next;\n *   ListNode([this.val = 0, this.next]);\n * }\n */\nclass Solution {\n  bool hasCycle(ListNode? head) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,8 +35,20 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
+  },
+  "leetcodeUnavailable": {
+    "rust": "力扣没有这道题的 Rust 版本：链表的最后一个节点可能接回前面的节点，成环，Option<Box<ListNode>> 表示不了。可以切到 ACM 模式用 Rust 写"
   },
   "legacyAcmStarterHashes": {
     "python": "15bfabd9",

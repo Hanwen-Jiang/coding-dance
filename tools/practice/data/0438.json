@@ -20,7 +20,16 @@
       "typescript": "function findAnagrams(s: string, p: string): number[] {\n  \n};",
       "java": "class Solution {\n    public List<Integer> findAnagrams(String s, String p) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<int> findAnagrams(string s, string p) {\n        \n    }\n};",
-      "go": "func findAnagrams(s string, p string) []int {\n    \n}"
+      "go": "func findAnagrams(s string, p string) []int {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* findAnagrams(char* s, char* p, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<int> FindAnagrams(string s, string p) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun findAnagrams(s: String, p: String): List<Int> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func findAnagrams(_ s: String, _ p: String) -> [Int] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn find_anagrams(s: String, p: String) -> Vec<i32> {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @param {String} p\n# @return {Integer[]}\ndef find_anagrams(s, p)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @param String $p\n     * @return Integer[]\n     */\n    function findAnagrams($s, $p) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def findAnagrams(s: String, p: String): List[Int] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<int> findAnagrams(String s, String p) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

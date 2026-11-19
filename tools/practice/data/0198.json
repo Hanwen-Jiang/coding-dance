@@ -18,7 +18,16 @@
       "typescript": "function rob(nums: number[]): number {\n  \n};",
       "java": "class Solution {\n    public int rob(int[] nums) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int rob(vector<int>& nums) {\n        \n    }\n};",
-      "go": "func rob(nums []int) int {\n    \n}"
+      "go": "func rob(nums []int) int {\n    \n}",
+      "c": "int rob(int* nums, int numsSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int Rob(int[] nums) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun rob(nums: IntArray): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func rob(_ nums: [Int]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn rob(nums: Vec<i32>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @return {Integer}\ndef rob(nums)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @return Integer\n     */\n    function rob($nums) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def rob(nums: Array[Int]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int rob(List<int> nums) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -18,7 +18,16 @@
       "typescript": "function generate(numRows: number): number[][] {\n  \n};",
       "java": "class Solution {\n    public List<List<Integer>> generate(int numRows) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<vector<int>> generate(int numRows) {\n        \n    }\n};",
-      "go": "func generate(numRows int) [][]int {\n    \n}"
+      "go": "func generate(numRows int) [][]int {\n    \n}",
+      "c": "/**\n * Return an array of arrays of size *returnSize.\n * The sizes of the arrays are returned as *returnColumnSizes array.\n * Note: Both returned array and *columnSizes array must be malloced, assume caller calls free().\n */\nint** generate(int numRows, int* returnSize, int** returnColumnSizes) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<IList<int>> Generate(int numRows) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun generate(numRows: Int): List<List<Int>> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func generate(_ numRows: Int) -> [[Int]] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn generate(num_rows: i32) -> Vec<Vec<i32>> {\n        \n    }\n}",
+      "ruby": "# @param {Integer} num_rows\n# @return {Integer[][]}\ndef generate(num_rows)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer $numRows\n     * @return Integer[][]\n     */\n    function generate($numRows) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def generate(numRows: Int): List[List[Int]] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<List<int>> generate(int numRows) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

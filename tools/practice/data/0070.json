@@ -18,7 +18,16 @@
       "typescript": "function climbStairs(n: number): number {\n  \n};",
       "java": "class Solution {\n    public int climbStairs(int n) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int climbStairs(int n) {\n        \n    }\n};",
-      "go": "func climbStairs(n int) int {\n    \n}"
+      "go": "func climbStairs(n int) int {\n    \n}",
+      "c": "int climbStairs(int n) {\n    \n}",
+      "csharp": "public class Solution {\n    public int ClimbStairs(int n) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun climbStairs(n: Int): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func climbStairs(_ n: Int) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn climb_stairs(n: i32) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer} n\n# @return {Integer}\ndef climb_stairs(n)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer $n\n     * @return Integer\n     */\n    function climbStairs($n) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def climbStairs(n: Int): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int climbStairs(int n) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

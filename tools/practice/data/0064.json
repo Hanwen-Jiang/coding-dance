@@ -18,7 +18,16 @@
       "typescript": "function minPathSum(grid: number[][]): number {\n  \n};",
       "java": "class Solution {\n    public int minPathSum(int[][] grid) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int minPathSum(vector<vector<int>>& grid) {\n        \n    }\n};",
-      "go": "func minPathSum(grid [][]int) int {\n    \n}"
+      "go": "func minPathSum(grid [][]int) int {\n    \n}",
+      "c": "int minPathSum(int** grid, int gridSize, int* gridColSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int MinPathSum(int[][] grid) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun minPathSum(grid: Array<IntArray>): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func minPathSum(_ grid: [[Int]]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn min_path_sum(grid: Vec<Vec<i32>>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[][]} grid\n# @return {Integer}\ndef min_path_sum(grid)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[][] $grid\n     * @return Integer\n     */\n    function minPathSum($grid) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def minPathSum(grid: Array[Array[Int]]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int minPathSum(List<List<int>> grid) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

@@ -20,7 +20,16 @@
       "typescript": "function findKthLargest(nums: number[], k: number): number {\n  \n};",
       "java": "class Solution {\n    public int findKthLargest(int[] nums, int k) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int findKthLargest(vector<int>& nums, int k) {\n        \n    }\n};",
-      "go": "func findKthLargest(nums []int, k int) int {\n    \n}"
+      "go": "func findKthLargest(nums []int, k int) int {\n    \n}",
+      "c": "int findKthLargest(int* nums, int numsSize, int k) {\n    \n}",
+      "csharp": "public class Solution {\n    public int FindKthLargest(int[] nums, int k) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun findKthLargest(nums: IntArray, k: Int): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func findKthLargest(_ nums: [Int], _ k: Int) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn find_kth_largest(nums: Vec<i32>, k: i32) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @param {Integer} k\n# @return {Integer}\ndef find_kth_largest(nums, k)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @param Integer $k\n     * @return Integer\n     */\n    function findKthLargest($nums, $k) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def findKthLargest(nums: Array[Int], k: Int): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int findKthLargest(List<int> nums, int k) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

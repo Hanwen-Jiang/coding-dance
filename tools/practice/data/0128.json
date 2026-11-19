@@ -18,7 +18,16 @@
       "typescript": "function longestConsecutive(nums: number[]): number {\n  \n};",
       "java": "class Solution {\n    public int longestConsecutive(int[] nums) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int longestConsecutive(vector<int>& nums) {\n        \n    }\n};",
-      "go": "func longestConsecutive(nums []int) int {\n    \n}"
+      "go": "func longestConsecutive(nums []int) int {\n    \n}",
+      "c": "int longestConsecutive(int* nums, int numsSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int LongestConsecutive(int[] nums) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun longestConsecutive(nums: IntArray): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func longestConsecutive(_ nums: [Int]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn longest_consecutive(nums: Vec<i32>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @return {Integer}\ndef longest_consecutive(nums)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @return Integer\n     */\n    function longestConsecutive($nums) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def longestConsecutive(nums: Array[Int]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int longestConsecutive(List<int> nums) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

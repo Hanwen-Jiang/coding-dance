@@ -1,9 +1,12 @@
 // 服务的测试：签名（带节点编号）、防重放、参数检查、限流，以及经服务完整跑一次。
 //   本机：node tools/runner/test/server.test.mjs（沙箱不隔离）；CI：RUNNER_TEST_IMAGE=lc-runner:ci（用容器池）
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { signedHeaders, verify, sign, sha256, NonceCache } from "../lib/sign.mjs";
-import { createServer, validate } from "../server.mjs";
+import { createServer, validate, LANGS } from "../server.mjs";
 import { DockerPool, LocalDriver } from "../lib/sandbox.mjs";
+
+const { LANG_IDS } = createRequire(import.meta.url)("../sandbox/programs.js");
 
 const SECRET = "test-secret-0123456789abcdef0123456789";
 let failed = 0, passed = 0;
@@ -13,6 +16,11 @@ async function test(name, fn) {
 
 /** 固定输入的签名：site/functions/_lib/test/runner.test.ts 用同一组输入，结果要一样 */
 const FIXED = { secret: "k".repeat(32), method: "POST", path: "/v1/run", time: 1700000000, nonce: "abcdefabcdefabcdef", user: "octocat", node: "lou1", body: '{"a":1}' };
+
+console.log("语言");
+await test("服务报的语言和沙箱支持的一样（部署时只复制 server.mjs，所以两边各写一份）", () => {
+  assert.deepEqual([...LANGS].sort(), [...LANG_IDS].sort());
+});
 
 console.log("签名");
 await test("签名和网站那边的算法一致（固定输入的结果）", () => {
@@ -39,8 +47,10 @@ await test("同一个请求不能用两次", () => {
   assert.equal(verify(SECRET, { method: "POST", path: "/v1/run", headers: h, body, node: "lou1", nonces }).reason, "这个请求已经用过了");
 });
 await test("参数检查", () => {
-  assert.equal(validate({ lang: "rust", mode: "acm", code: "x", cases: [{ stdin: "" }] }), "不支持的语言");
-  assert.equal(validate({ lang: "python", mode: "acm", code: "x", cases: [{ stdin: "" }], debug: true }), "这门语言在浏览器里调试");
+  assert.equal(validate({ lang: "cobol", mode: "acm", code: "x", cases: [{ stdin: "" }] }), "不支持的语言");
+  assert.equal(validate({ lang: "rust", mode: "acm", code: "x", cases: [{ stdin: "" }] }), null);
+  assert.equal(validate({ lang: "python", mode: "acm", code: "x", cases: [{ stdin: "" }], debug: true }), "这门语言不能在云端调试");
+  assert.equal(validate({ lang: "kotlin", mode: "acm", code: "x", cases: [{ stdin: "" }], debug: true }), "这门语言不能在云端调试");
   assert.equal(validate({ lang: "java", mode: "leetcode", code: "x", cases: [{ input: [] }, { input: [] }], debug: true }), "调试一次只跑一组用例");
   assert.equal(validate({ lang: "java", mode: "leetcode", code: "x", cases: [{ input: [] }] }), "力扣模式要有函数签名");
   assert.equal(validate({ lang: "go", mode: "acm", code: "x", cases: [{ stdin: "1" }] }), null);
@@ -86,7 +96,7 @@ await test("同一个用户一分钟内跑太多次被限流", async () => {
   assert.equal(r.status, 429, JSON.stringify(r.json));
 });
 await test("参数不对返回 400", async () => {
-  const r = await call("/v1/run", { body: JSON.stringify({ lang: "rust", mode: "acm", code: "x", cases: [{ stdin: "" }] }), user: "carol" });
+  const r = await call("/v1/run", { body: JSON.stringify({ lang: "cobol", mode: "acm", code: "x", cases: [{ stdin: "" }] }), user: "carol" });
   assert.equal(r.status, 400);
 });
 

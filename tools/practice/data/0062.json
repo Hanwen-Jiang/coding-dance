@@ -20,7 +20,16 @@
       "typescript": "function uniquePaths(m: number, n: number): number {\n  \n};",
       "java": "class Solution {\n    public int uniquePaths(int m, int n) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int uniquePaths(int m, int n) {\n        \n    }\n};",
-      "go": "func uniquePaths(m int, n int) int {\n    \n}"
+      "go": "func uniquePaths(m int, n int) int {\n    \n}",
+      "c": "int uniquePaths(int m, int n) {\n    \n}",
+      "csharp": "public class Solution {\n    public int UniquePaths(int m, int n) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun uniquePaths(m: Int, n: Int): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func uniquePaths(_ m: Int, _ n: Int) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn unique_paths(m: i32, n: i32) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer} m\n# @param {Integer} n\n# @return {Integer}\ndef unique_paths(m, n)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer $m\n     * @param Integer $n\n     * @return Integer\n     */\n    function uniquePaths($m, $n) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def uniquePaths(m: Int, n: Int): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int uniquePaths(int m, int n) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

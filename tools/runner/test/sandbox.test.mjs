@@ -9,6 +9,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { FirecrackerDriver, LocalDriver, runInFreshContainer } from "../lib/sandbox.mjs";
+import { SOLUTIONS, BAD as MORE_BAD, ACM as MORE_ACM, BROKEN as MORE_BROKEN } from "./languages.mjs";
 
 const require = createRequire(import.meta.url);
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -27,8 +28,11 @@ async function runJob(job) {
 }
 
 const has = (cmd, args = ["--version"]) => { const r = spawnSync(cmd, args, { stdio: "ignore" }); return !r.error && r.status === 0; };
-const LANGS = IMAGE ? ["python", "java", "cpp", "go", "javascript", "typescript"]
-  : ["python", "javascript", "typescript", ...(has("javac", ["-version"]) ? ["java"] : []), ...(has("g++") ? ["cpp"] : []), ...(has("go", ["version"]) ? ["go"] : [])];
+// 后加的九种语言：本机装了哪个就测哪个（镜像里都有）
+const MORE = { c: ["gcc"], csharp: ["dotnet", ["--list-sdks"]], kotlin: ["kotlinc", ["-version"]], swift: ["swiftc"], rust: ["rustc"], ruby: ["ruby"], php: ["php"], scala: ["scalac", ["-version"]], dart: ["dart"] };
+const LANGS = IMAGE ? ["python", "java", "cpp", "go", "javascript", "typescript", ...Object.keys(MORE)]
+  : ["python", "javascript", "typescript", ...(has("javac", ["-version"]) ? ["java"] : []), ...(has("g++") ? ["cpp"] : []), ...(has("go", ["version"]) ? ["go"] : []),
+    ...Object.entries(MORE).filter(([, [cmd, args]]) => has(cmd, args)).map(([l]) => l)];
 const DEBUG = LANGS.filter((l) => ["java", "cpp", "go"].includes(l) && (IMAGE || (l === "cpp" ? has("gdb") : l === "go" ? has("dlv", ["version"]) : true)));
 const only = process.argv.slice(2);
 const want = (lang) => !only.length || only.includes(lang);
@@ -54,10 +58,11 @@ const PROBLEMS = [1, 2, 141, 160, 138, 146, 236, 102, 48, 49, 206, 155];
 console.log(`语言：${LANGS.join(", ")}${IMAGE ? `（镜像 ${IMAGE}）` : "（本机，不隔离）"}`);
 for (const lang of LANGS.filter(want)) {
   console.log(`\n${lang}`);
-  for (const id of PROBLEMS) {
-    const code = official(id, lang);
+  // 没有官方题解的语言用 languages.mjs 里手写的
+  for (const id of SOLUTIONS[lang] ? Object.keys(SOLUTIONS[lang]).map(Number) : PROBLEMS) {
+    const code = SOLUTIONS[lang]?.[id] ?? official(id, lang);
     if (!code) continue;
-    await test(`官方题解 ${id}`, async () => {
+    await test(`${SOLUTIONS[lang] ? "手写题解" : "官方题解"} ${id}`, async () => {
       const P = practice(id);
       const r = await runJob({ lang, mode: "leetcode", code, sig: P.signature, cases: P.cases.map((c) => ({ input: c.input })) });
       assert.equal(r.compileError, undefined, r.compileError);
@@ -155,6 +160,9 @@ const BROKEN = {
   cpp: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) { int x = y;\n        return {0, 1};\n    }\n};\n",
   go: "func twoSum(nums []int, target int) []int {\n\tx := 1\n\treturn []int{0, y}\n}\n",
 };
+Object.assign(BAD, MORE_BAD);
+Object.assign(ACM, MORE_ACM);
+Object.assign(BROKEN, MORE_BROKEN);
 
 for (const lang of LANGS.filter(want)) {
   console.log(`\n${lang}：出错和输出`);

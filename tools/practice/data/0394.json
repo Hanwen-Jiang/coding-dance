@@ -18,7 +18,16 @@
       "typescript": "function decodeString(s: string): string {\n  \n};",
       "java": "class Solution {\n    public String decodeString(String s) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    string decodeString(string s) {\n        \n    }\n};",
-      "go": "func decodeString(s string) string {\n    \n}"
+      "go": "func decodeString(s string) string {\n    \n}",
+      "c": "char* decodeString(char* s) {\n    \n}",
+      "csharp": "public class Solution {\n    public string DecodeString(string s) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun decodeString(s: String): String {\n        \n    }\n}",
+      "swift": "class Solution {\n    func decodeString(_ s: String) -> String {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn decode_string(s: String) -> String {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @return {String}\ndef decode_string(s)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @return String\n     */\n    function decodeString($s) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def decodeString(s: String): String = {\n        \n    }\n}",
+      "dart": "class Solution {\n  String decodeString(String s) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

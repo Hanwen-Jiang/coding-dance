@@ -11,10 +11,11 @@ import { HttpError } from "./github";
 export const LANGS: Record<string, string[]> = {
   python: [".py"], java: [".java"], go: [".go"], cpp: [".cpp", ".cc"], c: [".c"],
   javascript: [".js"], typescript: [".ts"], rust: [".rs"], kotlin: [".kt"], swift: [".swift"], csharp: [".cs"],
+  ruby: [".rb"], php: [".php"], scala: [".scala"], dart: [".dart"],
 };
 const LANG_LABEL: Record<string, string> = {
   python: "Python", java: "Java", go: "Go", cpp: "C++", c: "C", javascript: "JavaScript", typescript: "TypeScript",
-  rust: "Rust", kotlin: "Kotlin", swift: "Swift", csharp: "C#",
+  rust: "Rust", kotlin: "Kotlin", swift: "Swift", csharp: "C#", ruby: "Ruby", php: "PHP", scala: "Scala", dart: "Dart",
 };
 export const STATUSES: Status[] = ["已通过", "曾通过", "尝试过", "未开始"];
 export const RESULTS: AttemptResult[] = ["通过", "答案错误", "超时", "运行出错", "思路不成立"];

@@ -4,8 +4,12 @@ import { parseAcmOutput } from "./acm";
 import { comparePracticeOutput } from "./compare";
 import type { PracticeCaseResult, PracticeLanguage, PracticeRunRequest, PracticeRunResult, PracticeTrace } from "./types";
 
-export const REMOTE_LANGUAGES: PracticeLanguage[] = ["java", "cpp", "go"];
+export const REMOTE_LANGUAGES: PracticeLanguage[] = ["java", "cpp", "go", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
 export const isRemote = (language: PracticeLanguage) => REMOTE_LANGUAGES.includes(language);
+/** 云端能调试的（真调试器：JDI、gdb、Delve）；其余云端语言只能运行 */
+export const REMOTE_DEBUG_LANGUAGES: PracticeLanguage[] = ["java", "cpp", "go"];
+/** 运行器报了支持哪些语言（/v1/status 的 langs），这门语言不在里面：节点还没更新到装了它的镜像 */
+export const remoteLacks = (status: RemoteStatus | null | undefined, language: PracticeLanguage) => !!status?.available && !!status.langs && !status.langs.includes(language);
 
 interface RemoteCase { index: number; actual: unknown; stdout: string; stderr?: string; error?: string; duration: number; trace?: PracticeTrace }
 interface RemoteReply { results?: RemoteCase[]; compileError?: string; compileMs?: number; runMs?: number; queueMs?: number; error?: string }
@@ -27,6 +31,10 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
   if (!request.cases.length) throw new Error("请先添加测试用例");
   if (request.code.length > 100000) throw new Error("代码长度不能超过 100 KB");
   if (request.cases.length > 100) throw new Error("一次最多运行 100 个测试用例");
+  const unavailable = request.mode === "leetcode" ? request.problem.leetcodeUnavailable?.[request.language] : undefined;
+  if (unavailable) throw new Error(unavailable);
+  if (request.debug && !REMOTE_DEBUG_LANGUAGES.includes(request.language)) throw new Error("这门语言暂时不能调试（云端只有 Java、C++、Go 接了调试器），可以先运行，用打印看中间结果");
+  if (remoteLacks(await remoteStatus(), request.language)) throw new Error("云端运行器还没装上这门语言（节点正在更新），暂时不能运行，稍后再试");
   const started = performance.now();
   options.onStatus?.(request.debug ? "正在云端调试：编译、在调试器里一步步记下来…" : "正在云端编译运行…");
   const body = {

@@ -18,7 +18,16 @@
       "typescript": "function canJump(nums: number[]): boolean {\n  \n};",
       "java": "class Solution {\n    public boolean canJump(int[] nums) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    bool canJump(vector<int>& nums) {\n        \n    }\n};",
-      "go": "func canJump(nums []int) bool {\n    \n}"
+      "go": "func canJump(nums []int) bool {\n    \n}",
+      "c": "bool canJump(int* nums, int numsSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public bool CanJump(int[] nums) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun canJump(nums: IntArray): Boolean {\n        \n    }\n}",
+      "swift": "class Solution {\n    func canJump(_ nums: [Int]) -> Bool {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn can_jump(nums: Vec<i32>) -> bool {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @return {Boolean}\ndef can_jump(nums)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @return Boolean\n     */\n    function canJump($nums) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def canJump(nums: Array[Int]): Boolean = {\n        \n    }\n}",
+      "dart": "class Solution {\n  bool canJump(List<int> nums) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

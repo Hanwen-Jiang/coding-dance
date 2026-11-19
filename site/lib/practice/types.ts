@@ -1,5 +1,11 @@
-/** python / javascript / typescript 在浏览器里运行；java / cpp / go 交给云端的运行器（tools/runner，经 /api/run） */
-export type PracticeLanguage = "python" | "javascript" | "typescript" | "java" | "cpp" | "go";
+/**
+ * python / javascript / typescript 在浏览器里运行；其余交给云端的运行器（tools/runner，经 /api/run）：
+ * java / cpp / go 还能用真调试器调试，c / csharp / kotlin / swift / rust / ruby / php / scala / dart 只能运行
+ */
+export type PracticeLanguage = "python" | "javascript" | "typescript" | "java" | "cpp" | "go"
+  | "c" | "csharp" | "kotlin" | "swift" | "rust" | "ruby" | "php" | "scala" | "dart";
+/** 练习区所有语言，顺序就是语言菜单里的顺序 */
+export const PRACTICE_LANGUAGES: PracticeLanguage[] = ["python", "javascript", "typescript", "java", "cpp", "go", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
 /** 编辑器补全：完整（关键字、内置函数、库函数、类型都提示）/ 无提示（只补全代码里已有的变量和函数） */
 export type PracticeHints = "full" | "none";
 export type PracticeMode = "leetcode" | "acm";
@@ -36,6 +42,8 @@ export interface PracticeProblem {
   signature: PracticeSignature;
   parameterNames: string[];
   starters: Record<PracticeMode, Record<PracticeLanguage, string>>;
+  /** 力扣模式做不了的语言和原因（Rust 的几道链表题，Box 表示不了成环、共用节点）；ACM 模式照常 */
+  leetcodeUnavailable?: Partial<Record<PracticeLanguage, string>>;
   cases: PracticeCase[];
   examples: PracticeCase[];
   /** FNV-1a of the previous generated ACM starters; only untouched defaults are migrated. */

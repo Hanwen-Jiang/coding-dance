@@ -36,7 +36,10 @@ export const CONFIG = {
   jobMs: num(env.RUNNER_JOB_MS, 90000),
   version: env.RUNNER_VERSION || "dev",
 };
-const LANGS = ["python", "java", "cpp", "go", "javascript", "typescript"], DEBUG_LANGS = ["java", "cpp", "go"];
+// 和 sandbox/programs.js 的 LANG_IDS 一样（部署时只复制 server.mjs 和 lib/，所以写在这里；server.test.mjs 核对两边一致）。
+// 网站按 /v1/status 里的 langs 判断哪些语言能在云端跑：节点还没更新到新镜像时，新语言显示成暂时不能用
+export const LANGS = ["python", "java", "cpp", "go", "javascript", "typescript", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
+export const DEBUG_LANGS = ["java", "cpp", "go"];
 const MAX_BODY = 2 << 20;
 
 const log = (o) => console.log(JSON.stringify({ t: new Date().toISOString(), ...o }));
@@ -50,7 +53,7 @@ export function validate(job) {
   if (job.code.length > 100000) return "代码不能超过 100 KB";
   if (!Array.isArray(job.cases) || !job.cases.length) return "至少要有一组用例";
   if (job.cases.length > 100) return "一次最多 100 组用例";
-  if (job.debug && !DEBUG_LANGS.includes(job.lang)) return "这门语言在浏览器里调试";
+  if (job.debug && !DEBUG_LANGS.includes(job.lang)) return "这门语言不能在云端调试";
   if (job.debug && job.cases.length !== 1) return "调试一次只跑一组用例";
   if (job.mode === "leetcode" && (!job.sig || typeof job.sig !== "object")) return "力扣模式要有函数签名";
   for (const c of job.cases) {

@@ -18,7 +18,16 @@
       "typescript": "function lengthOfLongestSubstring(s: string): number {\n  \n};",
       "java": "class Solution {\n    public int lengthOfLongestSubstring(String s) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int lengthOfLongestSubstring(string s) {\n        \n    }\n};",
-      "go": "func lengthOfLongestSubstring(s string) int {\n    \n}"
+      "go": "func lengthOfLongestSubstring(s string) int {\n    \n}",
+      "c": "int lengthOfLongestSubstring(char* s) {\n    \n}",
+      "csharp": "public class Solution {\n    public int LengthOfLongestSubstring(string s) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun lengthOfLongestSubstring(s: String): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func lengthOfLongestSubstring(_ s: String) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn length_of_longest_substring(s: String) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @return {Integer}\ndef length_of_longest_substring(s)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @return Integer\n     */\n    function lengthOfLongestSubstring($s) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def lengthOfLongestSubstring(s: String): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int lengthOfLongestSubstring(String s) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

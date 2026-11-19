@@ -18,7 +18,16 @@
       "typescript": "function dailyTemperatures(temperatures: number[]): number[] {\n  \n};",
       "java": "class Solution {\n    public int[] dailyTemperatures(int[] temperatures) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<int> dailyTemperatures(vector<int>& temperatures) {\n        \n    }\n};",
-      "go": "func dailyTemperatures(temperatures []int) []int {\n    \n}"
+      "go": "func dailyTemperatures(temperatures []int) []int {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nint* dailyTemperatures(int* temperatures, int temperaturesSize, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int[] DailyTemperatures(int[] temperatures) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun dailyTemperatures(temperatures: IntArray): IntArray {\n        \n    }\n}",
+      "swift": "class Solution {\n    func dailyTemperatures(_ temperatures: [Int]) -> [Int] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn daily_temperatures(temperatures: Vec<i32>) -> Vec<i32> {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} temperatures\n# @return {Integer[]}\ndef daily_temperatures(temperatures)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $temperatures\n     * @return Integer[]\n     */\n    function dailyTemperatures($temperatures) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def dailyTemperatures(temperatures: Array[Int]): Array[Int] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<int> dailyTemperatures(List<int> temperatures) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

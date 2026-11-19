@@ -19,7 +19,16 @@
       "typescript": "function threeSum(nums: number[]): number[][] {\n  \n};",
       "java": "class Solution {\n    public List<List<Integer>> threeSum(int[] nums) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    vector<vector<int>> threeSum(vector<int>& nums) {\n        \n    }\n};",
-      "go": "func threeSum(nums []int) [][]int {\n    \n}"
+      "go": "func threeSum(nums []int) [][]int {\n    \n}",
+      "c": "/**\n * Return an array of arrays of size *returnSize.\n * The sizes of the arrays are returned as *returnColumnSizes array.\n * Note: Both returned array and *columnSizes array must be malloced, assume caller calls free().\n */\nint** threeSum(int* nums, int numsSize, int* returnSize, int** returnColumnSizes) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<IList<int>> ThreeSum(int[] nums) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun threeSum(nums: IntArray): List<List<Int>> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func threeSum(_ nums: [Int]) -> [[Int]] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn three_sum(nums: Vec<i32>) -> Vec<Vec<i32>> {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @return {Integer[][]}\ndef three_sum(nums)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @return Integer[][]\n     */\n    function threeSum($nums) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def threeSum(nums: Array[Int]): List[List[Int]] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<List<int>> threeSum(List<int> nums) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -27,7 +36,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

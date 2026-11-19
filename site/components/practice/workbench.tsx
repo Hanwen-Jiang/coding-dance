@@ -17,7 +17,7 @@ import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
 import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
-import { isRemote, remoteStatus, type RemoteStatus } from "@/lib/practice/remote";
+import { isRemote, remoteLacks, remoteStatus, REMOTE_DEBUG_LANGUAGES, type RemoteStatus } from "@/lib/practice/remote";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
 import type { RunScope, SolutionLabel } from "@/lib/practice/record";
@@ -39,7 +39,24 @@ const LANGUAGES: { id: PracticeLanguage; label: string; remote?: boolean }[] = [
   { id: "java", label: "Java", remote: true },
   { id: "cpp", label: "C++", remote: true },
   { id: "go", label: "Go", remote: true },
+  { id: "c", label: "C", remote: true },
+  { id: "csharp", label: "C#", remote: true },
+  { id: "kotlin", label: "Kotlin", remote: true },
+  { id: "swift", label: "Swift", remote: true },
+  { id: "rust", label: "Rust", remote: true },
+  { id: "ruby", label: "Ruby", remote: true },
+  { id: "php", label: "PHP", remote: true },
+  { id: "scala", label: "Scala", remote: true },
+  { id: "dart", label: "Dart", remote: true },
 ];
+/** 云端语言在编辑器下面的说明：这道题力扣模式做不了、运行器不在线、节点还没装上这门语言、能不能调试 */
+function cloudNote(label: string, language: PracticeLanguage, mode: PracticeMode, problem: PracticeProblem, cloud: RemoteStatus | null) {
+  const no = mode === "leetcode" ? problem.leetcodeUnavailable?.[language] : undefined;
+  if (no) return `${no}。`;
+  if (cloud && !cloud.available) return `${label} 在云端编译运行，${cloud.reason || "云端运行器暂时不在线"}。`;
+  if (remoteLacks(cloud, language)) return `${label} 在云端编译运行，云端运行器还没装上它（节点更新后就能用），暂时不能运行。`;
+  return `${label} 在云端编译运行（要登录）${REMOTE_DEBUG_LANGUAGES.includes(language) ? "，调试用真调试器一步步记下来" : "；这门语言暂时不能调试"}。`;
+}
 type TestTab = "examples" | "custom" | "results" | "debug";
 /** 编辑器提示程度，存在浏览器里，换题、换语言都不变 */
 const HINT_LEVELS: { id: PracticeHints; label: string; desc: string }[] = [
@@ -66,7 +83,7 @@ function readLevel(): TestLevel {
 type RunReport = { result: PracticeRunResult; cases: PracticeCase[]; code: string; unchecked: boolean; scope: RunScope };
 const SCOPE_NAME: Record<RunScope, string> = { full: "全量测试", quick: "精简测试", sample: "运行示例", custom: "自定义用例" };
 /** 标签栏上的文件名后缀 */
-const FILE_EXT: Record<PracticeLanguage, string> = { python: "py", javascript: "js", typescript: "ts", java: "java", cpp: "cpp", go: "go" };
+const FILE_EXT: Record<PracticeLanguage, string> = { python: "py", javascript: "js", typescript: "ts", java: "java", cpp: "cpp", go: "go", c: "c", csharp: "cs", kotlin: "kt", swift: "swift", rust: "rs", ruby: "rb", php: "php", scala: "scala", dart: "dart" };
 
 const quickCasesOf = (cases: PracticeCase[]) => {
   const quick = cases.filter((c) => c.quick);
@@ -818,9 +835,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       <CodeEditor code={code} debugLine={debugLine} hints={hints} language={language} onBreakpoints={setBreakpoints} onChange={changeCode} ready={ready} wrap={wrap} />
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="practice-notice text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
-      {isRemote(language) && <p className="practice-notice text-muted" data-testid="practice-cloud-note">{cloud && !cloud.available
-        ? `${LANGUAGES.find((entry) => entry.id === language)?.label} 在云端编译运行，${cloud.reason || "云端运行器暂时不在线"}。`
-        : `${LANGUAGES.find((entry) => entry.id === language)?.label} 在云端编译运行（要登录），调试用真调试器一步步记下来。`}</p>}
+      {isRemote(language) && <p className="practice-notice text-muted" data-testid="practice-cloud-note">{cloudNote(LANGUAGES.find((entry) => entry.id === language)?.label ?? language, language, mode, problem, cloud)}</p>}
       {/* 控制台：从编辑器底部弹出来的子窗口，拖上沿调高度，✕ 或者状态栏上的「控制台」整个收起 */}
       {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
       {panelOpen && <div className="practice-console" data-testid="practice-test-panel">

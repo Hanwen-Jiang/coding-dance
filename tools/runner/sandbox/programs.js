@@ -14,8 +14,18 @@ const L = {
   cpp: require(path.join(JUDGE, "langs/cpp")),
   go: require(path.join(JUDGE, "langs/go")),
   ...require(path.join(JUDGE, "langs/javascript")),
+  c: require(path.join(JUDGE, "langs/c")),
+  csharp: require(path.join(JUDGE, "langs/csharp")),
+  kotlin: require(path.join(JUDGE, "langs/kotlin")),
+  scala: require(path.join(JUDGE, "langs/scala")),
+  swift: require(path.join(JUDGE, "langs/swift")),
+  rust: require(path.join(JUDGE, "langs/rust")),
+  dart: require(path.join(JUDGE, "langs/dart")),
+  ...require(path.join(JUDGE, "langs/scripting")),
 };
-const LANG_IDS = ["python", "java", "cpp", "go", "javascript", "typescript"];
+const { fnName, methodName } = require(path.join(JUDGE, "langs/names"));
+/** 运行器支持的语言（/v1/status 报给网站）；后九种只在云端运行，没有官方题解 */
+const LANG_IDS = ["python", "java", "cpp", "go", "javascript", "typescript", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
 
 const lines = (s) => s.split("\n").length;
 const newlines = (s) => s.split("\n").length - 1;
@@ -330,6 +340,434 @@ ${cases.join("\n")}
   return { files, user: "sol.go", off, n, args: (from, tok) => [String(from), tok] };
 }
 
+// —— C ——
+function cLang(job, sig) {
+  const P = L.c.parts, code = clean(job.code), random = usesType(sig, "RandomList");
+  const head = P.head + (random ? P.NODE_HEAD : "") + "\n";
+  const off = newlines(head), n = lines(code);
+  const cases = job.cases.map((c, k) => `static void jCase${k}(void) {\n    jReset();\n    ${P.caseBody(sig, c.input).join("\n    ")}\n}`);
+  const main = `
+${P.prelude}${random ? P.NODE : ""}
+${cases.join("\n\n")}
+
+int main(int argc, char **argv) {
+    int from = argc > 1 ? atoi(argv[1]) : 0;
+    jTok = argc > 2 ? argv[2] : "";
+    for (int k = from; k < ${job.cases.length}; k++) {
+        char s[32];
+        jCur = k;
+        snprintf(s, sizeof s, "S:%d", k);
+        jMark(s);
+        switch (k) {
+${job.cases.map((_, k) => `            case ${k}: jCase${k}(); break;`).join("\n")}
+        }
+    }
+    fflush(stdout);
+    return 0;
+}
+`;
+  return { files: { "main.c": head + code + "\n" + main }, user: "main.c", off, n, args: (from, tok) => [String(from), tok] };
+}
+
+// —— C# ——（用户代码单独一个文件 sol.cs，行号不用挪）
+function csharp(job, sig) {
+  const P = L.csharp.parts, code = clean(job.code), n = lines(code);
+  const emit = (json) => `Emit(${json});`;
+  const cases = job.cases.map((c, k) => `    static void C${k}() {\n        JH.Reset();\n        ${P.caseBody(sig, c.input, emit).join("\n        ")}\n    }`);
+  const main = `${P.prelude}${usesType(sig, "RandomList") ? P.NODE : ""}
+public static class JudgeMain {
+    static string tok = "";
+    static int cur;
+    const int N = ${n};
+
+    static void Mark(string s) {
+        Console.Out.Flush();
+        Console.Out.Write("\\u0001" + tok + ":" + s + "\\u0002");
+        Console.Out.Flush();
+    }
+
+    static void Emit(string json) { Mark("R:" + cur + ":" + json); }
+
+    static string Where(Exception e) {
+        var frames = new System.Diagnostics.StackTrace(e, true).GetFrames();
+        foreach (var f in frames) {
+            var file = f.GetFileName();
+            int l = f.GetFileLineNumber();
+            if (file != null && file.EndsWith("sol.cs") && l >= 1 && l <= N) return "（第 " + l + " 行）";
+        }
+        return "";
+    }
+
+${cases.join("\n\n")}
+
+    static void Run(int from) {
+        for (int k = from; k < ${job.cases.length}; k++) {
+            cur = k;
+            Mark("S:" + k);
+            try {
+                switch (k) {
+${job.cases.map((_, k) => `                    case ${k}: C${k}(); break;`).join("\n")}
+                }
+            } catch (Exception e) {
+                Emit("{\\"__error\\":" + JH.Q(e.GetType().Name + ": " + e.Message + Where(e)) + "}");
+            }
+        }
+    }
+
+    public static void Main(string[] args) {
+        Console.OutputEncoding = new UTF8Encoding(false);
+        int from = int.Parse(args[0]);
+        tok = args[1];
+        // 递归深的题解要大一点的栈
+        var t = new System.Threading.Thread(() => Run(from), 256 << 20);
+        t.Start();
+        t.Join();
+        Console.Out.Flush();
+    }
+}
+`;
+  return { files: { "globals.cs": P.GLOBALS, "sol.cs": code + "\n", "judge.cs": main }, main: "JudgeMain", user: "sol.cs", harness: ["judge.cs", "globals.cs"], off: 0, n, args: (from, tok) => [String(from), tok] };
+}
+
+/** package 那一行换成空行（文件都在同一个默认包里），行号不变 */
+const noPackage = (code) => code.split("\n").map((l) => (/^\s*package\s+[\w.]+\s*;?\s*$/.test(l) ? "" : l)).join("\n");
+
+// —— Kotlin ——（用户代码单独一个文件 sol.kt）
+function kotlin(job, sig) {
+  const P = L.kotlin.parts, code = noPackage(clean(job.code)), n = lines(code);
+  const emit = (json) => `emit(${json})`;
+  const cases = job.cases.map((c, k) => `    fun c${k}() {\n        JH.reset()\n        ${P.caseBody(sig, c.input, emit).join("\n        ")}\n    }`);
+  const main = `object JudgeMain {
+    var tok = ""
+    var cur = 0
+    const val N = ${n}
+
+    fun mark(s: String) {
+        System.out.flush()
+        System.out.print("\\u0001" + tok + ":" + s + "\\u0002")
+        System.out.flush()
+    }
+
+    fun emit(json: String) = mark("R:" + cur + ":" + json)
+
+    fun where(e: Throwable): String {
+        for (f in e.stackTrace) if (f.fileName == "sol.kt" && f.lineNumber in 1..N) return "（第 " + f.lineNumber + " 行）"
+        return ""
+    }
+
+${cases.join("\n\n")}
+
+    @JvmStatic
+    fun main(args: Array<String>) {
+        val from = args[0].toInt()
+        tok = args[1]
+        for (k in from until ${job.cases.length}) {
+            cur = k
+            mark("S:" + k)
+            try {
+                when (k) {
+${job.cases.map((_, k) => `                    ${k} -> c${k}()`).join("\n")}
+                }
+            } catch (e: StackOverflowError) {
+                emit("{\\"__error\\":" + JH.q("java.lang.StackOverflowError：递归太深" + where(e)) + "}")
+            } catch (e: Throwable) {
+                emit("{\\"__error\\":" + JH.q(e.toString() + where(e)) + "}")
+            }
+        }
+        System.out.flush()
+    }
+}
+`;
+  return { files: { "sol.kt": code + "\n", "prelude.kt": P.prelude + (usesType(sig, "RandomList") ? P.NODE : ""), "main.kt": main }, main: "JudgeMain", user: "sol.kt", harness: ["prelude.kt", "main.kt"], off: 0, n, args: (from, tok) => [String(from), tok] };
+}
+
+// —— Scala ——（用户代码单独一个文件 sol.scala）
+function scala(job, sig) {
+  const P = L.scala.parts, code = noPackage(clean(job.code)), n = lines(code);
+  const emit = (json) => `emit(${json})`;
+  const cases = job.cases.map((c, k) => `  def c${k}(): Unit = {\n    JH.reset()\n    ${P.caseBody(sig, c.input, emit).join("\n    ")}\n  }`);
+  const main = `object JudgeMain {
+  var tok = ""
+  var cur = 0
+  val N = ${n}
+
+  def mark(s: String): Unit = {
+    Console.out.flush()
+    System.out.flush()
+    System.out.print("\\u0001" + tok + ":" + s + "\\u0002")
+    System.out.flush()
+  }
+
+  def emit(json: String): Unit = mark("R:" + cur + ":" + json)
+
+  def where(e: Throwable): String = {
+    for (f <- e.getStackTrace) if (f.getFileName == "sol.scala" && f.getLineNumber >= 1 && f.getLineNumber <= N) return "（第 " + f.getLineNumber + " 行）"
+    ""
+  }
+
+${cases.join("\n\n")}
+
+  def main(args: Array[String]): Unit = {
+    val from = args(0).toInt
+    tok = args(1)
+    for (k <- from until ${job.cases.length}) {
+      cur = k
+      mark("S:" + k)
+      try {
+        k match {
+${job.cases.map((_, k) => `          case ${k} => c${k}()`).join("\n")}
+          case _ =>
+        }
+      } catch {
+        case e: StackOverflowError => emit("{\\"__error\\":" + JH.q("java.lang.StackOverflowError：递归太深" + where(e)) + "}")
+        case e: Throwable => emit("{\\"__error\\":" + JH.q(e.toString + where(e)) + "}")
+      }
+    }
+    Console.out.flush()
+    System.out.flush()
+  }
+}
+`;
+  return { files: { "sol.scala": code + "\n", "prelude.scala": P.prelude + (usesType(sig, "RandomList") ? P.NODE : ""), "main.scala": main }, main: "JudgeMain", user: "sol.scala", harness: ["prelude.scala", "main.scala"], off: 0, n, args: (from, tok) => [String(from), tok] };
+}
+
+// —— Swift ——（用户代码单独一个文件 sol.swift，前面加一行 import Foundation）
+function swift(job, sig) {
+  const P = L.swift.parts, code = clean(job.code);
+  const head = "import Foundation\n", off = newlines(head), n = lines(code);
+  const cases = job.cases.map((c, k) => `func jCase${k}() -> String {\n    jReset()\n    ${P.caseBody(sig, c.input).join("\n    ")}\n}`);
+  const main = `#if canImport(Glibc)
+import Glibc
+#endif
+
+var jTok = ""
+var jCur = 0
+
+func jMark(_ s: String) {
+    fflush(stdout)
+    let bytes = Array(("\\u{01}" + jTok + ":" + s + "\\u{02}").utf8)
+    bytes.withUnsafeBytes { p in
+        var o = 0
+        while o < p.count {
+            let w = write(1, p.baseAddress! + o, p.count - o)
+            if w <= 0 { break }
+            o += w
+        }
+    }
+}
+
+${cases.join("\n\n")}
+
+let jCases: [() -> String] = [${job.cases.map((_, k) => `jCase${k}`).join(", ")}]
+let jArgs = CommandLine.arguments
+let jFrom = Int(jArgs[1]) ?? 0
+jTok = jArgs[2]
+for k in jFrom..<jCases.count {
+    jCur = k
+    jMark("S:\\(k)")
+    let r = jCases[k]()
+    jMark("R:\\(k):" + r)
+}
+fflush(stdout)
+`;
+  return { files: { "sol.swift": head + code + "\n", "prelude.swift": P.prelude + (usesType(sig, "RandomList") ? P.NODE : ""), "main.swift": main }, user: "sol.swift", harness: ["prelude.swift", "main.swift"], off, n, args: (from, tok) => [String(from), tok] };
+}
+
+// —— Rust ——（用户代码在最前面，行号不用挪；判题部分接在后面）
+function rust(job, sig) {
+  const P = L.rust.parts, code = clean(job.code), n = lines(code);
+  const bad = P.UNSUPPORTED.find((t) => usesType(sig, t));
+  if (bad) throw new Error("力扣没有这道题的 Rust 版本（链表要成环或者共用节点，Option<Box<ListNode>> 表示不了），可以切到 ACM 模式用 Rust 写");
+  const cases = job.cases.map((c, k) => `#[allow(unused_mut, unused_variables)]\nfn __jc${k}() -> String {\n    __j::reset();\n    ${P.caseBody(sig, c.input).join("\n    ")}\n}`);
+  const main = `
+${P.prelude}
+${cases.join("\n\n")}
+
+fn __jmark(tok: &str, s: &str) {
+    use std::io::Write;
+    let out = std::io::stdout();
+    let mut o = out.lock();
+    let _ = write!(o, "\\x01{}:{}\\x02", tok, s);
+    let _ = o.flush();
+}
+
+fn __jrun(from: usize, tok: String) {
+    let cases: Vec<fn() -> String> = vec![${job.cases.map((_, k) => `__jc${k}`).join(", ")}];
+    for k in from..cases.len() {
+        __jmark(&tok, &format!("S:{}", k));
+        let f = cases[k];
+        let json = match std::panic::catch_unwind(f) {
+            Ok(s) => s,
+            Err(_) => format!("{{\\"__error\\":{}}}", __j::q(&__j::PANIC.with(|p| p.borrow().clone()))),
+        };
+        __jmark(&tok, &format!("R:{}:{}", k, json));
+    }
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    let from: usize = args[1].parse().unwrap_or(0);
+    let tok = args[2].clone();
+    std::panic::set_hook(Box::new(|info| {
+        let p = info.payload();
+        let msg = if let Some(s) = p.downcast_ref::<&str>() { s.to_string() } else if let Some(s) = p.downcast_ref::<String>() { s.clone() } else { String::from("panic") };
+        let at = match info.location() { Some(l) if l.file().ends_with("main.rs") && l.line() >= 1 && l.line() <= ${n} => format!("（第 {} 行）", l.line()), _ => String::new() };
+        __j::PANIC.with(|x| *x.borrow_mut() = format!("panicked: {}{}", msg, at));
+    }));
+    // 递归深的题解要大一点的栈
+    let h = std::thread::Builder::new().stack_size(256 << 20).spawn(move || __jrun(from, tok)).unwrap();
+    let _ = h.join();
+}
+`;
+  return { files: { "main.rs": code + "\n" + main }, user: "main.rs", off: 0, n, args: (from, tok) => [String(from), tok] };
+}
+
+/** 函数名、方法名在这门语言里叫什么（Ruby、PHP 的运行时用） */
+function entryNames(lang, sig) {
+  if (sig.kind === "design") return Object.fromEntries(Object.keys(sig.methods).map((m) => [m, methodName(lang, sig.cls, m)]));
+  return { __fn: fnName(lang, sig.fn) };
+}
+
+// —— Ruby ——（判题部分在前面，用户代码挪了 off 行）
+function ruby(job, sig) {
+  const code = clean(job.code);
+  const head = L.ruby.parts.prelude + "\n";
+  const off = newlines(head), n = lines(code);
+  const main = `
+$__j_tok = ARGV[2]
+def __j_mark(s)
+  $stdout.flush
+  $stdout.write("\\x01" + $__j_tok + ":" + s + "\\x02")
+  $stdout.flush
+end
+
+def __j_where(e)
+  (e.backtrace_locations || []).each do |l|
+    return "（第 #{l.lineno - ${off}} 行）" if l.path.to_s.end_with?('main.rb') && l.lineno > ${off} && l.lineno <= ${off + n}
+  end
+  ''
+end
+
+__j_spec = JSON.parse(File.read(ARGV[0], encoding: 'UTF-8'))
+__j_names = JSON.parse(${JSON.stringify(JSON.stringify(entryNames("ruby", sig)))})
+__j_from = ARGV[1].to_i
+# 递归深的题解要大一点的栈（RUBY_THREAD_VM_STACK_SIZE 由运行器设）
+Thread.new do
+  (__j_from...__j_spec['cases'].length).each do |k|
+    __j_mark("S:#{k}")
+    begin
+      res = JSON.generate(JudgeH.run_case(__j_spec['sig'], __j_spec['cases'][k], __j_names))
+    rescue SystemStackError => e
+      res = JSON.generate({ '__error' => 'SystemStackError: 递归太深' + __j_where(e) })
+    rescue Exception => e
+      res = JSON.generate({ '__error' => "#{e.class}: #{e.message}" + __j_where(e) })
+    end
+    __j_mark("R:#{k}:#{res}")
+  end
+end.join
+`;
+  return {
+    files: { "main.rb": head + code + "\n" + main, "spec.json": JSON.stringify({ sig: flatSig(sig), cases: job.cases.map((c) => c.input) }) },
+    user: "main.rb", off, n, args: (from, tok) => ["main.rb", "spec.json", String(from), tok],
+  };
+}
+
+/** PHP：用户代码开头的 <?php 换成空行 */
+const noPhpTag = (code) => code.replace(/^\s*<\?php\b[ \t]*/, "");
+
+// —— PHP ——（判题部分在前面，用户代码挪了 off 行）
+function php(job, sig) {
+  const code = noPhpTag(clean(job.code)).replace(/\?>\s*$/, "");
+  const head = "<?php\n" + L.php.parts.prelude + "\n";
+  const off = newlines(head), n = lines(code);
+  const main = `
+function __jmark($s) {
+    global $__jtok;
+    echo "\\x01" . $__jtok . ":" . $s . "\\x02";
+    flush();
+}
+
+function __jwhere($e) {
+    $frames = array_merge([['file' => $e->getFile(), 'line' => $e->getLine()]], $e->getTrace());
+    foreach ($frames as $f) {
+        if (isset($f['file'], $f['line']) && substr($f['file'], -8) === 'main.php' && $f['line'] > ${off} && $f['line'] <= ${off + n}) return '（第 ' . ($f['line'] - ${off}) . ' 行）';
+    }
+    return '';
+}
+
+$__jspec = json_decode(file_get_contents($argv[1]), true);
+$__jnames = json_decode(${JSON.stringify(JSON.stringify(entryNames("php", sig))).replace(/\$/g, "\\$")}, true);
+$__jtok = $argv[3];
+for ($k = (int)$argv[2]; $k < count($__jspec['cases']); $k++) {
+    __jmark("S:" . $k);
+    try {
+        $res = JudgeH::json(JudgeH::runCase($__jspec['sig'], $__jspec['cases'][$k], $__jnames));
+        if ($res === false) $res = JudgeH::json(['__error' => '返回值没法转成 JSON：' . json_last_error_msg()]);
+    } catch (\\Throwable $e) {
+        $res = JudgeH::json(['__error' => get_class($e) . ': ' . $e->getMessage() . __jwhere($e)]);
+    }
+    __jmark("R:" . $k . ":" . $res);
+}
+`;
+  return {
+    files: { "main.php": head + code + "\n" + main, "spec.json": JSON.stringify({ sig: flatSig(sig), cases: job.cases.map((c) => c.input) }) },
+    user: "main.php", off, n, args: (from, tok) => ["main.php", "spec.json", String(from), tok],
+  };
+}
+
+/** Dart：用户写的 import 挪到文件开头（Dart 要求 import 在最前面），原位置留空行，行号不变 */
+function dartSplit(code) {
+  const imports = [], body = [];
+  for (const line of code.split("\n")) {
+    if (/^\s*(import|export|library)\s+['"][^'"]+['"][^;]*;\s*$/.test(line) || /^\s*library\s+[\w.]+\s*;\s*$/.test(line)) { imports.push(line.trim()); body.push(""); }
+    else body.push(line);
+  }
+  return { imports, body: body.join("\n") };
+}
+
+// —— Dart ——（import 在前面，用户代码挪了 off 行）
+function dart(job, sig) {
+  const P = L.dart.parts, { imports, body } = dartSplit(clean(job.code));
+  const head = [...P.IMPORTS, ...imports.filter((l) => !/^library\b/.test(l))].join("\n") + "\n";
+  const off = newlines(head), n = lines(body);
+  const cases = job.cases.map((c, k) => `String jCase${k}() {\n  JH.reset();\n  ${P.caseBody(sig, c.input).join("\n  ")}\n}`);
+  const main = `
+${P.prelude}${usesType(sig, "RandomList") ? P.NODE : ""}
+var jTok = '';
+
+String jWhere(StackTrace st) {
+  for (final m in RegExp(r'main\\.dart:(\\d+)').allMatches(st.toString())) {
+    final l = int.parse(m.group(1)!) - ${off};
+    if (l >= 1 && l <= ${n}) return '（第 ' + l.toString() + ' 行）';
+  }
+  return '';
+}
+
+${cases.join("\n\n")}
+
+Future<void> main(List<String> args) async {
+  final from = int.parse(args[0]);
+  jTok = args[1];
+  final cases = <String Function()>[${job.cases.map((_, k) => `jCase${k}`).join(", ")}];
+  for (var k = from; k < cases.length; k++) {
+    jio.stdout.write('\\x01' + jTok + ':S:' + k.toString() + '\\x02');
+    await jio.stdout.flush();
+    String res;
+    try {
+      res = cases[k]();
+    } on StackOverflowError catch (_, st) {
+      res = '{"__error":' + JH.q('StackOverflowError：递归太深' + jWhere(st)) + '}';
+    } catch (e, st) {
+      res = '{"__error":' + JH.q(e.toString() + jWhere(st)) + '}';
+    }
+    jio.stdout.write('\\x01' + jTok + ':R:' + k.toString() + ':' + res + '\\x02');
+    await jio.stdout.flush();
+  }
+}
+`;
+  return { files: { "main.dart": head + body + "\n" + main }, user: "main.dart", off, n, args: (from, tok) => [String(from), tok] };
+}
+
 /** 力扣模式的程序 */
 function leetcodeProgram(job) {
   const sig = sigOf(job.sig, job.lang);
@@ -340,6 +778,15 @@ function leetcodeProgram(job) {
     case "java": return java(job, sig);
     case "cpp": return cpp(job, sig);
     case "go": return go(job, sig);
+    case "c": return cLang(job, sig);
+    case "csharp": return csharp(job, sig);
+    case "kotlin": return kotlin(job, sig);
+    case "scala": return scala(job, sig);
+    case "swift": return swift(job, sig);
+    case "rust": return rust(job, sig);
+    case "ruby": return ruby(job, sig);
+    case "php": return php(job, sig);
+    case "dart": return dart(job, sig);
   }
   throw new Error("不支持的语言：" + job.lang);
 }
@@ -360,8 +807,35 @@ function acmProgram(job) {
     }
     case "cpp": return { files: { "main.cpp": code }, user: "main.cpp", off: 0, n, args: () => [] };
     case "go": return { files: { "sol.go": code }, user: "sol.go", off: 0, n, args: () => [] };
+    case "c": return { files: { "main.c": code }, user: "main.c", off: 0, n, args: () => [] };
+    case "csharp": return { files: { "globals.cs": L.csharp.parts.GLOBALS, "main.cs": code }, user: "main.cs", harness: ["globals.cs"], off: 0, n, args: () => [] };
+    case "kotlin": {
+      // 顶层的 fun main 编进 MainKt；写成 object 的就用那个 object
+      const obj = code.match(/^\s*object\s+(\w+)/m);
+      return { files: { "main.kt": noPackage(code) }, main: /^\s*fun\s+main\s*\(/m.test(code) || !obj ? "MainKt" : obj[1], user: "main.kt", off: 0, n, args: () => [] };
+    }
+    case "scala": return { files: { "main.scala": noPackage(code) }, main: scalaMain(code), user: "main.scala", off: 0, n, args: () => [] };
+    case "swift": return { files: { "main.swift": code }, user: "main.swift", off: 0, n, args: () => [] };
+    case "rust": return { files: { "main.rs": code }, user: "main.rs", off: 0, n, args: () => [] };
+    case "ruby": return { files: { "main.rb": code }, user: "main.rb", off: 0, n, args: () => ["main.rb"] };
+    case "php": {
+      // 没写 <?php 时补上（不然 PHP 把代码原样输出），行号挪一行
+      const tagged = /^\s*<\?php\b/.test(code);
+      return { files: { "main.php": tagged ? code : "<?php\n" + code }, user: "main.php", off: tagged ? 0 : 1, n, args: () => ["main.php"] };
+    }
+    case "dart": return { files: { "main.dart": code }, user: "main.dart", off: 0, n, args: () => [] };
   }
   throw new Error("不支持的语言：" + job.lang);
+}
+
+/** Scala 的 ACM 程序从哪个 object 开始：extends App 的，或者里面有 def main 的；都没有就是 Main */
+function scalaMain(code) {
+  const objs = [...code.matchAll(/^\s*object\s+(\w+)([^\n{]*)/gm)];
+  for (let i = 0; i < objs.length; i++) {
+    const body = code.slice(objs[i].index, i + 1 < objs.length ? objs[i + 1].index : undefined);
+    if (/\bextends\s+App\b/.test(objs[i][2]) || /\bdef\s+main\s*\(/.test(body)) return objs[i][1];
+  }
+  return "Main";
 }
 
 module.exports = { LANG_IDS, leetcodeProgram, acmProgram, JUDGE };

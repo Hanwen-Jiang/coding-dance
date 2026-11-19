@@ -20,7 +20,16 @@
       "typescript": "function longestCommonSubsequence(text1: string, text2: string): number {\n  \n};",
       "java": "class Solution {\n    public int longestCommonSubsequence(String text1, String text2) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int longestCommonSubsequence(string text1, string text2) {\n        \n    }\n};",
-      "go": "func longestCommonSubsequence(text1 string, text2 string) int {\n    \n}"
+      "go": "func longestCommonSubsequence(text1 string, text2 string) int {\n    \n}",
+      "c": "int longestCommonSubsequence(char* text1, char* text2) {\n    \n}",
+      "csharp": "public class Solution {\n    public int LongestCommonSubsequence(string text1, string text2) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun longestCommonSubsequence(text1: String, text2: String): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func longestCommonSubsequence(_ text1: String, _ text2: String) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn longest_common_subsequence(text1: String, text2: String) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {String} text1\n# @param {String} text2\n# @return {Integer}\ndef longest_common_subsequence(text1, text2)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $text1\n     * @param String $text2\n     * @return Integer\n     */\n    function longestCommonSubsequence($text1, $text2) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def longestCommonSubsequence(text1: String, text2: String): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int longestCommonSubsequence(String text1, String text2) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

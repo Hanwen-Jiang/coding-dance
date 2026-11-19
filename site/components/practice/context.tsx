@@ -6,11 +6,11 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { withFigures } from "@/components/demo/figures";
 import { PixelLoader } from "@/components/pixel";
 import { usePrefs } from "@/lib/prefs";
-import type { PracticeLanguage, PracticeMode, PracticeProblem } from "@/lib/practice/types";
+import { PRACTICE_LANGUAGES, type PracticeLanguage, type PracticeMode, type PracticeProblem } from "@/lib/practice/types";
 import type { ProblemDetail } from "@/lib/types";
 
 const OPTIONS_KEY = "hot100:practice:options";
-const isLanguage = (value: unknown): value is PracticeLanguage => ["python", "javascript", "typescript", "java", "cpp", "go"].includes(String(value));
+const isLanguage = (value: unknown): value is PracticeLanguage => (PRACTICE_LANGUAGES as string[]).includes(String(value));
 type PracticeContextValue = {
   detail: ProblemDetail;
   problem: PracticeProblem | null;

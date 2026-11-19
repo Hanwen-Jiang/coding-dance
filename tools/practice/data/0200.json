@@ -18,7 +18,16 @@
       "typescript": "function numIslands(grid: string[][]): number {\n  \n};",
       "java": "class Solution {\n    public int numIslands(char[][] grid) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int numIslands(vector<vector<char>>& grid) {\n        \n    }\n};",
-      "go": "func numIslands(grid [][]byte) int {\n    \n}"
+      "go": "func numIslands(grid [][]byte) int {\n    \n}",
+      "c": "int numIslands(char** grid, int gridSize, int* gridColSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int NumIslands(char[][] grid) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun numIslands(grid: Array<CharArray>): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func numIslands(_ grid: [[Character]]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn num_islands(grid: Vec<Vec<char>>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Character[][]} grid\n# @return {Integer}\ndef num_islands(grid)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String[][] $grid\n     * @return Integer\n     */\n    function numIslands($grid) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def numIslands(grid: Array[Array[Char]]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int numIslands(List<List<String>> grid) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

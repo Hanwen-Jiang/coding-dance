@@ -20,7 +20,16 @@
       "typescript": "function searchInsert(nums: number[], target: number): number {\n  \n};",
       "java": "class Solution {\n    public int searchInsert(int[] nums, int target) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int searchInsert(vector<int>& nums, int target) {\n        \n    }\n};",
-      "go": "func searchInsert(nums []int, target int) int {\n    \n}"
+      "go": "func searchInsert(nums []int, target int) int {\n    \n}",
+      "c": "int searchInsert(int* nums, int numsSize, int target) {\n    \n}",
+      "csharp": "public class Solution {\n    public int SearchInsert(int[] nums, int target) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun searchInsert(nums: IntArray, target: Int): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func searchInsert(_ nums: [Int], _ target: Int) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn search_insert(nums: Vec<i32>, target: i32) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @param {Integer} target\n# @return {Integer}\ndef search_insert(nums, target)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @param Integer $target\n     * @return Integer\n     */\n    function searchInsert($nums, $target) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def searchInsert(nums: Array[Int], target: Int): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int searchInsert(List<int> nums, int target) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

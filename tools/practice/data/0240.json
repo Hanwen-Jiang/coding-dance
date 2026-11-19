@@ -20,7 +20,16 @@
       "typescript": "function searchMatrix(matrix: number[][], target: number): boolean {\n  \n};",
       "java": "class Solution {\n    public boolean searchMatrix(int[][] matrix, int target) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    bool searchMatrix(vector<vector<int>>& matrix, int target) {\n        \n    }\n};",
-      "go": "func searchMatrix(matrix [][]int, target int) bool {\n    \n}"
+      "go": "func searchMatrix(matrix [][]int, target int) bool {\n    \n}",
+      "c": "\n\nbool searchMatrix(int** matrix, int matrixSize, int* matrixColSize, int target){\n\n}",
+      "csharp": "public class Solution {\n    public bool SearchMatrix(int[][] matrix, int target) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun searchMatrix(matrix: Array<IntArray>, target: Int): Boolean {\n        \n    }\n}",
+      "swift": "class Solution {\n    func searchMatrix(_ matrix: [[Int]], _ target: Int) -> Bool {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn search_matrix(matrix: Vec<Vec<i32>>, target: i32) -> bool {\n        \n    }\n}",
+      "ruby": "# @param {Integer[][]} matrix\n# @param {Integer} target\n# @return {Boolean}\ndef search_matrix(matrix, target)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[][] $matrix\n     * @param Integer $target\n     * @return Boolean\n     */\n    function searchMatrix($matrix, $target) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def searchMatrix(matrix: Array[Array[Int]], target: Int): Boolean = {\n        \n    }\n}",
+      "dart": "class Solution {\n  bool searchMatrix(List<List<int>> matrix, int target) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -28,7 +37,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

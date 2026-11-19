@@ -18,7 +18,16 @@
       "typescript": "function numSquares(n: number): number {\n  \n};",
       "java": "class Solution {\n    public int numSquares(int n) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int numSquares(int n) {\n        \n    }\n};",
-      "go": "func numSquares(n int) int {\n    \n}"
+      "go": "func numSquares(n int) int {\n    \n}",
+      "c": "int numSquares(int n) {\n    \n}",
+      "csharp": "public class Solution {\n    public int NumSquares(int n) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun numSquares(n: Int): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func numSquares(_ n: Int) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn num_squares(n: i32) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer} n\n# @return {Integer}\ndef num_squares(n)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer $n\n     * @return Integer\n     */\n    function numSquares($n) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def numSquares(n: Int): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int numSquares(int n) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {

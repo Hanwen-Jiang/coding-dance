@@ -14,8 +14,14 @@ import { attemptPath, cnParts, codeKey, fence, nextStatus, parseAttemptPath, wri
 import { SyncError } from "../sync/server.ts";
 
 /** 练习区能跑的语言 → 进度仓里的后缀 */
-export const PRACTICE_EXT: Record<string, string> = { python: ".py", javascript: ".js", typescript: ".ts", java: ".java", cpp: ".cpp", go: ".go" };
-const LABEL: Record<string, string> = { python: "Python", javascript: "JavaScript", typescript: "TypeScript" };
+export const PRACTICE_EXT: Record<string, string> = {
+  python: ".py", javascript: ".js", typescript: ".ts", java: ".java", cpp: ".cpp", go: ".go",
+  c: ".c", csharp: ".cs", kotlin: ".kt", swift: ".swift", rust: ".rs", ruby: ".rb", php: ".php", scala: ".scala", dart: ".dart",
+};
+const LABEL: Record<string, string> = {
+  python: "Python", javascript: "JavaScript", typescript: "TypeScript", java: "Java", cpp: "C++", go: "Go",
+  c: "C", csharp: "C#", kotlin: "Kotlin", swift: "Swift", rust: "Rust", ruby: "Ruby", php: "PHP", scala: "Scala", dart: "Dart",
+};
 /** 练习区的尝试记录开头写的来源；从力扣同步时不拿它们去和力扣提交对（结果是按本站用例判的，不是力扣的判题结果） */
 export const PRACTICE_SOURCE = "practice";
 /** 练习区判得出来的四种结果（「思路不成立」只能手写） */

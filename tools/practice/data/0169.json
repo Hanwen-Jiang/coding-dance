@@ -18,7 +18,16 @@
       "typescript": "function majorityElement(nums: number[]): number {\n  \n};",
       "java": "class Solution {\n    public int majorityElement(int[] nums) {\n        \n    }\n}",
       "cpp": "class Solution {\npublic:\n    int majorityElement(vector<int>& nums) {\n        \n    }\n};",
-      "go": "func majorityElement(nums []int) int {\n    \n}"
+      "go": "func majorityElement(nums []int) int {\n    \n}",
+      "c": "int majorityElement(int* nums, int numsSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int MajorityElement(int[] nums) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun majorityElement(nums: IntArray): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func majorityElement(_ nums: [Int]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn majority_element(nums: Vec<i32>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @return {Integer}\ndef majority_element(nums)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @return Integer\n     */\n    function majorityElement($nums) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def majorityElement(nums: Array[Int]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int majorityElement(List<int> nums) {\n    \n  }\n}"
     },
     "acm": {
       "python": "",
@@ -26,7 +35,16 @@
       "typescript": "",
       "java": "",
       "cpp": "",
-      "go": ""
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
     }
   },
   "legacyAcmStarterHashes": {
