@@ -23,6 +23,7 @@ import { useCodingLayout } from "@/lib/practice/dock";
 import { PRACTICE_SAVED_EVENT } from "@/lib/practice/save-queue";
 import { usePrefs } from "@/lib/prefs";
 import { useProgress } from "@/lib/progress";
+import { setupHref } from "@/lib/setup";
 import type { Attempt, AttemptResult, HistoryFile, ProblemDetail, Spec } from "@/lib/types";
 import { TIER_INFO, TOPIC_KIND } from "@/lib/types";
 import { fetchApi, useApi } from "@/lib/use-api";
@@ -332,7 +333,13 @@ function MineGate({ mine, what }: { mine: Mine; what: string }) {
     );
   }
   if (!session.repo?.exists || !session.repo.accessible) {
-    return <HistoryEmpty desc={`先在首页按两步开通你的进度仓（创建仓库、授权），之后存进去的${what}会出现在这里。`} title="还没开通进度仓" />;
+    return (
+      <HistoryEmpty
+        action={<NextLink className="no-underline" href={setupHref()}><Button size="sm" variant="outline">去开通</Button></NextLink>}
+        desc={`开通你的进度仓之后，存进去的${what}会出现在这里。`}
+        title="还没开通进度仓"
+      />
+    );
   }
   if (!ready) return <Skel className="h-24 w-full rounded-3xl" />;
   if (state.error) return <HistoryEmpty desc={state.error} title={`没能读到你的${what}`} />;

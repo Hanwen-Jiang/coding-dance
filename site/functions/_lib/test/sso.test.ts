@@ -6,7 +6,7 @@ import {
   type AuthEnv, type Kv, type Session, OAUTH_COOKIE, SESSION_COOKIE, getSession, readCookie, sealData, sessionCookie, unseal,
 } from "../session.ts";
 import {
-  LINK_COOKIE, finishLogin, newSession, onAccept, onBridge, onLink, onLogout, onSignout, onSpread, needSpread, readDest, ssoOf, target, authEntry,
+  LINK_COOKIE, finishLogin, newSession, onAccept, onBridge, onLink, onLogout, onSignout, onSpread, needSpread, readDest, ssoOf, target, authEntry, viaSetup,
 } from "../sso.ts";
 
 const A = "https://a.test", B = "https://b.test", C = "https://c.test";
@@ -110,6 +110,9 @@ class Browser {
 /** Cookie 里存的会话（解码后的值） */
 const cookieValue = async (env: AuthEnv, s: Session) => decodeURIComponent((await sessionCookie(env, s)).split(";")[0].slice(SESSION_COOKIE.length + 1));
 
+/** 假的 GitHub 上，用户的进度仓能不能用（callback.ts 里的 repoUsable） */
+let repoReady = true;
+
 /** 和 callback.ts 一样的收尾（callback.ts 本身要 import 网络相关的模块，这里只测 sso 的部分） */
 async function fakeCallback(req: Request, env: AuthEnv): Promise<Response> {
   const s = await ssoOf(req, env);
@@ -117,7 +120,7 @@ async function fakeCallback(req: Request, env: AuthEnv): Promise<Response> {
   const url = new URL(req.url);
   assert.ok(d && url.searchParams.get("state") === d.s, "state 要和 Cookie 对上");
   const sess = newSession(s, { t: "t1", r: "r1", te: Date.now() + 8 * 3600e3 }, "alice", "");
-  return finishLogin(env, s, sess, d, [await sessionCookie(env, sess)]);
+  return finishLogin(env, s, sess, repoReady ? d : { ...d, r: viaSetup(d.r) }, [await sessionCookie(env, sess)]);
 }
 
 const routes: Record<string, (req: Request, env: AuthEnv) => Promise<Response>> = {
@@ -190,6 +193,40 @@ await test("在登录域名上登录：回来后顺路同步其余域名", async
   assert.equal(t2.at(-1), `${A}/learn/`);
   assert.equal((await br.session(B, env))?.l, "alice");
   assert.equal((await br.session(C, env))?.l, "alice");
+});
+
+await test("开通页的地址：原来的终点放进 return，已经是开通页的不再套", async () => {
+  assert.equal(viaSetup("/"), "/welcome/");
+  assert.equal(viaSetup("/p/1/"), "/welcome/?return=%2Fp%2F1%2F");
+  assert.equal(viaSetup("/sync/?from=leetcode#x"), "/welcome/?return=%2Fsync%2F%3Ffrom%3Dleetcode%23x");
+  assert.equal(viaSetup(`${B}/p/1/`), `${B}/welcome/?return=%2Fp%2F1%2F`);
+  assert.equal(viaSetup(B), `${B}/welcome/`);
+  assert.equal(viaSetup("/welcome/?return=%2Fp%2F1%2F"), "/welcome/?return=%2Fp%2F1%2F");
+  assert.equal(viaSetup(`${C}/welcome/`), `${C}/welcome/`);
+  // 多域名时 target 还要放行它
+  const s = (await ssoOf(new Request(`${B}/`), baseEnv()))!;
+  assert.equal(target(s, viaSetup(`${C}/p/2/?x=1`)), `${C}/welcome/?return=%2Fp%2F2%2F%3Fx%3D1`);
+});
+
+await test("进度仓还不能用：登录完先到开通页（在发起登录的域名上），开通页再带回原来的页面", async () => {
+  const env = baseEnv();
+  repoReady = false;
+  try {
+    const br = new Browser();
+    const t = await approveOnGitHub(br, await br.go(`${B}/api/auth/login?return=${encodeURIComponent("/p/1/")}`, env), env);
+    assert.equal(t.at(-1), `${B}/welcome/?return=%2Fp%2F1%2F`);
+    for (const o of [A, B, C]) assert.equal((await br.session(o, env))?.l, "alice", `${o} 也登录了`);
+    // 在开通页上点「去 GitHub 授权」：回来还是开通页，不再套一层
+    const t2 = await approveOnGitHub(br, await br.go(`${B}/api/auth/install?return=${encodeURIComponent("/welcome/?return=%2Fp%2F1%2F")}`, env), env);
+    assert.equal(t2.at(-1), `${B}/welcome/?return=%2Fp%2F1%2F`);
+    // 只有一个域名时也一样
+    const one = baseEnv({ SITE_ORIGINS: undefined });
+    const br2 = new Browser();
+    const t3 = await approveOnGitHub(br2, await br2.go(`${A}/api/auth/login?return=%2Flearn%2F`, one), one);
+    assert.equal(t3.at(-1), `${A}/welcome/?return=%2Flearn%2F`);
+  } finally {
+    repoReady = true;
+  }
 });
 
 await test("登录域名已经登录：别的域名点登录不用再去 GitHub", async () => {
