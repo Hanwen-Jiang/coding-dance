@@ -1,6 +1,6 @@
 import { parseAcmOutput } from "./acm";
 import { comparePracticeOutput } from "./compare";
-import { isRemote, runRemote } from "./remote";
+import { runRemote, runsInCloud } from "./remote";
 import type { PracticeCaseResult, PracticeRunRequest, PracticeRunResult } from "./types";
 
 export type { PracticeCaseResult, PracticeRunResult } from "./types";
@@ -20,9 +20,12 @@ const VENDOR = {
   typescript: `vendor/typescript/${process.env.PRACTICE_TYPESCRIPT_VERSION}/typescript.js`,
 };
 
-/** Opaque iframe + disposable Worker: user programs never share the site's origin. Java / C++ / Go 交给云端（remote.ts）。 */
+/**
+ * Opaque iframe + disposable Worker: user programs never share the site's origin.
+ * 只能在云端跑的语言、和选了云端的 Python / JavaScript / TypeScript（调试除外）交给云端（remote.ts）。
+ */
 export async function runPractice(request: PracticeRunRequest, options: PracticeRunOptions = {}): Promise<PracticeRunResult> {
-  if (isRemote(request.language)) return runRemote(request, options);
+  if (runsInCloud(request.language, request.target, request.debug)) return runRemote(request, options);
   if (typeof document === "undefined") throw new Error("代码运行需要浏览器环境");
   if (!request.cases.length) throw new Error("请先添加测试用例");
   if (request.code.length > 100000) throw new Error("代码长度不能超过 100 KB");

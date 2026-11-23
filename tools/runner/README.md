@@ -1,6 +1,6 @@
 # 远端运行器（云端运行 / 判题 / 调试）
 
-Java、C++、Go 的练习交给这里运行和调试，C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart 交给这里运行（Python、JavaScript、TypeScript 在浏览器里跑）。ROADMAP 阶段 6。
+Java、C++、Go 的练习交给这里运行和调试，C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart 交给这里运行。Python、JavaScript、TypeScript 默认在浏览器里跑，用户在练习区选了「云端」时运行和测试也交给这里（调试仍在浏览器里）。ROADMAP 阶段 6。
 
 ```
 浏览器 ──POST /api/run──▶ 网站（Pages Functions：认登录、挑节点、签名）
@@ -33,7 +33,7 @@ Java、C++、Go 的练习交给这里运行和调试，C、C#、Kotlin、Swift�
 | `sandbox/prepare.js` | 构建镜像时预先做好：C++ 预编译头、Go 标准库归档、Java 调试器、C# 的引用程序集列表、Kotlin / Scala 编译器的 CDS 归档，再把每种新语言编一个例子跑一下 |
 | `image/Dockerfile` | 沙箱镜像（Ubuntu 24.04、Python 3.12、OpenJDK 21、gcc / g++ 13 + gdb + uthash、Go 1.23 + Delve、Node 24、.NET 8、Kotlin 2.1、Scala 2.13、Swift 6.1、Rust 1.86、Ruby 3.2、PHP 8.3、Dart 3.7）；部署时转成 microVM 的根文件系统 |
 | `deploy/` | 一键安装节点（`setup.sh`）、Firecracker 这一层（`firecracker.sh`）、两个 systemd 服务 |
-| `test/` | `sandbox.test.mjs`（十五种语言、调试、隔离检查；本机 / 容器 / microVM 都能跑；没有官方题解的九种用 `languages.mjs` 里手写的题解）、`starters.test.mjs`（九种云端语言 × 100 题的起始代码和判题程序对得上）、`server.test.mjs`（签名、限流）、`firecracker.test.mjs`（驱动的协议，对着假 fc-manager） |
+| `test/` | `sandbox.test.mjs`（十五种语言、调试、隔离检查；本机 / 容器 / microVM 都能跑；没有官方题解的九种用 `languages.mjs` 里手写的题解）、`starters.test.mjs`（Python、JavaScript、TypeScript 和九种云端语言 × 100 题的起始代码和判题程序对得上）、`server.test.mjs`（签名、限流）、`firecracker.test.mjs`（驱动的协议，对着假 fc-manager） |
 
 ### 后加的九种语言
 
@@ -50,6 +50,8 @@ Java、C++、Go 的练习交给这里运行和调试，C、C#、Kotlin、Swift�
 | Ruby / PHP | 和 Python 一样运行时读 JSON、按签名转换 | 运行时 | `ruby -c` / `php -l` 查语法；Ruby 用例在线程里跑（栈 128 MB） |
 
 调试只有 Java、C++、Go（真调试器）；其余云端语言只能运行。网站按 `/v1/status` 报的 `langs` 判断哪些语言能在云端跑，节点还没更新到新镜像时，新语言在练习区显示成暂时不能用。
+
+Python、JavaScript、TypeScript（练习区选了「云端」时）：Python 先 `py_compile` 查语法，JavaScript 先 `node --check`；TypeScript 和浏览器里一样只转成 JavaScript、不做类型检查，运行前用 Node 自带的转换器（`module.stripTypeScriptTypes`）解析一遍，语法错误报成编译错误、带编辑器里的行号；运行加 `--experimental-transform-types`，`enum`、构造函数参数属性（`constructor(public x: number)`）这些要转换的写法也能用（只擦类型的话 Node 会直接报错）。
 
 ## Firecracker：为什么、用了什么
 
@@ -197,5 +199,5 @@ RUNNER_TEST_IMAGE=lc-runner:dev node tools/runner/test/server.test.mjs
 
 - 每天的额度、订阅档位：要在服务端记用量，等 ROADMAP「待决定 1」。现在只按用户名限流。
 - 交互式调试（断点停住、在调试器里求值）：现在是一次跑完、记下每一步，界面上前进后退；以后可以用 DAP 接 WebSocket。
-- Python / JavaScript / TypeScript 走云端（递归太深、要精确计时时兜底）：运行器已经支持，网站上还没有入口。
+- Python / JavaScript / TypeScript 在云端调试：现在选了云端也是在浏览器里调试（浏览器里有执行记录），运行器只调试 Java、C++、Go。
 - 判题用例里超大的输入（卡复杂度的 n = 10⁵）：Java 的用例写成字面量，单个方法超过 64 KB 会编译不过，要改成从文件读。

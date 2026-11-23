@@ -1,5 +1,5 @@
 /**
- * python / javascript / typescript 在浏览器里运行；其余交给云端的运行器（tools/runner，经 /api/run）：
+ * python / javascript / typescript 默认在浏览器里运行，也可以选云端；其余只在云端的运行器（tools/runner，经 /api/run）上运行：
  * java / cpp / go 还能用真调试器调试，c / csharp / kotlin / swift / rust / ruby / php / scala / dart 只能运行
  */
 export type PracticeLanguage = "python" | "javascript" | "typescript" | "java" | "cpp" | "go"
@@ -9,6 +9,8 @@ export const PRACTICE_LANGUAGES: PracticeLanguage[] = ["python", "javascript", "
 /** 编辑器补全：完整（关键字、内置函数、库函数、类型都提示）/ 无提示（只补全代码里已有的变量和函数） */
 export type PracticeHints = "full" | "none";
 export type PracticeMode = "leetcode" | "acm";
+/** 在哪里运行：浏览器（不用登录）/ 云端（要登录）。只有 Python、JavaScript、TypeScript 能选，其余语言总在云端 */
+export type PracticeTarget = "browser" | "cloud";
 export type PracticeComparison = "unordered" | "length" | null;
 
 export interface PracticeSignature {
@@ -69,6 +71,8 @@ export interface PracticeRunRequest {
   cases: PracticeCase[];
   /** 调试：只跑一组用例，同时记下每一步执行到哪一行、当时的变量 */
   debug?: boolean;
+  /** Python、JavaScript、TypeScript 选了云端就交给运行器（调试除外：云端不调试这三种，仍在浏览器里）；其余语言总在云端 */
+  target?: PracticeTarget;
 }
 /** 调试记录里的一步：执行到第 line 行之前（event=line），或者函数返回（return）、抛出异常（exception）时 */
 export interface PracticeTraceStep {
