@@ -18,7 +18,21 @@ export interface RunnerEnv {
   RUNNER_ACCESS_SECRET?: string;
 }
 export interface RunnerNode { id: string; url: string }
-export interface NodeStatus { node?: string; langs?: string[]; debugLangs?: string[]; slots?: number; queue?: number; busy?: number; queued?: number; version?: string }
+export interface NodeStatus { node?: string; langs?: string[]; debugLangs?: string[]; features?: string[]; slots?: number; queue?: number; busy?: number; queued?: number; version?: string }
+/**
+ * 有的语言要节点的沙箱带上某一版的改动才交给它（节点 /v1/status 的 features，tools/runner/server.mjs 的 FEATURES）：
+ *   typescript → ts-transform（先查语法、能转换 enum）。还没更新的节点照样报 typescript，但这门语言排到后面，练习区显示暂时不能用。
+ * 练习区那边 site/lib/practice/remote.ts 有同样一份。
+ */
+export const LANG_FEATURES: Record<string, string> = { typescript: "ts-transform" };
+/** 这个节点能不能跑这门语言：langs 里有、要的 features 也有（状态还不知道时当作能） */
+export function nodeFits(s: NodeStatus | null | undefined, lang: string | undefined, debug = false): boolean {
+  if (!s || !lang) return true;
+  const langs = debug ? s.debugLangs : s.langs;
+  if (langs && !langs.includes(lang)) return false;
+  const need = LANG_FEATURES[lang];
+  return !need || (s.features ?? []).includes(need);
+}
 
 const enc = new TextEncoder();
 const hex = (buf: ArrayBuffer) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -105,7 +119,7 @@ function unit(s: string): number {
 
 /**
  * 这个用户这次按什么顺序找节点（第一个是他固定的节点）。
- * 不在线的、知道正忙的、不支持这门语言（或调试）的排到后面，但不丢掉：状态可能是旧的，前面的都不行时还会试一下。
+ * 不在线的、知道正忙的、不支持这门语言（或调试、或还没更新到这门语言要的版本）的排到后面，但不丢掉：状态可能是旧的，前面的都不行时还会试一下。
  */
 export function pickOrder(nodes: RunnerNode[], user: string, opts: { lang?: string; debug?: boolean; now?: number } = {}): RunnerNode[] {
   const now = opts.now ?? Date.now();
@@ -113,8 +127,7 @@ export function pickOrder(nodes: RunnerNode[], user: string, opts: { lang?: stri
     const e = entry(n.id), s = e.status;
     const weight = Math.max(1, Number(s?.slots) || 1);
     const score = -weight / Math.log(unit(`${user}\n${n.id}`));
-    const langs = opts.debug ? s?.debugLangs : s?.langs;
-    const unfit = !!(opts.lang && langs && !langs.includes(opts.lang));
+    const unfit = !nodeFits(s, opts.lang, opts.debug);
     const down = e.downUntil > now;
     const busy = e.busyUntil > now || !!(s && s.slots !== undefined && s.queue !== undefined && (s.busy ?? 0) >= s.slots && (s.queued ?? 0) >= s.queue);
     return { n, score, rank: unfit ? 3 : down ? 2 : busy ? 1 : 0 };

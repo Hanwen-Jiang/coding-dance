@@ -14,9 +14,10 @@ export const onRequestGet = async ({ env }: { env: Env }) => {
   const statuses = [...(await nodeStatuses(env)).values()];
   const up = statuses.filter((s): s is NonNullable<typeof s> => !!s);
   if (!up.length) return privateJson({ available: false, reason: "云端运行器暂时都不在线", nodes: parseNodes(env.RUNNER_NODES).length, up: 0 });
-  const union = (k: "langs" | "debugLangs") => [...new Set(up.flatMap((s) => s[k] || []))];
+  const union = (k: "langs" | "debugLangs" | "features") => [...new Set(up.flatMap((s) => s[k] || []))];
+  // features：在线节点的沙箱带上了哪些改动（_lib/runner.ts 的 LANG_FEATURES），练习区按它判断 TypeScript 能不能交给云端
   return privateJson({
-    available: true, nodes: statuses.length, up: up.length, langs: union("langs"), debugLangs: union("debugLangs"),
+    available: true, nodes: statuses.length, up: up.length, langs: union("langs"), debugLangs: union("debugLangs"), features: union("features"),
     slots: up.reduce((a, s) => a + (s.slots || 0), 0), busy: up.reduce((a, s) => a + (s.busy || 0), 0), queued: up.reduce((a, s) => a + (s.queued || 0), 0),
   });
 };

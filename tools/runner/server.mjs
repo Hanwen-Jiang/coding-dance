@@ -40,6 +40,9 @@ export const CONFIG = {
 // 网站按 /v1/status 里的 langs 判断哪些语言能在云端跑：节点还没更新到新镜像时，新语言显示成暂时不能用
 export const LANGS = ["python", "java", "cpp", "go", "javascript", "typescript", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
 export const DEBUG_LANGS = ["java", "cpp", "go"];
+// 沙箱这一版带上的改动：有的语言要节点更新到带这一项的版本才交给它（网站 functions/_lib/runner.ts 的 LANG_FEATURES）。
+//   ts-transform：TypeScript 先查语法（报成编译错误）、能转换 enum 和构造函数参数属性
+export const FEATURES = ["ts-transform"];
 const MAX_BODY = 2 << 20;
 
 const log = (o) => console.log(JSON.stringify({ t: new Date().toISOString(), ...o }));
@@ -126,7 +129,7 @@ export function createServer(cfg = CONFIG, driver) {
 
     if (req.method === "GET" && url.pathname === "/v1/status") {
       // 网站按这些挑节点：slots 是容量（权重），busy / queued 是现在的负载
-      return send(res, 200, { ok: true, node: cfg.node, version: cfg.version, langs: LANGS, debugLangs: DEBUG_LANGS, pool: driver.status(), slots: cfg.slots, queue: cfg.queue, busy: slots.busy, queued: slots.waiting.length, limits: { caseMs: cfg.caseMs, totalMs: cfg.totalMs, perMinute: cfg.perMinute, cases: 100, steps: 1000 } });
+      return send(res, 200, { ok: true, node: cfg.node, version: cfg.version, langs: LANGS, debugLangs: DEBUG_LANGS, features: FEATURES, pool: driver.status(), slots: cfg.slots, queue: cfg.queue, busy: slots.busy, queued: slots.waiting.length, limits: { caseMs: cfg.caseMs, totalMs: cfg.totalMs, perMinute: cfg.perMinute, cases: 100, steps: 1000 } });
     }
     if (req.method !== "POST" || url.pathname !== "/v1/run") return send(res, 404, { error: "没有这个接口" });
 

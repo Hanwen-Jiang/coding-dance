@@ -31,13 +31,26 @@ export function writeTarget(language: PracticeLanguage, target: PracticeTarget) 
 export class RemoteLoginError extends Error {
   constructor(message = "云端运行要先登录（用 GitHub 登录）") { super(message); this.name = "RemoteLoginError"; }
 }
-/** 运行器报了支持哪些语言（/v1/status 的 langs），这门语言不在里面：节点还没更新到装了它的镜像 */
-export const remoteLacks = (status: RemoteStatus | null | undefined, language: PracticeLanguage) => !!status?.available && !!status.langs && !status.langs.includes(language);
+/**
+ * 有的语言要节点更新到带某一版改动的沙箱才交给云端（和 functions/_lib/runner.ts 的 LANG_FEATURES 一样）：
+ * TypeScript 要 ts-transform（先查语法、能转换 enum），老节点上语法错误会变成每组一长串 Node 调用栈、enum 直接报错
+ */
+const LANG_FEATURES: Partial<Record<PracticeLanguage, string>> = { typescript: "ts-transform" };
+/**
+ * 云端还不能跑这门语言：运行器报的 langs 里没有它（节点还没更新到装了它的镜像），
+ * 或者它要的 features 还没有（节点的沙箱还是旧版）
+ */
+export const remoteLacks = (status: RemoteStatus | null | undefined, language: PracticeLanguage) => {
+  if (!status?.available) return false;
+  if (status.langs && !status.langs.includes(language)) return true;
+  const need = LANG_FEATURES[language];
+  return !!need && !(status.features ?? []).includes(need);
+};
 
 interface RemoteCase { index: number; actual: unknown; stdout: string; stderr?: string; error?: string; duration: number; trace?: PracticeTrace }
 interface RemoteReply { results?: RemoteCase[]; compileError?: string; compileMs?: number; runMs?: number; queueMs?: number; error?: string }
 
-export interface RemoteStatus { available: boolean; reason?: string; langs?: string[]; debugLangs?: string[] }
+export interface RemoteStatus { available: boolean; reason?: string; langs?: string[]; debugLangs?: string[]; features?: string[] }
 
 /** 运行器在不在线（题目页打开练习区时问一次，缓存一分钟） */
 let statusCache: { at: number; value: Promise<RemoteStatus> } | null = null;
@@ -57,7 +70,7 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
   const unavailable = request.mode === "leetcode" ? request.problem.leetcodeUnavailable?.[request.language] : undefined;
   if (unavailable) throw new Error(unavailable);
   if (request.debug && !REMOTE_DEBUG_LANGUAGES.includes(request.language)) throw new Error("这门语言暂时不能调试（云端只有 Java、C++、Go 接了调试器），可以先运行，用打印看中间结果");
-  if (remoteLacks(await remoteStatus(), request.language)) throw new Error("云端运行器还没装上这门语言（节点正在更新），暂时不能运行，稍后再试");
+  if (remoteLacks(await remoteStatus(), request.language)) throw new Error(`云端运行器还没装上这门语言（节点正在更新），暂时不能运行，${isRemote(request.language) ? "稍后再试" : "可以先换回浏览器运行"}`);
   const started = performance.now();
   options.onStatus?.(request.debug ? "正在云端调试：编译、在调试器里一步步记下来…" : isRemote(request.language) ? "正在云端编译运行…" : "正在云端运行…");
   const body = {

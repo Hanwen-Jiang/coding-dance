@@ -51,7 +51,7 @@ Java、C++、Go 的练习交给这里运行和调试，C、C#、Kotlin、Swift�
 
 调试只有 Java、C++、Go（真调试器）；其余云端语言只能运行。网站按 `/v1/status` 报的 `langs` 判断哪些语言能在云端跑，节点还没更新到新镜像时，新语言在练习区显示成暂时不能用。
 
-Python、JavaScript、TypeScript（练习区选了「云端」时）：Python 先 `py_compile` 查语法，JavaScript 先 `node --check`；TypeScript 和浏览器里一样只转成 JavaScript、不做类型检查，运行前用 Node 自带的转换器（`module.stripTypeScriptTypes`）解析一遍，语法错误报成编译错误、带编辑器里的行号；运行加 `--experimental-transform-types`，`enum`、构造函数参数属性（`constructor(public x: number)`）这些要转换的写法也能用（只擦类型的话 Node 会直接报错）。
+Python、JavaScript、TypeScript（练习区选了「云端」时）：Python 先 `py_compile` 查语法，JavaScript 先 `node --check`；TypeScript 和浏览器里一样只转成 JavaScript、不做类型检查，运行前用 Node 自带的转换器（`module.stripTypeScriptTypes`）解析一遍，语法错误报成编译错误、带编辑器里的行号；运行加 `--experimental-transform-types`，`enum`、构造函数参数属性（`constructor(public x: number)`）这些要转换的写法也能用（只擦类型的话 Node 会直接报错）。这一版的节点在 `/v1/status` 里报 `features: ["ts-transform"]`；网站（`site/functions/_lib/runner.ts` 的 `LANG_FEATURES`）只把 TypeScript 交给报了它的节点，节点还没更新时练习区显示 TypeScript 暂时不能在云端运行（可以换回浏览器），不会把它交给旧版沙箱。
 
 ## Firecracker：为什么、用了什么
 

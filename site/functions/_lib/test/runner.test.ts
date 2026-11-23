@@ -1,7 +1,7 @@
 // 网站调用远端运行器集群：签名和 tools/runner/lib/sign.mjs 一致；起两个本机的运行器节点，测挑节点、固定节点、换节点。
 // 运行：node functions/_lib/test/runner.test.ts（在 site/ 里）
 import assert from "node:assert/strict";
-import { callNode, forgetNodes, nodeStatuses, parseNodes, pickOrder, runOnCluster, sha256, sign } from "../runner.ts";
+import { callNode, forgetNodes, nodeFits, nodeStatuses, parseNodes, pickOrder, runOnCluster, sha256, sign } from "../runner.ts";
 
 // tools/runner/test/server.test.mjs 用同一组输入算出的签名
 const fixed = await sign("k".repeat(32), { method: "post", path: "/v1/run", time: 1700000000, nonce: "abcdefabcdefabcdef", user: "octocat", node: "lou1", bodyHash: await sha256('{"a":1}') });
@@ -38,11 +38,11 @@ const start = async (node: string, over: Record<string, unknown> = {}) => {
   return { server, url: `http://127.0.0.1:${(server.address() as { port: number }).port}` };
 };
 const A = await start("lou1"), B = await start("lou2"), FULL = await start("lou3", { slots: 0, queue: 0 });
-// 假节点：状态说自己空闲，真去跑却返回 503
+// 假节点：状态说自己空闲，真去跑却返回 503；沙箱是旧版的（报了 typescript，但 features 里没有 ts-transform）
 const http = await import("node:http");
 const stubServer = http.createServer((req, res) => {
   res.writeHead(req.url === "/v1/status" ? 200 : 503, { "content-type": "application/json" });
-  res.end(JSON.stringify(req.url === "/v1/status" ? { node: "lou4", langs: ["python"], slots: 2, queue: 2, busy: 0, queued: 0 } : { error: "满了" }));
+  res.end(JSON.stringify(req.url === "/v1/status" ? { node: "lou4", langs: ["python", "typescript"], slots: 2, queue: 2, busy: 0, queued: 0 } : { error: "满了" }));
 });
 await new Promise<void>((r) => stubServer.listen(0, "127.0.0.1", () => r()));
 const STUB = { server: stubServer, url: `http://127.0.0.1:${(stubServer.address() as { port: number }).port}` };
@@ -79,6 +79,17 @@ try {
   assert.equal(((await r3.res!.json()) as { node: string }).node, "lou1");
   assert.deepEqual(r3.tried, ["lou1"]);
   console.log("✓ 固定的节点状态显示满了，直接去下一个");
+
+  // 沙箱还是旧版的节点（features 里没有 ts-transform）：TypeScript 排到后面，Python 照常
+  forgetNodes();
+  const oldEnv = { RUNNER_NODES: `lou4=${STUB.url},lou1=${A.url}`, RUNNER_SECRET: secret };
+  await nodeStatuses(oldEnv);
+  const onOld = users.find((u) => pickOrder(parseNodes(oldEnv.RUNNER_NODES), u, { lang: "python" })[0].id === "lou4")!;
+  assert.equal(pickOrder(parseNodes(oldEnv.RUNNER_NODES), onOld, { lang: "typescript" })[0].id, "lou1");
+  assert.equal(nodeFits({ langs: ["typescript"] }, "typescript"), false);
+  assert.equal(nodeFits({ langs: ["typescript"], features: ["ts-transform"] }, "typescript"), true);
+  assert.equal(nodeFits({ langs: ["python"] }, "python"), true);
+  console.log("✓ 沙箱还是旧版的节点不接 TypeScript（排到后面），别的语言照常");
 
   // 状态还显示空闲、真去跑时才返回 503（刚满）：换下一个，并且几秒内先不找它
   forgetNodes();
