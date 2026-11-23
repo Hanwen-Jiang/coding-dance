@@ -81,6 +81,21 @@ export const withFlag = (to: string, flag: string) => {
   return `${base}${base.includes("?") ? "&" : "?"}login=${flag}${hash ? `#${hash}` : ""}`;
 };
 
+/** 开通页：登录、授权完进度仓还不能用的用户先到这里建好它，再回原来的页面（components/onboarding.tsx） */
+export const SETUP_PATH = "/welcome/";
+
+/**
+ * 把登录后的终点换成开通页，原来的终点放进 return。r 是相对路径，或者列表里某个域名的完整地址（多域名时）；
+ * 本来就是开通页的不再套一层。
+ */
+export function viaSetup(r: string): string {
+  const m = /^(https?:\/\/[^/?#]+)(.*)$/i.exec(r);
+  const origin = m ? m[1] : "";
+  const path = (m ? m[2] : r) || "/";
+  if (path.startsWith(SETUP_PATH)) return r;
+  return `${origin}${SETUP_PATH}${path === "/" ? "" : `?return=${encodeURIComponent(path)}`}`;
+}
+
 /** 下一站：还有没走的域名就去它那里领会话，否则回到终点 */
 function nextHop(ret: string, rest: string[]): string {
   if (!rest.length) return ret;

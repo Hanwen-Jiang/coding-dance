@@ -15,6 +15,7 @@ import { createPortal } from "react-dom";
 import { LoginButton } from "@/components/account";
 import { PixelBullet, PixelIcon, Skel } from "@/components/pixel";
 import { useProgress } from "@/lib/progress";
+import { setupHref } from "@/lib/setup";
 import { bookmarklet } from "@/lib/sync/bookmarklet.ts";
 import { createBridge } from "@/lib/sync/bridge.ts";
 import { createLeetCode } from "@/lib/sync/leetcode.ts";
@@ -550,7 +551,7 @@ function SyncStage({ repoReady }: { repoReady: boolean }) {
       {busy && <ReadProgress log={log} step={step} />}
       {!busy && log && <p aria-live="polite" className="text-sm text-muted">{log}</p>}
       {error && <Note tone="danger">{error}</Note>}
-      {!repoReady && <Note tone="warning">还没开通进度仓：<NextLink href="/">先在首页按两步开通</NextLink>，再回力扣点一次书签。</Note>}
+      {!repoReady && <Note tone="warning">还没开通进度仓：<NextLink href={setupHref("/sync/")}>先去开通</NextLink>，再回力扣点一次书签。</Note>}
 
       {plan && (phase === "plan" || phase === "writing") && <PlanView excluded={excluded} plan={plan} toggle={toggle} />}
 
@@ -671,8 +672,8 @@ export function SyncApp() {
         ) : view === "login" ? (
           session?.user ? (
             <div className="flex flex-col items-center gap-5 py-2">
-              <Title center sub={<>已登录 <b className="text-foreground">{session.user.login}</b>。同步会写进你账号下的 <span className="font-mono">{session.repoName}</span>，先在首页按两步把它开通。</>}>先开通你的进度仓</Title>
-              <NextLink className="no-underline" href="/"><Button size="lg">去首页开通</Button></NextLink>
+              <Title center sub={<>已登录 <b className="text-foreground">{session.user.login}</b>。同步会写进你账号下的 <span className="font-mono">{session.repoName}</span>，先把它开通。</>}>先开通你的进度仓</Title>
+              <NextLink className="no-underline" href={setupHref("/sync/")}><Button size="lg">去开通</Button></NextLink>
             </div>
           ) : (
             <LoginCard repoName={session?.repoName ?? "hot100-progress"} />

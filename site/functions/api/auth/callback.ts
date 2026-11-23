@@ -1,12 +1,12 @@
 // GitHub 回调（登录和授权都回到这里，只在登录域名上）：核对 state，用授权码换用户令牌，加密后写进 Cookie，
 // 再把会话交给发起登录的域名、顺路同步其余域名（见 _lib/sso.ts），最后跳回原来的页面。
 // 第一次登录的用户还没有把 App 授权到自己账号上（GitHub 叫「安装」）：登录完直接接着去授权页，
-// 这样在 GitHub 上一口气走完，回到网站时就可以直接建进度仓了。
-import { userInstallation } from "../../_lib/install";
+// 这样在 GitHub 上一口气走完；回到网站先落在开通页（/welcome/）建进度仓，建好再回原来的页面。
+import { repoUsable, userInstallation } from "../../_lib/install";
 import {
   type AuthEnv, OAUTH_COOKIE, type Session, authConfigured, b64u, exchangeToken, getSession, newFamily, safeReturn, sessionCookie, setCookie,
 } from "../../_lib/session";
-import { destCookie, finishLogin, go, newSession, readDest, ssoOf, target, withFlag } from "../../_lib/sso";
+import { destCookie, finishLogin, go, newSession, readDest, ssoOf, target, viaSetup, withFlag } from "../../_lib/sso";
 
 export const onRequestGet = async ({ request, env }: { request: Request; env: AuthEnv }) => {
   const s = await ssoOf(request, env);
@@ -40,12 +40,16 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
 
   const sess = newSession(s, tok, u.login, u.avatar_url || "");
   const session = await sessionCookie(env, sess);
+  const inst = await userInstallation(tok.t, u.login);
   // 刚从授权页回来（带 setup_action）就不再跳了；否则没授权过的用户接着去授权页，回来还是到这里
-  if (!url.searchParams.get("setup_action") && !(await userInstallation(tok.t, u.login))) {
+  if (!url.searchParams.get("setup_action") && !inst) {
     const next = b64u(crypto.getRandomValues(new Uint8Array(18)));
     const gh = new URL(`https://github.com/apps/${env.GITHUB_APP_SLUG}/installations/new`);
     gh.searchParams.set("state", next);
     return go(gh.toString(), [session, destCookie({ ...d, s: next })]);
   }
-  return finishLogin(env, s, sess, d, [session]);
+  // 进度仓还不能用（刚授权完还没建、授权页上点了取消、或者授权范围里没有它）：先去开通页，
+  // 在那里选私有 / 公开、建好进度仓，再回原来的页面。能用的直接回去
+  const ready = !!inst && (await repoUsable(tok.t, inst, `${u.login}/${env.PROGRESS_REPO}`));
+  return finishLogin(env, s, sess, ready ? d : { ...d, r: viaSetup(d.r) }, [session]);
 };

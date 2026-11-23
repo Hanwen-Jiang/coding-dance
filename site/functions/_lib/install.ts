@@ -35,6 +35,16 @@ export async function installationCovers(token: string, inst: Installation, repo
 }
 
 /**
+ * 网站能不能读写这个仓库：仓库在、并且在授权范围里。和 /api/session 的 accessible 是同一个判断。
+ * 私有仓库不在授权范围里时 GitHub 对网站回 404，所以看不到不等于没建。
+ */
+export async function repoUsable(token: string, inst: Installation, repo: string): Promise<boolean> {
+  const r = await gh(token, "GET", `/repos/${repo}`);
+  if (!r.ok) return false;
+  return inst.selection === "all" || installationCovers(token, inst, repo);
+}
+
+/**
  * 用模板在用户自己的账号下建进度仓。要求用户已经授权，并且授权里带「建仓库」的权限；
  * 建出来的仓库 GitHub 会自动放进这次授权的范围里。
  */

@@ -48,8 +48,10 @@
 - 题目资源（资源仓）对所有人都一样；进度和题解来自登录用户自己账号下的 `hot100-progress` 仓库。没登录时显示 0 进度。
 - 登录走 **GitHub App**：权限是授权范围内仓库的 Contents 读写、建仓库（Repository creation），外加 Starring。授权范围（全部仓库，或者只选几个）由用户在 GitHub 的授权页面上选。用户的令牌 8 小时过期，服务端用 refresh token 自动续。
 - 界面上统一叫「授权」（GitHub 那边叫安装 App）。新用户点登录后，回调（`functions/api/auth/callback.ts`）发现他还没授权，会接着跳到授权页，在 GitHub 上一口气走完。
-- 回到网站后，首页的开通卡片（`components/account.tsx` 的 `SetupCard`）让用户选私有 / 公开、勾选要 Star 的仓库，点一下就由 `POST /api/progress/create` 用模板仓 `Hanwen-Jiang/hot100-progress-template`（wrangler.toml 里的 `TEMPLATE_REPO`）在他账号下建好 `hot100-progress`，不用去 GitHub。GitHub 会把 App 建的仓库自动放进授权范围。
+- 授权完回到网站时，回调先看进度仓能不能用（`_lib/install.ts` 的 `repoUsable`：仓库在、并且在授权范围里）。不能用就不回原来的页面，而是落在开通页 `/welcome/?return=<原来的页面>`（`components/onboarding.tsx`）：选私有 / 公开、勾选要 Star 的仓库（默认全勾，点开可以取消），点一下就由 `POST /api/progress/create` 用模板仓 `Hanwen-Jiang/hot100-progress-template`（wrangler.toml 里的 `TEMPLATE_REPO`）在他账号下建好 `hot100-progress`，不用去 GitHub；建好自动回到原来的页面。GitHub 会把 App 建的仓库自动放进授权范围。多域名时开通页在发起登录的那个域名上（`_lib/sso.ts` 的 `viaSetup` 把终点包一层）。
+- 在 GitHub 的授权页上点了取消的用户，开通页先请他授权，授权回来还是开通页。
 - 手动的路还留着：老的授权没有建仓库的权限、账号下已经有同名仓库、或者用户想只授权一个仓库时，自己去 GitHub 用模板建仓库，再把它放进授权范围。私有仓库在授权之前网站看不到，所以这条路上「仓库建好了没有」靠用户点「我建好了」。
+- 首页没有开通卡片：跳过了开通页（「以后再说」）的人在首页看到一行提醒，点了回开通页；账号菜单的「去开通进度仓」、同步页和题目页「我的历史题解」里的「去开通」也都去开通页。
 - 用户的令牌用 `SESSION_SECRET` 加密后放在 HttpOnly Cookie 里，浏览器脚本读不到；写操作只接受本站页面发起的请求。
 - 进度仓的文件规则见模板仓 README；`functions/_lib/progress.ts` 按同一套规则读写。
 

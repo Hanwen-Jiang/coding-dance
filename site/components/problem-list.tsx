@@ -9,7 +9,8 @@ import { useEffect, useMemo, useState } from "react";
 import { HistoryIcon, PlayIcon, SearchOffIcon } from "@/components/icons";
 import { LevelPixels, PixelTitle, ProgressMatrix, Skel, StatusPixel, TYPING_WORDS, TypingPixels } from "@/components/pixel";
 import { TierChip, TopicChip, langShort } from "@/components/tags";
-import { LoginHint, SetupCard } from "@/components/account";
+import { LoginHint } from "@/components/account";
+import { SetupReminder } from "@/components/onboarding";
 import { useMatrixPreview } from "@/components/matrix-preview";
 import { useProgress } from "@/lib/progress";
 import type { IndexData, Problem, Status } from "@/lib/types";
@@ -246,7 +247,8 @@ export function ProblemList() {
             <ProgressMatrix cellProps={preview.cellProps} problems={ready ? problems.slice().sort(byImportance) : null} />
             {preview.layer}
           </Card>
-          <SetupCard />
+          {/* 开通进度仓在登录后的开通页（/welcome/）里做；这里只给跳过了的人留一行提醒 */}
+          <SetupReminder />
           <LoginHint />
           {/* 进度仓开通好了：提示可以从力扣同步 */}
           {session?.repo?.exists && session.repo.accessible && (
