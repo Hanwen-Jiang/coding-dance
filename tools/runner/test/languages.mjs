@@ -821,6 +821,9 @@ export const BROKEN = {
  * 用来检查判题程序和起始代码的签名对得上（starters.test.mjs）。构造函数、没有返回值的方法留空。
  */
 export function fillStarter(lang, code) {
+  if (lang === "python") return fillPython(code);
+  // JavaScript / TypeScript 的空方法体本来就能运行（TypeScript 不做类型检查）
+  if (lang === "javascript" || lang === "typescript") return code;
   const lines = code.split("\n"), out = [];
   for (let i = 0; i < lines.length; i++) {
     out.push(lines[i]);
@@ -832,6 +835,21 @@ export function fillStarter(lang, code) {
   }
   return out.join("\n");
 }
+/** Python：方法体是空的（下一行只有空白，或者已经到了下一个 def / 文件末尾），补一句 pass */
+function fillPython(code) {
+  const lines = code.split("\n"), out = [];
+  const indent = (s) => s.match(/^\s*/)[0].length;
+  for (let i = 0; i < lines.length; i++) {
+    out.push(lines[i]);
+    if (!/^\s*def\s.*:\s*$/.test(lines[i])) continue;
+    let j = i + 1;
+    while (j < lines.length && /^\s*$/.test(lines[j])) j++;
+    if (j < lines.length && indent(lines[j]) > indent(lines[i])) continue;
+    out.push(" ".repeat(indent(lines[i]) + 4) + "pass");
+  }
+  return out.join("\n");
+}
+
 function filler(lang, head) {
   switch (lang) {
     case "c": return /^\s*void\s/.test(head) ? "" : "return 0;";

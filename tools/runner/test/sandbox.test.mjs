@@ -156,6 +156,7 @@ const ACM = {
 const BROKEN = {
   python: "class Solution:\n    def twoSum(self, nums, target):\n        return [0, 1\n",
   javascript: "var twoSum = function(nums, target) {\n  const x = 1;\n  return [0, 1;\n};\n",
+  typescript: "function twoSum(nums: number[], target: number): number[] {\n  const x: number = 1;\n  return [0, 1;\n}\n",
   java: "class Solution {\n    public int[] twoSum(int[] nums, int target) {\n        int x = 1\n        return new int[]{0, 1};\n    }\n}\n",
   cpp: "class Solution {\npublic:\n    vector<int> twoSum(vector<int>& nums, int target) { int x = y;\n        return {0, 1};\n    }\n};\n",
   go: "func twoSum(nums []int, target int) []int {\n\tx := 1\n\treturn []int{0, y}\n}\n",
@@ -185,6 +186,22 @@ for (const lang of LANGS.filter(want)) {
     const r = await runJob({ lang, mode: "leetcode", code: BROKEN[lang], sig: SUM_SIG, cases: twoSumCases.map((c) => ({ input: c.input })) });
     assert.ok(r.compileError, "应该编译不过：" + JSON.stringify(r.results[0]));
     assert.match(r.compileError, /第 3 行/, r.compileError);
+  });
+}
+
+// —— TypeScript 要转换的写法（enum、构造函数参数属性）：浏览器里能跑，云端也要能跑；ACM 模式的语法错误也报成编译错误 ——
+if (LANGS.includes("typescript") && want("typescript")) {
+  console.log("\ntypescript：要转换的写法");
+  await test("enum 和 constructor(public x) 能运行，运行时出错的行号还是编辑器里的", async () => {
+    const code = "enum Pick { First = 0 }\nclass Seen { constructor(public map: Map<number, number>) {} }\nfunction twoSum(nums: number[], target: number): number[] {\n  if (nums[0] === 99) { const a: any = null; return a.x; }\n  const s = new Seen(new Map());\n  for (let i = Pick.First; i < nums.length; i++) {\n    if (s.map.has(target - nums[i])) return [s.map.get(target - nums[i])!, i];\n    s.map.set(nums[i], i);\n  }\n  return [];\n}\n";
+    const r = await runJob({ lang: "typescript", mode: "leetcode", code, sig: SUM_SIG, cases: [{ input: [[2, 7, 11, 15], 9] }, { input: [[99, 1], 100] }] });
+    assert.equal(r.compileError, undefined, r.compileError);
+    assert.deepEqual(r.results[0].actual, [0, 1], JSON.stringify(r.results[0]));
+    assert.match(r.results[1].error || "", /第 4 行/, JSON.stringify(r.results[1]));
+  });
+  await test("ACM 模式的语法错误是编译错误", async () => {
+    const r = await runJob({ lang: "typescript", mode: "acm", code: 'import { readFileSync } from "node:fs";\nconst x: number = 1;\nconsole.log(x +);\n', cases: [{ stdin: "1 2\n" }] });
+    assert.match(r.compileError || "", /第 3 行/, JSON.stringify(r));
   });
 }
 

@@ -17,9 +17,9 @@ import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
 import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
-import { isRemote, remoteLacks, remoteStatus, REMOTE_DEBUG_LANGUAGES, type RemoteStatus } from "@/lib/practice/remote";
+import { isRemote, readTarget, remoteLacks, RemoteLoginError, remoteStatus, REMOTE_DEBUG_LANGUAGES, writeTarget, type RemoteStatus } from "@/lib/practice/remote";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
-import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult } from "@/lib/practice/types";
+import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult, PracticeTarget } from "@/lib/practice/types";
 import type { RunScope, SolutionLabel } from "@/lib/practice/record";
 import { practiceVerdict } from "@/lib/practice/verdict";
 import { formatPracticeInput, formatPracticeResult, formatPracticeValue, parsePracticeFields, practiceInputFields, starterHash, type PracticeInputField } from "@/lib/practice/format";
@@ -31,7 +31,10 @@ const CodeEditor = dynamic(() => import("./editor"), {
   ssr: false,
   loading: () => <div className="practice-editor-loading flex items-center justify-center"><PixelLoader label="EDITOR" /></div>,
 });
-/** remote：在云端运行（tools/runner，要登录）；其余在浏览器里运行 */
+/**
+ * remote：只能在云端运行（tools/runner，要登录）；其余（Python、JavaScript、TypeScript）默认在浏览器里运行，
+ * 也可以在「⋯」或状态栏上换成云端，每门语言各记各的（remote.ts 的 readTarget）
+ */
 const LANGUAGES: { id: PracticeLanguage; label: string; remote?: boolean }[] = [
   { id: "python", label: "Python" },
   { id: "javascript", label: "JavaScript" },
@@ -49,14 +52,25 @@ const LANGUAGES: { id: PracticeLanguage; label: string; remote?: boolean }[] = [
   { id: "scala", label: "Scala", remote: true },
   { id: "dart", label: "Dart", remote: true },
 ];
-/** 云端语言在编辑器下面的说明：这道题力扣模式做不了、运行器不在线、节点还没装上这门语言、能不能调试 */
+/**
+ * 在云端运行时编辑器下面的说明：这道题力扣模式做不了、运行器不在线、节点还没装上这门语言、能不能调试。
+ * Python、JavaScript、TypeScript 选了云端：运行和测试在云端，调试仍在浏览器里（云端只给 Java、C++、Go 接了调试器）
+ */
 function cloudNote(label: string, language: PracticeLanguage, mode: PracticeMode, problem: PracticeProblem, cloud: RemoteStatus | null) {
   const no = mode === "leetcode" ? problem.leetcodeUnavailable?.[language] : undefined;
   if (no) return `${no}。`;
-  if (cloud && !cloud.available) return `${label} 在云端编译运行，${cloud.reason || "云端运行器暂时不在线"}。`;
-  if (remoteLacks(cloud, language)) return `${label} 在云端编译运行，云端运行器还没装上它（节点更新后就能用），暂时不能运行。`;
+  const chosen = !isRemote(language);
+  const where = chosen ? `${label} 选了云端运行` : `${label} 在云端编译运行`;
+  if (cloud && !cloud.available) return `${where}，${cloud.reason || "云端运行器暂时不在线"}${chosen ? "；可以先换回浏览器运行" : ""}。`;
+  if (remoteLacks(cloud, language)) return `${where}，云端运行器还没装上它（节点更新后就能用），暂时不能运行${chosen ? "；可以先换回浏览器运行" : ""}。`;
+  if (chosen) return `${label} 在云端运行（要登录）；调试仍在浏览器里，云端只调试 Java、C++、Go。`;
   return `${label} 在云端编译运行（要登录）${REMOTE_DEBUG_LANGUAGES.includes(language) ? "，调试用真调试器一步步记下来" : "；这门语言暂时不能调试"}。`;
 }
+/** 「⋯」里的运行位置（Python、JavaScript、TypeScript 才能选） */
+const TARGETS: { id: PracticeTarget; label: string; desc: string }[] = [
+  { id: "browser", label: "在浏览器里运行", desc: "不用登录；调试也在这里" },
+  { id: "cloud", label: "在云端运行", desc: "要登录，交给云端的沙箱；调试仍在浏览器里" },
+];
 type TestTab = "examples" | "custom" | "results" | "debug";
 /** 编辑器提示程度，存在浏览器里，换题、换语言都不变 */
 const HINT_LEVELS: { id: PracticeHints; label: string; desc: string }[] = [
@@ -404,14 +418,26 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   const [error, setError] = useState<string | null>(null);
   /** 最近一次运行：结果、跑的是哪组用例（scope）、当时的代码；手动保存时按它判断记什么 */
   const [report, setReport] = useState<RunReport | null>(null);
-  // 云端语言：看一眼运行器在不在线（缓存一分钟），不在线就在编辑器下面说一声
+  // 在哪里运行：只能在云端跑的语言总是云端；Python、JavaScript、TypeScript 按这门语言上次选的（默认浏览器）
+  const cloudOnly = isRemote(language);
+  const [target, setTarget] = useState<PracticeTarget>(() => readTarget(language));
+  const inCloud = cloudOnly || target === "cloud";
+  /** 云端运行要登录：点了运行才发现没登录（或者登录过期）时，控制台里显示登录提示 */
+  const [needLogin, setNeedLogin] = useState(false);
+  const changeTarget = (next: PracticeTarget) => {
+    if (cloudOnly || next === target) return;
+    setTarget(next);
+    writeTarget(language, next);
+    setNeedLogin(false);
+  };
+  // 在云端运行：看一眼运行器在不在线（缓存一分钟），不在线就在编辑器下面说一声
   const [cloud, setCloud] = useState<RemoteStatus | null>(null);
   useEffect(() => {
-    if (!isRemote(language)) return;
+    if (!inCloud) return;
     let alive = true;
     void remoteStatus().then((s) => { if (alive) setCloud(s); });
     return () => { alive = false; };
-  }, [language]);
+  }, [inCloud]);
   /** 全量测试跑完自动记进尝试记录的那一次（手动「存为尝试记录」时不再重复记） */
   const autoRecorded = useRef<RunReport | null>(null);
   // 调试：一组输入的执行记录、当前看到第几步、编辑器里的断点；调试用的输入跟着上一次看的是「示例」还是「自定义」
@@ -454,7 +480,9 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   }, [draftKey]);
 
   // —— 存进用户自己的进度仓（要登录并开通）：草稿（Ctrl+S、停下 60 秒后自动存）和「测试全部」的记录，都走 save-queue 排队 ——
-  const { ready: repoReady, refresh: refreshProgress } = useProgress();
+  const { ready: repoReady, refresh: refreshProgress, loading: sessionLoading, session, error: sessionError, loginHref } = useProgress();
+  /** 确定没登录（登录状态问到了、不是没问成）：要去云端的运行直接提示登录，不用等 /api/run 回 401 */
+  const signedOut = !sessionLoading && !session?.user && !sessionError;
   const draftJob = `draft:${problem.id}:${mode}:${language}`;
   const runJob = `run:${problem.id}:${mode}:${language}`;
   const solutionJob = `solution:${problem.id}:${mode}:${language}`;
@@ -558,18 +586,28 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       setError(mode === "acm" ? "还没写程序：先写好读入、计算和输出，再运行。" : "还没写解法：在模板的方法里补上代码，再运行。");
       return;
     }
+    setNeedLogin(false);
+    // 要去云端、又确定没登录：不发请求，直接在控制台里提示登录
+    if (inCloud && signedOut) {
+      setReport(null);
+      setError(null);
+      setPanelOpen(true);
+      setTab("results");
+      setNeedLogin(true);
+      return;
+    }
     const token = ++sequenceRef.current;
     const controller = new AbortController();
     abortRef.current = controller;
     const snapshot = codeRef.current;
     setError(null);
     setReport(null);
-    setStatus(isRemote(language) ? "正在云端编译运行…" : language === "python" ? "正在准备 Python 运行环境，首次运行请稍候…" : "正在运行测试…");
+    setStatus(inCloud ? (cloudOnly ? "正在云端编译运行…" : "正在云端运行…") : language === "python" ? "正在准备 Python 运行环境，首次运行请稍候…" : "正在运行测试…");
     setPanelOpen(true);
     setRunning(true);
     setTab("results");
     try {
-      const result = await runPractice({ problem, language, mode, code: snapshot, cases }, {
+      const result = await runPractice({ problem, language, mode, code: snapshot, cases, target }, {
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
       });
@@ -578,11 +616,14 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       // 全量测试相当于一次提交：自动记进进度仓的尝试记录（示例、精简、自定义用例只是运行，要记就点「保存」）
       if (scope === "full" && !unchecked && recordRef.current(rep)) autoRecorded.current = rep;
     } catch (e) {
-      if (sequenceRef.current === token) setError(e instanceof Error ? e.message : String(e));
+      if (sequenceRef.current === token) {
+        if (e instanceof RemoteLoginError) setNeedLogin(true);
+        else setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
     }
-  }, [language, mode, problem, ready, running, starter]);
+  }, [cloudOnly, inCloud, language, mode, problem, ready, running, signedOut, starter, target]);
 
   /** 按「自定义」里填的内容拼一组用例；填得不对抛出中文错误 */
   const customCase = (): { test: PracticeCase; unchecked: boolean } => {
@@ -660,17 +701,26 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       setError(mode === "acm" ? "还没写程序：先写好读入、计算和输出，再调试。" : "还没写解法：在模板的方法里补上代码，再调试。");
       return;
     }
+    // 调试只有只能在云端跑的语言才去云端（Python、JavaScript、TypeScript 选了云端也在浏览器里调试）
+    setNeedLogin(false);
+    if (cloudOnly && signedOut) {
+      setError(null);
+      setPanelOpen(true);
+      setTab("debug");
+      setNeedLogin(true);
+      return;
+    }
     const token = ++sequenceRef.current;
     const controller = new AbortController();
     abortRef.current = controller;
     const snapshot = codeRef.current;
     setError(null);
-    setStatus("正在调试：记下每一步…");
+    setStatus(target === "cloud" && !cloudOnly ? "正在浏览器里调试（云端只调试 Java、C++、Go）：记下每一步…" : "正在调试：记下每一步…");
     setPanelOpen(true);
     setRunning(true);
     setTab("debug");
     try {
-      const result = await runPractice({ problem, language, mode, code: snapshot, cases: [test], debug: true }, {
+      const result = await runPractice({ problem, language, mode, code: snapshot, cases: [test], debug: true, target }, {
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
       });
@@ -682,7 +732,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       const firstBreak = steps.findIndex((s) => s.event === "line" && breakpoints.includes(s.line));
       setDebugIndex(firstBreak >= 0 ? firstBreak : 0);
     } catch (e) {
-      if (sequenceRef.current === token) setError(e instanceof Error ? e.message : String(e));
+      if (sequenceRef.current === token) {
+        if (e instanceof RemoteLoginError) setNeedLogin(true);
+        else setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
     }
@@ -727,7 +780,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             <Select.Value>{({ selectedText }) => <><span className="practice-file-name">{fileName}</span><span className="sr-only">{selectedText}</span></>}</Select.Value>
             <Select.Indicator />
           </Select.Trigger>
-          <Select.Popover className="min-w-36" style={{ zIndex: 120 }}><ListBox aria-label="可选练习语言">{LANGUAGES.map((entry) => <ListBox.Item id={entry.id} key={entry.id} textValue={entry.label}>{entry.label}{entry.remote && <span className="practice-cloud-tag" title="在云端编译运行，要登录">云端</span>}<ListBox.ItemIndicator /></ListBox.Item>)}</ListBox></Select.Popover>
+          <Select.Popover className="min-w-36" style={{ zIndex: 120 }}><ListBox aria-label="可选练习语言">{LANGUAGES.map((entry) => {
+            // 只能在云端跑的语言、和选了云端的 Python / JavaScript / TypeScript 都标「云端」
+            const cloudTag = entry.remote || (entry.id === language ? target : readTarget(entry.id)) === "cloud";
+            return <ListBox.Item id={entry.id} key={entry.id} textValue={entry.label}>{entry.label}{cloudTag && <span className="practice-cloud-tag" title={entry.remote ? "在云端编译运行，要登录" : "选了在云端运行，要登录"}>云端</span>}<ListBox.ItemIndicator /></ListBox.Item>;
+          })}</ListBox></Select.Popover>
         </Select>
         <div className="practice-tabbar-scroll">
           <PracticeModeSwitch />
@@ -776,15 +833,25 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             </Dropdown>
           </>}
         </div>
-        {/* 「⋯」：自动换行、编辑器提示档位、重置代码 */}
+        {/* 「⋯」：运行位置（浏览器 / 云端）、自动换行、编辑器提示档位、重置代码 */}
         <Dropdown>
           <Button aria-label="编辑器设置" className="practice-tb-icon" isIconOnly size="sm" variant="ghost"><MoreIcon /></Button>
           <Dropdown.Popover className="min-w-56 max-w-[300px]" placement="bottom end">
-            <Dropdown.Menu aria-label="编辑器设置" disabledKeys={running || !ready ? ["reset"] : []} onAction={(key) => {
+            <Dropdown.Menu aria-label="编辑器设置" disabledKeys={["target:only", ...(running ? ["target:browser", "target:cloud"] : []), ...(running || !ready ? ["reset"] : [])]} onAction={(key) => {
               if (key === "wrap") toggleWrap();
               else if (key === "reset") setConfirmReset(true);
+              else if (key === "target:browser" || key === "target:cloud") changeTarget(key.slice(7) as PracticeTarget);
               else if (typeof key === "string" && key.startsWith("hints:")) changeHints(key.slice(6) as PracticeHints);
             }}>
+              {cloudOnly ? (
+                <Dropdown.Item className="flex items-center justify-between gap-3" id="target:only" textValue="在云端运行">
+                  <span className="flex flex-col"><span className="text-sm">在云端运行</span><span className="text-[11px] text-muted">{LANGUAGES.find((entry) => entry.id === language)?.label} 只能在云端运行（要登录）</span></span><CheckIcon />
+                </Dropdown.Item>
+              ) : TARGETS.map((entry) => (
+                <Dropdown.Item className="flex items-center justify-between gap-3" id={`target:${entry.id}`} key={entry.id} textValue={entry.label}>
+                  <span className="flex flex-col"><span className="text-sm">{entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{target === entry.id && <CheckIcon />}
+                </Dropdown.Item>
+              ))}
               <Dropdown.Item className="flex items-center justify-between gap-3" id="wrap" textValue="自动换行">
                 <span className="text-sm">自动换行</span>{wrap && <CheckIcon />}
               </Dropdown.Item>
@@ -835,7 +902,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       <CodeEditor code={code} debugLine={debugLine} hints={hints} language={language} onBreakpoints={setBreakpoints} onChange={changeCode} ready={ready} wrap={wrap} />
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="practice-notice text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
-      {isRemote(language) && <p className="practice-notice text-muted" data-testid="practice-cloud-note">{cloudNote(LANGUAGES.find((entry) => entry.id === language)?.label ?? language, language, mode, problem, cloud)}</p>}
+      {inCloud && <p className="practice-notice text-muted" data-testid="practice-cloud-note"><span className="min-w-0">{cloudNote(LANGUAGES.find((entry) => entry.id === language)?.label ?? language, language, mode, problem, cloud)}{signedOut && <> <a className="practice-notice-link" href={loginHref()}>用 GitHub 登录</a></>}</span></p>}
       {/* 控制台：从编辑器底部弹出来的子窗口，拖上沿调高度，✕ 或者状态栏上的「控制台」整个收起 */}
       {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
       {panelOpen && <div className="practice-console" data-testid="practice-test-panel">
@@ -848,6 +915,15 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         </div>
         <div className="practice-console-body">
           {error && <p className="rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-xs leading-5 text-danger" role="alert">{error}</p>}
+          {needLogin && (
+            <div className="practice-login-prompt" data-testid="practice-cloud-login" role="alert">
+              <p className="text-xs leading-5"><span className="font-medium text-foreground">云端运行要先登录。</span><span className="text-muted">用 GitHub 登录后，代码交给云端的沙箱编译运行。草稿存在这个浏览器里，登录回来还在。</span></p>
+              <div className="flex flex-wrap gap-2">
+                <Button className="practice-tb-btn" onPress={() => { window.location.href = loginHref(); }} size="sm" variant="primary">用 GitHub 登录</Button>
+                {!cloudOnly && <Button className="practice-tb-btn" onPress={() => changeTarget("browser")} size="sm" variant="secondary">改在浏览器里运行</Button>}
+              </div>
+            </div>
+          )}
           {tab === "examples" && <div className="flex flex-col gap-2.5">
             <div className="flex flex-wrap items-center justify-between gap-2"><div className="flex flex-wrap gap-1">{samples.map((_, index) => <button aria-pressed={sample === index} className={clsx("rounded-md px-2 py-0.5 text-xs focus-visible:outline-2 focus-visible:outline-accent", sample === index ? "bg-accent/10 text-accent" : "text-muted hover:bg-surface-secondary")} key={index} onClick={() => setSample(index)} type="button">示例 {index + 1}</button>)}</div><Button className="practice-tb-btn" onPress={() => { setCustomInput(selectedSample.stdin); setCustomFields(practiceInputFields(problem, selectedSample.input)); setCustomExpected(mode === "leetcode" ? formatPracticeValue(selectedSample.expected) : selectedSample.stdout); setError(null); setTab("custom"); }} size="sm" variant="ghost">编辑此用例</Button></div>
             <div className="flex min-w-0 flex-col gap-2.5"><div className="min-w-0"><p className="mb-1 text-[11px] text-muted">{mode === "leetcode" ? "输入" : "标准输入"}</p><pre className="practice-output" data-testid="practice-example-input">{mode === "leetcode" ? formatPracticeInput(problem, selectedSample) : selectedSample.stdin}</pre></div><div className="min-w-0"><p className="mb-1 text-[11px] text-muted">{mode === "leetcode" ? "预期结果" : "标准输出"}</p><pre className="practice-output" data-testid="practice-example-output">{mode === "leetcode" ? formatPracticeResult(problem, selectedSample.expected) : selectedSample.stdout}</pre></div></div>
@@ -857,10 +933,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             {mode === "leetcode" ? <div className="grid gap-2.5 sm:grid-cols-2">{customFields.map((field, index) => <label className="flex min-w-0 flex-col gap-1 font-mono text-xs text-muted" key={field.key}>{field.label}<TextArea aria-label={`自定义参数 ${field.label}`} className="w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomFields((fields) => fields.map((item, i) => i === index ? { ...item, value: event.target.value } : item))} rows={2} value={field.value} variant="secondary" /></label>)}</div> : <label className="flex min-w-0 flex-col gap-1 text-xs text-muted">标准输入<TextArea aria-label="自定义输入" className="min-h-24 w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomInput(event.target.value)} rows={4} value={customInput} variant="secondary" /></label>}
             <label className="flex min-w-0 flex-col gap-1 text-xs text-muted">{mode === "leetcode" ? "预期结果（JSON，可选）" : "预期标准输出（可选）"}<TextArea aria-label="自定义预期结果" className="w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomExpected(event.target.value)} rows={2} value={customExpected} variant="secondary" /></label>
           </div>}
-          {tab === "results" && (running ? busyNote : report ? <PracticeResults problem={problem} cases={report.cases} key={report.result.duration} mode={mode} result={report.result} stale={report.code !== code} unchecked={report.unchecked} /> : <p className="py-4 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
+          {tab === "results" && (running ? busyNote : report ? <PracticeResults problem={problem} cases={report.cases} key={report.result.duration} mode={mode} result={report.result} stale={report.code !== code} unchecked={report.unchecked} /> : needLogin ? null : <p className="py-4 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
           {tab === "debug" && (running ? busyNote : debugRun ? <PracticeDebugger breakpoints={breakpoints} index={debugIndex} onIndex={setDebugIndex} onWatch={setWatch} run={debugRun} stale={debugRun.code !== code} watch={watch} /> : (
             <div className="flex flex-col items-center gap-2.5 py-4 text-center">
-              <p className="max-w-sm text-xs leading-6 text-muted">用{caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}把程序跑一遍，记下每一行执行时的变量，然后一步步往前、往后看。点行号可以加断点。</p>
+              <p className="max-w-sm text-xs leading-6 text-muted">用{caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}把程序跑一遍，记下每一行执行时的变量，然后一步步往前、往后看。点行号可以加断点。{target === "cloud" && !cloudOnly && "选了云端运行，调试仍在浏览器里。"}</p>
               <Button className="practice-tb-btn" isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="secondary"><BugIcon />开始调试</Button>
             </div>
           ))}
@@ -868,6 +944,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       </div>}
       <div className="practice-statusbar">
         <span className="practice-status-lang">{LANGUAGES.find((entry) => entry.id === language)?.label} · {mode === "acm" ? "ACM" : "LeetCode"}</span>
+        {/* 在哪里运行：Python、JavaScript、TypeScript 点一下在浏览器 / 云端之间换；只能在云端跑的语言只显示「云端」 */}
+        {cloudOnly
+          ? <span className="practice-status-where" data-testid="practice-run-target" title="这门语言在云端编译运行（要登录）"><CloudIcon />云端</span>
+          : <button aria-label={`运行位置：${target === "cloud" ? "云端" : "浏览器"}（点一下换到${target === "cloud" ? "浏览器" : "云端"}）`} className="practice-status-where" data-testid="practice-run-target" disabled={running} onClick={() => changeTarget(target === "cloud" ? "browser" : "cloud")} title={target === "cloud" ? "在云端运行（要登录）；调试仍在浏览器里。点一下换回浏览器" : "在浏览器里运行（不用登录）。点一下换到云端"} type="button">{target === "cloud" ? <CloudIcon /> : <BrowserIcon />}{target === "cloud" ? "云端" : "浏览器"}</button>}
         <SaveStatus draft={draftState} flash={flash} repoReady={repoReady} run={runState} solution={solutionState} />
         {lastPassed !== null && <span className={clsx("practice-status-result", lastPassed === lastTotal ? "text-success" : "text-danger")} title="上次运行的结果">{lastPassed === lastTotal ? "✓" : "✗"} {lastPassed}/{lastTotal}</span>}
         <button aria-expanded={panelOpen} aria-label="控制台" className="practice-console-toggle" onClick={() => setPanelOpen((open) => !open)} type="button"><TerminalIcon />控制台<ChevronDown className={clsx("transition-transform", !panelOpen && "rotate-180")} height={11} width={11} /></button>
@@ -937,4 +1017,12 @@ function CloseSmallIcon() {
 /** 控制台：一个终端窗口 */
 function TerminalIcon() {
   return <svg {...svg} height={12} width={12}><rect height="11" rx="2" width="13" x="1.5" y="2.5" /><path d="m4.5 6.5 2 1.5-2 1.5M8.5 10h3" /></svg>;
+}
+/** 在云端运行：一朵云 */
+function CloudIcon() {
+  return <svg {...svg} height={12} width={12}><path d="M4.5 12.5a3 3 0 0 1-.4-5.97A4 4 0 0 1 11.8 5.6a3.45 3.45 0 0 1-.3 6.9Z" /></svg>;
+}
+/** 在浏览器里运行：一个带标题栏的窗口 */
+function BrowserIcon() {
+  return <svg {...svg} height={12} width={12}><rect height="11" rx="2" width="13" x="1.5" y="2.5" /><path d="M1.5 5.5h13M4 4h.01M6 4h.01" /></svg>;
 }

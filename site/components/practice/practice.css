@@ -151,6 +151,15 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
 .practice-statusbar { display: flex; flex-shrink: 0; align-items: center; gap: 10px; height: 24px; padding: 0 4px 0 10px; border-top: 1px solid var(--separator); background: color-mix(in oklch, var(--foreground) 2.5%, var(--surface)); color: var(--muted); font-size: 11px; }
 .practice-statusbar [data-testid="practice-save-status"] { font-size: 11px; line-height: 24px; }
 .practice-status-lang { flex-shrink: 0; white-space: nowrap; }
+/* 运行位置：浏览器 / 云端。能选的语言是个按钮，点一下换；只能在云端跑的语言是一段字 */
+.practice-status-where { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; height: 20px; margin-left: -4px; padding: 0 5px; border-radius: 4px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+button.practice-status-where:hover:not(:disabled) { background: color-mix(in oklch, var(--foreground) 6%, transparent); color: var(--foreground); }
+button.practice-status-where:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+button.practice-status-where:disabled { opacity: 0.6; }
+/* 云端运行要先登录：控制台里的提示，带登录按钮（能在浏览器里跑的语言还有「改在浏览器里运行」） */
+.practice-login-prompt { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--separator); border-radius: 8px; background: color-mix(in oklch, var(--accent) 5%, transparent); }
+.practice-notice-link { color: var(--accent); white-space: nowrap; }
+.practice-notice-link:hover { text-decoration: underline; }
 .practice-status-result { flex-shrink: 0; font-family: var(--font-mono); white-space: nowrap; }
 .practice-console-toggle { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; height: 20px; margin-left: auto; padding: 0 6px; border-radius: 4px; color: var(--muted); font-size: 11px; }
 .practice-console-toggle:hover { background: color-mix(in oklch, var(--foreground) 6%, transparent); color: var(--foreground); }

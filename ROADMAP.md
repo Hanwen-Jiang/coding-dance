@@ -184,8 +184,13 @@
   - [x] 判题程序各语言的部分（`tools/illustrations/judge/langs/`、`prelude/`），镜像装上九种工具链，Kotlin / Scala 编译器做 CDS 归档
   - [x] CI：手写题解 6 道 × 9 种、崩溃 / 超时 / ACM / 编译报错行号；九种 × 100 题的起始代码和判题程序对得上（`starters.test.mjs`）
   - [x] 网站：练习区语言菜单、编辑器上色、进度仓规则（模板仓 README、`check.mjs`、`progress.ts`）、从力扣同步的语言对照
-  - [ ] lou1 换上新镜像（重跑 `setup.sh`）；在这之前新语言在练习区显示「云端运行器还没装上」
+  - [x] lou1 换上新镜像（重跑 `setup.sh`）；在这之前新语言在练习区显示「云端运行器还没装上」（2026-11-23 核对：线上 `GET /api/run` 的 `langs` 是 15 种）
   - [ ] 新语言的调试器（C 用 gdb、Rust 用 gdb / lldb、C# / Kotlin / Scala 用 JDI 或 netcoredbg……）
+- [x] Python、JavaScript、TypeScript 也能在云端运行 — 认领：Claude（分支 `cloud-run`）
+  - [x] 练习区：这三种语言在「⋯」菜单和状态栏上选「浏览器 / 云端」，每门语言各记各的（存在浏览器里，默认浏览器）；只能在云端的语言状态栏显示「云端」。选了云端时运行和测试走 `/api/run`，调试仍在浏览器里（编辑器下面的说明写明）
+  - [x] 云端运行要登录：确定没登录时不发请求，控制台里显示登录提示（「用 GitHub 登录」，这三种语言还有「改在浏览器里运行」）；登录过期 `/api/run` 回 401 时也一样
+  - [x] 运行器：TypeScript 先用 Node 的转换器查语法（语法错误报成编译错误、带编辑器里的行号），运行加 `--experimental-transform-types`（`enum`、构造函数参数属性能用，和浏览器一致）；CI 的起始代码测试加上这三种（3 × 100 组）
+  - [ ] lou1 重跑 `setup.sh` 换上带 TypeScript 修复的镜像（`/v1/status` 报 `features: ["ts-transform"]`）；在这之前练习区显示 TypeScript 暂时不能在云端运行（可以换回浏览器），Python、JavaScript 照常
 
 ### 阶段 7：订阅
 - [ ] 档位和价格定稿；支付渠道；先用兑换码内测
@@ -209,6 +214,7 @@
 
 ## 变更记录
 
+- 2026-11-23：Python、JavaScript、TypeScript 也能选云端运行（分支 `cloud-run`）。练习区的「⋯」菜单和状态栏上选「浏览器 / 云端」，每门语言各记各的（`hot100:practice:target:<语言>`，默认浏览器）；语言列表里选了云端的也标「云端」。选了云端时运行和测试经 `/api/run` 交给运行器，调试仍在浏览器里（运行器只给 Java、C++、Go 接了调试器）。云端运行要登录：确定没登录时直接在控制台里提示登录，不发请求；登录过期 `/api/run` 回 401 时也显示同样的提示，不再只有一行报错。运行器这边 Python、JavaScript 早就支持，TypeScript 补了两处：语法错误原来按运行时出错报（每组都是 Node 的一长串调用栈），现在先用 Node 自带的转换器解析一遍，报成编译错误、带编辑器里的行号；`enum`、构造函数参数属性这些要转换的写法原来直接报错（Node 默认只擦类型），现在加 `--experimental-transform-types`，和浏览器里一样能用。这一版的节点在 `/v1/status` 里报 `features: ["ts-transform"]`，网站只把 TypeScript 交给报了它的节点；lou1 重跑 `setup.sh` 之前，练习区显示 TypeScript 暂时不能在云端运行，不会交给旧版沙箱。CI 的起始代码测试加上这三种语言（300 组）。本地用假的 `/api/run`（在 lc-runner 镜像里跑这个分支的沙箱）在 Chrome 里走了一遍：没登录、登录、登录过期、调试、每门语言各记各的、运行器不在线。
 - 2026-11-18：练习区加九种云端语言（C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart，分支 `more-langs`）。起始代码不自己生成，用 leetcode.cn 公开接口取的力扣原样模板（`tools/practice/fetch-starters.mjs` → `leetcode-starters.json`），判题程序按同样的类型和函数名调用，`build.cjs` 逐题核对函数名，CI 再把九种 × 100 题的起始代码补上「还没写」编译、跑一组（896 组，Rust 少 4 道）。力扣没有 Rust 版本的 138、141、142、160（Box 表示不了成环、共用节点、random 指针）在力扣模式下提示改用 ACM 模式；Dart 没有的 138、141、142、160、236、240 照力扣 Dart 的写法补。各语言实测（本机 1 核）：编译 C 0.1 秒、Rust 0.2 秒、C# 0.5 秒、Swift 0.3–1 秒、Dart 0.4 秒、Scala 1.6 秒、Kotlin 2.1 秒（Kotlin、Scala 原来要 5 秒、3 秒，只用 C1 加 CDS 归档省了一半）。踩过的坑：Swift `-O` 下越界只会 ud2、不说原因，加了 `-assert-config Debug` 调用栈又在断言那里断了，改用 `-Onone -g`；Dart AOT 的调用栈没有行号，改用 kernel + JIT；Ruby 的几道链表题力扣用的是驼峰函数名（`hasCycle`）。镜像从 6 种语言变成 15 种，Swift 去掉 SourceKit、LLDB 等省 1 GB 多。网站：`/v1/status` 报的 `langs` 里没有的语言，练习区显示「云端运行器还没装上」，不去跑；新语言暂时不能调试。顺手修了练习区存进度仓时 Java / C++ / Go 的提交说明里语言名是 undefined。
 - 2026-11-18：第一个运行器节点 lou1 接到网站：Pages 生产环境设了加密环境变量 `RUNNER_SECRET`（和 lou1 的 `/etc/lc-runner.env` 同一个值，以后加节点也用它），`wrangler.toml` 的 `RUNNER_NODES` 设成 `lou1=https://run-lou1.codingdance.cn`。Tunnel 的 `run-lou1.codingdance.cn` → `http://localhost:8790` 早先已经加好，没改。网站这边要等 `remote-runner` 合进 main 部署后才生效。同一天合进 main（#44）并部署；第一次部署后 `/api/run` 显示节点不在线，原因是用 PowerShell 管道设密钥时前面多了个 UTF-8 BOM，重设（原样传字节）、再部署后在线（`site/README.md` 里记了这个坑）。
 

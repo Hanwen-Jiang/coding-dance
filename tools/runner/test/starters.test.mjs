@@ -1,5 +1,6 @@
-// 起始代码和判题程序对得上：C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart 的 100 道题起始代码（力扣原样），
-// 每个空方法体补一句「还没写」（返回默认值或抛异常，见 languages.mjs 的 fillStarter），按力扣模式拼成程序编译，跑第一组用例。
+// 起始代码和判题程序对得上：Python、JavaScript、TypeScript（网站上也能选云端运行）和 C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart
+// 的 100 道题起始代码（力扣原样），每个空方法体补一句「还没写」（返回默认值或抛异常，Python 补 pass，见 languages.mjs 的 fillStarter），
+// 按力扣模式拼成程序编译，跑第一组用例。
 // 编译不过就说明判题程序传的参数类型、调用的函数名和起始代码不一样。运行结果不管（方法体是空的）。
 //   在镜像里跑（CI；所有工具链都在，按核数并发）：
 //     docker run --rm -v "$PWD:/src" -w /src -e RUNNER_WORK=/tmp/work lc-runner:ci node tools/runner/test/starters.test.mjs [语言…] [题号…]
@@ -14,7 +15,8 @@ import { LocalDriver } from "../lib/sandbox.mjs";
 import { fillStarter } from "./languages.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../..");
-const TOOLS = { c: ["gcc"], csharp: ["dotnet", ["--list-sdks"]], kotlin: ["java", ["-version"], "/opt/kotlinc/lib/kotlin-compiler.jar"], swift: ["swiftc"], rust: ["rustc"], ruby: ["ruby"], php: ["php"], scala: ["java", ["-version"], "/opt/scala/lib/scala-compiler.jar"], dart: ["dart"] };
+const PY = (process.env.PYTHON || (process.platform === "win32" ? "python" : "python3")).split(" ");
+const TOOLS = { python: [PY[0], [...PY.slice(1), "--version"]], javascript: [process.execPath], typescript: [process.execPath], c: ["gcc"], csharp: ["dotnet", ["--list-sdks"]], kotlin: ["java", ["-version"], "/opt/kotlinc/lib/kotlin-compiler.jar"], swift: ["swiftc"], rust: ["rustc"], ruby: ["ruby"], php: ["php"], scala: ["java", ["-version"], "/opt/scala/lib/scala-compiler.jar"], dart: ["dart"] };
 const has = ([cmd, args = ["--version"], file]) => { const r = spawnSync(cmd, args, { stdio: "ignore" }); return !r.error && r.status === 0 && (!file || fs.existsSync(file)); };
 const argv = process.argv.slice(2);
 const pick = argv.filter((a) => TOOLS[a]), ids = argv.filter((a) => /^\d+$/.test(a)).map(Number);
@@ -46,7 +48,8 @@ await Promise.all(Array.from({ length: width }, async () => {
       assert.equal(r.json.compileError, undefined, "编译不过：\n" + r.json.compileError);
       const x = r.json.results[0];
       // 判题程序自己出错（找不到函数、启动失败）也算没对上；空方法体抛「还没写」之类的不算
-      assert.ok(!/没有找到|启动超时|判题程序|NoSuchMethod|undefined method|Call to undefined/.test(x.error || ""), "判题程序出错：" + x.error);
+      // Python 找不到方法是「'Solution' object has no attribute」，JavaScript 的设计类是「obj[...] is not a function」
+      assert.ok(!/没有找到|启动超时|判题程序|NoSuchMethod|undefined method|Call to undefined|'(?!NoneType)\w+' object has no attribute|is not a function/.test(x.error || ""), "判题程序出错：" + x.error);
     } catch (e) {
       failed++;
       fails.push(`  ✗ ${String(p.id).padStart(4, "0")} ${p.name} · ${lang}\n      ${String(e.message || e).split("\n").slice(0, 8).join("\n      ")}`);

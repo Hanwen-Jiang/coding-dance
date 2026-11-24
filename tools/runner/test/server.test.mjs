@@ -81,6 +81,7 @@ await test("状态里有节点编号和容量", async () => {
   assert.equal(r.json.node, "lou1");
   assert.equal(r.json.slots, 1);
   assert.deepEqual(r.json.debugLangs, ["java", "cpp", "go"]);
+  assert.ok(r.json.features.includes("ts-transform"), "网站按 features 判断节点的 TypeScript 是不是新版：" + JSON.stringify(r.json.features));
 });
 await test("跑一次", async () => {
   const r = await call("/v1/run", { body: job() });

@@ -23,6 +23,18 @@ const SAN_ENV = {
 const JAVA_FLAGS = ["-Xss64m", "-Xmx512m", "-XX:+UseSerialGC", "-XX:-UsePerfData", "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8"];
 const nodeMajor = Number(process.versions.node.split(".")[0]);
 const NODE_FLAGS = ["--stack-size=4000", "--max-old-space-size=512", "--no-warnings", ...(nodeMajor < 23 ? ["--experimental-strip-types"] : [])];
+/**
+ * TypeScript：和浏览器里一样只转成 JavaScript、不做类型检查。Node 默认只「擦掉」类型，enum、namespace、
+ * 构造函数参数属性（constructor(public x: number)）这些要转换的写法会直接报错，所以加上 transform-types（带 source map，行号不变）。
+ */
+const TS_TRANSFORM = process.allowedNodeEnvironmentFlags.has("--experimental-transform-types");
+const TS_FLAGS = TS_TRANSFORM ? ["--experimental-transform-types"] : [];
+/** TypeScript 的语法检查（相当于 JavaScript 的 node --check）：用 Node 自己的转换器解析一遍，报错带「main.ts:行号」 */
+const TS_CHECK = `const m = require("node:module"), f = process.argv[process.argv.length - 1];
+if (typeof m.stripTypeScriptTypes === "function") {
+  try { m.stripTypeScriptTypes(require("node:fs").readFileSync(f, "utf8"), { mode: ${JSON.stringify(TS_TRANSFORM ? "transform" : "strip")}, sourceUrl: f }); }
+  catch (e) { process.stderr.write(String(e && e.stack || e).split("\\n").filter((l) => !/^\\s+at /.test(l)).join("\\n")); process.exit(1); }
+}`;
 
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -135,11 +147,13 @@ async function compile(lang, prog, dir, { debug = false, acm = false, timeoutMs 
     return done({ file: PY[0], args: (from, tok) => [...PY.slice(1), "-X", "utf8", ...prog.args(from, tok)] });
   }
   if (lang === "javascript" || lang === "typescript") {
-    if (lang === "javascript") {
-      const r = await run(process.execPath, ["--check", prog.user], { cwd: dir, timeoutMs });
-      if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr);
-    }
-    return done({ file: process.execPath, args: (from, tok) => [...NODE_FLAGS, ...prog.args(from, tok)] });
+    const r = lang === "javascript"
+      ? await run(process.execPath, ["--check", prog.user], { cwd: dir, timeoutMs })
+      : await run(process.execPath, ["--no-warnings", "-e", TS_CHECK, prog.user], { cwd: dir, timeoutMs });
+    // 只留报错和源码摘录，去掉 Node 自己的调用栈和版本号
+    if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr.split(/\r?\n/).filter((l) => !/^\s+at |^Node\.js v/.test(l)).join("\n"));
+    const flags = lang === "typescript" ? [...NODE_FLAGS, ...TS_FLAGS] : NODE_FLAGS;
+    return done({ file: process.execPath, args: (from, tok) => [...flags, ...prog.args(from, tok)] });
   }
   if (lang === "java") {
     const r = await run("javac", ["-J-Duser.language=zh", "-J-Duser.country=CN", "-encoding", "UTF-8", "-proc:none", "-nowarn", "-Xlint:none", "-g", "-d", "out", prog.user], { cwd: dir, timeoutMs });
