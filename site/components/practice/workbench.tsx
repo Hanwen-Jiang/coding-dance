@@ -17,7 +17,7 @@ import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
 import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
-import { isRemote, readTarget, remoteLacks, RemoteLoginError, remoteStatus, REMOTE_DEBUG_LANGUAGES, writeTarget, type RemoteStatus } from "@/lib/practice/remote";
+import { isRemote, readTarget, remoteLacks, RemoteLoginError, RemoteQuotaError, remoteStatus, REMOTE_DEBUG_LANGUAGES, writeTarget, type RemoteStatus } from "@/lib/practice/remote";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult, PracticeTarget } from "@/lib/practice/types";
 import type { RunScope, SolutionLabel } from "@/lib/practice/record";
@@ -63,8 +63,16 @@ function cloudNote(label: string, language: PracticeLanguage, mode: PracticeMode
   const where = chosen ? `${label} 选了云端运行` : `${label} 在云端编译运行`;
   if (cloud && !cloud.available) return `${where}，${cloud.reason || "云端运行器暂时不在线"}${chosen ? "；可以先换回浏览器运行" : ""}。`;
   if (remoteLacks(cloud, language)) return `${where}，云端运行器还没装上它（节点更新后就能用），暂时不能运行${chosen ? "；可以先换回浏览器运行" : ""}。`;
-  if (chosen) return `${label} 在云端运行（要登录）；调试仍在浏览器里，云端只调试 Java、C++、Go。`;
-  return `${label} 在云端编译运行（要登录）${REMOTE_DEBUG_LANGUAGES.includes(language) ? "，调试用真调试器一步步记下来" : "；这门语言暂时不能调试"}。`;
+  const q = cloud?.quota;
+  let quotaMsg = "";
+  if (q) {
+    if (q.blockedReason === "free_paused") quotaMsg = `（免费云端因月度预算暂停${chosen ? "，可先换回浏览器" : ""}）`;
+    else if (q.blockedReason === "account_too_new") quotaMsg = `（免费云端需 GitHub 注册满 30 天${chosen ? "，可先换回浏览器" : ""}）`;
+    else if (q.blockedReason === "quota_exceeded") quotaMsg = `（今日额度已用完 ${q.used}/${q.limit}，北京时间 0 点重置）`;
+    else quotaMsg = `（${q.founder ? "首批用户 · " : ""}今日剩余 ${q.remaining}/${q.limit} 次）`;
+  }
+  if (chosen) return `${label} 在云端运行（要登录）${quotaMsg}；调试仍在浏览器里，云端只调试 Java、C++、Go。`;
+  return `${label} 在云端编译运行（要登录）${quotaMsg}${REMOTE_DEBUG_LANGUAGES.includes(language) ? "，调试用真调试器一步步记下来" : "；这门语言暂时不能调试"}。`;
 }
 /** 「⋯」里的运行位置（Python、JavaScript、TypeScript 才能选） */
 const TARGETS: { id: PracticeTarget; label: string; desc: string }[] = [
@@ -424,11 +432,14 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   const inCloud = cloudOnly || target === "cloud";
   /** 云端运行要登录：点了运行才发现没登录（或者登录过期）时，控制台里显示登录提示 */
   const [needLogin, setNeedLogin] = useState(false);
+  /** 云端每日额度用完、新账号受限或预算开关暂停时，控制台里显示受限提示 */
+  const [quotaError, setQuotaError] = useState<string | null>(null);
   const changeTarget = (next: PracticeTarget) => {
     if (cloudOnly || next === target) return;
     setTarget(next);
     writeTarget(language, next);
     setNeedLogin(false);
+    setQuotaError(null);
   };
   // 在云端运行：看一眼运行器在不在线（缓存一分钟），不在线就在编辑器下面说一声
   const [cloud, setCloud] = useState<RemoteStatus | null>(null);
@@ -587,6 +598,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       return;
     }
     setNeedLogin(false);
+    setQuotaError(null);
     // 要去云端、又确定没登录：不发请求，直接在控制台里提示登录
     if (inCloud && signedOut) {
       setReport(null);
@@ -611,6 +623,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
       });
+      if (result.quota) setCloud((prev) => (prev ? { ...prev, quota: result.quota } : prev));
       const rep: RunReport = { result, cases, code: snapshot, unchecked, scope };
       if (sequenceRef.current === token) setReport(rep);
       // 全量测试相当于一次提交：自动记进进度仓的尝试记录（示例、精简、自定义用例只是运行，要记就点「保存」）
@@ -618,7 +631,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     } catch (e) {
       if (sequenceRef.current === token) {
         if (e instanceof RemoteLoginError) setNeedLogin(true);
-        else setError(e instanceof Error ? e.message : String(e));
+        else if (e instanceof RemoteQuotaError) {
+          if (e.quota) setCloud((prev) => (prev ? { ...prev, quota: e.quota } : prev));
+          if (cloudOnly) setError(e.message);
+          else setQuotaError(e.message);
+        } else setError(e instanceof Error ? e.message : String(e));
       }
     } finally {
       if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
@@ -703,6 +720,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     }
     // 调试只有只能在云端跑的语言才去云端（Python、JavaScript、TypeScript 选了云端也在浏览器里调试）
     setNeedLogin(false);
+    setQuotaError(null);
     if (cloudOnly && signedOut) {
       setError(null);
       setPanelOpen(true);
@@ -724,6 +742,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
       });
+      if (result.quota) setCloud((prev) => (prev ? { ...prev, quota: result.quota } : prev));
       if (sequenceRef.current !== token) return;
       const r = result.results[0];
       setDebugRun({ trace: r?.trace ?? null, stdout: r?.stdout ?? "", error: r?.error, code: snapshot, label: test.label || (caseTab.current === "custom" ? "自定义用例" : `示例 ${sample + 1}`), cancelled: result.cancelled });
@@ -734,7 +753,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     } catch (e) {
       if (sequenceRef.current === token) {
         if (e instanceof RemoteLoginError) setNeedLogin(true);
-        else setError(e instanceof Error ? e.message : String(e));
+        else if (e instanceof RemoteQuotaError) {
+          if (e.quota) setCloud((prev) => (prev ? { ...prev, quota: e.quota } : prev));
+          setError(e.message);
+        } else setError(e instanceof Error ? e.message : String(e));
       }
     } finally {
       if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
@@ -922,6 +944,16 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
                 <Button className="practice-tb-btn" onPress={() => { window.location.href = loginHref(); }} size="sm" variant="primary">用 GitHub 登录</Button>
                 {!cloudOnly && <Button className="practice-tb-btn" onPress={() => changeTarget("browser")} size="sm" variant="secondary">改在浏览器里运行</Button>}
               </div>
+            </div>
+          )}
+          {quotaError && (
+            <div className="practice-login-prompt" data-testid="practice-cloud-quota" role="alert">
+              <p className="text-xs leading-5 text-foreground">{quotaError}</p>
+              {!cloudOnly && (
+                <div className="flex flex-wrap gap-2">
+                  <Button className="practice-tb-btn" onPress={() => changeTarget("browser")} size="sm" variant="primary">改在浏览器里运行</Button>
+                </div>
+              )}
             </div>
           )}
           {tab === "examples" && <div className="flex flex-col gap-2.5">

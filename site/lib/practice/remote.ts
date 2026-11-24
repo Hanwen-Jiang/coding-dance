@@ -3,7 +3,7 @@
 // 运行器只负责编译运行、给出每组的返回值和输出；对答案和浏览器里运行一样在这里做（comparePracticeOutput / parseAcmOutput）。
 import { parseAcmOutput } from "./acm";
 import { comparePracticeOutput } from "./compare";
-import type { PracticeCaseResult, PracticeLanguage, PracticeRunRequest, PracticeRunResult, PracticeTarget, PracticeTrace } from "./types";
+import type { CloudQuotaInfo, PracticeCaseResult, PracticeLanguage, PracticeRunRequest, PracticeRunResult, PracticeTarget, PracticeTrace } from "./types";
 
 /** 只能在云端运行的语言 */
 export const REMOTE_LANGUAGES: PracticeLanguage[] = ["java", "cpp", "go", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
@@ -31,6 +31,19 @@ export function writeTarget(language: PracticeLanguage, target: PracticeTarget) 
 export class RemoteLoginError extends Error {
   constructor(message = "云端运行要先登录（用 GitHub 登录）") { super(message); this.name = "RemoteLoginError"; }
 }
+export type QuotaBlockCode = "free_paused" | "account_too_new" | "quota_exceeded";
+const QUOTA_CODES = new Set<string>(["free_paused", "account_too_new", "quota_exceeded"]);
+/** 云端额度用完、新账号受限或免费开关暂停时抛这个，练习区可提供换回浏览器运行按钮 */
+export class RemoteQuotaError extends Error {
+  code: QuotaBlockCode;
+  quota?: CloudQuotaInfo;
+  constructor(code: QuotaBlockCode, message: string, quota?: CloudQuotaInfo) {
+    super(message);
+    this.name = "RemoteQuotaError";
+    this.code = code;
+    this.quota = quota;
+  }
+}
 /**
  * 有的语言要节点更新到带某一版改动的沙箱才交给云端（和 functions/_lib/runner.ts 的 LANG_FEATURES 一样）：
  * TypeScript 要 ts-transform（先查语法、能转换 enum），老节点上语法错误会变成每组一长串 Node 调用栈、enum 直接报错
@@ -48,9 +61,9 @@ export const remoteLacks = (status: RemoteStatus | null | undefined, language: P
 };
 
 interface RemoteCase { index: number; actual: unknown; stdout: string; stderr?: string; error?: string; duration: number; trace?: PracticeTrace }
-interface RemoteReply { results?: RemoteCase[]; compileError?: string; compileMs?: number; runMs?: number; queueMs?: number; error?: string }
+interface RemoteReply { results?: RemoteCase[]; compileError?: string; compileMs?: number; runMs?: number; queueMs?: number; error?: string; code?: string; quota?: CloudQuotaInfo }
 
-export interface RemoteStatus { available: boolean; reason?: string; langs?: string[]; debugLangs?: string[]; features?: string[] }
+export interface RemoteStatus { available: boolean; reason?: string; langs?: string[]; debugLangs?: string[]; features?: string[]; quota?: CloudQuotaInfo }
 
 /** 运行器在不在线（题目页打开练习区时问一次，缓存一分钟） */
 let statusCache: { at: number; value: Promise<RemoteStatus> } | null = null;
@@ -61,6 +74,12 @@ export function remoteStatus(): Promise<RemoteStatus> {
     .catch(() => ({ available: false, reason: "连不上网站的接口" }));
   statusCache = { at: Date.now(), value };
   return value;
+}
+
+function patchCachedQuota(quota?: CloudQuotaInfo) {
+  if (!quota || !statusCache) return;
+  const prev = statusCache.value;
+  statusCache = { at: statusCache.at, value: prev.then((s) => ({ ...s, quota })) };
 }
 
 export async function runRemote(request: PracticeRunRequest, options: { signal?: AbortSignal; onStatus?: (s: string) => void } = {}): Promise<PracticeRunResult> {
@@ -89,7 +108,11 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
     throw new Error("连不上云端运行器，检查一下网络再试");
   }
   const reply = (await res.json().catch(() => ({}))) as RemoteReply;
+  if (reply.quota) patchCachedQuota(reply.quota);
   if (res.status === 401) throw new RemoteLoginError(reply.error);
+  if (reply.code && QUOTA_CODES.has(reply.code)) {
+    throw new RemoteQuotaError(reply.code as QuotaBlockCode, reply.error || "云端运行额度受限", reply.quota);
+  }
   if (!res.ok) throw new Error(reply.error || `云端运行失败（${res.status}）`);
   const results: PracticeCaseResult[] = (reply.results || []).map((r) => {
     const test = request.cases[r.index];
@@ -114,5 +137,5 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
       passed: checked && !error && comparePracticeOutput(request.problem, test, actual),
     };
   });
-  return { results, duration: performance.now() - started };
+  return { results, duration: performance.now() - started, ...(reply.quota ? { quota: reply.quota } : {}) };
 }

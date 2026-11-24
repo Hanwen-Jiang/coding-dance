@@ -83,26 +83,102 @@ for _ in range(30):
   alts: [{
     t: "小顶堆",
     code: "heap",
-    note: "堆里始终留着目前见过的最大的 k 个数，堆顶是其中最小的。新来的数比堆顶大才有资格进去，把堆顶换掉。",
-    legend: [["a", "正在看的数"], ["d", "已经看过"], ["b", "堆顶：目前的第 k 大"], ["c", "答案"]],
+    note: "堆里始终留着目前见过的最大的 k 个数，堆顶是其中最小的。新来的数比堆顶大才有资格进去，把堆顶换掉，并一步步展示上浮 / 下沉的调整过程。",
+    legend: [["a", "正在看 / 刚进堆"], ["d", "已经看过"], ["b", "堆顶：目前的第 k 大"], ["e", "正在上浮 / 下沉比较"], ["c", "答案"]],
     build(a, snap) {
       const nums = a.nums.slice(), n = nums.length, k = a.k;
       const heap = [];
-      const up = (i) => { while (i > 0) { const p = (i - 1) >> 1; if (heap[p] <= heap[i]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
-      const down = (i) => { for (;;) { const l = 2 * i + 1, r = l + 1; let s = i; if (l < heap.length && heap[l] < heap[s]) s = l; if (r < heap.length && heap[r] < heap[s]) s = r; if (s === i) break; [heap[s], heap[i]] = [heap[i], heap[s]]; i = s; } };
-      const nodes = () => { const N = {}; heap.forEach((v, i) => (N[i] = { v, l: 2 * i + 1 < heap.length ? 2 * i + 1 : null, r: 2 * i + 2 < heap.length ? 2 * i + 2 : null })); return N; };
-      const view = (j, fin) => [
-        { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === j ? "a" : t < j ? "d" : "" })), ptrs: {} },
-        heap.length ? { t: "tree", label: `小顶堆（最多 ${k} 个，堆顶是其中最小的）`, nodes: nodes(), root: 0, cls: { 0: fin ? "c" : "b" } } : { t: "note", label: "小顶堆", html: "空" },
-      ];
-      const f = () => ({ facts: [["堆大小", `${heap.length} / ${k}`], ["堆顶", heap.length ? heap[0] : "—"]] });
-      snap("开始", `堆里只留目前见过的最大的 ${k} 个数。全部看完后，堆顶就是第 ${k} 大。`, view(-1), { at: "push", ...f() });
-      nums.forEach((x, j) => {
-        if (heap.length < k) { heap.push(x); up(heap.length - 1); snap("入堆", `堆里还不到 ${k} 个，${x} 直接放进去，调整后堆顶是 ${heap[0]}。`, view(j), { at: "push", ...f() }); }
-        else if (x > heap[0]) { const old = heap[0]; heap[0] = x; down(0); snap("替换堆顶", `${x} 比堆顶 ${old} 大，有资格进前 ${k}。换掉堆顶再往下调整，新的堆顶是 ${heap[0]}。`, view(j), { at: "replace", ...f() }); }
-        else snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，跳过。`, view(j), { at: "skip", ...f() });
+      const nodes = (hl = -1, prevMap = {}) => {
+        const N = {};
+        heap.forEach((v, i) => {
+          N[i] = {
+            v,
+            ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),
+            l: 2 * i + 1 < heap.length ? 2 * i + 1 : null,
+            r: 2 * i + 2 < heap.length ? 2 * i + 2 : null,
+          };
+        });
+        return N;
+      };
+      const view = (j, opts = {}) => {
+        const cls = {};
+        if (heap.length) cls[0] = opts.fin ? "c" : "b";
+        if (opts.hl !== undefined && opts.hl >= 0 && opts.hl < heap.length) cls[opts.hl] = opts.hl === 0 && opts.fin ? "c" : "a";
+        if (opts.cmp !== undefined && opts.cmp >= 0 && opts.cmp < heap.length) cls[opts.cmp] = "e";
+        return [
+          { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === j ? "a" : t < j ? "d" : "" })), ptrs: {} },
+          heap.length
+            ? {
+                t: "tree",
+                label: `小顶堆（最多 ${k} 个，堆顶是其中最小的）`,
+                nodes: nodes(opts.hl, opts.prevMap),
+                root: 0,
+                cls,
+                ...(opts.swaps ? { swaps: opts.swaps } : {}),
+              }
+            : { t: "note", label: "小顶堆", html: "空" },
+        ];
+      };
+      const f = (prevTop) => ({
+        facts: [
+          ["堆大小", `${heap.length} / ${k}`],
+          ["堆顶", heap.length ? heap[0] : "—", prevTop],
+        ],
       });
-      snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, true), { at: "done", kind: "ok", ans: heap[0], ...f() });
+      snap("开始", `堆里只留目前见过的最大的 ${k} 个数。全部看完后，堆顶就是第 ${k} 大。`, view(-1), { at: "push", ...f() });
+
+      nums.forEach((x, j) => {
+        if (heap.length < k) {
+          const oldTop = heap.length ? heap[0] : "—";
+          heap.push(x);
+          let cur = heap.length - 1;
+          snap("放入堆尾", `堆里还不到 ${k} 个，把 <b>${x}</b> 先放到堆尾（节点 ${cur}）。`, view(j, { hl: cur }), { at: "push", ...f(oldTop) });
+          while (cur > 0) {
+            const p = (cur - 1) >> 1;
+            if (heap[p] <= heap[cur]) break;
+            const prevTop = heap[0];
+            const vp = heap[p], vc = heap[cur];
+            [heap[p], heap[cur]] = [heap[cur], heap[p]];
+            snap(
+              "上浮交换",
+              `${vc} 比父节点 ${vp} 小，不符合小顶堆，两人交换上浮！`,
+              view(j, { hl: p, cmp: cur, swaps: [[p, cur]], prevMap: { [p]: vp, [cur]: vc } }),
+              { at: "push", ...f(prevTop) },
+            );
+            cur = p;
+          }
+        } else if (x > heap[0]) {
+          const oldTop = heap[0];
+          heap[0] = x;
+          snap(
+            "替换堆顶",
+            `${x} 比堆顶 ${oldTop} 大，有资格进前 ${k}。先用 <b>${x}</b> 替换掉堆顶 ${oldTop}。`,
+            view(j, { hl: 0, prevMap: { 0: oldTop } }),
+            { at: "replace", ...f(oldTop) },
+          );
+          let cur = 0;
+          for (;;) {
+            const l = 2 * cur + 1, r = l + 1;
+            let s = cur;
+            if (l < heap.length && heap[l] < heap[s]) s = l;
+            if (r < heap.length && heap[r] < heap[s]) s = r;
+            if (s === cur) break;
+            const prevTop = heap[0];
+            const vc = heap[cur], vs = heap[s];
+            [heap[s], heap[cur]] = [heap[cur], heap[s]];
+            snap(
+              "下沉交换",
+              `堆顶方向需要保持最小：${vc} 比孩子 ${vs} 大，和更小的孩子交换下沉！`,
+              view(j, { hl: s, cmp: cur, swaps: [[cur, s]], prevMap: { [cur]: vc, [s]: vs } }),
+              { at: "replace", ...f(prevTop) },
+            );
+            cur = s;
+          }
+        } else {
+          snap("跳过", `${x} 不比堆顶 ${heap[0]} 大，进不了前 ${k}，直接跳过。`, view(j), { at: "skip", ...f() });
+        }
+      });
+      snap("完成", `看完了，堆顶 <b>${heap[0]}</b> 就是第 ${k} 大的数。`, view(n, { fin: true }), { at: "done", kind: "ok", ans: heap[0], ...f() });
     },
   }],
   build(a, snap) {
@@ -110,23 +186,65 @@ for _ in range(30):
     const target = n - k;
     let lo = 0, hi = n - 1, lt = 0, i = 0, gt = n - 1, pv = null, hl = -1, done = -1;
     const cls = (j) => (j === done ? "c" : j < lo || j > hi ? "d" : j === hl ? "a" : pv === null ? "e" : j < lt ? "g" : j < i ? "k" : j > gt ? "w" : "e");
-    const view = () => [{ t: "bars", label: `nums（目标是升序后下标 ${target} 的数）`, items: nums.map((v, j) => ({ v, cls: cls(j) })), ptrs: pv === null ? { lo, hi } : { lt, i: i <= gt ? i : null, gt } }];
-    const f = () => ({ facts: [["目标下标", target], ["范围", `[${lo}, ${hi}]`], ["pivot", pv === null ? "—" : pv]] });
+    const view = (opts = {}) => [{
+      t: "bars",
+      label: `nums（目标是升序后下标 ${target} 的数）`,
+      items: nums.map((v, j) => ({
+        v,
+        ...(opts.prevMap && opts.prevMap[j] !== undefined ? { prev: opts.prevMap[j] } : {}),
+        cls: cls(j),
+      })),
+      ptrs: pv === null ? { lo, hi } : { lt, i: i <= gt ? i : null, gt },
+      ...(opts.swaps ? { swaps: opts.swaps } : {}),
+    }];
+    const f = (prevRange) => ({ facts: [["目标下标", target], ["范围", `[${lo}, ${hi}]`, prevRange], ["pivot", pv === null ? "—" : pv]] });
     snap("开始", `第 ${k} 大，就是升序排好后下标 ${n} − ${k} = <b>${target}</b> 的数。只关心这一个位置放的是谁。`, view(), { at: "init", ...f() });
     for (;;) {
       pv = nums[(lo + hi) >> 1]; lt = lo; i = lo; gt = hi; hl = -1;
       snap("选 pivot", `这一轮的范围是 [${lo}, ${hi}]。演示里取中间位置的 <b>${pv}</b> 当 pivot（代码里是随机选的）。`, view(), { at: "pivot", ...f() });
       while (i <= gt) {
         const x = nums[i];
-        if (x < pv) { [nums[lt], nums[i]] = [nums[i], nums[lt]]; lt++; i++; hl = lt - 1; snap("小于", `${x} &lt; ${pv}，放到左边的小于区。`, view(), { at: "less", ...f() }); }
-        else if (x > pv) { [nums[i], nums[gt]] = [nums[gt], nums[i]]; gt--; hl = gt + 1; snap("大于", `${x} &gt; ${pv}，换到右边的大于区。换过来的 ${nums[i]} 还没看过，i 不动。`, view(), { at: "more", ...f() }); }
-        else { i++; hl = i - 1; snap("等于", `${x} 等于 pivot，留在中间的等于区。`, view(), { at: "eq", ...f() }); }
+        if (x < pv) {
+          const oldLt = nums[lt], oldI = nums[i];
+          const didSwap = lt !== i;
+          [nums[lt], nums[i]] = [nums[i], nums[lt]];
+          lt++; i++; hl = lt - 1;
+          snap(
+            "小于 pivot",
+            didSwap ? `${x} &lt; ${pv}，和 lt 处的 ${oldLt} 交换，放到左边的小于区。` : `${x} &lt; ${pv}，就在小于区边界，lt 和 i 一起前进。`,
+            view({ swaps: didSwap ? [[lt - 1, i - 1]] : [], prevMap: didSwap ? { [lt - 1]: oldLt, [i - 1]: oldI } : {} }),
+            { at: "less", ...f() },
+          );
+        } else if (x > pv) {
+          const oldI = nums[i], oldGt = nums[gt];
+          const didSwap = i !== gt;
+          [nums[i], nums[gt]] = [nums[gt], nums[i]];
+          gt--; hl = gt + 1;
+          snap(
+            "大于 pivot",
+            didSwap ? `${x} &gt; ${pv}，和 gt 处的 ${oldGt} 交换到右边的大于区。换过来的 ${nums[i]} 还没看过，i 不动。` : `${x} &gt; ${pv}，就在大于区边界，gt 左移。`,
+            view({ swaps: didSwap ? [[i, gt + 1]] : [], prevMap: didSwap ? { [i]: oldI, [gt + 1]: oldGt } : {} }),
+            { at: "more", ...f() },
+          );
+        } else {
+          i++; hl = i - 1;
+          snap("等于 pivot", `${x} 等于 pivot，留在中间的等于区，i 前进。`, view(), { at: "eq", ...f() });
+        }
       }
       hl = -1;
       const parts = `小于区 [${lo}, ${lt - 1}]，等于区 [${lt}, ${gt}]，大于区 [${gt + 1}, ${hi}]`;
-      if (target < lt) { snap("去左边", `划分完了：${parts}。目标下标 ${target} 在小于区，右边两段直接扔掉。`, view(), { at: "left", ...f() }); hi = lt - 1; pv = null; }
-      else if (target > gt) { snap("去右边", `划分完了：${parts}。目标下标 ${target} 在大于区，左边两段直接扔掉。`, view(), { at: "right", ...f() }); lo = gt + 1; pv = null; }
-      else { done = target; snap("找到", `划分完了：${parts}。目标下标 ${target} 落在等于区，答案就是 pivot <b>${pv}</b>。`, view(), { at: "found", kind: "ok", ans: pv, ...f() }); return; }
+      const prevRange = `[${lo}, ${hi}]`;
+      if (target < lt) {
+        hi = lt - 1; pv = null;
+        snap("去左边", `划分完了：${parts}。目标下标 ${target} 在小于区，右边两段直接扔掉，范围缩成 [${lo}, ${hi}]。`, view(), { at: "left", ...f(prevRange) });
+      } else if (target > gt) {
+        lo = gt + 1; pv = null;
+        snap("去右边", `划分完了：${parts}。目标下标 ${target} 在大于区，左边两段直接扔掉，范围缩成 [${lo}, ${hi}]。`, view(), { at: "right", ...f(prevRange) });
+      } else {
+        done = target;
+        snap("找到", `划分完了：${parts}。目标下标 ${target} 落在等于区，答案就是 pivot <b>${pv}</b>。`, view(), { at: "found", kind: "ok", ans: pv, ...f() });
+        return;
+      }
     }
   },
   points: [

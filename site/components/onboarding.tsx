@@ -36,15 +36,32 @@ const STAR_INFO: Record<string, string> = {
   "Timmononon/my-runtime": "共创者的本地 Python AI Agent 运行时，带工具、记忆和 GitHub 自动化流程",
 };
 
-/** 还没 Star 的仓库和用户的勾选（默认全勾，可以逐个取消），在用户点开通按钮时一起点 */
+const STAR_OFF_KEY = "hot100:star-off";
+
+/** 还没 Star 的仓库和用户的勾选（默认全勾，可以逐个取消），在用户点开通按钮时一起点；默认展开以便直接查看和勾选 */
 function useStarChoice() {
   const { session, star } = useProgress();
   const pending = useMemo(() => (session?.stars ?? []).filter((s) => !s.starred).map((s) => s.repo), [session]);
-  const [off, setOff] = useState<Set<string>>(new Set());
+  const [off, setOff] = useState<Set<string>>(() => {
+    try {
+      const raw = sessionStorage.getItem(STAR_OFF_KEY);
+      if (raw) {
+        const arr = JSON.parse(raw);
+        if (Array.isArray(arr)) return new Set(arr.filter((x): x is string => typeof x === "string"));
+      }
+    } catch {}
+    return new Set();
+  });
   const [results, setResults] = useState<StarResult[]>([]);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const chosen = pending.filter((r) => !off.has(r));
-  const toggle = (repo: string, on: boolean) => setOff((s) => { const n = new Set(s); if (on) n.delete(repo); else n.add(repo); return n; });
+  const toggle = (repo: string, on: boolean) => setOff((s) => {
+    const n = new Set(s);
+    if (on) n.delete(repo);
+    else n.add(repo);
+    try { sessionStorage.setItem(STAR_OFF_KEY, JSON.stringify([...n])); } catch {}
+    return n;
+  });
   const run = async () => {
     if (!chosen.length) return [];
     const res = await star(chosen);
@@ -59,13 +76,21 @@ type StarChoice = ReturnType<typeof useStarChoice>;
 
 const linkBtn = "inline-flex items-center gap-1 rounded-md px-1 text-xs text-muted underline-offset-2 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-accent";
 
-/** 一行小字：点按钮时会顺手 Star 几个仓库，点开可以逐个取消 */
+/** 一行小字：点按钮时会顺手 Star 几个仓库，默认展开、可点击收起 */
 function StarToggle({ c, lead }: { c: StarChoice; lead: string }) {
-  if (!c.pending.length && !c.results.some((r) => !r.starred)) return null;
+  if (!c.all.length) return null;
+  if (!c.pending.length && !c.results.some((r) => !r.starred)) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-success">
+        <PixelIcon cell={1.25} className="text-warning" name="star" />
+        已 Star 全部 {c.all.length} 个关联仓库，谢谢支持
+      </span>
+    );
+  }
   return (
     <button aria-controls="star-list" aria-expanded={c.open} className={linkBtn} type="button" onClick={() => c.setOpen(!c.open)}>
       <PixelIcon cell={1.25} className="text-warning" name="star" />
-      {c.chosen.length ? `${lead} ${c.chosen.length} 个仓库` : "不顺手 Star 了"}
+      {c.chosen.length ? `${lead} ${c.chosen.length} / ${c.pending.length} 个仓库` : "不顺手 Star 了"}
       <ChevronDown aria-hidden className={clsx("transition-transform", c.open && "rotate-180")} height={12} width={12} />
     </button>
   );
@@ -343,6 +368,21 @@ function SetupFlow({ session, back }: { session: SessionInfo; back: string }) {
   );
 }
 
+/** 第 0 步（未登录）：一并加载关联仓库 Star 列表，取消勾选的选择会保留到登录回来 */
+function Step0Card({ repoName }: { repoName: string }) {
+  const c = useStarChoice();
+  return (
+    <Card className="gap-4 p-5 sm:p-6">
+      <p className="text-sm leading-6 text-muted">
+        登录后 GitHub 会接着请你授权网站，回到这里点一下就建好你自己的进度仓 <Mono>{repoName}</Mono>，私有还是公开由你定。
+      </p>
+      <LoginButton className="self-start max-sm:w-full" />
+      <StarToggle c={c} lead="登录后建仓时顺手 Star" />
+      <StarList c={c} />
+    </Card>
+  );
+}
+
 /** /welcome/ 页面 */
 export function Onboarding() {
   const { loading, session, ready } = useProgress();
@@ -371,12 +411,7 @@ export function Onboarding() {
     body = (
       <>
         <Steps at={0} />
-        <Card className="gap-4 p-5 sm:p-6">
-          <p className="text-sm leading-6 text-muted">
-            登录后 GitHub 会接着请你授权网站，回到这里点一下就建好你自己的进度仓 <Mono>{session.repoName}</Mono>，私有还是公开由你定。
-          </p>
-          <LoginButton className="self-start max-sm:w-full" />
-        </Card>
+        <Step0Card repoName={session.repoName} />
       </>
     );
   } else if (repoOk(session)) {

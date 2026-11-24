@@ -5,11 +5,11 @@ function flatten(root: TreeNode | null): void {
         if (!node) {
             return;
         }
-        dfs(node.right);
-        dfs(node.left);
-        node.right = prev;                          //@link
-        node.left = null;                           //@link
-        prev = node;                                //@link
+        dfs(node.right);                            //@goR
+        dfs(node.left);                             //@goL
+        node.right = prev;                          //@linkR
+        node.left = null;                           //@clearL
+        prev = node;                                //@setP
     };
     dfs(root);                                      //@init
 }

@@ -12,13 +12,13 @@ class Solution:
     def sortColors(self, nums: List[int]) -> None:
         lo, i, hi = 0, 0, len(nums) - 1     # [0,lo) 是 0，[lo,i) 是 1，(hi,end] 是 2 #@init
         while i <= hi:                      #@loop
-            if nums[i] == 0:                #@zero
-                nums[lo], nums[i] = nums[i], nums[lo]   #@zero
-                lo += 1                     #@zero
-                i += 1                      #@zero
-            elif nums[i] == 2:              #@two
-                nums[i], nums[hi] = nums[hi], nums[i]   #@two
-                hi -= 1                     # 换过来的数还没看过，i 不动 #@two
+            if nums[i] == 0:                #@chk0
+                nums[lo], nums[i] = nums[i], nums[lo]   #@swap0
+                lo += 1                     #@adv0
+                i += 1                      #@adv0
+            elif nums[i] == 2:              #@chk2
+                nums[i], nums[hi] = nums[hi], nums[i]   #@swap2
+                hi -= 1                     # 换过来的数还没看过，i 不动 #@adv2
             else:                           #@one
                 i += 1                      #@one
 ` }, { t: "简洁写法：先写 2，再覆盖成 1 和 0", key: "paint", kind: "elegant", note: "每个位置先写成 2；读到的是 0 或 1，就把 1 的区域往后扩一格；读到的是 0，再把 0 的区域往后扩一格。后写的覆盖先写的。", code: `
@@ -50,42 +50,124 @@ for _ in range(30):
     assert f(a[:]) == sorted(a)
 `,
   method: "三指针交换",
-  legend: [["e", "确定是 0"], ["g", "确定是 1"], ["w", "确定是 2"], ["a", "nums[i]"]],
+  legend: [["e", "确定是 0"], ["g", "确定是 1"], ["w", "确定是 2"], ["a", "当前位置 i / 刚换完"]],
   presets: [
     { label: "示例 1", args: { nums: [2, 0, 2, 1, 1, 0] }, note: "nums = [2,0,2,1,1,0]", expect: [0, 0, 1, 1, 2, 2] },
     { label: "示例 2", args: { nums: [2, 0, 1] }, note: "nums = [2,0,1]", expect: [0, 1, 2] },
   ],
   build(a, snap) {
-    const nums = a.nums.slice(); let lo = 0, i = 0, hi = nums.length - 1;
-    const view = () => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k < lo ? "e" : k < i ? "g" : k > hi ? "w" : k === i ? "a" : "" })), ptrs: { lo, i, hi } }];
-    snap("开始", "一开始所有位置都还没看过。", view(), { at: "init" });
+    const nums = a.nums.slice();
+    let lo = 0, i = 0, hi = nums.length - 1;
+    const view = (opts = {}) => {
+      const prevMap = opts.prevMap || {};
+      return [{
+        t: "array",
+        label: "nums（[0,lo) 全是 0，[lo,i) 全是 1，(hi,end] 全是 2）",
+        items: nums.map((v, k) => ({
+          v,
+          ...(prevMap[k] !== undefined ? { prev: prevMap[k] } : {}),
+          cls: k < lo ? "e" : k < i ? "g" : k > hi ? "w" : k === i ? "a" : "",
+        })),
+        ptrs: { lo, i: i <= hi ? i : null, hi },
+        ...(opts.swaps ? { swaps: opts.swaps } : {}),
+      }];
+    };
+    snap("初始化", "lo 和 i 从 0 开始，hi 在末尾。一开始所有元素都在未处理区间 [i, hi] 内。", view(), { at: "init", facts: [["lo", lo], ["i", i], ["hi", hi]] });
+
     while (i <= hi) {
       const x = nums[i];
-      if (x === 0) { snap("是 0", `nums[${i}] = 0，和 nums[lo=${lo}] 交换，放进 0 的区域。lo、i 都前进。`, view(), { at: "zero" }); [nums[lo], nums[i]] = [nums[i], nums[lo]]; lo++; i++; }
-      else if (x === 2) { snap("是 2", `nums[${i}] = 2，和 nums[hi=${hi}] = ${nums[hi]} 交换，放进 2 的区域。hi 后退，i 不动，换过来的 ${nums[hi]} 还没看过。`, view(), { at: "two" }); [nums[i], nums[hi]] = [nums[hi], nums[i]]; hi--; }
-      else { snap("是 1", `nums[${i}] = 1，留在原地，i 前进。`, view(), { at: "one" }); i++; }
+      if (x === 0) {
+        snap("判断 nums[i] == 0", `nums[${i}] = 0，应该放到左边 0 的区间末尾（lo = ${lo}）。`, view(), { at: "chk0", facts: [["lo", lo], ["i", i], ["hi", hi]] });
+        const oldLo = nums[lo], oldI = nums[i];
+        [nums[lo], nums[i]] = [nums[i], nums[lo]];
+        snap(
+          "交换 nums[lo] 与 nums[i]",
+          lo === i
+            ? `lo 和 i 在同一个位置 ${i}，0 留在原地。`
+            : `把 nums[${i}]（${oldI}）与 nums[${lo}]（${oldLo}）交换，0 来到下标 ${lo}。`,
+          view({
+            swaps: lo !== i ? [[lo, i]] : [],
+            prevMap: lo !== i ? { [lo]: oldLo, [i]: oldI } : {},
+          }),
+          { at: "swap0", facts: [["lo", lo], ["i", i], ["hi", hi]] },
+        );
+        const pLo = lo, pI = i;
+        lo++; i++;
+        snap("lo 和 i 前进", `0 的区间扩大到 [0, ${lo})，而且换过来的 ${nums[pI] ?? "数"} 一定已经看过（1 或它自己），所以 lo 和 i 一起前进。`, view(), { at: "adv0", facts: [["lo", lo, pLo], ["i", i, pI], ["hi", hi]] });
+      } else if (x === 2) {
+        snap("判断 nums[i] == 2", `nums[${i}] = 2，应该换到右边 2 的区间开头（hi = ${hi}）。`, view(), { at: "chk2", facts: [["lo", lo], ["i", i], ["hi", hi]] });
+        const oldI = nums[i], oldHi = nums[hi];
+        [nums[i], nums[hi]] = [nums[hi], nums[i]];
+        snap(
+          "交换 nums[i] 与 nums[hi]",
+          i === hi
+            ? `i 和 hi 在同一个位置 ${i}，2 已经在右边了。`
+            : `把 nums[${i}]（${oldI}）与 nums[${hi}]（${oldHi}）交换，2 换到下标 ${hi}；原来的 ${oldHi} 换到了下标 ${i}。`,
+          view({
+            swaps: i !== hi ? [[i, hi]] : [],
+            prevMap: i !== hi ? { [i]: oldI, [hi]: oldHi } : {},
+          }),
+          { at: "swap2", facts: [["lo", lo], ["i", i], ["hi", hi]] },
+        );
+        const pHi = hi;
+        hi--;
+        snap("hi 后退，i 不动", `2 的区间向左扩到 (${hi}, ${nums.length})。注意 <b>i 留在 ${i} 不动</b>：刚从 hi 换过来的 ${nums[i]} 还没检查过！`, view(), { at: "adv2", facts: [["lo", lo], ["i", i], ["hi", hi, pHi]] });
+      } else {
+        const pI = i;
+        i++;
+        snap("nums[i] == 1，i 前进", `nums[${pI}] = 1 正好属于中间的 1 区间，不用交换，直接 i 前进到 ${i}。`, view(), { at: "one", facts: [["lo", lo], ["i", i, pI], ["hi", hi]] });
+      }
     }
-    snap("完成", `i 超过了 hi，中间没有没看过的数了。结果 [${nums.join(",")}]。`, view(), { at: "loop", kind: "ok", ans: nums.slice() });
+    snap("完成", `i (${i}) 超过了 hi (${hi})，未处理区间为空。结果 [${nums.join(", ")}]。`, view(), { at: "loop", kind: "ok", ans: nums.slice(), facts: [["lo", lo], ["i", i], ["hi", hi]] });
   },
   alts: [{
     t: "先写 2 再覆盖",
     code: "paint",
-    note: "和简洁写法一样：读到一个数，先把这一格写成 2；是 0 或 1，就在 p1 处写 1，1 的区域往后扩；是 0，再在 p0 处写 0。后写的覆盖先写的。",
-    legend: [["e", "0"], ["g", "1"], ["w", "2"], ["a", "这一步写过的格子"]],
+    note: "和简洁写法一样：每读一个数 x = nums[i]，分三步覆盖刷色：先把当前格写成 2；若 x < 2，就在 p1 处写 1 并让 p1++；若 x == 0，就在 p0 处写 0 并让 p0++。",
+    legend: [["e", "0"], ["g", "1"], ["w", "2"], ["a", "这一步正在改写的格子"]],
     build(a, snap) {
-      const nums = a.nums.slice(), n = nums.length; let p0 = 0, p1 = 0;
+      const nums = a.nums.slice(), n = nums.length;
+      let p0 = 0, p1 = 0;
       const col = { 0: "e", 1: "g", 2: "w" };
-      const view = (i, wr) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: wr.has(k) ? "a" : k <= i ? col[v] : "" })), ptrs: { p0, p1, i: i >= 0 && i < n ? i : null } }];
-      const f = (at) => ({ at, facts: [["0 的个数", p0], ["1 的个数", p1 - p0]] });
-      snap("开始", "p0 是下一个 0 该写的位置，p1 是下一个 1 该写的位置。i 左边已经排好：[0, p0) 是 0，[p0, p1) 是 1，[p1, i) 是 2。", view(-1, new Set()), f("init"));
+      const view = (i, wr, prevMap = {}) => [{
+        t: "array",
+        label: "nums（[0,p0) 是 0，[p0,p1) 是 1，[p1,i] 是 2）",
+        items: nums.map((v, k) => ({
+          v,
+          ...(prevMap[k] !== undefined ? { prev: prevMap[k] } : {}),
+          cls: wr.has(k) ? "a" : k <= i ? col[v] : "",
+        })),
+        ptrs: { p0, p1, i: i >= 0 && i < n ? i : null },
+      }];
+      const f = (at, x, prevP0, prevP1) => ({
+        at,
+        facts: [
+          ...(x !== undefined ? [["读出 x", x]] : []),
+          ["p0 (0 的个数)", p0, prevP0],
+          ["p1 (≤1 的个数)", p1, prevP1],
+        ],
+      });
+      snap("初始化", "p0 是下一个 0 该写的位置，p1 是下一个 1 该写的位置。从左到右刷过去，后写的覆盖先写的。", view(-1, new Set()), f("init"));
       for (let i = 0; i < n; i++) {
-        const x = nums[i], wr = new Set([i]), ops = [`nums[${i}] 写成 2`];
+        const x = nums[i];
         nums[i] = 2;
-        if (x < 2) { nums[p1] = 1; wr.add(p1); ops.push(`nums[${p1}] 写成 1，p1 前进`); p1++; }
-        if (x === 0) { nums[p0] = 0; wr.add(p0); ops.push(`nums[${p0}] 写成 0，p0 前进`); p0++; }
-        snap(`读到 ${x}`, `nums[${i}] 原来是 ${x}。${ops.join("；")}。`, view(i, wr), f(x === 2 ? "read" : x === 1 ? ["read", "one"] : ["read", "one", "zero"]));
+        snap(`读出 x=${x}，先写 2`, `先记住 nums[${i}] 原来的值 x = <b>${x}</b>，把 nums[${i}] 先覆盖写成 2。`, view(i, new Set([i]), { [i]: x }), f("read", x));
+        if (x < 2) {
+          const old1 = nums[p1];
+          const oldP1 = p1;
+          nums[p1] = 1;
+          p1++;
+          snap("写入 1 并扩大 1 区间", `因为 x = ${x} < 2，在 p1 = ${oldP1} 处写入 <b>1</b>，然后 p1 右移到 ${p1}。`, view(i, new Set([oldP1]), { [oldP1]: old1 }), f("one", x, undefined, oldP1));
+        }
+        if (x === 0) {
+          const old0 = nums[p0];
+          const oldP0 = p0;
+          nums[p0] = 0;
+          p0++;
+          snap("写入 0 并扩大 0 区间", `因为 x = 0，在 p0 = ${oldP0} 处写入 <b>0</b>（覆盖掉刚才的 1 或 2），然后 p0 右移到 ${p0}。`, view(i, new Set([oldP0]), { [oldP0]: old0 }), f("zero", x, oldP0));
+        }
       }
-      snap("完成", `全部读完，结果 [${nums.join(",")}]。`, view(n, new Set()), { kind: "ok", ans: nums.slice(), ...f([]) });
+      snap("完成", `全部扫描完成，结果 [${nums.join(", ")}]。`, view(n, new Set()), { kind: "ok", ans: nums.slice(), ...f([]) });
     },
   }],
   points: [

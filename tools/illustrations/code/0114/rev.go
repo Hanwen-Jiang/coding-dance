@@ -6,9 +6,11 @@ func flatten(root *TreeNode) {
 		if node == nil {
 			return
 		}
-		dfs(node.Right)
-		dfs(node.Left)
-		node.Right, node.Left, prev = prev, nil, node //@link
+		dfs(node.Right)  //@goR
+		dfs(node.Left)   //@goL
+		node.Right = prev //@linkR
+		node.Left = nil   //@clearL
+		prev = node       //@setP
 	}
 	dfs(root) //@init
 }
