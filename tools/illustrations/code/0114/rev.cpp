@@ -13,10 +13,10 @@ private:
         if (!node) {
             return;
         }
-        dfs(node->right);
-        dfs(node->left);
-        node->right = prev;                         //@link
-        node->left = nullptr;                       //@link
-        prev = node;                                //@link
+        dfs(node->right);                           //@goR
+        dfs(node->left);                            //@goL
+        node->right = prev;                         //@linkR
+        node->left = nullptr;                       //@clearL
+        prev = node;                                //@setP
     }
 };

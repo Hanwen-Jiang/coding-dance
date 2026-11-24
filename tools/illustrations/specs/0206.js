@@ -19,9 +19,10 @@ class Solution:
     def reverseList(self, head: Optional[ListNode]) -> Optional[ListNode]:
         prev, cur = None, head          #@init
         while cur:
-            nxt = cur.next              # 先记住下一个 #@flip
+            nxt = cur.next              # 先记住下一个 #@save
             cur.next = prev             # 箭头掉头 #@flip
-            prev, cur = cur, nxt        # 两个指针都往前走 #@move
+            prev = cur                  #@mprev
+            cur = nxt                   #@mcur
         return prev                     #@done
 ` }, { t: "递归写法", key: "rec", note: "先让后面的部分反转好，再把自己接到它的尾巴上。", code: `
 class Solution:
@@ -57,17 +58,56 @@ assert toL(s.reverseList(L([]))) == []
   ],
   build(a, snap) {
     const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null));
-    let prev = null, cur = 0;
-    const view = () => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === cur ? "a" : i === prev ? "b" : prev !== null && i < prev ? "k" : "" })), next: next.slice(), ptrs: { prev, cur } }];
-    snap("开始", "prev 是空，cur 在头节点。", view(), { at: "init" });
+    let prev = null, cur = n ? 0 : null;
+    const view = (opts = {}) => [{
+      t: "list",
+      label: "链表（虚红线 × 表示断开的旧指针，高亮弧线表示新掉头的指针）",
+      nodes: v.map((x, i) => ({
+        v: x,
+        cls: i === cur ? "a" : i === prev ? "b" : prev !== null && i < prev ? "k" : "",
+        ...(opts.hot === i ? { ecls: "on" } : {}),
+      })),
+      next: next.slice(),
+      ptrs: { prev, cur, ...(opts.nxt !== undefined ? { nxt: opts.nxt } : {}) },
+      ...(opts.ghostEdges ? { ghostEdges: opts.ghostEdges } : {}),
+      ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+    }];
+    if (!n) {
+      snap("完成", "链表是空的，直接返回空。", [{ t: "note", label: "链表", html: "空" }], { at: "done", kind: "ok", ans: [] });
+      return;
+    }
+    snap("prev, cur = None, head", `prev 一开始为空（原来的头节点 ${v[0]} 反转后是尾巴），cur 指向头节点 ${v[0]}。`, view(), { at: "init" });
     while (cur !== null) {
       const nxt = cur + 1 < n ? cur + 1 : null;
+      snap(
+        "nxt = cur.next",
+        `先用 nxt 记住 ${v[cur]} 的下一个节点${nxt === null ? "（空）" : ` <b>${v[nxt]}</b>`}。下一行要改 ${v[cur]}.next，不先记住就找不到后面的链表了。`,
+        view({ nxt }),
+        { at: "save" },
+      );
       next[cur] = prev;
-      snap("箭头掉头", `先记住 cur 的下一个节点${nxt === null ? "（空）" : " " + v[nxt]}。然后把 ${v[cur]} 的 next 改成指向 ${prev === null ? "空" : v[prev]}。`, view(), { at: "flip" });
-      prev = cur; cur = nxt;
-      snap("往前走", cur === null ? "prev 移到刚处理完的节点，cur 走到了空，循环结束。" : `prev 移到 ${v[prev]}，cur 移到 ${v[cur]}。`, view(), { at: "move" });
+      snap(
+        "cur.next = prev",
+        `把 ${v[cur]}.next 改成指向 prev（<b>${prev === null ? "空" : v[prev]}</b>）${nxt !== null ? `，断开原本指往 ${v[nxt]} 的箭头` : ""}。`,
+        view({
+          nxt,
+          hot: cur,
+          animEdges: [cur],
+          ...(nxt !== null ? { ghostEdges: [[cur, nxt]] } : {}),
+        }),
+        { at: "flip" },
+      );
+      prev = cur;
+      snap("prev = cur", `箭头已经掉头，把 prev 前移到刚处理完的 <b>${v[prev]}</b>。`, view({ nxt }), { at: "mprev" });
+      cur = nxt;
+      snap(
+        "cur = nxt",
+        cur === null ? "cur 沿着刚才存下的 nxt 走到空，循环结束。" : `cur 沿着刚才存下的 nxt 前移到 <b>${v[cur]}</b>，准备翻转下一个节点。`,
+        view(),
+        { at: "mcur" },
+      );
     }
-    snap("完成", `所有箭头都掉了头。prev 指着的 ${v[prev]} 就是新的头节点。`, view(), { at: "done", kind: "ok", ans: v.slice().reverse() });
+    snap("完成", `所有箭头都掉了头。返回 prev 指向的 <b>${v[prev]}</b>，就是新的头节点。`, view(), { at: "done", kind: "ok", ans: v.slice().reverse() });
   },
   alts: [{
     t: "递归",
@@ -77,8 +117,20 @@ assert toL(s.reverseList(L([]))) == []
     build(a, snap) {
       const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null)), calls = [];
       let nh = null;
-      const view = (cur) => [
-        { t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === cur ? "a" : i === nh ? "c" : calls.includes(i) ? "e" : nh !== null && i > cur ? "k" : "" })), next: next.slice(), ptrs: { head: cur >= 0 ? cur : null, new_head: nh } },
+      const view = (cur, opts = {}) => [
+        {
+          t: "list",
+          label: "链表",
+          nodes: v.map((x, i) => ({
+            v: x,
+            cls: i === cur ? "a" : i === nh ? "c" : calls.includes(i) ? "e" : nh !== null && i > cur ? "k" : "",
+            ...(opts.hot === i ? { ecls: "on" } : {}),
+          })),
+          next: next.slice(),
+          ptrs: { head: cur >= 0 ? cur : null, new_head: nh },
+          ...(opts.ghostEdges ? { ghostEdges: opts.ghostEdges } : {}),
+          ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+        },
         { t: "chips", label: "递归调用栈（右边是最里层）", items: calls.map((i) => ({ v: `reverseList(${v[i]})`, cls: i === cur ? "a" : "e" })), empty: "空" },
       ];
       if (!n) { snap("完成", "链表是空的，直接返回空。", [{ t: "note", label: "链表", html: "空" }], { at: "base", kind: "ok", ans: [] }); return; }
@@ -86,18 +138,34 @@ assert toL(s.reverseList(L([]))) == []
         calls.push(i);
         if (i === n - 1) {
           nh = i;
-          snap("到底", `reverseList(${v[i]})：${v[i]} 后面没有节点了，它自己就是反转后的头，直接返回。`, view(i), { at: "base" });
+          snap("到底", `reverseList(${v[i]})：${v[i]} 后面没有节点了，它自己就是反转后的头 new_head，直接返回。`, view(i), { at: "base" });
           calls.pop();
-        } else snap("往下递归", `reverseList(${v[i]})：先把 ${v[i]} 后面的部分反转好，再处理 ${v[i]} 自己。`, view(i), { at: "down" });
+        } else snap("往下递归", `reverseList(${v[i]})：先把 ${v[i]} 后面的部分反转好，再回来接 ${v[i]}。`, view(i), { at: "down" });
       }
       for (let i = n - 2; i >= 0; i--) {
         next[i + 1] = i;
-        snap("指回来", `回到 reverseList(${v[i]})，后面已经反转好了，新的头是 ${v[nh]}。head.next 是 ${v[i + 1]}，让 ${v[i + 1]}.next 指回 ${v[i]}。`, view(i), { at: "back" });
+        snap(
+          "head.next.next = head",
+          `回到 reverseList(${v[i]})，后面已经反转好了，新头是 ${v[nh]}。head.next 是 ${v[i + 1]}，让 <b>${v[i + 1]}.next 指回 ${v[i]}</b>。`,
+          view(i, { hot: i + 1, animEdges: [i + 1] }),
+          { at: "back" },
+        );
         next[i] = null;
-        snap("断开", `再把 ${v[i]}.next 设成空，${v[i]} 成了新的尾巴。把 new_head ${v[nh]} 返回给上一层。`, view(i), { at: ["cut", "ret"] });
+        snap(
+          "head.next = None",
+          `断开 ${v[i]} 原来指往 ${v[i + 1]} 的指针（置空），防止形成环。`,
+          view(i, { ghostEdges: [[i, i + 1]] }),
+          { at: "cut" },
+        );
+        snap(
+          "return new_head",
+          `把 new_head（<b>${v[nh]}</b>）原封不动返回给上一层。`,
+          view(i),
+          { at: "ret" },
+        );
         calls.pop();
       }
-      snap("完成", `递归全部返回，新的头节点是 ${v[nh]}。`, view(-1), { at: "ret", kind: "ok", ans: v.slice().reverse() });
+      snap("完成", `递归全部返回，新的头节点是 <b>${v[nh]}</b>。`, view(-1), { at: "ret", kind: "ok", ans: v.slice().reverse() });
     },
   }],
   points: [

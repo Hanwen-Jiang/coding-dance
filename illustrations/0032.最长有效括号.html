@@ -98,10 +98,14 @@ button.primary:disabled { color: var(--ink); border-color: var(--line); }
 .chip { font-family: var(--font-mono); font-size: 13px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); }
 .empty { color: var(--muted); font-size: 13px; }
 
-svg.g2 { display: block; height: auto; }
+svg.g2 { display: block; height: auto; overflow: visible; }
 svg.g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; }
 svg.g2 .edge.on { stroke: var(--accent); stroke-width: 2.6; }
 svg.g2 .edge.warm { stroke: var(--warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
+svg.g2 .edge.cut { stroke: #d9383a; stroke-width: 1.8; stroke-dasharray: 5 4; opacity: 0.45; }
+svg.g2 text.lr { font-size: 9px; font-weight: 700; fill: var(--muted); }
+.cell.changed { line-height: 1.05; }
+.cell .prev { display: block; font-size: 9px; font-weight: 500; opacity: 0.7; text-decoration: line-through; line-height: 1; }
 svg.g2 .ah { fill: var(--muted); }
 svg.g2 rect.n, svg.g2 circle.n { fill: var(--surface); stroke: var(--line); stroke-width: 2; transition: fill .25s ease; }
 svg.g2 .n.a { fill: var(--accent); stroke: var(--accent); }
@@ -382,7 +386,7 @@ const SPEC = { presets: [{"label":"示例 2","args":{"s":")()())"},"note":"s = \
 ] };
 (function () {
   const $ = (id) => document.getElementById(id);
-  const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const INV = new Set(["a", "b", "c"]);
   const lab = (v) => (v.label ? `<div class="vl">${v.label}</div>` : "");
   const norm = (it) => (it !== null && typeof it === "object" ? it : { v: it });
@@ -390,15 +394,18 @@ const SPEC = { presets: [{"label":"示例 2","args":{"s":")()())"},"note":"s = \
 
   function ptrMap(ptrs) {
     const m = {};
-    for (const [name, i] of Object.entries(ptrs || {})) if (i !== null && i !== undefined) (m[i] = m[i] || []).push(name);
+    for (const [name, i] of Object.entries(ptrs || {})) if (i !== null && i !== undefined) (m[String(i)] = m[String(i)] || []).push(name);
     return m;
   }
+  const cellHtml = (it) => (it.prev !== undefined && String(it.prev) !== String(it.v)
+    ? `<span class="prev">${show(it.prev)}→</span><span>${show(it.v)}</span>`
+    : show(it.v));
   function vArray(v) {
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
-      `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
+      `<div class="cc"><div class="cell ${it.cls || ""}${it.prev !== undefined && String(it.prev) !== String(it.v) ? " changed" : ""}">${cellHtml(it)}</div>` +
       (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
-      (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
+      (hasP ? `<div class="cp">${(pm[String(i)] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
   function vBars(v) {
@@ -409,7 +416,7 @@ const SPEC = { presets: [{"label":"示例 2","args":{"s":")()())"},"note":"s = \
       (it.v / max < 0.16 ? `<div class="bv">${it.v}</div>` : "") +
       (it.water ? `<div class="wat" style="height:${(it.water / max) * 100}%"></div>` : "") +
       `<div class="bar ${it.cls || ""}" style="height:${(it.v / max) * 100}%">${it.v / max < 0.16 ? "" : it.v}</div></div>` +
-      `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
+      `<div class="ci">${i}</div><div class="cp">${(pm[String(i)] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
   // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
@@ -418,7 +425,7 @@ const SPEC = { presets: [{"label":"示例 2","args":{"s":")()())"},"note":"s = \
     const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
     let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}${it.prev !== undefined && String(it.prev) !== String(it.v) ? " changed" : ""}">${cellHtml(it)}</div>`).join("");
     });
     return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
@@ -447,6 +454,7 @@ const SPEC = { presets: [{"label":"示例 2","args":{"s":")()())"},"note":"s = \
       else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 16 + Math.abs(j - i) * 4);
         s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`; }
     };
+    (v.ghostEdges || []).forEach(([i, j]) => edge(i, j, "cut", false));
     next.forEach((j, i) => { if (!nodes[i].hide) edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, nodes[i].ecls || "", false); });
     (v.extra || []).forEach(([i, j]) => edge(i, j, "warm", j > i, true));
     const pm = ptrMap(v.ptrs);
@@ -455,26 +463,39 @@ const SPEC = { presets: [{"label":"示例 2","args":{"s":")()())"},"note":"s = \
       const c = (nd.cls || "").split(" ")[0];
       s += `<rect class="n ${nd.cls || ""}" x="${cx(i) - BW / 2}" y="${Y - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
       s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx(i)}" y="${Y}">${show(nd.v)}</text>`;
-      (pm[i] || []).forEach((nm, k) => { s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`; });
+      (pm[String(i)] || []).forEach((nm, k) => { s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`; });
     });
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;
   }
   function vTree(v) {
-    const pos = {}, par = {}, PAD = v.badges ? 44 : 28, GAPX = v.badges ? 54 : 46; let x = 0, depth = 0;
-    const walk = (id, d) => { if (id === null || id === undefined || !v.nodes[id]) return; const nd = v.nodes[id];
-      walk(nd.l, d + 1); pos[id] = [PAD + x * GAPX, 28 + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
-      for (const c of [nd.l, nd.r]) if (c !== null && c !== undefined && v.nodes[c]) par[c] = id; };
+    const pos = {}, parList = [], PAD = v.badges || v.ptrs ? 46 : 32, GAPX = v.badges || v.ptrs ? 54 : 46, TOP = v.ptrs ? 42 : 28, R = 17;
+    const visited = new Set(); let x = 0, depth = 0;
+    const walk = (id, d) => { if (id === null || id === undefined) return; const sid = String(id); if (!v.nodes[id] || visited.has(sid)) return; visited.add(sid);
+      const nd = v.nodes[id]; walk(nd.l, d + 1); pos[sid] = [PAD + x * GAPX, TOP + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
+      if (nd.l !== null && nd.l !== undefined && v.nodes[nd.l]) parList.push([sid, String(nd.l), "L"]);
+      if (nd.r !== null && nd.r !== undefined && v.nodes[nd.r]) parList.push([sid, String(nd.r), "R"]); };
     walk(v.root, 0);
-    const W = Math.max(PAD * 2 + (x - 1) * GAPX, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
-    const cls = v.cls || {}, on = new Set(v.on || []);
-    let s = "";
-    for (const id in par) { const [x1, y1] = pos[par[id]], [x2, y2] = pos[id];
-      s += `<line class="edge ${on.has(+id) && on.has(+par[id]) ? "on" : ""}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`; }
-    for (const id in pos) { const [px, py] = pos[id], c = (cls[id] || "").split(" ")[0];
-      s += `<circle class="n ${cls[id] || ""}" cx="${px}" cy="${py}" r="17"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(v.nodes[id].v)}</text>`;
+    const pm = ptrMap(v.ptrs), maxPtrLines = Math.max(0, ...Object.values(pm).map((a) => a.length));
+    const W = Math.max(PAD * 2 + Math.max(0, x - 1) * GAPX, 140), H = TOP + 28 + depth * 66 + Math.max(v.badges ? 24 : 0, maxPtrLines ? 14 + maxPtrLines * 12 : 0);
+    const cls = v.cls || {}, on = new Set((v.on || []).map(String)), id0 = "tr" + uid++;
+    let s = `<defs><marker id="${id0}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
+    for (const [f, t, side] of parList) { const p1 = pos[f], p2 = pos[t]; if (!p1 || !p2) continue;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+      const sx = p1[0] + ux * R, sy = p1[1] + uy * R, ex = p2[0] - ux * (v.directed ? R + 3 : R), ey = p2[1] - uy * (v.directed ? R + 3 : R);
+      s += `<line class="edge ${on.has(f) && on.has(t) ? "on" : ""}"${v.directed ? ` marker-end="url(#${id0})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
+      if (v.lrLabels) s += `<text class="lr" x="${(sx + ex) / 2 + (side === "L" ? -8 : 8)}" y="${(sy + ey) / 2 - 2}">${side}</text>`; }
+    for (const [a, b] of (v.cutEdges || [])) { const p1 = pos[String(a)], p2 = pos[String(b)]; if (!p1 || !p2) continue;
+      s += `<line class="edge cut" x1="${p1[0]}" y1="${p1[1]}" x2="${p2[0]}" y2="${p2[1]}"></line>`; }
+    for (const ex of (v.extra || [])) { const p1 = pos[String(ex.from)], p2 = pos[String(ex.to)]; if (!p1 || !p2) continue;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+      const sx = p1[0] + ux * R, sy = p1[1] + uy * R, exX = p2[0] - ux * (R + 3), exY = p2[1] - uy * (R + 3), bend = ex.bend ?? 0.35;
+      s += `<path class="edge ${ex.cls || "on"}" marker-end="url(#${id0})" d="M${sx} ${sy} Q${(sx + exX) / 2 - uy * bend * 64} ${(sy + exY) / 2 + ux * bend * 64} ${exX} ${exY}"></path>`; }
+    for (const id of Object.keys(pos)) { const [px, py] = pos[id], c = (cls[id] || "").split(" ")[0];
+      s += `<circle class="n ${cls[id] || ""}" cx="${px}" cy="${py}" r="${R}"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(v.nodes[id].v)}</text>`;
       const b = v.badges && v.badges[id];
       if (b !== undefined && b !== null) { const t = String(b), w = Math.max(26, t.length * 7 + 10);
         s += `<rect class="bd" x="${px - w / 2}" y="${py + 21}" width="${w}" height="16" rx="8"></rect><text class="bt" x="${px}" y="${py + 29}">${E(t)}</text>`; }
+      (pm[id] || []).forEach((nm, k) => { s += `<text class="pt" x="${px}" y="${py + (b != null ? 47 : 28) + k * 12}">${E(nm)}</text>`; });
     }
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W * 1.15}px;max-width:100%"><g>${s}</g></svg></div></div>`;
   }

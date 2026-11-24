@@ -51,10 +51,17 @@ html {
 .demo .dm-views { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .demo .dm-v { display: flex; flex-direction: column; gap: 6px; min-width: 0; animation: dm-fade 0.25s ease both; }
 .demo .dm-vl { font-size: 12px; color: var(--muted); }
-.demo .dm-scroll { overflow-x: auto; padding: 4px 2px; }
+.demo .dm-scroll { position: relative; overflow-x: auto; padding: 8px 4px; }
 .demo .dm-arr { display: flex; gap: 4px; width: max-content; min-width: 100%; }
 .demo .dm-cc { flex: 1 1 0; min-width: 30px; max-width: 58px; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
-.demo .dm-cell { height: 38px; border: 1px solid var(--dm-line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; background: var(--surface); transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease; }
+.demo .dm-cell { position: relative; height: 38px; border: 1px solid var(--dm-line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; background: var(--surface); transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease; }
+.demo .dm-cell.dm-changed { line-height: 1.05; }
+.demo .dm-cell .dm-prev { display: block; font-size: 9px; font-weight: 500; opacity: 0.72; text-decoration: line-through; line-height: 1; }
+.demo .dm-cell .dm-val { display: block; font-size: 13px; line-height: 1.1; }
+.demo .dm-fx-run .dm-cell.dm-changed,
+.demo .dm-fx-run .dm-bar.dm-changed { animation: dm-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.demo .dm-fx-run .dm-swap-a,
+.demo .dm-fx-run .dm-swap-b { animation: dm-swap-pulse 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .demo .dm-ci { text-align: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 .demo .dm-cp { min-height: 18px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
 .demo .dm-cp span { font-family: var(--font-mono); font-size: 11px; font-weight: 600; line-height: 1.25; color: var(--dm-accent); white-space: nowrap; }
@@ -69,12 +76,21 @@ html {
 .demo .dm-chip { font-family: var(--font-mono); font-size: 13px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--dm-line); background: var(--surface); transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
 .demo .dm-empty { color: var(--muted); font-size: 13px; }
 .demo .dm-note pre { font-family: var(--font-mono); font-size: 13px; line-height: 1.6; white-space: pre; overflow-x: auto; margin: 0; }
-.demo svg.dm-g2 { display: block; height: auto; }
+.demo svg.dm-g2 { display: block; height: auto; overflow: visible; }
 .demo svg.dm-g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; transition: stroke 0.25s ease, stroke-width 0.25s ease, opacity 0.25s ease; }
 .demo svg.dm-g2 .edge.on { stroke: var(--dm-accent); stroke-width: 2.6; }
 .demo svg.dm-g2 .edge.warm { stroke: var(--dm-warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
 .demo svg.dm-g2 .edge.dim { opacity: 0.25; }
+.demo svg.dm-g2 .edge.cut { stroke: var(--danger, oklch(0.62 0.21 25)); stroke-width: 2; stroke-dasharray: 5 4; opacity: 0.72; }
+.demo .dm-fx-run svg.dm-g2 .edge.draw { stroke-dasharray: 260; stroke-dashoffset: 260; animation: dm-draw 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.demo .dm-fx-run svg.dm-g2 .edge.cut { animation: dm-cut 0.7s ease forwards; }
 .demo svg.dm-g2 .ah { fill: var(--muted); }
+.demo svg.dm-g2 .ah-on { fill: var(--dm-accent); }
+.demo svg.dm-g2 .dm-tnode { transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1); }
+.demo .dm-fx-run svg.dm-g2 .dm-tnode.dm-tswap circle.n { animation: dm-node-pop 0.5s ease both; }
+.demo svg.dm-g2 text.dm-lr { font-size: 9px; font-weight: 700; fill: var(--muted); }
+.demo svg.dm-g2 text.dm-cut-x { font-size: 13px; font-weight: 700; fill: var(--danger, oklch(0.62 0.21 25)); }
+.demo svg.dm-g2 text.dm-tprev { font-size: 10px; font-weight: 600; fill: var(--dm-warm); }
 .demo svg.dm-g2 rect.n, .demo svg.dm-g2 circle.n { fill: var(--surface); stroke: var(--dm-line); stroke-width: 2; transition: fill 0.25s ease, stroke 0.25s ease; }
 .demo svg.dm-g2 text { transition: fill 0.25s ease; }
 .demo svg.dm-g2 .n.r-a { fill: var(--dm-accent); stroke: var(--dm-accent); }
@@ -122,6 +138,19 @@ html {
 .statement .lc-fig .dm-v { animation: none; }
 .statement .lc-fig .lc-orig { align-self: flex-start; font-size: 11px; color: var(--muted); text-decoration: none; }
 .statement .lc-fig .lc-orig:hover { color: var(--accent); }
+/* 动态 FX 覆盖层：交换飞跃胶囊、DP 依赖箭头 */
+.demo .dm-fx-overlay { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; z-index: 4; }
+.demo .dm-fx-swap-arc { fill: none; stroke: var(--dm-accent); stroke-width: 1.8; stroke-dasharray: 4 3; opacity: 0.78; }
+.demo .dm-fx-feed { fill: none; stroke-width: 2; }
+.demo .dm-fx-feed.win { stroke: var(--dm-accent); stroke-width: 2.4; stroke-dasharray: 220; stroke-dashoffset: 220; animation: dm-draw 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+.demo .dm-fx-feed.cand { stroke: var(--muted); stroke-dasharray: 4 3; opacity: 0.55; }
+.demo .dm-fx-feed.no-anim { stroke-dasharray: none; stroke-dashoffset: 0; animation: none; }
+.demo .dm-fx-ah, .demo .dm-fx-ah-win { fill: var(--dm-accent); }
+.demo .dm-fx-ah-cand { fill: var(--muted); }
+.demo .dm-fx-tag { font-family: var(--font-mono); font-size: 10px; font-weight: 700; text-anchor: middle; dominant-baseline: central; paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.demo .dm-fx-tag.win { fill: var(--dm-accent); }
+.demo .dm-fx-tag.cand { fill: var(--muted); }
+.demo .dm-fly-chip { position: absolute; z-index: 5; pointer-events: none; padding: 2px 7px; border-radius: 6px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; background: var(--dm-accent); color: var(--dm-on); box-shadow: 0 4px 12px color-mix(in oklch, var(--foreground) 18%, transparent); white-space: nowrap; }
 @keyframes dm-fade {
   from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: none; }
@@ -130,8 +159,30 @@ html {
   from { opacity: 0.45; }
   to { opacity: 1; }
 }
+@keyframes dm-pop {
+  0% { transform: scale(0.88); }
+  55% { transform: scale(1.07); }
+  100% { transform: none; }
+}
+@keyframes dm-swap-pulse {
+  0% { transform: translateY(-2px) scale(0.92); }
+  50% { transform: translateY(-4px) scale(1.06); }
+  100% { transform: translateY(-2px) scale(1); }
+}
+@keyframes dm-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes dm-cut {
+  0% { opacity: 0.95; }
+  100% { opacity: 0.32; }
+}
+@keyframes dm-node-pop {
+  0% { transform: scale(0.88); }
+  50% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .demo .dm-v, .demo .dm-msg { animation: none; }
+  .demo .dm-v, .demo .dm-msg, .demo .dm-fx-run .dm-cell.dm-changed, .demo .dm-fx-run .dm-bar.dm-changed, .demo .dm-fx-run .dm-swap-a, .demo .dm-fx-run .dm-swap-b, .demo .dm-fx-run svg.dm-g2 .edge.draw, .demo .dm-fx-run svg.dm-g2 .edge.cut, .demo .dm-fx-feed.win { animation: none; stroke-dashoffset: 0; }
   .demo .dm-cell, .demo .dm-bar, .demo .dm-wat, .demo .dm-chip, .demo svg.dm-g2 * { transition: none; }
 }
 

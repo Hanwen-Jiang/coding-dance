@@ -5,20 +5,37 @@ import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { playDemoFx } from "@/components/demo/fx";
 import { morphInto } from "@/components/demo/morph";
 import { renderViews } from "@/components/demo/render";
 import { StepCode } from "@/components/demo/step-code";
-import { ChevronLeft, ChevronRight, EyeIcon, PlayIcon } from "@/components/icons";
+import { ChevronLeft, ChevronRight, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { LangTabs } from "@/components/lang-picker";
 import { PixelIcon } from "@/components/pixel";
 import { codeIn, langLabel } from "@/lib/langs";
 import { usePrefs } from "@/lib/prefs";
 import type { Demo, DemoMethod, SpecCode } from "@/lib/types";
 
-/** at：这一步对应代码里的哪些标记（tag），播放器按它高亮代码行 */
-type Step = { phase: string; msg: string; views: Record<string, unknown>[]; kind?: string; facts?: [string, unknown][]; at?: string | string[] };
+/** at：这一步对应代码里的哪些标记（tag），播放器按它高亮代码行；facts 第三项可选填变化前的值 */
+type Step = { phase: string; msg: string; views: Record<string, unknown>[]; kind?: string; facts?: [string, unknown, unknown?][]; at?: string | string[] };
 const hasMarks = (m?: Record<string, number[]>) => !!m && Object.keys(m).length > 0;
 const SHOW_CODE_KEY = "hot100:demo-code";
+const SPEEDS = [0.75, 1, 1.5] as const;
+
+function stepHasFx(step?: Step): boolean {
+  if (!step) return false;
+  if (step.facts?.some((f) => f.length >= 3 && f[2] !== undefined && String(f[2]) !== String(f[1]))) return true;
+  return step.views.some((v) =>
+    (Array.isArray(v.swaps) && v.swaps.length > 0) ||
+    (Array.isArray(v.feeds) && v.feeds.length > 0) ||
+    (Array.isArray(v.extra) && v.extra.length > 0) ||
+    (Array.isArray(v.cutEdges) && v.cutEdges.length > 0) ||
+    (Array.isArray(v.animEdges) && v.animEdges.length > 0) ||
+    (Array.isArray(v.ghostEdges) && v.ghostEdges.length > 0) ||
+    (Array.isArray(v.items) && v.items.some((x: unknown) => !!x && typeof x === "object" && "prev" in x)) ||
+    (Array.isArray(v.rows) && v.rows.some((r: unknown[]) => Array.isArray(r) && r.some((x) => !!x && typeof x === "object" && "prev" in x)))
+  );
+}
 type BuildFn = (args: unknown, snap: (phase: string, msg: string, views: Step["views"], o?: Partial<Step>) => void) => void;
 
 /** 把 spec 里的 build 方法（形如 "build(a, snap) { ... }"）变回函数。来源是自己仓库里的数据。 */
@@ -102,7 +119,10 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
   const steps = useMemo(() => (build && input ? runSteps(build, input.args) : []), [build, input]);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const timer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [speedIdx, setSpeedIdx] = useState(1);
+  const [replayTick, setReplayTick] = useState(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const speed = SPEEDS[speedIdx];
 
   const last = Math.max(0, steps.length - 1);
   const go = useCallback((i: number) => setIdx(Math.max(0, Math.min(last, i))), [last]);
@@ -124,19 +144,19 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
 
   useEffect(() => {
     if (!playing) return;
-    timer.current = setInterval(() => {
-      setIdx((i) => {
-        if (i >= last) {
-          setPlaying(false);
-          return i;
-        }
-        return i + 1;
-      });
-    }, 1100);
+    const cur = steps[Math.min(idx, last)];
+    const delay = Math.round((stepHasFx(cur) ? 1450 : 1050) / speed);
+    timer.current = setTimeout(() => {
+      if (idx >= last) {
+        setPlaying(false);
+      } else {
+        setIdx((i) => Math.min(last, i + 1));
+      }
+    }, delay);
     return () => {
-      if (timer.current) clearInterval(timer.current);
+      if (timer.current) clearTimeout(timer.current);
     };
-  }, [playing, last]);
+  }, [playing, idx, last, speed, steps]);
 
   const togglePlay = () => {
     if (playing) return setPlaying(false);
@@ -144,22 +164,30 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
     setPlaying(true);
   };
 
+  const replayStep = useCallback(() => {
+    setPlaying(false);
+    setReplayTick((t) => t + 1);
+  }, []);
+
   // 每一步的图是 render.ts 拼的一段 HTML。不整段换 innerHTML（每步整张图重新淡入、闪一下，格子的颜色过渡也不生效，
   // 横向滚动还会回到开头），而是用 morphInto 把现有的 DOM 原地改成新的样子：没变的不动，变色的格子走 CSS 过渡，
   // .dm-scroll 还是原来那个元素，滚动位置自然保留。换了输入或解法时才把横向滚动放回开头。
   // 每次渲染都检查一遍：容器被重新挂载（比如收起代码面板时布局变了）时 HTML 没变也要重新写进去。
   const viewsHtml = steps.length ? renderViews(steps[Math.min(idx, last)].views) : "";
   const viewsRef = useRef<HTMLDivElement>(null);
-  const shown = useRef<{ el: HTMLElement | null; html: string; steps: Step[] | null }>({ el: null, html: "", steps: null });
+  const shown = useRef<{ el: HTMLElement | null; html: string; steps: Step[] | null; replay: number }>({ el: null, html: "", steps: null, replay: 0 });
   useLayoutEffect(() => {
     const el = viewsRef.current;
     const prev = shown.current;
-    if (!el || (prev.el === el && prev.html === viewsHtml)) return;
-    morphInto(el, viewsHtml);
-    if (prev.el === el && prev.steps !== steps) {
-      el.querySelectorAll<HTMLElement>(".dm-scroll").forEach((x) => { x.scrollLeft = 0; x.scrollTop = 0; });
+    if (!el || (prev.el === el && prev.html === viewsHtml && prev.replay === replayTick)) return;
+    if (prev.el !== el || prev.html !== viewsHtml) {
+      morphInto(el, viewsHtml);
+      if (prev.el === el && prev.steps !== steps) {
+        el.querySelectorAll<HTMLElement>(".dm-scroll").forEach((x) => { x.scrollLeft = 0; x.scrollTop = 0; });
+      }
     }
-    shown.current = { el, html: viewsHtml, steps };
+    playDemoFx(el);
+    shown.current = { el, html: viewsHtml, steps, replay: replayTick };
   });
 
   if (!build || !steps.length) return <p className="text-sm text-muted">这道题的演示加载失败了。</p>;
@@ -239,6 +267,9 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
           } else if (e.key === " ") {
             e.preventDefault();
             togglePlay();
+          } else if (e.key === "r" || e.key === "R") {
+            e.preventDefault();
+            replayStep();
           }
         }}
       >
@@ -290,7 +321,7 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
           <div ref={viewsRef} className="dm-views" />
           <div className="flex flex-col gap-3 border-t border-separator pt-4">
             {/* 一行放下：手机上和桌面窄的演示栏里，「自动播放」带字会被挤到第二行，所以只留图标（读屏和悬停提示里有文字） */}
-            <div className="flex flex-nowrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant="ghost" onPress={() => { setPlaying(false); go(0); }}>
                 重置
               </Button>
@@ -302,9 +333,30 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
                 下一步
                 <ChevronRight />
               </Button>
-              <Button isIconOnly aria-label={playing ? "暂停" : "自动播放"} className="ms-auto shrink-0" size="sm" variant="outline" onPress={togglePlay}>
-                {playing ? <PauseIcon /> : <PlayIcon />}
+              <Button
+                aria-label="重播本步过渡动画 (R)"
+                className="shrink-0"
+                size="sm"
+                variant={stepHasFx(s) ? "secondary" : "ghost"}
+                onPress={replayStep}
+              >
+                <HistoryIcon />
+                <span className="hidden sm:inline">重播本步</span>
               </Button>
+              <div className="ms-auto flex shrink-0 items-center gap-1.5">
+                <Button
+                  aria-label={`切换自动播放速度，当前 ${speed} 倍`}
+                  className="font-mono text-[11px] tabular-nums"
+                  size="sm"
+                  variant="ghost"
+                  onPress={() => setSpeedIdx((i) => (i + 1) % SPEEDS.length)}
+                >
+                  {speed}×
+                </Button>
+                <Button isIconOnly aria-label={playing ? "暂停" : "自动播放"} className="shrink-0" size="sm" variant="outline" onPress={togglePlay}>
+                  {playing ? <PauseIcon /> : <PlayIcon />}
+                </Button>
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <input
@@ -343,10 +395,18 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
         <div className="flex min-w-0 flex-col gap-4" aria-live="polite">
           {s.facts && s.facts.length > 0 && (
             <div className="grid grid-cols-[repeat(auto-fit,minmax(92px,1fr))] gap-3 border-b border-separator pb-4">
-              {s.facts.map(([k, v]) => (
+              {s.facts.map(([k, v, prev]) => (
                 <div key={k} className="flex min-w-0 flex-col gap-0.5">
                   <span className="text-xs text-muted">{k}</span>
-                  <span className={clsx("font-bold text-accent [overflow-wrap:anywhere]", String(v).length > 6 ? "font-mono text-sm" : "text-2xl")}>{String(v)}</span>
+                  <span className={clsx("flex flex-wrap items-baseline gap-1 font-bold text-accent [overflow-wrap:anywhere]", String(v).length > 6 ? "font-mono text-sm" : "text-2xl")}>
+                    {prev !== undefined && String(prev) !== String(v) && (
+                      <span className="font-mono text-xs font-normal text-muted line-through">{String(prev)}</span>
+                    )}
+                    {prev !== undefined && String(prev) !== String(v) && (
+                      <span aria-hidden className="font-mono text-xs font-normal text-muted">→</span>
+                    )}
+                    <span>{String(v)}</span>
+                  </span>
                 </div>
               ))}
             </div>
@@ -372,7 +432,7 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
               ))}
             </div>
           )}
-          <span className="hidden text-[11px] text-muted lg:block">点一下演示区域后，可以用 ← → 切换步骤，空格键播放 / 暂停。</span>
+          <span className="hidden text-[11px] text-muted lg:block">点一下演示区域后，可以用 ← → 切换步骤，空格播放 / 暂停，R 键重播本步动画。</span>
         </div>
         </div>
       </div>

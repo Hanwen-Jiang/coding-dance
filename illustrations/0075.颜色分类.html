@@ -98,10 +98,14 @@ button.primary:disabled { color: var(--ink); border-color: var(--line); }
 .chip { font-family: var(--font-mono); font-size: 13px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--line); }
 .empty { color: var(--muted); font-size: 13px; }
 
-svg.g2 { display: block; height: auto; }
+svg.g2 { display: block; height: auto; overflow: visible; }
 svg.g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; }
 svg.g2 .edge.on { stroke: var(--accent); stroke-width: 2.6; }
 svg.g2 .edge.warm { stroke: var(--warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
+svg.g2 .edge.cut { stroke: #d9383a; stroke-width: 1.8; stroke-dasharray: 5 4; opacity: 0.45; }
+svg.g2 text.lr { font-size: 9px; font-weight: 700; fill: var(--muted); }
+.cell.changed { line-height: 1.05; }
+.cell .prev { display: block; font-size: 9px; font-weight: 500; opacity: 0.7; text-decoration: line-through; line-height: 1; }
 svg.g2 .ah { fill: var(--muted); }
 svg.g2 rect.n, svg.g2 circle.n { fill: var(--surface); stroke: var(--line); stroke-width: 2; transition: fill .25s ease; }
 svg.g2 .n.a { fill: var(--accent); stroke: var(--accent); }
@@ -249,7 +253,7 @@ svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw e"></i>确定是 0</span><span><i class="sw g"></i>确定是 1</span><span><i class="sw w"></i>确定是 2</span><span><i class="sw a"></i>nums[i]</span></div>
+        <div class="legend" id="legend"><span><i class="sw e"></i>确定是 0</span><span><i class="sw g"></i>确定是 1</span><span><i class="sw w"></i>确定是 2</span><span><i class="sw a"></i>当前位置 i / 刚换完</span></div>
       </div>
     </div>
   </section>
@@ -331,37 +335,119 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,0,2,1,1,0]},"note
     const nums = R.arr(R.int(4, 8), 0, 2);
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `__inplace(Solution().sortColors, ${R.py(nums)})` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "三指针交换", note: null, legend: [["e","确定是 0"],["g","确定是 1"],["w","确定是 2"],["a","nums[i]"]], build(a, snap) {
-    const nums = a.nums.slice(); let lo = 0, i = 0, hi = nums.length - 1;
-    const view = () => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k < lo ? "e" : k < i ? "g" : k > hi ? "w" : k === i ? "a" : "" })), ptrs: { lo, i, hi } }];
-    snap("开始", "一开始所有位置都还没看过。", view(), { at: "init" });
+{ t: "三指针交换", note: null, legend: [["e","确定是 0"],["g","确定是 1"],["w","确定是 2"],["a","当前位置 i / 刚换完"]], build(a, snap) {
+    const nums = a.nums.slice();
+    let lo = 0, i = 0, hi = nums.length - 1;
+    const view = (opts = {}) => {
+      const prevMap = opts.prevMap || {};
+      return [{
+        t: "array",
+        label: "nums（[0,lo) 全是 0，[lo,i) 全是 1，(hi,end] 全是 2）",
+        items: nums.map((v, k) => ({
+          v,
+          ...(prevMap[k] !== undefined ? { prev: prevMap[k] } : {}),
+          cls: k < lo ? "e" : k < i ? "g" : k > hi ? "w" : k === i ? "a" : "",
+        })),
+        ptrs: { lo, i: i <= hi ? i : null, hi },
+        ...(opts.swaps ? { swaps: opts.swaps } : {}),
+      }];
+    };
+    snap("初始化", "lo 和 i 从 0 开始，hi 在末尾。一开始所有元素都在未处理区间 [i, hi] 内。", view(), { at: "init", facts: [["lo", lo], ["i", i], ["hi", hi]] });
+
     while (i <= hi) {
       const x = nums[i];
-      if (x === 0) { snap("是 0", `nums[${i}] = 0，和 nums[lo=${lo}] 交换，放进 0 的区域。lo、i 都前进。`, view(), { at: "zero" }); [nums[lo], nums[i]] = [nums[i], nums[lo]]; lo++; i++; }
-      else if (x === 2) { snap("是 2", `nums[${i}] = 2，和 nums[hi=${hi}] = ${nums[hi]} 交换，放进 2 的区域。hi 后退，i 不动，换过来的 ${nums[hi]} 还没看过。`, view(), { at: "two" }); [nums[i], nums[hi]] = [nums[hi], nums[i]]; hi--; }
-      else { snap("是 1", `nums[${i}] = 1，留在原地，i 前进。`, view(), { at: "one" }); i++; }
-    }
-    snap("完成", `i 超过了 hi，中间没有没看过的数了。结果 [${nums.join(",")}]。`, view(), { at: "loop", kind: "ok", ans: nums.slice() });
-  } },
-{ t: "先写 2 再覆盖", note: "和简洁写法一样：读到一个数，先把这一格写成 2；是 0 或 1，就在 p1 处写 1，1 的区域往后扩；是 0，再在 p0 处写 0。后写的覆盖先写的。", legend: [["e","0"],["g","1"],["w","2"],["a","这一步写过的格子"]], build(a, snap) {
-      const nums = a.nums.slice(), n = nums.length; let p0 = 0, p1 = 0;
-      const col = { 0: "e", 1: "g", 2: "w" };
-      const view = (i, wr) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: wr.has(k) ? "a" : k <= i ? col[v] : "" })), ptrs: { p0, p1, i: i >= 0 && i < n ? i : null } }];
-      const f = (at) => ({ at, facts: [["0 的个数", p0], ["1 的个数", p1 - p0]] });
-      snap("开始", "p0 是下一个 0 该写的位置，p1 是下一个 1 该写的位置。i 左边已经排好：[0, p0) 是 0，[p0, p1) 是 1，[p1, i) 是 2。", view(-1, new Set()), f("init"));
-      for (let i = 0; i < n; i++) {
-        const x = nums[i], wr = new Set([i]), ops = [`nums[${i}] 写成 2`];
-        nums[i] = 2;
-        if (x < 2) { nums[p1] = 1; wr.add(p1); ops.push(`nums[${p1}] 写成 1，p1 前进`); p1++; }
-        if (x === 0) { nums[p0] = 0; wr.add(p0); ops.push(`nums[${p0}] 写成 0，p0 前进`); p0++; }
-        snap(`读到 ${x}`, `nums[${i}] 原来是 ${x}。${ops.join("；")}。`, view(i, wr), f(x === 2 ? "read" : x === 1 ? ["read", "one"] : ["read", "one", "zero"]));
+      if (x === 0) {
+        snap("判断 nums[i] == 0", `nums[${i}] = 0，应该放到左边 0 的区间末尾（lo = ${lo}）。`, view(), { at: "chk0", facts: [["lo", lo], ["i", i], ["hi", hi]] });
+        const oldLo = nums[lo], oldI = nums[i];
+        [nums[lo], nums[i]] = [nums[i], nums[lo]];
+        snap(
+          "交换 nums[lo] 与 nums[i]",
+          lo === i
+            ? `lo 和 i 在同一个位置 ${i}，0 留在原地。`
+            : `把 nums[${i}]（${oldI}）与 nums[${lo}]（${oldLo}）交换，0 来到下标 ${lo}。`,
+          view({
+            swaps: lo !== i ? [[lo, i]] : [],
+            prevMap: lo !== i ? { [lo]: oldLo, [i]: oldI } : {},
+          }),
+          { at: "swap0", facts: [["lo", lo], ["i", i], ["hi", hi]] },
+        );
+        const pLo = lo, pI = i;
+        lo++; i++;
+        snap("lo 和 i 前进", `0 的区间扩大到 [0, ${lo})，而且换过来的 ${nums[pI] ?? "数"} 一定已经看过（1 或它自己），所以 lo 和 i 一起前进。`, view(), { at: "adv0", facts: [["lo", lo, pLo], ["i", i, pI], ["hi", hi]] });
+      } else if (x === 2) {
+        snap("判断 nums[i] == 2", `nums[${i}] = 2，应该换到右边 2 的区间开头（hi = ${hi}）。`, view(), { at: "chk2", facts: [["lo", lo], ["i", i], ["hi", hi]] });
+        const oldI = nums[i], oldHi = nums[hi];
+        [nums[i], nums[hi]] = [nums[hi], nums[i]];
+        snap(
+          "交换 nums[i] 与 nums[hi]",
+          i === hi
+            ? `i 和 hi 在同一个位置 ${i}，2 已经在右边了。`
+            : `把 nums[${i}]（${oldI}）与 nums[${hi}]（${oldHi}）交换，2 换到下标 ${hi}；原来的 ${oldHi} 换到了下标 ${i}。`,
+          view({
+            swaps: i !== hi ? [[i, hi]] : [],
+            prevMap: i !== hi ? { [i]: oldI, [hi]: oldHi } : {},
+          }),
+          { at: "swap2", facts: [["lo", lo], ["i", i], ["hi", hi]] },
+        );
+        const pHi = hi;
+        hi--;
+        snap("hi 后退，i 不动", `2 的区间向左扩到 (${hi}, ${nums.length})。注意 <b>i 留在 ${i} 不动</b>：刚从 hi 换过来的 ${nums[i]} 还没检查过！`, view(), { at: "adv2", facts: [["lo", lo], ["i", i], ["hi", hi, pHi]] });
+      } else {
+        const pI = i;
+        i++;
+        snap("nums[i] == 1，i 前进", `nums[${pI}] = 1 正好属于中间的 1 区间，不用交换，直接 i 前进到 ${i}。`, view(), { at: "one", facts: [["lo", lo], ["i", i, pI], ["hi", hi]] });
       }
-      snap("完成", `全部读完，结果 [${nums.join(",")}]。`, view(n, new Set()), { kind: "ok", ans: nums.slice(), ...f([]) });
+    }
+    snap("完成", `i (${i}) 超过了 hi (${hi})，未处理区间为空。结果 [${nums.join(", ")}]。`, view(), { at: "loop", kind: "ok", ans: nums.slice(), facts: [["lo", lo], ["i", i], ["hi", hi]] });
+  } },
+{ t: "先写 2 再覆盖", note: "和简洁写法一样：每读一个数 x = nums[i]，分三步覆盖刷色：先把当前格写成 2；若 x < 2，就在 p1 处写 1 并让 p1++；若 x == 0，就在 p0 处写 0 并让 p0++。", legend: [["e","0"],["g","1"],["w","2"],["a","这一步正在改写的格子"]], build(a, snap) {
+      const nums = a.nums.slice(), n = nums.length;
+      let p0 = 0, p1 = 0;
+      const col = { 0: "e", 1: "g", 2: "w" };
+      const view = (i, wr, prevMap = {}) => [{
+        t: "array",
+        label: "nums（[0,p0) 是 0，[p0,p1) 是 1，[p1,i] 是 2）",
+        items: nums.map((v, k) => ({
+          v,
+          ...(prevMap[k] !== undefined ? { prev: prevMap[k] } : {}),
+          cls: wr.has(k) ? "a" : k <= i ? col[v] : "",
+        })),
+        ptrs: { p0, p1, i: i >= 0 && i < n ? i : null },
+      }];
+      const f = (at, x, prevP0, prevP1) => ({
+        at,
+        facts: [
+          ...(x !== undefined ? [["读出 x", x]] : []),
+          ["p0 (0 的个数)", p0, prevP0],
+          ["p1 (≤1 的个数)", p1, prevP1],
+        ],
+      });
+      snap("初始化", "p0 是下一个 0 该写的位置，p1 是下一个 1 该写的位置。从左到右刷过去，后写的覆盖先写的。", view(-1, new Set()), f("init"));
+      for (let i = 0; i < n; i++) {
+        const x = nums[i];
+        nums[i] = 2;
+        snap(`读出 x=${x}，先写 2`, `先记住 nums[${i}] 原来的值 x = <b>${x}</b>，把 nums[${i}] 先覆盖写成 2。`, view(i, new Set([i]), { [i]: x }), f("read", x));
+        if (x < 2) {
+          const old1 = nums[p1];
+          const oldP1 = p1;
+          nums[p1] = 1;
+          p1++;
+          snap("写入 1 并扩大 1 区间", `因为 x = ${x} < 2，在 p1 = ${oldP1} 处写入 <b>1</b>，然后 p1 右移到 ${p1}。`, view(i, new Set([oldP1]), { [oldP1]: old1 }), f("one", x, undefined, oldP1));
+        }
+        if (x === 0) {
+          const old0 = nums[p0];
+          const oldP0 = p0;
+          nums[p0] = 0;
+          p0++;
+          snap("写入 0 并扩大 0 区间", `因为 x = 0，在 p0 = ${oldP0} 处写入 <b>0</b>（覆盖掉刚才的 1 或 2），然后 p0 右移到 ${p0}。`, view(i, new Set([oldP0]), { [oldP0]: old0 }), f("zero", x, oldP0));
+        }
+      }
+      snap("完成", `全部扫描完成，结果 [${nums.join(", ")}]。`, view(n, new Set()), { kind: "ok", ans: nums.slice(), ...f([]) });
     } }
 ] };
 (function () {
   const $ = (id) => document.getElementById(id);
-  const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const E = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   const INV = new Set(["a", "b", "c"]);
   const lab = (v) => (v.label ? `<div class="vl">${v.label}</div>` : "");
   const norm = (it) => (it !== null && typeof it === "object" ? it : { v: it });
@@ -369,15 +455,18 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,0,2,1,1,0]},"note
 
   function ptrMap(ptrs) {
     const m = {};
-    for (const [name, i] of Object.entries(ptrs || {})) if (i !== null && i !== undefined) (m[i] = m[i] || []).push(name);
+    for (const [name, i] of Object.entries(ptrs || {})) if (i !== null && i !== undefined) (m[String(i)] = m[String(i)] || []).push(name);
     return m;
   }
+  const cellHtml = (it) => (it.prev !== undefined && String(it.prev) !== String(it.v)
+    ? `<span class="prev">${show(it.prev)}→</span><span>${show(it.v)}</span>`
+    : show(it.v));
   function vArray(v) {
     const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
     const cols = v.items.map(norm).map((it, i) =>
-      `<div class="cc"><div class="cell ${it.cls || ""}">${show(it.v)}</div>` +
+      `<div class="cc"><div class="cell ${it.cls || ""}${it.prev !== undefined && String(it.prev) !== String(it.v) ? " changed" : ""}">${cellHtml(it)}</div>` +
       (v.idx === false ? "" : `<div class="ci">${v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i}</div>`) +
-      (hasP ? `<div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
+      (hasP ? `<div class="cp">${(pm[String(i)] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
   function vBars(v) {
@@ -388,7 +477,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,0,2,1,1,0]},"note
       (it.v / max < 0.16 ? `<div class="bv">${it.v}</div>` : "") +
       (it.water ? `<div class="wat" style="height:${(it.water / max) * 100}%"></div>` : "") +
       `<div class="bar ${it.cls || ""}" style="height:${(it.v / max) * 100}%">${it.v / max < 0.16 ? "" : it.v}</div></div>` +
-      `<div class="ci">${i}</div><div class="cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
+      `<div class="ci">${i}</div><div class="cp">${(pm[String(i)] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`).join("");
     return `<div class="v">${lab(v)}<div class="scroll"><div class="arr">${cols}</div></div></div>`;
   }
   // rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号
@@ -397,7 +486,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,0,2,1,1,0]},"note
     const rl = (i) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j) => (v.colLabels ? show(v.colLabels[j]) : j);
     let h = ax ? `<span class="ax"></span>` + v.rows[0].map((_, j) => `<span class="ax">${cl(j)}</span>`).join("") : "";
     v.rows.forEach((r, i) => {
-      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}">${show(it.v)}</div>`).join("");
+      h += (ax ? `<span class="ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="cell ${it.cls || ""}${it.prev !== undefined && String(it.prev) !== String(it.v) ? " changed" : ""}">${cellHtml(it)}</div>`).join("");
     });
     return `<div class="v">${lab(v)}<div class="scroll"><div class="grid" style="grid-template-columns:${ax ? "minmax(18px,auto) " : ""}repeat(${n},40px)">${h}</div></div></div>`;
   }
@@ -426,6 +515,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,0,2,1,1,0]},"note
       else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 16 + Math.abs(j - i) * 4);
         s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`; }
     };
+    (v.ghostEdges || []).forEach(([i, j]) => edge(i, j, "cut", false));
     next.forEach((j, i) => { if (!nodes[i].hide) edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, nodes[i].ecls || "", false); });
     (v.extra || []).forEach(([i, j]) => edge(i, j, "warm", j > i, true));
     const pm = ptrMap(v.ptrs);
@@ -434,26 +524,39 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,0,2,1,1,0]},"note
       const c = (nd.cls || "").split(" ")[0];
       s += `<rect class="n ${nd.cls || ""}" x="${cx(i) - BW / 2}" y="${Y - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
       s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx(i)}" y="${Y}">${show(nd.v)}</text>`;
-      (pm[i] || []).forEach((nm, k) => { s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`; });
+      (pm[String(i)] || []).forEach((nm, k) => { s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`; });
     });
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;
   }
   function vTree(v) {
-    const pos = {}, par = {}, PAD = v.badges ? 44 : 28, GAPX = v.badges ? 54 : 46; let x = 0, depth = 0;
-    const walk = (id, d) => { if (id === null || id === undefined || !v.nodes[id]) return; const nd = v.nodes[id];
-      walk(nd.l, d + 1); pos[id] = [PAD + x * GAPX, 28 + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
-      for (const c of [nd.l, nd.r]) if (c !== null && c !== undefined && v.nodes[c]) par[c] = id; };
+    const pos = {}, parList = [], PAD = v.badges || v.ptrs ? 46 : 32, GAPX = v.badges || v.ptrs ? 54 : 46, TOP = v.ptrs ? 42 : 28, R = 17;
+    const visited = new Set(); let x = 0, depth = 0;
+    const walk = (id, d) => { if (id === null || id === undefined) return; const sid = String(id); if (!v.nodes[id] || visited.has(sid)) return; visited.add(sid);
+      const nd = v.nodes[id]; walk(nd.l, d + 1); pos[sid] = [PAD + x * GAPX, TOP + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
+      if (nd.l !== null && nd.l !== undefined && v.nodes[nd.l]) parList.push([sid, String(nd.l), "L"]);
+      if (nd.r !== null && nd.r !== undefined && v.nodes[nd.r]) parList.push([sid, String(nd.r), "R"]); };
     walk(v.root, 0);
-    const W = Math.max(PAD * 2 + (x - 1) * GAPX, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
-    const cls = v.cls || {}, on = new Set(v.on || []);
-    let s = "";
-    for (const id in par) { const [x1, y1] = pos[par[id]], [x2, y2] = pos[id];
-      s += `<line class="edge ${on.has(+id) && on.has(+par[id]) ? "on" : ""}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`; }
-    for (const id in pos) { const [px, py] = pos[id], c = (cls[id] || "").split(" ")[0];
-      s += `<circle class="n ${cls[id] || ""}" cx="${px}" cy="${py}" r="17"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(v.nodes[id].v)}</text>`;
+    const pm = ptrMap(v.ptrs), maxPtrLines = Math.max(0, ...Object.values(pm).map((a) => a.length));
+    const W = Math.max(PAD * 2 + Math.max(0, x - 1) * GAPX, 140), H = TOP + 28 + depth * 66 + Math.max(v.badges ? 24 : 0, maxPtrLines ? 14 + maxPtrLines * 12 : 0);
+    const cls = v.cls || {}, on = new Set((v.on || []).map(String)), id0 = "tr" + uid++;
+    let s = `<defs><marker id="${id0}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
+    for (const [f, t, side] of parList) { const p1 = pos[f], p2 = pos[t]; if (!p1 || !p2) continue;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+      const sx = p1[0] + ux * R, sy = p1[1] + uy * R, ex = p2[0] - ux * (v.directed ? R + 3 : R), ey = p2[1] - uy * (v.directed ? R + 3 : R);
+      s += `<line class="edge ${on.has(f) && on.has(t) ? "on" : ""}"${v.directed ? ` marker-end="url(#${id0})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
+      if (v.lrLabels) s += `<text class="lr" x="${(sx + ex) / 2 + (side === "L" ? -8 : 8)}" y="${(sy + ey) / 2 - 2}">${side}</text>`; }
+    for (const [a, b] of (v.cutEdges || [])) { const p1 = pos[String(a)], p2 = pos[String(b)]; if (!p1 || !p2) continue;
+      s += `<line class="edge cut" x1="${p1[0]}" y1="${p1[1]}" x2="${p2[0]}" y2="${p2[1]}"></line>`; }
+    for (const ex of (v.extra || [])) { const p1 = pos[String(ex.from)], p2 = pos[String(ex.to)]; if (!p1 || !p2) continue;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+      const sx = p1[0] + ux * R, sy = p1[1] + uy * R, exX = p2[0] - ux * (R + 3), exY = p2[1] - uy * (R + 3), bend = ex.bend ?? 0.35;
+      s += `<path class="edge ${ex.cls || "on"}" marker-end="url(#${id0})" d="M${sx} ${sy} Q${(sx + exX) / 2 - uy * bend * 64} ${(sy + exY) / 2 + ux * bend * 64} ${exX} ${exY}"></path>`; }
+    for (const id of Object.keys(pos)) { const [px, py] = pos[id], c = (cls[id] || "").split(" ")[0];
+      s += `<circle class="n ${cls[id] || ""}" cx="${px}" cy="${py}" r="${R}"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(v.nodes[id].v)}</text>`;
       const b = v.badges && v.badges[id];
       if (b !== undefined && b !== null) { const t = String(b), w = Math.max(26, t.length * 7 + 10);
         s += `<rect class="bd" x="${px - w / 2}" y="${py + 21}" width="${w}" height="16" rx="8"></rect><text class="bt" x="${px}" y="${py + 29}">${E(t)}</text>`; }
+      (pm[id] || []).forEach((nm, k) => { s += `<text class="pt" x="${px}" y="${py + (b != null ? 47 : 28) + k * 12}">${E(nm)}</text>`; });
     }
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W * 1.15}px;max-width:100%"><g>${s}</g></svg></div></div>`;
   }

@@ -1,6 +1,7 @@
 // 当前登录状态：是谁、进度仓建了没有、有没有授权网站读写它、Star 了没有。令牌本身从不返回给浏览器。
 import { installationCovers, userInstallation } from "../_lib/install";
 import { gh } from "../_lib/progress";
+import { cacheQuotaProfile } from "../_lib/quota";
 import { type AuthEnv, SESSION_COOKIE, authConfigured, getSession, membership, privateJson, setCookie, starRepos } from "../_lib/session";
 import { needSpread } from "../_lib/sso";
 
@@ -35,8 +36,14 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
   // 每个仓库 Star 了没有
   const stars = list.map((r, i) => ({ repo: r, starred: starred[i].status === 204 }));
   // 会员档位：按第一次授权网站、建好进度仓的时间判断是不是首批用户
+  const meJson = me.ok ? ((await me.json().catch(() => ({}))) as { created_at?: string }) : {};
   const repoCreated = rr.ok ? ((await rr.json().catch(() => ({}))) as { created_at?: string }).created_at : null;
   const member = membership(env, [inst?.createdAt, repoCreated]);
+  await cacheQuotaProfile(env, s.l, {
+    tier: member.tier,
+    founder: member.founder,
+    createdAt: typeof meJson.created_at === "string" ? meJson.created_at : null,
+  });
   return privateJson(
     {
       ...base,

@@ -105,8 +105,19 @@ export interface PracticeCaseResult {
   duration: number;
   trace?: PracticeTrace;
 }
+export interface CloudQuotaInfo {
+  tier: "free" | "pro";
+  founder: boolean;
+  limit: number;
+  used: number;
+  remaining: number;
+  day: string;
+  resetAt: string;
+  blockedReason?: "free_paused" | "account_too_new" | "quota_exceeded";
+}
 export interface PracticeRunResult {
   results: PracticeCaseResult[];
   duration: number;
   cancelled?: boolean;
+  quota?: CloudQuotaInfo;
 }

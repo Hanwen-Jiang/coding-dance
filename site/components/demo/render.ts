@@ -2,10 +2,10 @@
 // 只是类名都加了 dm- 前缀、颜色角色改成 r-*，避免和 HeroUI / Tailwind 的类名冲突。
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-type Item = { v?: unknown; cls?: string; water?: number; hide?: boolean; ecls?: string; noNil?: boolean };
+type Item = { v?: unknown; prev?: unknown; cls?: string; water?: number; hide?: boolean; ecls?: string; noNil?: boolean; key?: string | number };
 type View = Record<string, any>;
 
-const E = (s: unknown) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const E = (s: unknown) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 const INV = new Set(["a", "b", "c"]);
 const roles = (cls?: string) => (cls || "").split(/\s+/).filter(Boolean).map((t) => "r-" + t).join(" ");
 const first = (cls?: string) => (cls || "").split(" ")[0];
@@ -13,48 +13,89 @@ const lab = (v: View) => (v.label ? `<div class="dm-vl">${v.label}</div>` : "");
 const norm = (it: unknown): Item => (it !== null && typeof it === "object" ? (it as Item) : { v: it });
 const show = (x: unknown) => (x === null || x === undefined ? "" : E(x));
 
-function ptrMap(ptrs?: Record<string, number | null | undefined>) {
-  const m: Record<number, string[]> = {};
-  for (const [name, i] of Object.entries(ptrs || {})) if (i !== null && i !== undefined) (m[i] = m[i] || []).push(name);
+function ptrMap(ptrs?: Record<string, string | number | null | undefined>) {
+  const m: Record<string, string[]> = {};
+  for (const [name, i] of Object.entries(ptrs || {})) {
+    if (i !== null && i !== undefined) (m[String(i)] = m[String(i)] || []).push(name);
+  }
   return m;
+}
+
+/** 渲染单个格子的内容：如有 prev 且不等于当前值，展示 old→new 过渡 */
+function cellBody(it: Item): { changed: boolean; html: string } {
+  if (it.prev !== undefined && String(it.prev) !== String(it.v)) {
+    return {
+      changed: true,
+      html: `<span class="dm-prev">${show(it.prev)}→</span><span class="dm-val">${show(it.v)}</span>`,
+    };
+  }
+  return { changed: false, html: show(it.v) };
 }
 
 /** 下标那一行写什么：labels 可以逐个指定（比如越界的格子写 -1），否则从 idxFrom（默认 0）开始数 */
 const idxLabel = (v: View, i: number) => (v.labels ? show(v.labels[i]) : v.idxFrom ? i + v.idxFrom : i);
 
+function swapClassMap(swaps?: [number, number][]) {
+  const m = new Map<number, string>();
+  for (const [a, b] of swaps || []) {
+    if (a !== b) {
+      m.set(a, "dm-swap-a");
+      m.set(b, "dm-swap-b");
+    }
+  }
+  return m;
+}
+
 function vArray(v: View) {
   const pm = ptrMap(v.ptrs), hasP = v.ptrs !== undefined;
-  const cols = (v.items as unknown[]).map(norm).map((it, i) =>
-    `<div class="dm-cc"><div class="dm-cell ${roles(it.cls)}">${show(it.v)}</div>` +
-    (v.idx === false ? "" : `<div class="dm-ci">${idxLabel(v, i)}</div>`) +
-    (hasP ? `<div class="dm-cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`).join("");
-  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-arr">${cols}</div></div></div>`;
+  const swaps = Array.isArray(v.swaps) ? (v.swaps as [number, number][]) : undefined;
+  const sw = swapClassMap(swaps);
+  const feeds = Array.isArray(v.feeds) ? v.feeds : undefined;
+  const attrs = `${swaps?.length ? ` data-swaps="${E(JSON.stringify(swaps))}"` : ""}${feeds?.length ? ` data-feeds="${E(JSON.stringify(feeds))}"` : ""}`;
+  const cols = (v.items as unknown[]).map(norm).map((it, i) => {
+    const body = cellBody(it);
+    const sc = sw.get(i) || "";
+    return `<div class="dm-cc"><div class="dm-cell ${roles(it.cls)}${body.changed ? " dm-changed" : ""}${sc ? ` ${sc}` : ""}" data-idx="${i}" data-val="${show(it.v)}">${body.html}</div>` +
+      (v.idx === false ? "" : `<div class="dm-ci">${idxLabel(v, i)}</div>`) +
+      (hasP ? `<div class="dm-cp">${(pm[String(i)] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div>` : "") + `</div>`;
+  }).join("");
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-arr"${attrs}>${cols}</div></div></div>`;
 }
 
 function vBars(v: View) {
   const items = (v.items as unknown[]).map(norm), pm = ptrMap(v.ptrs);
+  const swaps = Array.isArray(v.swaps) ? (v.swaps as [number, number][]) : undefined;
+  const sw = swapClassMap(swaps);
   const max = Math.max(1, ...items.map((it) => Number(it.v) + (it.water || 0)), v.max || 0);
+  const attrs = swaps?.length ? ` data-swaps="${E(JSON.stringify(swaps))}"` : "";
   const cols = items.map((it, i) => {
     const val = Number(it.v), small = val / max < 0.16;
-    return `<div class="dm-cc"><div class="dm-bar-slot">` +
+    const sc = sw.get(i) || "";
+    const changed = it.prev !== undefined && String(it.prev) !== String(it.v);
+    return `<div class="dm-cc"><div class="dm-bar-slot" data-idx="${i}" data-val="${show(it.v)}">` +
       (small ? `<div class="dm-bv">${show(it.v)}</div>` : "") +
       (it.water ? `<div class="dm-wat" style="height:${(it.water / max) * 100}%"></div>` : "") +
-      `<div class="dm-bar ${roles(it.cls)}" style="height:${(val / max) * 100}%">${small ? "" : show(it.v)}</div></div>` +
-      `<div class="dm-ci">${i}</div><div class="dm-cp">${(pm[i] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`;
+      `<div class="dm-bar ${roles(it.cls)}${changed ? " dm-changed" : ""}${sc ? ` ${sc}` : ""}" style="height:${(val / max) * 100}%">${small ? "" : show(it.v)}</div></div>` +
+      `<div class="dm-ci">${i}</div><div class="dm-cp">${(pm[String(i)] || []).map((n) => `<span>${E(n)}</span>`).join("")}</div></div>`;
   }).join("");
-  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-arr">${cols}</div></div></div>`;
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-arr"${attrs}>${cols}</div></div></div>`;
 }
 
-/** 网格：rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号 */
+/** 网格：rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号；支持 feeds 传递箭头与 prev 前后值 */
 function vGrid(v: View) {
   const n = v.rows[0].length, ax = v.ax !== false;
   const rl = (i: number) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j: number) => (v.colLabels ? show(v.colLabels[j]) : j);
+  const feeds = Array.isArray(v.feeds) ? v.feeds : undefined;
   let h = ax ? `<span class="dm-ax"></span>` + v.rows[0].map((_: unknown, j: number) => `<span class="dm-ax">${cl(j)}</span>`).join("") : "";
   (v.rows as unknown[][]).forEach((r, i) => {
-    h += (ax ? `<span class="dm-ax">${rl(i)}</span>` : "") + r.map(norm).map((it) => `<div class="dm-cell ${roles(it.cls)}">${show(it.v)}</div>`).join("");
+    h += (ax ? `<span class="dm-ax">${rl(i)}</span>` : "") + r.map(norm).map((it, j) => {
+      const body = cellBody(it);
+      return `<div class="dm-cell ${roles(it.cls)}${body.changed ? " dm-changed" : ""}" data-rc="${i},${j}">${body.html}</div>`;
+    }).join("");
   });
   const cols = (ax ? "minmax(18px,auto) " : "") + `repeat(${n},40px)`;
-  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-grid" style="grid-template-columns:${cols}">${h}</div></div></div>`;
+  const attrs = feeds?.length ? ` data-feeds="${E(JSON.stringify(feeds))}"` : "";
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-grid" style="grid-template-columns:${cols}"${attrs}>${h}</div></div></div>`;
 }
 
 /**
@@ -84,7 +125,6 @@ function vGraph(v: View) {
   const W = PAD * 2 + 40 + (Math.max(...xs) - x0) * UX, H = PAD * 2 + (Math.max(...ys) - y0) * UY;
   const by: Record<string, (typeof nodes)[number]> = {};
   nodes.forEach((n) => (by[String(n.id)] = n));
-  // 从中心沿方向 (dx, dy) 走到节点边上的距离
   const reach = (n: (typeof nodes)[number], dx: number, dy: number) =>
     n.shape === "circle" ? R : Math.min(dx ? BW / 2 / Math.abs(dx) : Infinity, dy ? BH / 2 / Math.abs(dy) : Infinity);
   let s = `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
@@ -122,7 +162,9 @@ function vList(v: View) {
   const cx = (i: number) => X0 + i * GAP + BW / 2;
   let s = `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
   const next: (number | null)[] = v.next || nodes.map((_, i) => (i + 1 < n ? i + 1 : null));
-  const edge = (i: number, j: number | null | undefined, cls: string, lift: boolean, arc?: boolean) => {
+  const animSet = new Set<number>(Array.isArray(v.animEdges) ? v.animEdges : []);
+
+  const edge = (i: number, j: number | null | undefined, cls: string, lift: boolean, arc?: boolean, isCut?: boolean) => {
     if (j === null || j === undefined) return;
     if (j === -1) {
       if (i === n - 1) s += `<line class="edge ${cls}" x1="${cx(i) + BW / 2}" y1="${Y}" x2="${cx(i) + BW / 2 + 12}" y2="${Y}"></line><text class="nil" x="${cx(i) + BW / 2 + 20}" y="${Y}">∅</text>`;
@@ -130,62 +172,183 @@ function vList(v: View) {
       else s += `<line class="edge ${cls}" x1="${cx(i)}" y1="${Y - BH / 2}" x2="${cx(i)}" y2="${Y - BH / 2 - 9}"></line><text class="nil" x="${cx(i)}" y="${Y - BH / 2 - 17}">∅</text>`;
       return;
     }
-    if (j === i + 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
-    else if (j === i - 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
-    else if (j === i) s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i) - 8} ${Y - BH / 2} C${cx(i) - 18} ${Y - 40} ${cx(i) + 18} ${Y - 40} ${cx(i) + 8} ${Y - BH / 2 - 2}"></path>`;
-    else {
+    if (j === i + 1 && !arc) {
+      const mx = (cx(i) + BW / 2 + cx(j) - BW / 2 - 2) / 2;
+      s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
+      if (isCut) s += `<text class="dm-cut-x" x="${mx}" y="${Y - 12}">×</text>`;
+    } else if (j === i - 1 && !arc) {
+      const mx = (cx(i) - BW / 2 + cx(j) + BW / 2 + 2) / 2;
+      s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
+      if (isCut) s += `<text class="dm-cut-x" x="${mx}" y="${Y + 14}">×</text>`;
+    } else if (j === i) {
+      s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i) - 8} ${Y - BH / 2} C${cx(i) - 18} ${Y - 40} ${cx(i) + 18} ${Y - 40} ${cx(i) + 8} ${Y - BH / 2 - 2}"></path>`;
+    } else {
       const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 16 + Math.abs(j - i) * 4);
-      s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`;
+      const qx = (cx(i) + cx(j)) / 2, qy = y0 + up * h * 1.6;
+      s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${qx} ${qy} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`;
+      if (isCut) s += `<text class="dm-cut-x" x="${qx}" y="${(y0 + qy) / 2}">×</text>`;
     }
   };
+
+  // 被剪断的旧指向（虚线渐隐 + ×）
+  ((v.ghostEdges || []) as [number, number][]).forEach(([i, j]) => edge(i, j, "cut", false, false, true));
+
   next.forEach((j, i) => {
-    if (!nodes[i].hide) edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, nodes[i].ecls || "", false);
+    if (!nodes[i].hide) {
+      const cls = `${nodes[i].ecls || ""}${animSet.has(i) ? " draw" : ""}`.trim();
+      edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, cls, false);
+    }
   });
   ((v.extra || []) as [number, number][]).forEach(([i, j]) => edge(i, j, "warm", j > i, true));
   const pm = ptrMap(v.ptrs);
   nodes.forEach((nd, i) => {
     if (nd.hide) return;
     const c = first(nd.cls);
+    const keyAttr = ` data-key="ln-${E(nd.key ?? i)}"`;
+    s += `<g class="dm-lnode"${keyAttr}>`;
     s += `<rect class="n ${roles(nd.cls)}" x="${cx(i) - BW / 2}" y="${Y - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
     s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx(i)}" y="${Y}">${show(nd.v)}</text>`;
-    (pm[i] || []).forEach((nm, k) => {
+    (pm[String(i)] || []).forEach((nm, k) => {
       s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`;
     });
+    s += `</g>`;
   });
   // 长链表：地方不够时先等比缩小，最多缩到 74%（字还看得清），再窄才在框里横着滚
   return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:100%;min-width:${Math.round(W * 0.74)}px"><g>${s}</g></svg></div></div>`;
 }
 
 function vTree(v: View) {
-  const pos: Record<string, [number, number]> = {}, par: Record<string, string> = {};
-  const PAD = v.badges ? 44 : 28, GAPX = v.badges ? 54 : 46;
+  const pos: Record<string, [number, number]> = {};
+  const parList: { from: string; to: string; side: "L" | "R" }[] = [];
+  const PAD = v.badges || v.ptrs ? 46 : 32;
+  const GAPX = v.badges || v.ptrs ? 54 : 46;
+  const TOP = v.ptrs ? 42 : 28;
+  const LEVEL_Y = 66;
+  const R = 17;
+  const visited = new Set<string>();
   let x = 0, depth = 0;
+
   const walk = (id: any, d: number) => {
-    if (id === null || id === undefined || !v.nodes[id]) return;
+    if (id === null || id === undefined) return;
+    const sid = String(id);
+    if (!v.nodes[id] || visited.has(sid)) return;
+    visited.add(sid);
     const nd = v.nodes[id];
     walk(nd.l, d + 1);
-    pos[id] = [PAD + x * GAPX, 28 + d * 66];
+    pos[sid] = [PAD + x * GAPX, TOP + d * LEVEL_Y];
     x++;
     depth = Math.max(depth, d);
     walk(nd.r, d + 1);
-    for (const c of [nd.l, nd.r]) if (c !== null && c !== undefined && v.nodes[c]) par[c] = id;
+    if (nd.l !== null && nd.l !== undefined && v.nodes[nd.l]) parList.push({ from: sid, to: String(nd.l), side: "L" });
+    if (nd.r !== null && nd.r !== undefined && v.nodes[nd.r]) parList.push({ from: sid, to: String(nd.r), side: "R" });
   };
   walk(v.root, 0);
-  const W = Math.max(PAD * 2 + (x - 1) * GAPX, 120), H = 56 + depth * 66 + (v.badges ? 22 : 0);
-  const cls = v.cls || {}, on = new Set(v.on || []);
-  let s = "";
-  for (const id in par) {
-    const [x1, y1] = pos[par[id]], [x2, y2] = pos[id];
-    s += `<line class="edge ${on.has(+id) && on.has(+par[id]) ? "on" : ""}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"></line>`;
-  }
-  for (const id in pos) {
-    const [px, py] = pos[id], c = first(cls[id]);
-    s += `<circle class="n ${roles(cls[id])}" cx="${px}" cy="${py}" r="17"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(v.nodes[id].v)}</text>`;
-    const b = v.badges && v.badges[id];
-    if (b !== undefined && b !== null) {
-      const t = String(b), w = Math.max(26, t.length * 7 + 10);
-      s += `<rect class="bd" x="${px - w / 2}" y="${py + 21}" width="${w}" height="16" rx="8"></rect><text class="bt" x="${px}" y="${py + 29}">${E(t)}</text>`;
+
+  const pm = ptrMap(v.ptrs);
+  const maxPtrLines = Math.max(0, ...Object.values(pm).map((arr) => arr.length));
+  const extraPadB = v.badges ? 24 : 0;
+  const extraPadPtr = maxPtrLines ? 14 + maxPtrLines * 12 : 0;
+  const W = Math.max(PAD * 2 + Math.max(0, x - 1) * GAPX, 140);
+  const H = TOP + 28 + depth * LEVEL_Y + Math.max(extraPadB, extraPadPtr);
+
+  const cls = v.cls || {};
+  const on = new Set((v.on || []).map(String));
+  const animEdges = new Set(((v.animEdges || []) as [string | number, string | number][]).map(([a, b]) => `${a}->${b}`));
+  const cutEdges = (v.cutEdges || []) as [string | number, string | number][];
+  const ahId = "dmtr" + uid++;
+  const ahOnId = "dmtron" + uid++;
+
+  let s = (v.directed || (v.extra && v.extra.length) || cutEdges.length)
+    ? `<defs><marker id="${ahId}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker><marker id="${ahOnId}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-on"></path></marker></defs>`
+    : "";
+
+  const drawEdge = (x1: number, y1: number, x2: number, y2: number, eCls: string, arrow: boolean, side?: "L" | "R", cut?: boolean) => {
+    const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1;
+    const ux = dx / d, uy = dy / d;
+    const sx = x1 + ux * R, sy = y1 + uy * R;
+    const ex = x2 - ux * (arrow ? R + 3 : R), ey = y2 - uy * (arrow ? R + 3 : R);
+    const isOn = eCls.includes("on");
+    s += `<line class="edge ${eCls}"${arrow ? ` marker-end="url(#${isOn ? ahOnId : ahId})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
+    if (side && v.lrLabels) {
+      const mx = (sx + ex) / 2 + (side === "L" ? -8 : 8);
+      const my = (sy + ey) / 2 - 2;
+      s += `<text class="dm-lr" x="${mx}" y="${my}">${side}</text>`;
     }
+    if (cut) {
+      s += `<text class="dm-cut-x" x="${(sx + ex) / 2}" y="${(sy + ey) / 2}">×</text>`;
+    }
+  };
+
+  for (const e of parList) {
+    const p1 = pos[e.from], p2 = pos[e.to];
+    if (!p1 || !p2) continue;
+    const isOn = on.has(e.from) && on.has(e.to);
+    const isAnim = animEdges.has(`${e.from}->${e.to}`);
+    const eCls = `${isOn ? "on" : ""}${isAnim ? " draw" : ""}`.trim();
+    drawEdge(p1[0], p1[1], p2[0], p2[1], eCls, !!v.directed, e.side);
+  }
+
+  for (const [a, b] of cutEdges) {
+    const p1 = pos[String(a)], p2 = pos[String(b)];
+    if (!p1 || !p2) continue;
+    drawEdge(p1[0], p1[1], p2[0], p2[1], "cut", !!v.directed, undefined, true);
+  }
+
+  for (const ex of (v.extra || []) as { from: string | number; to: string | number; cls?: string; bend?: number; anim?: string; label?: string }[]) {
+    const p1 = pos[String(ex.from)], p2 = pos[String(ex.to)];
+    if (!p1 || !p2) continue;
+    const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1;
+    const ux = dx / d, uy = dy / d;
+    const sx = p1[0] + ux * R, sy = p1[1] + uy * R;
+    const exX = p2[0] - ux * (R + 3), exY = p2[1] - uy * (R + 3);
+    const bend = ex.bend ?? 0.35;
+    const cx = (sx + exX) / 2 - uy * bend * 64;
+    const cy = (sy + exY) / 2 + ux * bend * 64;
+    const eCls = `${ex.cls || "on"}${ex.anim ? ` ${ex.anim}` : ""}`.trim();
+    const isOn = eCls.includes("on");
+    s += `<path class="edge ${eCls}" marker-end="url(#${isOn ? ahOnId : ahId})" d="M${sx} ${sy} Q${cx} ${cy} ${exX} ${exY}"></path>`;
+    if (ex.label) {
+      s += `<text class="pt" x="${(sx + 2 * cx + exX) / 4}" y="${(sy + 2 * cy + exY) / 4 - 4}">${E(ex.label)}</text>`;
+    }
+  }
+
+  const swapSet = new Set<string>();
+  for (const [a, b] of (v.swaps || []) as [string | number, string | number][]) {
+    const sa = String(a), sb = String(b);
+    swapSet.add(sa); swapSet.add(sb);
+    const p1 = pos[sa], p2 = pos[sb];
+    if (!p1 || !p2) continue;
+    const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1;
+    const ux = dx / d, uy = dy / d;
+    const sx = p1[0] + ux * R, sy = p1[1] + uy * R;
+    const exX = p2[0] - ux * (R + 3), exY = p2[1] - uy * (R + 3);
+    const cx = (sx + exX) / 2 - uy * 26;
+    const cy = (sy + exY) / 2 + ux * 26;
+    s += `<path class="edge on draw" marker-start="url(#${ahOnId})" marker-end="url(#${ahOnId})" d="M${sx} ${sy} Q${cx} ${cy} ${exX} ${exY}"></path>`;
+  }
+
+  for (const id of Object.keys(pos)) {
+    const [px, py] = pos[id];
+    const nd = v.nodes[id];
+    const c = first(cls[id]);
+    const swapCls = swapSet.has(id) ? " dm-tswap" : "";
+    s += `<g class="dm-tnode${swapCls}" data-key="tn-${E(id)}" style="transform:translate(${px}px,${py}px)">`;
+    s += `<circle class="n ${roles(cls[id])}" cx="0" cy="0" r="${R}"></circle>`;
+    s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="0" y="0">${show(nd.v)}</text>`;
+    if (nd.prev !== undefined && String(nd.prev) !== String(nd.v)) {
+      s += `<text class="dm-tprev" x="0" y="-23">${show(nd.prev)}→</text>`;
+    }
+    const b = v.badges && v.badges[id];
+    const hasBadge = b !== undefined && b !== null;
+    if (hasBadge) {
+      const t = String(b), w = Math.max(26, t.length * 7 + 10);
+      s += `<rect class="bd" x="${-w / 2}" y="21" width="${w}" height="16" rx="8"></rect><text class="bt" x="0" y="29">${E(t)}</text>`;
+    }
+    (pm[id] || []).forEach((nm, k) => {
+      const pyOff = hasBadge ? 47 + k * 12 : 28 + k * 12;
+      s += `<text class="pt" x="0" y="${pyOff}">${E(nm)}</text>`;
+    });
+    s += `</g>`;
   }
   return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 0 ${W} ${H}" style="width:${W * 1.15}px;max-width:100%"><g>${s}</g></svg></div></div>`;
 }
