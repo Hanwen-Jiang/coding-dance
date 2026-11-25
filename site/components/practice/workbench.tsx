@@ -10,10 +10,21 @@ import { flushSync } from "react-dom";
 
 import { ChevronDown, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
 import { PixelCodeMark, PixelLoader, Skel } from "@/components/pixel";
+import { CompanionPromptBanner, PracticeCompanionPanel } from "@/components/practice/companion";
 import { PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
 import { type DebugRun, PracticeDebugger } from "@/components/practice/debugger";
 import { PracticeResults } from "@/components/practice/results";
 import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice/resize";
+import {
+  COMPANION_MODES,
+  type CompanionConsentMode,
+  type CompanionHintLevel,
+  type HintCheckResponse,
+  type HintRevealResponse,
+  checkCompanionHint,
+  revealCompanionHint,
+  useCompanionMode,
+} from "@/lib/companion";
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
 import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
@@ -79,7 +90,7 @@ const TARGETS: { id: PracticeTarget; label: string; desc: string }[] = [
   { id: "browser", label: "在浏览器里运行", desc: "不用登录；调试也在这里" },
   { id: "cloud", label: "在云端运行", desc: "要登录，交给云端的沙箱；调试仍在浏览器里" },
 ];
-type TestTab = "examples" | "custom" | "results" | "debug";
+type TestTab = "examples" | "custom" | "results" | "debug" | "companion";
 /** 编辑器提示程度，存在浏览器里，换题、换语言都不变 */
 const HINT_LEVELS: { id: PracticeHints; label: string; desc: string }[] = [
   { id: "full", label: "完整提示", desc: "提示关键字、内置函数、库函数和类型" },
@@ -462,6 +473,64 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   const sequenceRef = useRef(0);
   const codeRef = useRef(code);
 
+  // —— Consent-First AI 伴学（proactive_consent / on_demand / off）——
+  const [companionMode, setCompanionMode] = useCompanionMode();
+  const [companionLevel, setCompanionLevel] = useState<CompanionHintLevel>("L1");
+  const [companionPrompt, setCompanionPrompt] = useState<HintCheckResponse | null>(null);
+  const [companionDismissed, setCompanionDismissed] = useState(false);
+  const [companionReveal, setCompanionReveal] = useState<HintRevealResponse | null>(null);
+  const [companionBusy, setCompanionBusy] = useState(false);
+  const [companionError, setCompanionError] = useState<string | null>(null);
+  const failStreakRef = useRef(0);
+  const startedAtRef = useRef(Date.now());
+
+  useEffect(() => {
+    setCompanionPrompt(null);
+    setCompanionDismissed(false);
+    setCompanionReveal(null);
+    setCompanionError(null);
+    failStreakRef.current = 0;
+    startedAtRef.current = Date.now();
+  }, [problem.id]);
+
+  useEffect(() => {
+    if (companionMode === "off") {
+      setCompanionPrompt(null);
+      if (tab === "companion") setTab("results");
+    } else if (companionMode === "on_demand") {
+      setCompanionPrompt(null);
+    }
+  }, [companionMode, tab]);
+
+  const requestCompanionReveal = useCallback(async (level: CompanionHintLevel, explicitToken?: string) => {
+    if (companionMode === "off") return;
+    setCompanionLevel(level);
+    setCompanionBusy(true);
+    setCompanionError(null);
+    setPanelOpen(true);
+    setTab("companion");
+    const firstBad = report?.result.results.find((r) => r.error || (!report.unchecked && !r.passed));
+    try {
+      const res = await revealCompanionHint({
+        consent_mode: companionMode,
+        user_consented: true,
+        consent_token: explicitToken ?? companionPrompt?.consent_token,
+        hint_level: level,
+        problem_id: String(problem.id),
+        problem_title: problem.name,
+        language,
+        code: codeRef.current,
+        error_output: firstBad?.error || (firstBad ? `期望输出未匹配（用例 ${firstBad.index + 1}）` : undefined),
+      });
+      setCompanionReveal(res);
+      setCompanionPrompt(null);
+    } catch (e) {
+      setCompanionError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCompanionBusy(false);
+    }
+  }, [companionMode, companionPrompt?.consent_token, language, problem.id, problem.name, report]);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(draftKey);
@@ -628,6 +697,31 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       if (sequenceRef.current === token) setReport(rep);
       // 全量测试相当于一次提交：自动记进进度仓的尝试记录（示例、精简、自定义用例只是运行，要记就点「保存」）
       if (scope === "full" && !unchecked && recordRef.current(rep)) autoRecorded.current = rep;
+      if (sequenceRef.current === token && !result.cancelled && !unchecked) {
+        const failedList = result.results.filter((r) => r.error || !r.passed);
+        if (failedList.length === 0 && result.results.length > 0) {
+          failStreakRef.current = 0;
+          setCompanionPrompt(null);
+        } else if (failedList.length > 0) {
+          failStreakRef.current += 1;
+          const hasRuntimeErr = failedList.some((r) => !!r.error);
+          if (companionMode === "proactive_consent" && !companionDismissed && (failStreakRef.current >= 2 || hasRuntimeErr)) {
+            const stuckSeconds = Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000));
+            void checkCompanionHint({
+              consent_mode: companionMode,
+              problem_id: String(problem.id),
+              problem_title: problem.name,
+              language,
+              stuck_seconds: stuckSeconds,
+              attempt_count: failStreakRef.current,
+              error_output: failedList.find((r) => r.error)?.error,
+              failed_tests: failedList.length,
+            }).then((chk) => {
+              if (sequenceRef.current === token && chk.should_prompt) setCompanionPrompt(chk);
+            }).catch(() => { /* 伴学不可用时不打断主流程 */ });
+          }
+        }
+      }
     } catch (e) {
       if (sequenceRef.current === token) {
         if (e instanceof RemoteLoginError) setNeedLogin(true);
@@ -640,7 +734,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     } finally {
       if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
     }
-  }, [cloudOnly, inCloud, language, mode, problem, ready, running, signedOut, starter, target]);
+  }, [cloudOnly, companionDismissed, companionMode, inCloud, language, mode, problem, ready, running, signedOut, starter, target]);
 
   /** 按「自定义」里填的内容拼一组用例；填得不对抛出中文错误 */
   const customCase = (): { test: PracticeCase; unchecked: boolean } => {
@@ -864,6 +958,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
               else if (key === "reset") setConfirmReset(true);
               else if (key === "target:browser" || key === "target:cloud") changeTarget(key.slice(7) as PracticeTarget);
               else if (typeof key === "string" && key.startsWith("hints:")) changeHints(key.slice(6) as PracticeHints);
+              else if (typeof key === "string" && key.startsWith("companion:")) { setCompanionDismissed(false); setCompanionMode(key.slice(10) as CompanionConsentMode); }
             }}>
               {cloudOnly ? (
                 <Dropdown.Item className="flex items-center justify-between gap-3" id="target:only" textValue="在云端运行">
@@ -880,6 +975,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
               {HINT_LEVELS.map((entry) => (
                 <Dropdown.Item className="flex items-center justify-between gap-3" id={`hints:${entry.id}`} key={entry.id} textValue={entry.label}>
                   <span className="flex flex-col"><span className="text-sm">{entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{hints === entry.id && <CheckIcon />}
+                </Dropdown.Item>
+              ))}
+              {COMPANION_MODES.map((entry) => (
+                <Dropdown.Item className="flex items-center justify-between gap-3" id={`companion:${entry.id}`} key={entry.id} textValue={`AI 伴学：${entry.label}`}>
+                  <span className="flex flex-col"><span className="text-sm">AI 伴学 · {entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{companionMode === entry.id && <CheckIcon />}
                 </Dropdown.Item>
               ))}
               <Dropdown.Item className="text-danger" id="reset" textValue="重置代码"><span className="text-sm">重置代码…</span></Dropdown.Item>
@@ -925,12 +1025,20 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="practice-notice text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
       {inCloud && <p className="practice-notice text-muted" data-testid="practice-cloud-note"><span className="min-w-0">{cloudNote(LANGUAGES.find((entry) => entry.id === language)?.label ?? language, language, mode, problem, cloud)}{signedOut && <> <a className="practice-notice-link" href={loginHref()}>用 GitHub 登录</a></>}</span></p>}
+      {companionMode === "proactive_consent" && companionPrompt?.should_prompt && !companionDismissed && (
+        <CompanionPromptBanner
+          loading={companionBusy}
+          onAccept={(lvl) => { void requestCompanionReveal(lvl, companionPrompt.consent_token); }}
+          onDismiss={() => { setCompanionDismissed(true); setCompanionPrompt(null); }}
+          prompt={companionPrompt}
+        />
+      )}
       {/* 控制台：从编辑器底部弹出来的子窗口，拖上沿调高度，✕ 或者状态栏上的「控制台」整个收起 */}
       {panelOpen && <ResizeHandle axis="y" className="practice-console-handle" container={() => document.getElementById("practice")} fallback={0.4} invert label="调整控制台高度" max={0.75} min={0.15} onChange={setConsoleSize} onCommit={commitConsole} value={consoleSize} />}
       {panelOpen && <div className="practice-console" data-testid="practice-test-panel">
         <div className="practice-console-tabs">
           <Segment aria-label="测试面板" className="practice-console-segment" onSelectionChange={(key) => { const next = String(key) as TestTab; if (next === "examples" || next === "custom") caseTab.current = next; setTab(next); }} selectedKey={tab} size="sm" variant="ghost">
-            <Segment.Item id="examples">示例</Segment.Item><Segment.Item id="custom">自定义</Segment.Item><Segment.Item id="results">运行结果</Segment.Item><Segment.Item id="debug">调试</Segment.Item>
+            <Segment.Item id="examples">示例</Segment.Item><Segment.Item id="custom">自定义</Segment.Item><Segment.Item id="results">运行结果</Segment.Item><Segment.Item id="debug">调试</Segment.Item>{companionMode !== "off" && <Segment.Item id="companion">伴学</Segment.Item>}
           </Segment>
           <span className="flex-1" />
           <Button aria-label="收起控制台" className="practice-tb-icon" isIconOnly onPress={() => setPanelOpen(false)} size="sm" variant="ghost"><CloseSmallIcon /></Button>
@@ -972,6 +1080,17 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
               <Button className="practice-tb-btn" isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="secondary"><BugIcon />开始调试</Button>
             </div>
           ))}
+          {tab === "companion" && companionMode !== "off" && (
+            <PracticeCompanionPanel
+              consentMode={companionMode}
+              error={companionError}
+              loading={companionBusy}
+              onRequestHint={(lvl) => { void requestCompanionReveal(lvl); }}
+              onSelectLevel={setCompanionLevel}
+              revealed={companionReveal}
+              selectedLevel={companionLevel}
+            />
+          )}
         </div>
       </div>}
       <div className="practice-statusbar">
@@ -982,6 +1101,17 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
           : <button aria-label={`运行位置：${target === "cloud" ? "云端" : "浏览器"}（点一下换到${target === "cloud" ? "浏览器" : "云端"}）`} className="practice-status-where" data-testid="practice-run-target" disabled={running} onClick={() => changeTarget(target === "cloud" ? "browser" : "cloud")} title={target === "cloud" ? "在云端运行（要登录）；调试仍在浏览器里。点一下换回浏览器" : "在浏览器里运行（不用登录）。点一下换到云端"} type="button">{target === "cloud" ? <CloudIcon /> : <BrowserIcon />}{target === "cloud" ? "云端" : "浏览器"}</button>}
         <SaveStatus draft={draftState} flash={flash} repoReady={repoReady} run={runState} solution={solutionState} />
         {lastPassed !== null && <span className={clsx("practice-status-result", lastPassed === lastTotal ? "text-success" : "text-danger")} title="上次运行的结果">{lastPassed === lastTotal ? "✓" : "✗"} {lastPassed}/{lastTotal}</span>}
+        {companionMode !== "off" && (
+          <button
+            aria-label="打开 AI 伴学提示面板"
+            className="practice-console-toggle"
+            data-testid="practice-companion-toggle"
+            onClick={() => { setPanelOpen(true); setTab("companion"); }}
+            type="button"
+          >
+            伴学
+          </button>
+        )}
         <button aria-expanded={panelOpen} aria-label="控制台" className="practice-console-toggle" onClick={() => setPanelOpen((open) => !open)} type="button"><TerminalIcon />控制台<ChevronDown className={clsx("transition-transform", !panelOpen && "rotate-180")} height={11} width={11} /></button>
       </div>
     </Card>

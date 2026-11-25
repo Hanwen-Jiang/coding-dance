@@ -9,6 +9,7 @@ import { useTheme } from "next-themes";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import { CodePanel } from "@/components/code-panel";
+import { AttemptsCompanionReview } from "@/components/practice/companion";
 import { PracticeProvider, PracticeStatement, prefetchPractice } from "@/components/practice/context";
 import { PracticeWorkbench } from "@/components/practice/workbench";
 import { DemoPlayer } from "@/components/demo/demo-player";
@@ -17,6 +18,7 @@ import { StatusPicker } from "@/components/account";
 import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel } from "@/components/pixel";
 import { SolutionCode } from "@/components/solution-code";
 import { TierChip, TopicChip } from "@/components/tags";
+import { useCompanionMode } from "@/lib/companion";
 import { IDS } from "@/lib/ids";
 import { codeIn } from "@/lib/langs";
 import { useCodingLayout } from "@/lib/practice/dock";
@@ -421,7 +423,7 @@ function Attempts({ d, mine }: { d: ProblemDetail; mine: Mine }) {
       />
     );
   }
-  return <AttemptList attempts={attempts} slug={d.slug} />;
+  return <AttemptList attempts={attempts} slug={d.slug} topic={d.summary.topic} />;
 }
 
 /** 一次尝试点开后的内容：笔记、代码、文件路径 */
@@ -452,8 +454,9 @@ const SHOW_RECENT = 5;
  * 尝试记录默认折叠：上面一行汇总（每次一个色块，从旧到新），下面每次尝试只占一行，点开才看笔记和代码。
  * 次数多时只列最近几次，更早的点一下再展开。
  */
-function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | null | undefined }) {
+function AttemptList({ attempts, slug, topic }: { attempts: Attempt[]; slug: string | null | undefined; topic: string }) {
   const [showAll, setShowAll] = useState(false);
+  const [companionMode] = useCompanionMode();
   const counts = attempts.reduce<Partial<Record<AttemptResult, number>>>((m, a) => ({ ...m, [a.result]: (m[a.result] ?? 0) + 1 }), {});
   const latest = attempts[attempts.length - 1];
   const hidden = showAll ? 0 : Math.max(0, attempts.length - SHOW_RECENT);
@@ -478,6 +481,7 @@ function AttemptList({ attempts, slug }: { attempts: Attempt[]; slug: string | n
           ))}
         </div>
       </div>
+      <AttemptsCompanionReview attempts={attempts} consentMode={companionMode} topic={topic} />
       {hidden > 0 && (
         <Button className="self-start" size="sm" variant="ghost" onPress={() => setShowAll(true)}>
           显示更早的 {hidden} 次
