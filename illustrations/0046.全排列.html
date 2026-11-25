@@ -261,7 +261,7 @@ svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>这一步选的数</span><span><i class="sw d"></i>已经用掉</span><span><i class="sw c"></i>填满了</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>这一步选的数</span><span><i class="sw e"></i>已在 path 中</span><span><i class="sw d"></i>已用掉 / 本位已试</span><span><i class="sw w"></i>撤销放回</span><span><i class="sw c"></i>填满收集</span></div>
       </div>
     </div>
   </section>
@@ -343,26 +343,78 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,2,3]},"note":"num
     const nums = R.distinct(R.int(2, 3), 0, 9);
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().permute(${R.py(nums)})`, cmp: "unordered" };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "标准解法", note: null, legend: [["a","这一步选的数"],["d","已经用掉"],["c","填满了"]], build(a, snap) {
+{ t: "标准解法", note: null, legend: [["a","这一步选的数"],["e","已在 path 中"],["d","已用掉 / 本位已试"],["w","撤销放回"],["c","填满收集"]], build(a, snap) {
     const nums = a.nums, n = nums.length, used = nums.map(() => false), path = [], res = [];
-    const view = (cur, done) => [
-      { t: "array", label: "nums（灰色的已经用掉）", items: nums.map((v, i) => ({ v, cls: i === cur ? "a" : used[i] ? "d" : "" })), ptrs: {} },
-      { t: "array", label: "path（正在填的排列）", items: Array.from({ length: n }, (_, k) => ({ v: k < path.length ? path[k] : "", cls: k < path.length ? (done ? "c" : k === path.length - 1 && cur >= 0 ? "a" : "e") : "" })), idx: true },
-      { t: "chips", label: "已收集", items: res.map((r) => `[${r.join(",")}]`), empty: "还没有" },
-    ];
-    snap("开始", `有 ${n} 个空位，从左往右填。每一位从还没用过的数里挑。`, view(-1), { at: "init" });
+    const tried = Array.from({ length: n }, () => new Set());
+    const pStr = () => (path.length ? `[${path.join(",")}]` : "空");
+    let prevP = pStr(), prevF = 0, prevR = n;
+    const emit = (phase, msg, views, o = {}) => {
+      const curP = pStr(), curF = res.length, curR = n - path.length;
+      const facts = o.facts || [
+        ["path", curP, prevP],
+        ["已找到", curF, prevF],
+        ["剩余", curR, prevR],
+      ];
+      prevP = curP; prevF = curF; prevR = curR;
+      snap(phase, msg, views, { ...o, facts });
+    };
+    const view = (opts = {}) => {
+      const depth = path.length;
+      const prevSlot = opts.prevSlot || {};
+      return [
+        {
+          t: "array",
+          label: "nums（灰色的已经用掉或本位已试过）",
+          items: nums.map((v, i) => ({
+            v,
+            cls: i === opts.undoNum ? "w"
+              : i === opts.cur ? "a"
+              : used[i] || (depth < n && tried[depth].has(i)) ? "d"
+              : "",
+          })),
+          ptrs: { i: opts.cur >= 0 ? opts.cur : opts.undoNum >= 0 ? opts.undoNum : null },
+        },
+        {
+          t: "array",
+          label: "path（正在填的排列）",
+          items: Array.from({ length: n }, (_, k) => ({
+            v: k < path.length ? path[k] : "",
+            ...(prevSlot[k] !== undefined ? { prev: prevSlot[k] } : {}),
+            cls: opts.undoSlot === k ? "w"
+              : k < path.length ? (opts.fresh ? "c" : k === path.length - 1 && opts.cur >= 0 ? "a" : "e")
+              : "",
+          })),
+          idx: true,
+        },
+        {
+          t: "chips",
+          label: "已收集",
+          items: res.map((r, k) => ({ v: `[${r.join(",")}]`, cls: opts.fresh && k === res.length - 1 ? "c" : "" })),
+          empty: "还没有",
+        },
+      ];
+    };
+    emit("开始", `有 ${n} 个空位，从左往右填。每一位从还没用过的数里挑。`, view(), { at: "init", facts: [["path", "空"], ["已找到", 0], ["剩余", n]] });
     const dfs = () => {
-      if (path.length === n) { res.push(path.slice()); snap("收集", `${n} 个位置都填好了，得到 <b>[${path.join(",")}]</b>。`, view(-1, true), { at: "collect", kind: "ok", facts: [["已收集", res.length]] }); return; }
+      if (path.length === n) {
+        res.push(path.slice());
+        emit("收集", `${n} 个位置都填好了，得到 <b>[${path.join(",")}]</b>。收进结果后回溯。`, view({ fresh: true }), { at: "collect", kind: "ok" });
+        return;
+      }
+      const depth = path.length;
+      tried[depth].clear();
       for (let i = 0; i < n; i++) {
         if (used[i]) continue;
         used[i] = true; path.push(nums[i]);
-        snap("填第 " + path.length + " 位", `第 ${path.length} 位填 <b>${nums[i]}</b>，把它标记成用过。`, view(i), { at: "choose", facts: [["已收集", res.length]] });
+        emit(`填第 ${depth + 1} 位`, `第 ${depth + 1} 位填 <b>${nums[i]}</b>，标记 used[${i}] = True，递归下一位。`, view({ cur: i, prevSlot: { [depth]: "" } }), { at: "choose" });
         dfs();
         path.pop(); used[i] = false;
+        tried[depth].add(i);
+        emit(`撤销第 ${depth + 1} 位`, `把 <b>${nums[i]}</b> 从第 ${depth + 1} 位拿出来并恢复 used[${i}] = False。`, view({ undoNum: i, undoSlot: depth, prevSlot: { [depth]: nums[i] } }), { at: "choose", kind: "warn" });
       }
     };
     dfs();
-    snap("完成", `一共 ${res.length} 个排列，正好是 ${n}! 个。`, view(-1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["已收集", res.length]] });
+    snap("完成", `一共 ${res.length} 个排列，正好是 ${n}! 个。`, view(), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["path", "空"], ["已找到", res.length], ["剩余", n]] });
   } }
 ] };
 (function () {

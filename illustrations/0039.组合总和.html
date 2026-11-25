@@ -263,7 +263,7 @@ svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>这一步选的数</span><span><i class="sw e"></i>这一层可以选的范围</span><span><i class="sw w"></i>太大，剪掉</span><span><i class="sw c"></i>凑够了</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>这一步选的数</span><span><i class="sw e"></i>本层可选范围</span><span><i class="sw d"></i>已试过 / 跳过</span><span><i class="sw w"></i>太大剪枝 / 回溯</span><span><i class="sw c"></i>凑够收集</span></div>
       </div>
     </div>
   </section>
@@ -345,54 +345,143 @@ const SPEC = { presets: [{"label":"示例 1","args":{"c":[2,3,6,7],"target":7},"
     const c = R.sorted(R.distinct(R.int(2, 4), 2, 7)), target = R.int(5, 9);
     return { args: { c, target }, note: `candidates = ${R.fmt(c)}, target = ${target}`, py: `Solution().combinationSum(${R.py(c)}, ${target})`, cmp: "unordered" };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "回溯 + 剪枝", note: null, legend: [["a","这一步选的数"],["e","这一层可以选的范围"],["w","太大，剪掉"],["c","凑够了"]], build(a, snap) {
+{ t: "回溯 + 剪枝", note: null, legend: [["a","这一步选的数"],["e","本层可选范围"],["d","已试过 / 跳过"],["w","太大剪枝 / 回溯"],["c","凑够收集"]], build(a, snap) {
     const c = a.c.slice().sort((x, y) => x - y), target = a.target, res = [], path = [];
-    const view = (start, i, cls) => [
-      { t: "array", label: "candidates（排好序）", items: c.map((v, k) => ({ v, cls: k === i ? cls : k >= start && start >= 0 ? "e" : "" })), ptrs: { start: start >= 0 ? start : null, i: i >= 0 ? i : null } },
-      { t: "chips", label: "path", items: path.slice(), empty: "空" },
-      { t: "chips", label: "已收集的组合", items: res.map((r) => `[${r.join(",")}]`), empty: "还没有" },
+    const pStr = () => (path.length ? `[${path.join(",")}]` : "空");
+    let prevP = pStr(), prevF = 0, prevR = target;
+    const emit = (phase, msg, views, remain, o = {}) => {
+      const curP = pStr(), curF = res.length;
+      const facts = o.facts || [
+        ["path", curP, prevP],
+        ["已找到", curF, prevF],
+        ["剩余", remain, prevR],
+      ];
+      prevP = curP; prevF = curF; prevR = remain;
+      snap(phase, msg, views, { ...o, facts });
+    };
+    const view = (start, i, cls, opts = {}) => [
+      {
+        t: "array",
+        label: "candidates（排好序）",
+        items: c.map((v, k) => ({
+          v,
+          cls: opts.pruneFrom !== undefined && k >= opts.pruneFrom ? "w"
+            : k === i ? cls
+            : start >= 0 && k < i ? "d"
+            : start >= 0 && k > i ? "e"
+            : "",
+        })),
+        ptrs: { start: start >= 0 ? start : null, i: i >= 0 ? i : null },
+      },
+      {
+        t: "chips",
+        label: "path",
+        items: path.map((v, k) => ({
+          v,
+          cls: opts.fresh ? "c" : opts.picked && k === path.length - 1 ? "a" : "e",
+        })),
+        empty: "空",
+      },
+      {
+        t: "chips",
+        label: "已收集的组合",
+        items: res.map((r, k) => ({
+          v: `[${r.join(",")}]`,
+          cls: opts.fresh && k === res.length - 1 ? "c" : "",
+        })),
+        empty: "还没有",
+      },
     ];
-    snap("开始", `从 [${c.join(",")}] 里选数凑出 ${target}，每个数可以选多次。`, view(-1, -1), { at: "init", facts: [["还差", target]] });
+    emit("开始", `从 [${c.join(",")}] 里选数凑出 ${target}，每个数可以选多次。`, view(-1, -1, ""), target, { at: "init", facts: [["path", "空"], ["已找到", 0], ["剩余", target]] });
     const dfs = (start, remain) => {
-      if (remain === 0) { res.push(path.slice()); snap("凑够了", `path = [${path.join(",")}]，和正好是 ${target}，收集。`, view(-1, -1), { at: "found", kind: "ok", facts: [["还差", 0]] }); return; }
+      if (remain === 0) {
+        res.push(path.slice());
+        emit("凑够了", `path = [${path.join(",")}]，和正好是 ${target}，收集进结果后回溯。`, view(-1, -1, "", { fresh: true }), 0, { at: "found", kind: "ok" });
+        return;
+      }
       for (let i = start; i < c.length; i++) {
-        if (c[i] > remain) { snap("剪枝", `还差 ${remain}，但 ${c[i]} 已经比它大了。后面的数只会更大，这一层到此为止。`, view(start, i, "w"), { at: "prune", kind: "warn", facts: [["还差", remain]] }); break; }
+        if (c[i] > remain) {
+          emit("剪枝", `还差 ${remain}，但 ${c[i]} 已经比它大了。排过序后面的只会更大，这一层直接剪枝返回。`, view(start, i, "w", { pruneFrom: i }), remain, { at: "prune", kind: "warn" });
+          break;
+        }
         path.push(c[i]);
-        snap("选", `选 ${c[i]}，还差 ${remain} − ${c[i]} = <b>${remain - c[i]}</b>。下一层还从下标 ${i} 开始，${c[i]} 还能再选。`, view(start, i, "a"), { at: "pick", facts: [["还差", remain - c[i]]] });
+        emit("选", `选 ${c[i]}，还差 ${remain} − ${c[i]} = <b>${remain - c[i]}</b>。下一层还从下标 ${i} 开始，${c[i]} 还能再选。`, view(start, i, "a", { picked: true }), remain - c[i], { at: "pick" });
         dfs(i, remain - c[i]);
         path.pop();
+        emit("撤销", `把 ${c[i]} 从 path 拿出来，剩余恢复到 <b>${remain}</b>${i + 1 < c.length ? `，准备尝试下一个数 ${c[i + 1]}` : "，这一层尝试结束"}。`, view(start, i, "w"), remain, { at: "pick", kind: "warn" });
       }
     };
     dfs(0, target);
-    snap("完成", `一共找到 ${res.length} 个组合：${res.map((r) => `[${r.join(",")}]`).join("、")}。`, view(-1, -1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["组合数", res.length]] });
+    snap("完成", `一共找到 ${res.length} 个组合${res.length ? "：" + res.map((r) => `[${r.join(",")}]`).join("、") : ""}。`, view(-1, -1, ""), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["path", "空"], ["已找到", res.length], ["剩余", target]] });
   } },
-{ t: "选或不选", note: "和简洁写法一样：对第 i 个数只有两种决定：再选一次它（i 不动），或者以后都不选它（i + 1）。两条分支返回的组合拼起来就是答案。", legend: [["a","选它"],["b","不选它了"],["w","超过 target"],["d","已经决定不选的数"]], build(a, snap) {
+{ t: "选或不选", note: "和简洁写法一样：对第 i 个数只有两种决定：再选一次它（i 不动），或者以后都不选它（i + 1）。两条分支返回的组合拼起来就是答案。", legend: [["a","选它"],["b","不选它了"],["w","超过 target / 剪枝"],["d","已经决定不选的数"],["c","凑够收集"]], build(a, snap) {
       const c = a.c, target = a.target, path = [], found = [];
-      const view = (i, cls) => [
-        { t: "array", label: "candidates", items: c.map((v, k) => ({ v, cls: k === i ? cls : k < i ? "d" : "" })), ptrs: { i: i >= 0 && i < c.length ? i : null } },
-        { t: "chips", label: "这条分支上选了的数", items: path.slice(), empty: "空" },
-        { t: "chips", label: "找到的组合", items: found.map((r) => `[${r.join(",")}]`), empty: "还没有" },
+      const pStr = () => (path.length ? `[${path.join(",")}]` : "空");
+      let prevP = pStr(), prevF = 0, prevR = target;
+      const emit = (phase, msg, views, remain, o = {}) => {
+        const curP = pStr(), curF = found.length;
+        const facts = o.facts || [
+          ["path", curP, prevP],
+          ["已找到", curF, prevF],
+          ["剩余", remain, prevR],
+        ];
+        prevP = curP; prevF = curF; prevR = remain;
+        snap(phase, msg, views, { ...o, facts });
+      };
+      const view = (i, cls, opts = {}) => [
+        {
+          t: "array",
+          label: "candidates",
+          items: c.map((v, k) => ({
+            v,
+            cls: k === i ? cls : k < i ? "d" : i >= 0 && i < c.length ? "e" : "",
+          })),
+          ptrs: { i: i >= 0 && i < c.length ? i : null },
+        },
+        {
+          t: "chips",
+          label: "这条分支上选了的数",
+          items: path.map((v, k) => ({
+            v,
+            cls: opts.fresh ? "c" : opts.picked && k === path.length - 1 ? "a" : "e",
+          })),
+          empty: "空",
+        },
+        {
+          t: "chips",
+          label: "找到的组合",
+          items: found.map((r, k) => ({
+            v: `[${r.join(",")}]`,
+            cls: opts.fresh && k === found.length - 1 ? "c" : "",
+          })),
+          empty: "还没有",
+        },
       ];
-      const f = (r) => ({ facts: [["还差", r]] });
       const dfs = (i, remain) => {
         if (remain === 0) {
           found.push(path.slice());
-          snap("凑够了", `还差 0：这条分支选的 [${path.join(",")}] 正好凑出 ${target}。返回 [[]]，回去的路上每一层把自己选的数加在前面。`, view(-1, ""), { at: "found", kind: "ok", ...f(0) });
+          emit("凑够了", `还差 0：这条分支选的 [${path.join(",")}] 正好凑出 ${target}。返回 [[]]，回去的路上每一层把自己选的数加在前面。`, view(-1, "", { fresh: true }), 0, { at: "found", kind: "ok" });
           return [[]];
         }
-        if (remain < 0) { snap("超了", `还差 ${remain}，已经超过 target 了，这条分支返回空。`, view(i, "w"), { at: "empty", kind: "warn", ...f(remain) }); return []; }
-        if (i === c.length) { snap("没得选了", `所有数都决定过了，还差 ${remain}，这条分支返回空。`, view(i, ""), { at: "empty", kind: "warn", ...f(remain) }); return []; }
+        if (remain < 0) {
+          emit("超了", `还差 ${remain}，已经超过 target 了，这条分支剪枝返回空。`, view(i, "w"), remain, { at: "empty", kind: "warn" });
+          return [];
+        }
+        if (i === c.length) {
+          emit("没得选了", `所有数都决定过了，还差 ${remain}，这条分支返回空。`, view(i, "w"), remain, { at: "empty", kind: "warn" });
+          return [];
+        }
         const x = c[i];
         path.push(x);
-        snap("选", `考虑 ${x}，还差 ${remain}。先走「再选一次 ${x}」：还差 ${remain - x}，下一层还停在 ${x}。`, view(i, "a"), { at: "take", ...f(remain - x) });
+        emit("选", `考虑 ${x}，还差 ${remain}。先走「再选一次 ${x}」：还差 ${remain - x}，下一层还停在 ${x}。`, view(i, "a", { picked: true }), remain - x, { at: "take" });
         const A = dfs(i, remain - x).map((r) => [x, ...r]);
         path.pop();
-        snap("不选", `「选 ${x}」这条分支走完了。再走「以后都不选 ${x}」：还差 ${remain}，看下一个数。`, view(i, "b"), { at: "skip", ...f(remain) });
+        emit("不选", `「选 ${x}」这条分支走完了，撤销 ${x}。再走「以后都不选 ${x}」：还差 ${remain}，看下一个数。`, view(i, "b"), remain, { at: "skip" });
         return A.concat(dfs(i + 1, remain));
       };
-      snap("开始", `从 [${c.join(",")}] 里选数凑出 ${target}。每一层只对一个数做决定。`, view(-1, ""), { at: "start", ...f(target) });
+      emit("开始", `从 [${c.join(",")}] 里选数凑出 ${target}。每一层只对一个数做决定。`, view(-1, ""), target, { at: "start", facts: [["path", "空"], ["已找到", 0], ["剩余", target]] });
       const res = dfs(0, target);
-      snap("完成", `两种决定都试完了，一共 ${res.length} 个组合${res.length ? "：" + res.map((r) => `[${r.join(",")}]`).join("、") : ""}。`, view(-1, ""), { at: "start", kind: "ok", ans: res, facts: [["组合数", res.length]] });
+      snap("完成", `两种决定都试完了，一共 ${res.length} 个组合${res.length ? "：" + res.map((r) => `[${r.join(",")}]`).join("、") : ""}。`, view(-1, ""), { at: "start", kind: "ok", ans: res.map((r) => r.slice()), facts: [["path", "空"], ["已找到", res.length], ["剩余", target]] });
     } }
 ] };
 (function () {

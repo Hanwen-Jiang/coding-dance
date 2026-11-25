@@ -80,50 +80,221 @@ assert t.startsWith("b") is False
 t.insert("banana")
 assert t.startsWith("ban") is True and t.search("ban") is False
 `,
-  legend: [["a", "正在执行的操作"]],
+  legend: [["a", "当前节点"], ["e", "走过的路径"], ["c", "单词结尾 (is_end)"], ["w", "新建节点 / 查找失败"]],
   presets: [
     { label: "示例", args: { ops: [["insert", "apple"], ["search", "apple"], ["search", "app"], ["startsWith", "app"], ["insert", "app"], ["search", "app"]] }, note: "insert apple, search apple, search app, startsWith app, insert app, search app", expect: [null, true, false, true, null, true] },
     { label: "分叉", args: { ops: [["insert", "car"], ["insert", "cat"], ["insert", "do"], ["startsWith", "ca"], ["search", "ca"], ["search", "cat"]] }, note: "insert car, cat, do 后查询", expect: [null, null, null, true, false, true] },
   ],
   build(a, snap) {
-    const root = { ch: {}, end: false }, out = [];
-    const render = (hl) => {
-      const lines = ["(根)"];
-      const walk = (node, prefix, indent) => {
-        const keys = Object.keys(node.ch).sort();
-        keys.forEach((k, idx) => {
-          const last = idx === keys.length - 1, word = prefix + k, child = node.ch[k];
-          const on = hl && hl.startsWith(word);
-          const label = (on ? `<b style="color:var(--accent)">${k}</b>` : k) + (child.end ? " ●" : "");
-          lines.push(indent + (last ? "└─ " : "├─ ") + label);
-          walk(child, word, indent + (last ? "   " : "│  "));
-        });
-      };
-      walk(root, "", "");
-      return `<pre class="code">${lines.join("\n")}</pre>`;
-    };
+    const T = [{ ch: "", kids: {}, end: false, depth: 0 }], out = [];
+    let wordCount = 0;
     const name = (o) => `${o[0]}("${o[1]}")`;
-    const view = (i, hl) => [
-      { t: "chips", label: "操作", items: a.ops.map((o, t) => ({ v: name(o), cls: t === i ? "a" : t < i ? "d" : "" })) },
-      { t: "note", label: "前缀树（● 表示有单词在这里结束，蓝色是这次走过的路径）", html: render(hl) },
-      { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : String(v))), empty: "还没有" },
-    ];
-    snap("开始", "只有一个空的根节点。", view(-1, ""), { at: "init" });
-    a.ops.forEach((o, i) => {
-      const [op, w] = o; let node = root, msg;
-      if (op === "insert") {
-        const made = [];
-        for (const c of w) { if (!node.ch[c]) { node.ch[c] = { ch: {}, end: false }; made.push(c); } node = node.ch[c]; }
-        node.end = true; out.push(null);
-        msg = `沿着 ${w.split("").join(" → ")} 往下走，${made.length ? `新建了 ${made.join("、")} 这几个节点` : "所有节点都已经存在"}，在最后一个节点打上结尾标记。`;
-      } else {
-        let k = 0; for (; k < w.length && node; k++) node = node.ch[w[k]];
-        const found = !!node, res = op === "search" ? found && node.end : found; out.push(res);
-        msg = !found ? `走到第 ${k} 个字母 '${w[k - 1]}' 时没有路了，返回 <b>false</b>。` : op === "search" ? `能走到 "${w}" 的节点，${node.end ? "它有结尾标记" : "但它没有结尾标记，只是别的单词的前缀"}，返回 <b>${res}</b>。` : `能走到 "${w}" 的节点，说明有单词以它开头，返回 <b>true</b>。`;
+    const view = (opIdx, opts = {}) => {
+      const pos = [], edges = [];
+      let col = 0;
+      const place = (id) => {
+        const ks = Object.keys(T[id].kids).sort();
+        if (!ks.length) { pos[id] = [col++, T[id].depth]; return; }
+        ks.forEach((k) => place(T[id].kids[k]));
+        const xs = ks.map((k) => pos[T[id].kids[k]][0]);
+        pos[id] = [(Math.min(...xs) + Math.max(...xs)) / 2, T[id].depth];
+      };
+      place(0);
+      T.forEach((nd, u) => {
+        for (const k of Object.keys(nd.kids).sort()) edges.push([u, nd.kids[k]]);
+      });
+      const path = opts.path || [];
+      const curNode = path.length ? path[path.length - 1] : -1;
+      const fresh = opts.fresh ?? -1;
+      const views = [
+        { t: "chips", label: "操作序列", items: a.ops.map((o, t) => ({ v: name(o), cls: t === opIdx ? "a" : t < opIdx ? "d" : "" })) },
+      ];
+      if (opts.word !== undefined) {
+        views.push({
+          t: "array",
+          label: `当前字符串 "${opts.word}"`,
+          items: [...opts.word].map((ch, k) => ({
+            v: ch,
+            cls: k === opts.failChar ? "w" : k === opts.charIdx ? "a" : k < opts.charIdx ? "e" : "",
+          })),
+          ptrs: opts.charIdx < opts.word.length ? { c: opts.charIdx } : {},
+        });
       }
-      snap(name(o), msg, view(i, w), { at: op === "insert" ? "insert" : op === "search" ? ["search", "find"] : ["starts", "find"] });
+      views.push(
+        {
+          t: "net",
+          label: "前缀树（绿色 / end 表示有单词在这里结束）",
+          directed: true,
+          pos,
+          nodes: T.map((nd, idx) => ({
+            v: idx === 0 ? "根" : nd.ch,
+            cls: idx === fresh || (idx === curNode && (opts.warnEnd || opts.failChar !== undefined))
+              ? "w"
+              : idx === curNode
+                ? (opts.markEnd ? "c" : "a")
+                : path.includes(idx)
+                  ? "e"
+                  : nd.end
+                    ? "c"
+                    : "",
+          })),
+          edges: edges.map(([u, v]) => {
+            const isCurEdge = opts.edge && opts.edge[0] === u && opts.edge[1] === v;
+            const pIdx = path.indexOf(u);
+            const onPath = pIdx >= 0 && path[pIdx + 1] === v;
+            return [u, v, isCurEdge ? "on draw" : onPath ? "on" : ""];
+          }),
+          badges: T.map((nd) => (nd.end ? "end" : "")),
+        },
+        {
+          t: "chips",
+          label: "输出",
+          items: out.map((v, k) => ({
+            v: v === null ? "null" : String(v),
+            cls: k === out.length - 1 && opts.justOut ? (v === false ? "w" : v === true ? "c" : "d") : "",
+          })),
+          empty: "还没有",
+        },
+      );
+      return views;
+    };
+    snap("初始化", "创建一个空的前缀树，只有一个根节点 root。", view(-1), {
+      at: "init",
+      facts: [["操作", "Trie()"], ["节点数", 1], ["已存单词", 0]],
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(a.ops.length, ""), { at: [], kind: "ok", ans: out.slice() });
+    a.ops.forEach((o, i) => {
+      const [op, w] = o;
+      const path = [0];
+      let node = 0;
+      if (op === "insert") {
+        for (let k = 0; k < w.length; k++) {
+          const c = w[k];
+          const prevNodes = T.length;
+          const made = !(c in T[node].kids);
+          if (made) {
+            T.push({ ch: c, kids: {}, end: false, depth: T[node].depth + 1 });
+            T[node].kids[c] = T.length - 1;
+          }
+          const parent = node;
+          node = T[node].kids[c];
+          path.push(node);
+          snap(
+            made ? `新建 '${c}'` : `沿着 '${c}' 走`,
+            made
+              ? `当前节点没有 '${c}' 这条边，新建子节点 '${c}' 并走过去。`
+              : `'${c}' 子节点已经存在，直接走过去（共享公共前缀）。`,
+            view(i, { word: w, charIdx: k, path: path.slice(), edge: [parent, node], fresh: made ? node : -1 }),
+            {
+              at: "insert",
+              facts: [
+                ["操作", name(o)],
+                ["当前字符", `'${c}' (${k + 1}/${w.length})`],
+                ["节点数", T.length, prevNodes],
+              ],
+            },
+          );
+        }
+        const prevEnd = T[node].end;
+        const prevWords = wordCount;
+        T[node].end = true;
+        if (!prevEnd) wordCount++;
+        out.push(null);
+        snap(
+          "标记 is_end",
+          `"${w}" 的字母走完了，把当前节点的 <code>is_end</code> 设为 True，表示一个单词在这里结束。`,
+          view(i, { word: w, charIdx: w.length, path: path.slice(), markEnd: true, justOut: true }),
+          {
+            at: "insert",
+            facts: [
+              ["操作", name(o)],
+              ["is_end", "True", prevEnd ? "True" : "False"],
+              ["已存单词", wordCount, prevWords],
+            ],
+          },
+        );
+      } else {
+        let ok = true;
+        for (let k = 0; k < w.length; k++) {
+          const c = w[k];
+          if (!(c in T[node].kids)) {
+            ok = false;
+            out.push(false);
+            snap(
+              "路断了",
+              `走到第 ${k + 1} 个字母 '${c}' 时没有对应的子节点，路断了，直接返回 <b>false</b>。`,
+              view(i, { word: w, charIdx: k, failChar: k, path: path.slice(), justOut: true }),
+              {
+                at: "find",
+                facts: [
+                  ["操作", name(o)],
+                  ["字符", `'${c}' 缺失`],
+                  ["返回", "false"],
+                ],
+              },
+            );
+            break;
+          }
+          const parent = node;
+          node = T[node].kids[c];
+          path.push(node);
+          snap(
+            `沿着 '${c}' 走`,
+            `找到子节点 '${c}'，继续往下走到第 ${k + 1} 个字母。`,
+            view(i, { word: w, charIdx: k, path: path.slice(), edge: [parent, node] }),
+            {
+              at: "find",
+              facts: [
+                ["操作", name(o)],
+                ["当前字符", `'${c}' (${k + 1}/${w.length})`],
+                ["节点数", T.length],
+              ],
+            },
+          );
+        }
+        if (ok) {
+          if (op === "search") {
+            const res = T[node].end;
+            out.push(res);
+            snap(
+              name(o),
+              res
+                ? `走到了 "${w}" 的节点，而且它有结尾标记（is_end = True），返回 <b>true</b>。`
+                : `能走到 "${w}" 的节点，但它没有结尾标记（is_end = False，只是别的单词的前缀），返回 <b>false</b>。`,
+              view(i, { word: w, charIdx: w.length, path: path.slice(), warnEnd: !res, markEnd: res, justOut: true }),
+              {
+                at: "search",
+                facts: [
+                  ["操作", name(o)],
+                  ["is_end", res ? "True" : "False"],
+                  ["返回", String(res)],
+                ],
+              },
+            );
+          } else {
+            out.push(true);
+            snap(
+              name(o),
+              `成功走完了 "${w}"，说明前缀树里有单词以它开头（无需检查 is_end），返回 <b>true</b>。`,
+              view(i, { word: w, charIdx: w.length, path: path.slice(), justOut: true }),
+              {
+                at: "starts",
+                facts: [
+                  ["操作", name(o)],
+                  ["前缀匹配", "成功"],
+                  ["返回", "true"],
+                ],
+              },
+            );
+          }
+        }
+      }
+    });
+    snap("完成", `所有操作完成，输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(a.ops.length), {
+      at: [],
+      kind: "ok",
+      ans: out.slice(),
+      facts: [["节点数", T.length], ["已存单词", wordCount], ["操作数", a.ops.length]],
+    });
   },
   points: [
     { t: "结尾标记不能省", body: "没有 is_end，就分不清 app 是插入过的单词，还是 apple 的前缀。" },

@@ -359,54 +359,180 @@ const SPEC = { presets: [{"label":"能修完","args":{"n":4,"pre":[[1,0],[2,0],[
     const n = a.n, g = Array.from({ length: n }, () => []), indeg = Array(n).fill(0);
     for (const [x, y] of a.pre) { g[y].push(x); indeg[x]++; }
     const q = [], taken = [];
-    const view = (cur, fin) => [
-      { t: "chips", label: "先修关系（b → a：先上 b 才能上 a）", items: a.pre.map(([x, y]) => `${y} → ${x}`) },
-      { t: "array", label: "课程（格子里是入度：还差几门先修课）", items: indeg.map((d, k) => ({ v: d, cls: k === cur ? "a" : taken.includes(k) ? "c" : q.includes(k) ? "e" : fin ? "w" : "" })), ptrs: {} },
-      { t: "chips", label: "队列", items: q.slice(), empty: "空" },
-    ];
+    const view = (cur, fin, opts = {}) => {
+      const prevIndeg = opts.prevIndeg || {};
+      const nodeCls = (k) => (k === cur ? "a" : taken.includes(k) ? "c" : q.includes(k) ? "e" : fin ? "w" : "");
+      return [
+        {
+          t: "net",
+          label: "先修图（b → a：先上 b 才能上 a；虚线×表示依赖解除）",
+          directed: true,
+          nodes: Array.from({ length: n }, (_, k) => ({ v: k, cls: nodeCls(k) })),
+          edges: a.pre.map(([x, y]) => [y, x, y === cur ? "cut" : taken.includes(y) ? "dim" : fin && !taken.includes(y) ? "warm" : ""]),
+          badges: indeg.map((d, k) => (taken.includes(k) ? "已上" : `入度 ${d}`)),
+        },
+        {
+          t: "array",
+          label: "indeg（每门课还差几门先修课）",
+          items: indeg.map((d, k) => ({
+            v: d,
+            ...(prevIndeg[k] !== undefined ? { prev: prevIndeg[k] } : {}),
+            cls: nodeCls(k),
+          })),
+          ptrs: { b: cur >= 0 ? cur : null },
+        },
+        { t: "chips", label: "队列（左边先出）", items: q.slice(), empty: "空" },
+      ];
+    };
     for (let i = 0; i < n; i++) if (!indeg[i]) q.push(i);
-    snap("开始", `入度为 0 的课 ${q.length ? q.join("、") : "没有"} 没有先修课，可以直接上，放进队列。`, view(-1), { at: "init", facts: [["已上", 0], ["总数", n]] });
+    snap("开始", `入度为 0 的课 ${q.length ? q.join("、") : "没有"} 没有先修课，可以直接上，放进队列。`, view(-1, false), {
+      at: "init",
+      facts: [["已上课", 0], ["剩余", n], ["队列长度", q.length]],
+    });
     while (q.length) {
-      const b = q.shift(); taken.push(b); const freed = [];
-      for (const x of g[b]) { indeg[x]--; if (!indeg[x]) { q.push(x); freed.push(x); } }
-      snap(`上课 ${b}`, `上完课 ${b}。` + (g[b].length ? `它是 ${g[b].join("、")} 的先修课，这些课的入度各减一。` : "没有课依赖它。") + (freed.length ? `${freed.join("、")} 的入度变成 0，入队。` : ""), view(b), { at: "take", facts: [["已上", taken.length], ["总数", n]] });
+      const prevTaken = taken.length, prevQ = q.length;
+      const b = q.shift();
+      taken.push(b);
+      const freed = [], prevIndeg = {};
+      for (const x of g[b]) {
+        prevIndeg[x] = indeg[x];
+        indeg[x]--;
+        if (!indeg[x]) { q.push(x); freed.push(x); }
+      }
+      snap(
+        `上课 ${b}`,
+        `上完课 ${b}。` + (g[b].length ? `它是 ${g[b].join("、")} 的先修课，解除对应依赖边，这些课的入度各减一。` : "没有课依赖它。") + (freed.length ? `${freed.join("、")} 的入度变成 0，入队。` : ""),
+        view(b, false, { prevIndeg }),
+        {
+          at: "take",
+          facts: [
+            ["已上课", taken.length, prevTaken],
+            ["剩余", n - taken.length, n - prevTaken],
+            ["队列长度", q.length, prevQ],
+          ],
+        },
+      );
     }
     const ok = taken.length === n;
-    snap("完成", ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join("、")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`, view(-1, true), { at: "done", kind: ok ? "ok" : "warn", ans: ok, facts: [["已上", taken.length], ["总数", n]] });
+    snap(
+      "完成",
+      ok ? `${n} 门课全部上完，返回 <b>true</b>。` : `队列空了，只上了 ${taken.length} 门。剩下的 ${indeg.map((_, k) => k).filter((k) => !taken.includes(k)).join("、")} 在环上，互相等待，入度永远减不到 0，返回 <b>false</b>。`,
+      view(-1, true),
+      {
+        at: "done",
+        kind: ok ? "ok" : "warn",
+        ans: ok,
+        facts: [["已上课", taken.length], ["剩余", n - taken.length], ["结果", ok ? "true" : "false"]],
+      },
+    );
   } },
-{ t: "DFS 三色标记", note: "和简洁写法一样：从一门课出发，沿着「要先上哪门」一路往下走。state 为 1 表示这门课还在当前的递归路径上，又走回了路径上的课，就说明有环。", legend: [["a","当前的课 / 正在看的关系"],["e","1：在递归路径上"],["c","2：确认没问题"],["w","绕回来的课"]], build(a, snap) {
+{ t: "DFS 三色标记", note: "和简洁写法一样：从一门课出发，沿着「要先上哪门」一路往下走。state 为 1 表示这门课还在当前的递归路径上，又走回了路径上的课，就说明有环。", legend: [["a","当前的课 / 正在检查的边"],["e","1：在递归路径上"],["c","2：确认没问题"],["w","绕回来的课 / 环边"]], build(a, snap) {
       const n = a.n, g = Array.from({ length: n }, () => []);
       for (const [x, y] of a.pre) g[x].push(y);
       const state = Array(n).fill(0), path = [];
-      let edge = null, bad = -1;
-      const view = (cur) => [
-        { t: "chips", label: "先修关系（a → b：上 a 之前要先上 b）", items: a.pre.map(([x, y]) => ({ v: `${x} → ${y}`, cls: edge && edge[0] === x && edge[1] === y ? "a" : "" })) },
-        { t: "array", label: "state（0 没访问，1 在递归路径上，2 确认没问题）", items: state.map((s, k) => ({ v: s, cls: k === bad ? "w" : k === cur ? "a" : s === 1 ? "e" : s === 2 ? "c" : "" })) },
-        { t: "chips", label: "递归路径", items: path.map((u) => ({ v: `课 ${u}`, cls: u === cur ? "a" : "e" })), empty: "空" },
-      ];
+      let edge = null, bad = -1, confirmed = 0;
+      const view = (cur, opts = {}) => {
+        const prevState = opts.prevState || {};
+        const pathEdge = (x, y) => {
+          const i = path.indexOf(x);
+          return i >= 0 && path[i + 1] === y;
+        };
+        const nodeCls = (k) => (k === bad ? "w" : k === cur ? "a" : state[k] === 1 ? "e" : state[k] === 2 ? "c" : "");
+        return [
+          {
+            t: "net",
+            label: "依赖图（a → b：上 a 之前要先上 b）",
+            directed: true,
+            nodes: Array.from({ length: n }, (_, k) => ({
+              v: k,
+              ...(prevState[k] !== undefined ? { prev: prevState[k] } : {}),
+              cls: nodeCls(k),
+            })),
+            edges: a.pre.map(([x, y]) => {
+              const isCur = edge && edge[0] === x && edge[1] === y;
+              return [x, y, bad >= 0 && isCur ? "warm" : isCur ? "on draw" : pathEdge(x, y) ? "on" : state[x] === 2 ? "dim" : ""];
+            }),
+            badges: state.map((s) => (s === 2 ? "2:安全" : s === 1 ? "1:在栈" : "0:未访")),
+          },
+          {
+            t: "array",
+            label: "state（0 没访问，1 在递归路径上，2 确认没问题）",
+            items: state.map((s, k) => ({
+              v: s,
+              ...(prevState[k] !== undefined ? { prev: prevState[k] } : {}),
+              cls: nodeCls(k),
+            })),
+            ptrs: { u: cur >= 0 ? cur : null },
+          },
+          { t: "chips", label: "递归路径", items: path.map((u) => ({ v: `课 ${u}`, cls: u === bad ? "w" : u === cur ? "a" : "e" })), empty: "空" },
+        ];
+      };
       const ok = (u) => {
+        const prevLen = path.length;
         state[u] = 1; path.push(u);
-        snap("进入", `进入课 ${u}，标成 1。` + (g[u].length ? `上它之前要先上 ${g[u].join("、")}，挨个检查。` : "它没有先修课。"), view(u), { at: "enter" });
+        snap(
+          "进入",
+          `进入课 ${u}，state[${u}] 从 0 标成 1。` + (g[u].length ? `上它之前要先上 ${g[u].join("、")}，挨个检查。` : "它没有先修课。"),
+          view(u, { prevState: { [u]: 0 } }),
+          { at: "enter", facts: [["当前课", u], ["已确认", confirmed], ["路径长度", path.length, prevLen]] },
+        );
         for (const v of g[u]) {
           edge = [u, v];
           if (state[v] === 1) {
             bad = v;
-            snap("有环", `课 ${u} 要先上课 ${v}，可是 ${v} 还在当前的递归路径上：${path.slice(path.indexOf(v)).join(" → ")} → ${v} 绕成了一个环，这些课互相等待。返回 false。`, view(u), { at: "cycle", kind: "warn" });
+            snap(
+              "有环",
+              `课 ${u} 要先上课 ${v}，可是 ${v} 还在当前的递归路径上：${path.slice(path.indexOf(v)).join(" → ")} → ${v} 绕成了一个环，这些课互相等待。返回 false。`,
+              view(u),
+              { at: "cycle", kind: "warn", facts: [["当前课", u], ["发现环", `${u}→${v}`], ["路径长度", path.length]] },
+            );
             return false;
           }
-          if (state[v] === 2) { snap("已确认", `课 ${u} 要先上课 ${v}，${v} 之前已经确认没问题，跳过。`, view(u), { at: "seen" }); continue; }
+          if (state[v] === 2) {
+            snap(
+              "已确认",
+              `课 ${u} 要先上课 ${v}，${v} 之前已经确认没问题（state = 2），跳过。`,
+              view(u),
+              { at: "seen", facts: [["当前课", u], ["跳过", `课 ${v}(安全)`], ["路径长度", path.length]] },
+            );
+            continue;
+          }
           if (!ok(v)) return false;
         }
-        edge = null; state[u] = 2; path.pop();
-        snap("确认", `课 ${u} 的先修课都没问题，标成 2，离开递归路径。`, view(u), { at: "confirm" });
+        edge = null;
+        state[u] = 2;
+        path.pop();
+        confirmed++;
+        snap(
+          "确认",
+          `课 ${u} 的先修课都没问题，state[${u}] 从 1 标成 2，离开递归路径。`,
+          view(u, { prevState: { [u]: 1 } }),
+          { at: "confirm", facts: [["当前课", u], ["已确认", confirmed, confirmed - 1], ["路径长度", path.length, path.length + 1]] },
+        );
         return true;
       };
-      snap("开始", "所有课的 state 都是 0。从课 0 开始，依次把每门没访问过的课当起点做 DFS。", view(-1), { at: "init" });
+      snap("开始", "所有课的 state 都是 0。从课 0 开始，依次把每门没访问过的课当起点做 DFS。", view(-1), {
+        at: "init",
+        facts: [["当前课", "—"], ["已确认", 0], ["路径长度", 0]],
+      });
       for (let u = 0; u < n; u++) {
         if (state[u]) continue;
-        if (!ok(u)) { snap("完成", "找到了环，环上的课永远上不完，返回 <b>false</b>。", view(-1), { at: "done", kind: "warn", ans: false }); return; }
+        if (!ok(u)) {
+          snap("完成", "找到了环，环上的课永远上不完，返回 <b>false</b>。", view(-1), {
+            at: "done",
+            kind: "warn",
+            ans: false,
+            facts: [["已确认", confirmed], ["总数", n], ["结果", "false"]],
+          });
+          return;
+        }
       }
-      snap("完成", `所有课都标成了 2，没有环，${n} 门课都能上完，返回 <b>true</b>。`, view(-1), { at: "done", kind: "ok", ans: true });
+      snap("完成", `所有课都标成了 2，没有环，${n} 门课都能上完，返回 <b>true</b>。`, view(-1), {
+        at: "done",
+        kind: "ok",
+        ans: true,
+        facts: [["已确认", confirmed], ["总数", n], ["结果", "true"]],
+      });
     } }
 ] };
 (function () {

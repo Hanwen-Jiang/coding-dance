@@ -42,16 +42,63 @@ class Solution:
       presets: [{ label: "示例", args: { nums: [1, 3, 4, 6, 8, 11, 15], target: 17 }, note: "numbers = [1,3,4,6,8,11,15], target = 17", expect: [4, 6] }],
       build(a, snap) {
         const A = a.nums;
-        let l = 0, r = A.length - 1, hit = false;
-        const view = () => [{ t: "array", label: "numbers", items: A.map((v, i) => ({ v, cls: hit && (i === l || i === r) ? "c" : i === l || i === r ? "a" : i < l || i > r ? "d" : "" })), ptrs: { l, r } }];
-        snap("开始", "l 在最左，r 在最右。", view(), { at: "init" });
+        let l = 0, r = A.length - 1, hit = false, prevSum = "—";
+        const view = () => [{
+          t: "array",
+          label: "numbers",
+          items: A.map((v, i) => ({ v, cls: hit && (i === l || i === r) ? "c" : i === l || i === r ? "a" : i < l || i > r ? "d" : "" })),
+          ptrs: { l, r },
+        }];
+        snap("开始", "l 在最左，r 在最右。", view(), {
+          at: "init",
+          facts: [["target", a.target], ["区间 [l, r]", `[0, ${A.length - 1}]`], ["当前和", "—"]],
+        });
         while (l < r) {
           const s = A[l] + A[r];
-          if (s === a.target) { hit = true; snap("找到了", `${A[l]} + ${A[r]} = ${s}，正好。返回 [${l + 1}, ${r + 1}]（下标从 1 开始）。`, view(), { at: ["sum", "hit"], kind: "ok", ans: [l + 1, r + 1] }); return; }
-          if (s < a.target) { snap("太小", `${A[l]} + ${A[r]} = ${s} &lt; ${a.target}。${A[r]} 已经是能配的最大的数了，${A[l]} 和谁配都不够，排除 ${A[l]}：l 右移。`, view(), { at: ["sum", "small"] }); l++; }
-          else { snap("太大", `${A[l]} + ${A[r]} = ${s} &gt; ${a.target}。${A[l]} 已经是能配的最小的数了，${A[r]} 和谁配都太大，排除 ${A[r]}：r 左移。`, view(), { at: ["sum", "big"] }); r--; }
+          const curSum = `${A[l]} + ${A[r]} = ${s}`;
+          if (s === a.target) {
+            hit = true;
+            snap("找到了", `${A[l]} + ${A[r]} = ${s}，正好。返回 [${l + 1}, ${r + 1}]（下标从 1 开始）。`, view(), {
+              at: ["sum", "hit"],
+              kind: "ok",
+              ans: [l + 1, r + 1],
+              facts: [["target", a.target], ["当前和", curSum, prevSum], ["返回 (1-based)", `[${l + 1}, ${r + 1}]`]],
+            });
+            return;
+          }
+          if (s < a.target) {
+            snap("太小", `${A[l]} + ${A[r]} = ${s} &lt; ${a.target}。${A[r]} 已经是能配的最大的数了，${A[l]} 和谁配都不够。`, view(), {
+              at: "sum",
+              kind: "warn",
+              facts: [["target", a.target], ["当前和", curSum, prevSum], ["l / r", `${l} / ${r}`]],
+            });
+            const oldL = l;
+            l++;
+            snap("排除 l", `排除 numbers[${oldL}] = ${A[oldL]}，l 从 ${oldL} 右移到 ${l}。`, view(), {
+              at: "small",
+              facts: [["target", a.target], ["l", l, oldL], ["r", r], ["区间 [l, r]", `[${l}, ${r}]`, `[${oldL}, ${r}]`]],
+            });
+          } else {
+            snap("太大", `${A[l]} + ${A[r]} = ${s} &gt; ${a.target}。${A[l]} 已经是能配的最小的数了，${A[r]} 和谁配都太大。`, view(), {
+              at: "sum",
+              kind: "warn",
+              facts: [["target", a.target], ["当前和", curSum, prevSum], ["l / r", `${l} / ${r}`]],
+            });
+            const oldR = r;
+            r--;
+            snap("排除 r", `排除 numbers[${oldR}] = ${A[oldR]}，r 从 ${oldR} 左移到 ${r}。`, view(), {
+              at: "big",
+              facts: [["target", a.target], ["l", l], ["r", r, oldR], ["区间 [l, r]", `[${l}, ${r}]`, `[${l}, ${oldR}]`]],
+            });
+          }
+          prevSum = curSum;
         }
-        snap("没有", "l 和 r 相遇，没有答案。", view(), { at: "sum", kind: "ok", ans: [] });
+        snap("没有", "l 和 r 相遇，没有答案。", view(), {
+          at: "sum",
+          kind: "ok",
+          ans: [],
+          facts: [["target", a.target], ["结果", "[]"]],
+        });
       },
     },
   }, {
@@ -86,19 +133,57 @@ class Solution:
       build(a, snap) {
         const A = a.nums.slice(), n = A.length, skip = new Set();
         let slow = 1, fast = null;
-        const view = () => [{ t: "array", label: "nums", items: A.map((v, i) => ({ v, cls: i === fast ? "a" : i < slow ? "c" : skip.has(i) ? "d" : "" })), ptrs: { slow: slow < n ? slow : null, ...(fast !== null ? { fast } : {}) } }];
-        snap("开始", "第一个数一定保留。slow = 1：nums[:1] 是目前的结果。", view(), { at: "init", facts: [["k", slow]] });
+        const view = (opts = {}) => {
+          const prevMap = opts.prevMap || {};
+          return [{
+            t: "array",
+            label: "nums",
+            items: A.map((v, i) => ({
+              v,
+              ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),
+              cls: i === fast ? "a" : i < slow ? "c" : skip.has(i) ? "d" : "",
+            })),
+            ptrs: { slow: slow < n ? slow : null, ...(fast !== null ? { fast } : {}) },
+            feeds: opts.feeds || [],
+          }];
+        };
+        snap("开始", "第一个数一定保留。slow = 1：nums[:1] 是目前的结果。", view(), {
+          at: "init",
+          facts: [["fast", "—"], ["保留长度 k (slow)", slow], ["当前保留", `[${A[0]}]`]],
+        });
         for (fast = 1; fast < n; fast++) {
+          const prevFast = fast === 1 ? "—" : fast - 1;
           if (A[fast] !== A[slow - 1]) {
-            const w = slow; A[slow] = A[fast]; slow++;
-            snap("新数", `nums[${fast}] = ${A[fast]} 和结果的最后一个 ${A[w - 1]} 不一样，写到 nums[${w}]，slow 前进到 ${slow}。`, view(), { at: ["scan", "keep"], facts: [["k", slow]] });
+            const w = slow, oldVal = A[w], newVal = A[fast], prevSlow = slow;
+            A[slow] = newVal;
+            slow++;
+            const hasOverwrite = w !== fast && oldVal !== newVal;
+            snap(
+              "新数",
+              `nums[${fast}] = ${newVal} 和结果的最后一个 ${A[w - 1]} 不一样，${w === fast ? "原地保留" : `写到 nums[${w}]（覆盖 ${oldVal}）`}，slow 前进到 ${slow}。`,
+              view({
+                ...(hasOverwrite ? { prevMap: { [w]: oldVal }, feeds: [{ from: fast, to: w, win: true, label: `=${newVal}` }] } : {}),
+              }),
+              {
+                at: ["scan", "keep"],
+                facts: [["fast", fast, prevFast], ["保留长度 k (slow)", slow, prevSlow], ["当前保留", `[${A.slice(0, slow).join(", ")}]`]],
+              },
+            );
           } else {
             skip.add(fast);
-            snap("重复", `nums[${fast}] = ${A[fast]} 和结果的最后一个一样，跳过。`, view(), { at: ["scan", "keep"], facts: [["k", slow]] });
+            snap("重复", `nums[${fast}] = ${A[fast]} 和结果的最后一个一样，跳过。`, view(), {
+              at: ["scan", "keep"],
+              facts: [["fast", fast, prevFast], ["保留长度 k (slow)", slow], ["当前保留", `[${A.slice(0, slow).join(", ")}]`]],
+            });
           }
         }
         fast = null;
-        snap("完成", `返回 k = ${slow}，nums 的前 ${slow} 个是 [${A.slice(0, slow).join(", ")}]。后面剩下的数不用管。`, view(), { at: "done", kind: "ok", ans: A.slice(), facts: [["k", slow]] });
+        snap("完成", `返回 k = ${slow}，nums 的前 ${slow} 个是 [${A.slice(0, slow).join(", ")}]。后面剩下的数不用管。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: A.slice(),
+          facts: [["返回长度 k", slow], ["去重结果", `[${A.slice(0, slow).join(", ")}]`]],
+        });
       },
     },
   }],

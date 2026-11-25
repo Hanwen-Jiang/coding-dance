@@ -19,7 +19,7 @@ func partition(s string) [][]string {
 			if isPal(piece) {     // 这一段是回文才切 //@try,cut
 				path = append(path, piece) //@cut
 				dfs(end)                   //@cut
-				path = path[:len(path)-1]
+				path = path[:len(path)-1]  //@back
 			}
 		}
 	}

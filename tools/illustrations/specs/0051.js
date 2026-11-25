@@ -57,7 +57,7 @@ assert s.solveNQueens(1) == [["Q"]]
 assert len(s.solveNQueens(6)) == 4
 assert len(s.solveNQueens(8)) == 92
 `,
-  legend: [["a", "刚放的皇后"], ["c", "已经放好的皇后"], ["d", "被攻击到的格子"], ["k", "找到的一种摆法"]],
+  legend: [["a", "刚放的皇后"], ["c", "已经放好的皇后"], ["d", "被攻击到的格子"], ["w", "回溯拿掉"], ["k", "找到的一种摆法"]],
   presets: [
     { label: "n = 4", args: { n: 4 }, note: "n = 4", expect: [[".Q..", "...Q", "Q...", "..Q."], ["..Q.", "Q...", "...Q", ".Q.."]] },
     { label: "n = 5", args: { n: 5 }, note: "n = 5", expect: [["Q....", "..Q..", "....Q", ".Q...", "...Q."], ["Q....", "...Q.", ".Q...", "....Q", "..Q.."], [".Q...", "...Q.", "Q....", "..Q..", "....Q"], [".Q...", "....Q", "..Q..", "Q....", "...Q."], ["..Q..", "Q....", "...Q.", ".Q...", "....Q"], ["..Q..", "....Q", ".Q...", "...Q.", "Q...."], ["...Q.", "Q....", "..Q..", "....Q", ".Q..."], ["...Q.", ".Q...", "....Q", "..Q..", "Q...."], ["....Q", ".Q...", "...Q.", "Q....", "..Q.."], ["....Q", "..Q..", "Q....", "...Q.", ".Q..."]] },
@@ -65,26 +65,68 @@ assert len(s.solveNQueens(8)) == 92
   build(a, snap) {
     const n = a.n, q = [], res = [];
     const hit = (r, c) => q.some((x, i) => x === c || Math.abs(x - c) === Math.abs(r - i));
-    const view = (done) => [{ t: "grid", label: "棋盘", rows: Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => {
-      if (q[r] === c) return { v: "Q", cls: done ? "k" : r === q.length - 1 ? "a" : "c" };
-      return { v: "", cls: r >= q.length && hit(r, c) ? "d" : "" };
-    })) }];
-    const f = () => ({ facts: [["已放", `${q.length} / ${n}`], ["找到", res.length]] });
-    snap("开始", `在 ${n}×${n} 的棋盘上放 ${n} 个皇后。从第 0 行开始，一行放一个。`, view(), { at: "init", ...f() });
+    const view = (opts = {}) => {
+      const done = !!opts.done, placed = opts.placed || null, removed = opts.removed || null;
+      return [{
+        t: "grid",
+        label: "棋盘",
+        rows: Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => {
+          if (q[r] === c) {
+            const isPlaced = placed && placed[0] === r && placed[1] === c;
+            return {
+              v: "Q",
+              ...(isPlaced ? { prev: "" } : {}),
+              cls: done ? "k" : isPlaced ? "a" : "c",
+            };
+          }
+          if (removed && removed[0] === r && removed[1] === c) {
+            return { v: "", prev: "Q", cls: "w" };
+          }
+          return { v: "", cls: !done && r >= q.length && hit(r, c) ? "d" : "" };
+        })),
+      }];
+    };
+    let prevPlaced = `0 / ${n}`, prevRow = 0, prevFound = 0;
+    const emit = (phase, msg, views, curRow, o = {}) => {
+      const curPlaced = `${q.length} / ${n}`, curFound = res.length;
+      const facts = o.facts || [
+        curPlaced !== prevPlaced ? ["已放", curPlaced, prevPlaced] : ["已放", curPlaced],
+        curRow !== prevRow ? ["当前行", curRow, prevRow] : ["当前行", curRow],
+        curFound !== prevFound ? ["找到", curFound, prevFound] : ["找到", curFound],
+      ];
+      prevPlaced = curPlaced; prevRow = curRow; prevFound = curFound;
+      snap(phase, msg, views, { ...o, facts });
+    };
+    emit("开始", `在 ${n}×${n} 的棋盘上放 ${n} 个皇后。从第 0 行开始，一行放一个。`, view(), 0, {
+      at: "init",
+      facts: [["已放", `0 / ${n}`], ["当前行", 0], ["找到", 0]],
+    });
     const dfs = (r) => {
-      if (r === n) { res.push(q.map((c) => ".".repeat(c) + "Q" + ".".repeat(n - c - 1))); snap("找到", `${n} 行都放好了，记下这种摆法（第 ${res.length} 种）。`, view(true), { at: "found", kind: "ok", ...f() }); return; }
+      if (r === n) {
+        res.push(q.map((c) => ".".repeat(c) + "Q" + ".".repeat(n - c - 1)));
+        emit("找到", `${n} 行都放好了，记下这种摆法（第 ${res.length} 种）。`, view({ done: true }), n, { at: "found", kind: "ok" });
+        return null;
+      }
       let any = false;
       for (let c = 0; c < n; c++) {
         if (hit(r, c)) continue;
         any = true; q.push(c);
-        snap(`第 ${r} 行`, `第 ${r} 行第 ${c} 列没有被攻击，放一个皇后。灰色是它和上面的皇后能攻击到的格子。`, view(), { at: "place", ...f() });
-        dfs(r + 1);
-        q.pop();
+        emit(`第 ${r} 行`, `第 ${r} 行第 ${c} 列没有被攻击，放一个皇后。灰色是它和上面的皇后能攻击到的格子。`, view({ placed: [r, c] }), r, { at: "place" });
+        const childAny = dfs(r + 1);
+        const removedC = q.pop();
+        if (childAny !== null) {
+          emit("回溯", `第 ${r + 1} 行${childAny ? "剩下的列都试过了" : "每一列都被攻击了，放不下"}。拿掉第 ${r} 行的皇后，换下一列试。`, view({ removed: [r, removedC] }), r, { at: "back", kind: "warn" });
+        }
       }
-      if (r > 0) snap("回溯", `第 ${r} 行${any ? "剩下的列都试过了" : "每一列都被攻击了，放不下"}。拿掉第 ${r - 1} 行的皇后，换下一列试。`, view(), { at: "back", kind: "warn", ...f() });
+      return any;
     };
     dfs(0);
-    snap("完成", `所有摆法都试过了，一共 <b>${res.length}</b> 种。`, view(), { at: "done", kind: "ok", ans: res.map((x) => x.slice()), ...f() });
+    snap("完成", `所有摆法都试过了，一共 <b>${res.length}</b> 种。`, view(), {
+      at: "done",
+      kind: "ok",
+      ans: res.map((x) => x.slice()),
+      facts: [["已放", `0 / ${n}`], ["找到", res.length]],
+    });
   },
   points: [
     { t: "对角线的编号", body: "<code>r - c</code> 的范围是 -(n-1) 到 n-1，用集合就不用管负数；用数组的话要加上 n-1 的偏移。" },

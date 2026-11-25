@@ -40,17 +40,58 @@ class Solution:
       build(a, snap) {
         const C = a.cost, n = C.length, dp = new Array(n + 1).fill(null);
         dp[0] = 0; dp[1] = 0;
-        const view = (i, fin) => [
-          { t: "array", label: "cost", items: C.map((v, k) => ({ v, cls: i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "" })) },
-          { t: "array", label: "dp[i]：爬到第 i 阶的最小花费（第 n 阶是楼顶）", items: dp.map((v, k) => ({ v: v ?? "", cls: fin && k === n ? "c" : k === i ? "a" : k < 2 ? (i >= 0 && k >= i - 2 ? "x e" : "x") : i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
+        const view = (i, fin, opts = {}) => [
+          {
+            t: "array",
+            label: "cost",
+            items: C.map((v, k) => ({ v, cls: i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "" })),
+            ptrs: i >= 2 ? { "i-2": i - 2, "i-1": i - 1 } : {},
+          },
+          {
+            t: "array",
+            label: "dp[i]：爬到第 i 阶的最小花费（第 n 阶是楼顶）",
+            items: dp.map((v, k) => ({
+              v: v ?? "",
+              cls: fin && k === n ? "c" : k === i ? "a" : k < 2 ? (i >= 0 && k >= i - 2 ? "x e" : "x") : i >= 0 && (k === i - 1 || k === i - 2) ? "e" : "",
+            })),
+            ptrs: { i: i >= 0 ? i : null },
+            feeds: opts.feeds || [],
+          },
         ];
-        snap("边界", "dp[0]、dp[1] 是边界：可以直接从第 0 阶或第 1 阶出发，不花钱，都是 0。<br>公式要读 dp[i − 2]，从 i = 2 开始用，正好读到 dp[0]，不会越界。", view(-1), { at: "init" });
+        snap("边界", "dp[0]、dp[1] 是边界：可以直接从第 0 阶或第 1 阶出发，不花钱，都是 0。<br>公式要读 dp[i − 2]，从 i = 2 开始用，正好读到 dp[0]，不会越界。", view(-1, false), {
+          at: "init",
+          facts: [["dp[0]", 0], ["dp[1]", 0], ["楼顶阶数 n", n]],
+        });
+        let prevDp = 0;
         for (let i = 2; i <= n; i++) {
           const one = dp[i - 1] + C[i - 1], two = dp[i - 2] + C[i - 2];
           dp[i] = Math.min(one, two);
-          snap(`第 ${i} 阶`, `从第 ${i - 1} 阶跨 1 步：${dp[i - 1]} + ${C[i - 1]} = ${one}；从第 ${i - 2} 阶跨 2 步：${dp[i - 2]} + ${C[i - 2]} = ${two}。取小的，dp[${i}] = <b>${dp[i]}</b>。`, view(i), { at: "step" });
+          snap(
+            `第 ${i} 阶`,
+            `从第 ${i - 1} 阶跨 1 步：${dp[i - 1]} + ${C[i - 1]} = ${one}；从第 ${i - 2} 阶跨 2 步：${dp[i - 2]} + ${C[i - 2]} = ${two}。取小的，dp[${i}] = <b>${dp[i]}</b>。`,
+            view(i, false, {
+              feeds: [
+                { from: i - 1, to: i, win: one <= two, label: `+${C[i - 1]}` },
+                { from: i - 2, to: i, win: two < one, label: `+${C[i - 2]}` },
+              ],
+            }),
+            {
+              at: "step",
+              facts: [
+                ["跨 1 步", `${dp[i - 1]}+${C[i - 1]}=${one}`],
+                ["跨 2 步", `${dp[i - 2]}+${C[i - 2]}=${two}`],
+                dp[i] !== prevDp ? [`dp[${i}]`, dp[i], prevDp] : [`dp[${i}]`, dp[i]],
+              ],
+            },
+          );
+          prevDp = dp[i];
         }
-        snap("完成", `楼顶是第 ${n} 阶，最少花费 <b>${dp[n]}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: dp[n] });
+        snap("完成", `楼顶是第 ${n} 阶，最少花费 <b>${dp[n]}</b>。`, view(-1, true), {
+          at: "done",
+          kind: "ok",
+          ans: dp[n],
+          facts: [[`答案 dp[${n}]`, dp[n]]],
+        });
       },
       alts: [{
         t: "空间压缩：两个变量",
@@ -60,17 +101,57 @@ class Solution:
         build(a, snap) {
           const C = a.cost, n = C.length, vals = [0, 0];
           let i = 1;
-          const view = (fin) => [
-            { t: "array", label: "dp（灰的已经丢掉，代码里只有 a、b）", items: Array.from({ length: n + 1 }, (_, k) => ({ v: k < vals.length ? vals[k] : "", cls: fin && k === n ? "c" : k === i ? (k < 2 ? "x" : "a") : k === i - 1 ? (k < 2 ? "x e" : "e") : k < i - 1 ? "d" : "" })), ptrs: { a: i - 1, b: i } },
-            { t: "chips", label: "代码里只有这两个变量", items: [{ v: `a = ${vals[i - 1]}（dp[${i - 1}]）`, cls: "e" }, { v: `b = ${vals[i]}（dp[${i}]）`, cls: "a" }] },
+          const view = (fin, opts = {}) => [
+            {
+              t: "array",
+              label: "dp（灰的已经丢掉，代码里只有 a、b）",
+              items: Array.from({ length: n + 1 }, (_, k) => ({
+                v: k < vals.length ? vals[k] : "",
+                cls: fin && k === n ? "c" : k === i ? (k < 2 ? "x" : "a") : k === i - 1 ? (k < 2 ? "x e" : "e") : k < i - 1 ? "d" : "",
+              })),
+              ptrs: { a: i - 1, b: i },
+              feeds: opts.feeds || [],
+            },
+            {
+              t: "chips",
+              label: "代码里只有这两个变量",
+              items: [{ v: `a = ${vals[i - 1]}（dp[${i - 1}]）`, cls: "e" }, { v: `b = ${vals[i]}（dp[${i}]）`, cls: "a" }],
+            },
           ];
-          snap("开始", "a、b 先是 dp[0]、dp[1]，都是 0（边界）。", view(false), { at: "init" });
+          snap("开始", "a、b 先是 dp[0]、dp[1]，都是 0（边界）。", view(false), {
+            at: "init",
+            facts: [["a (dp[0])", 0], ["b (dp[1])", 0]],
+          });
           while (i < n) {
-            const A0 = vals[i - 1], B0 = vals[i], nb = Math.min(B0 + C[i], A0 + C[i - 1]);
+            const A0 = vals[i - 1], B0 = vals[i];
+            const one = B0 + C[i], two = A0 + C[i - 1];
+            const nb = Math.min(one, two);
             vals.push(nb); i++;
-            snap(`第 ${i} 阶`, `新的 b = min(b + cost[${i - 1}], a + cost[${i - 2}]) = min(${B0} + ${C[i - 1]}, ${A0} + ${C[i - 2]}) = <b>${nb}</b>，就是 dp[${i}]；a 变成原来的 b。dp[${i - 2}] 再也用不到了。`, view(false), { at: "step" });
+            snap(
+              `第 ${i} 阶`,
+              `新的 b = min(b + cost[${i - 1}], a + cost[${i - 2}]) = min(${B0} + ${C[i - 1]}, ${A0} + ${C[i - 2]}) = <b>${nb}</b>，就是 dp[${i}]；a 变成原来的 b。dp[${i - 2}] 再也用不到了。`,
+              view(false, {
+                feeds: [
+                  { from: i - 1, to: i, win: one <= two, label: `+${C[i - 1]}` },
+                  { from: i - 2, to: i, win: two < one, label: `+${C[i - 2]}` },
+                ],
+              }),
+              {
+                at: "step",
+                facts: [
+                  [`a (dp[${i - 1}])`, B0, A0],
+                  [`b (dp[${i}])`, nb, B0],
+                  ["跨1 / 跨2", `${one} / ${two}`],
+                ],
+              },
+            );
           }
-          snap("完成", `b = dp[${n}] = <b>${vals[n]}</b>，只用了两个变量。`, view(true), { at: "done", kind: "ok", ans: vals[n] });
+          snap("完成", `b = dp[${n}] = <b>${vals[n]}</b>，只用了两个变量。`, view(true), {
+            at: "done",
+            kind: "ok",
+            ans: vals[n],
+            facts: [[`答案 b = dp[${n}]`, vals[n]]],
+          });
         },
       }],
     },
@@ -124,7 +205,7 @@ class Solution:
       build(a, snap) {
         const G = a.grid, m = G.length, n = G[0].length, dp = G.map((r) => r.map(() => null));
         // 表外多画一圈虚线：第 -1 行、第 -1 列越界，当 0
-        const view = (ci, cj, fin) => {
+        const view = (ci, cj, fin, opts = {}) => {
           const upOut = ci === 0 && cj > 0, leftOut = cj === 0 && ci > 0;
           return [{
             t: "grid", label: "dp[i][j]：走到 (i, j) 的路径数（虚线是越界的位置，当 0）",
@@ -133,18 +214,63 @@ class Solution:
               [{ v: "", cls: "x" }, ...G[0].map((_, j) => ({ v: 0, cls: upOut && j === cj ? "x e" : "x" }))],
               ...G.map((r, i) => [{ v: 0, cls: leftOut && i === ci ? "x e" : "x" }, ...r.map((o, j) => ({ v: o ? "障" : dp[i][j] ?? "", cls: o ? "d" : fin && i === m - 1 && j === n - 1 ? "c" : i === ci && j === cj ? "a" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? "e" : i === 0 && j === 0 ? "x" : "" }))]),
             ],
+            feeds: opts.feeds || [],
           }];
         };
-        snap("开始", "从左上角一行行、从左往右填表。表外一圈虚线是越界的位置：那里不存在，没有路从那里来，当 <b>0</b>。", view(-1, -1), { at: "init" });
+        snap("开始", "从左上角一行行、从左往右填表。表外一圈虚线是越界的位置：那里不存在，没有路从那里来，当 <b>0</b>。", view(-1, -1, false), {
+          at: "init",
+          facts: [["网格", `${m} × ${n}`], ["边界", "越界当 0"]],
+        });
+        let prevPos = "—", prevVal = "—";
         for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
-          if (G[i][j] === 1) { dp[i][j] = 0; snap(`(${i}, ${j})`, "这里是障碍，走不到，dp = 0。", view(i, j), { at: "block" }); continue; }
-          if (i === 0 && j === 0) { dp[0][0] = 1; snap("起点", "起点直接给定：dp[0][0] = 1（站在起点本身算一条路）。", view(0, 0), { at: "start" }); continue; }
+          const posStr = `(${i}, ${j})`;
+          if (G[i][j] === 1) {
+            dp[i][j] = 0;
+            snap(posStr, "这里是障碍，走不到，dp = 0。", view(i, j, false), {
+              at: "block",
+              facts: [["位置", posStr, prevPos], ["状态", "障碍"], ["dp[i][j]", 0, prevVal]],
+            });
+            prevPos = posStr; prevVal = 0;
+            continue;
+          }
+          if (i === 0 && j === 0) {
+            dp[0][0] = 1;
+            snap("起点", "起点直接给定：dp[0][0] = 1（站在起点本身算一条路）。", view(0, 0, false), {
+              at: "start",
+              facts: [["位置", "(0, 0)", prevPos], ["状态", "起点"], ["dp[0][0]", 1, prevVal]],
+            });
+            prevPos = "(0, 0)"; prevVal = 1;
+            continue;
+          }
           const up = i > 0 ? dp[i - 1][j] : 0, left = j > 0 ? dp[i][j - 1] : 0;
           dp[i][j] = up + left;
           const why = i === 0 ? "上面越界了，当 0" : j === 0 ? "左边越界了，当 0" : "";
-          snap(`(${i}, ${j})`, `上面 ${i > 0 ? `(${i - 1}, ${j})` : "(-1, " + j + ")"} 是 ${up}，左边 ${j > 0 ? `(${i}, ${j - 1})` : "(" + i + ", -1)"} 是 ${left}${why ? `（${why}）` : ""}。dp = ${up} + ${left} = <b>${dp[i][j]}</b>。`, view(i, j), { at: "cell" });
+          snap(
+            posStr,
+            `上面 ${i > 0 ? `(${i - 1}, ${j})` : "(-1, " + j + ")"} 是 ${up}，左边 ${j > 0 ? `(${i}, ${j - 1})` : "(" + i + ", -1)"} 是 ${left}${why ? `（${why}）` : ""}。dp = ${up} + ${left} = <b>${dp[i][j]}</b>。`,
+            view(i, j, false, {
+              feeds: [
+                { from: [i, j + 1], to: [i + 1, j + 1], win: true, label: `+${up}` },
+                { from: [i + 1, j], to: [i + 1, j + 1], win: true, label: `+${left}` },
+              ],
+            }),
+            {
+              at: "cell",
+              facts: [
+                ["位置", posStr, prevPos],
+                ["上面 + 左边", `${up} + ${left}`],
+                dp[i][j] !== prevVal ? ["dp[i][j]", dp[i][j], prevVal] : ["dp[i][j]", dp[i][j]],
+              ],
+            },
+          );
+          prevPos = posStr; prevVal = dp[i][j];
         }
-        snap("完成", `走到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), { at: "done", kind: "ok", ans: dp[m - 1][n - 1] });
+        snap("完成", `走到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), {
+          at: "done",
+          kind: "ok",
+          ans: dp[m - 1][n - 1],
+          facts: [["终点", `(${m - 1}, ${n - 1})`], ["总路径数", dp[m - 1][n - 1]]],
+        });
       },
       alts: [{
         t: "空间压缩：一行",
@@ -155,25 +281,90 @@ class Solution:
           const G = a.grid, m = G.length, n = G[0].length, dp = new Array(n).fill(0);
           dp[0] = 1;
           let row = -1, col = -1;
-          const view = (fin) => [
-            { t: "grid", label: "障碍", ax: false, rows: G.map((r, i) => r.map((o, j) => ({ v: o ? "障" : "", cls: o ? "d" : i === row && j === col ? "a" : "" }))) },
-            { t: "array", label: row < 0 ? "dp（一行）：现在是第 -1 行" : `dp（一行）：左边已经是第 ${row} 行，右边还是第 ${row - 1} 行`, items: dp.map((v, j) => ({ v, cls: fin && j === n - 1 ? "c" : j === col ? "a" : row < 0 ? "x" : j < col ? "k" : "g" })), ptrs: { j: col >= 0 ? col : null } },
-          ];
-          snap("开始", "一行 dp 先当作越界的第 -1 行：全是 0，只有起点上面放 1，这样第 0 行的公式不用特殊处理。", view(false), { at: "init" });
+          const view = (fin, opts = {}) => {
+            const prevMap = opts.prevMap || {};
+            return [
+              {
+                t: "grid",
+                label: "障碍",
+                ax: false,
+                rows: G.map((r, i) => r.map((o, j) => ({ v: o ? "障" : "", cls: o ? "d" : i === row && j === col ? "a" : "" }))),
+              },
+              {
+                t: "array",
+                label: row < 0 ? "dp（一行）：现在是第 -1 行" : `dp（一行）：左边已经是第 ${row} 行，右边还是第 ${row - 1} 行`,
+                items: dp.map((v, j) => ({
+                  v,
+                  ...(prevMap[j] !== undefined ? { prev: prevMap[j] } : {}),
+                  cls: fin && j === n - 1 ? "c" : j === col ? "a" : row < 0 ? "x" : j < col ? "k" : "g",
+                })),
+                ptrs: { j: col >= 0 ? col : null },
+                feeds: opts.feeds || [],
+              },
+            ];
+          };
+          snap("开始", "一行 dp 先当作越界的第 -1 行：全是 0，只有起点上面放 1，这样第 0 行的公式不用特殊处理。", view(false), {
+            at: "init",
+            facts: [["当前行", -1], ["dp", `[${dp.join(", ")}]`]],
+          });
+          let prevRow = -1;
           for (let i = 0; i < m; i++) {
             row = i; col = -1;
-            snap(`第 ${i} 行`, `开始算第 ${i} 行，dp 里现在整行都是第 ${i - 1} 行的值。`, view(false), { at: "row" });
+            snap(`第 ${i} 行`, `开始算第 ${i} 行，dp 里现在整行都是第 ${i - 1} 行的值。`, view(false), {
+              at: "row",
+              facts: [["当前行", i, prevRow], ["dp[0]", dp[0]]],
+            });
+            prevRow = i;
             for (let j = 0; j < n; j++) {
               col = j;
-              if (G[i][j] === 1) { dp[j] = 0; snap(`(${i}, ${j})`, "障碍：dp[j] 清零。", view(false), { at: "block" }); continue; }
-              if (j === 0) { snap(`(${i}, 0)`, `第 0 列只能从上面来，dp[0] = ${dp[0]} 不用改。`, view(false), { at: "cell" }); continue; }
+              if (G[i][j] === 1) {
+                const old = dp[j];
+                dp[j] = 0;
+                snap(`(${i}, ${j})`, "障碍：dp[j] 清零。", view(false, { prevMap: old !== 0 ? { [j]: old } : {} }), {
+                  at: "block",
+                  facts: [
+                    ["位置", `(${i}, ${j})`],
+                    ["状态", "障碍"],
+                    old !== 0 ? [`dp[${j}]`, 0, old] : [`dp[${j}]`, 0],
+                  ],
+                });
+                continue;
+              }
+              if (j === 0) {
+                snap(`(${i}, 0)`, `第 0 列只能从上面来，dp[0] = ${dp[0]} 不用改。`, view(false), {
+                  at: "cell",
+                  facts: [["位置", `(${i}, 0)`], ["上面 (旧dp[0])", dp[0]], ["dp[0]", dp[0]]],
+                });
+                continue;
+              }
               const up = dp[j], left = dp[j - 1];
               dp[j] = up + left;
-              snap(`(${i}, ${j})`, `dp[${j}] 更新前是 ${up}（上一行，<b>上面</b>），dp[${j - 1}] = ${left}（这一行，<b>左边</b>）。dp[${j}] = <b>${dp[j]}</b>。`, view(false), { at: "cell" });
+              snap(
+                `(${i}, ${j})`,
+                `dp[${j}] 更新前是 ${up}（上一行，<b>上面</b>），dp[${j - 1}] = ${left}（这一行，<b>左边</b>）。dp[${j}] = <b>${dp[j]}</b>。`,
+                view(false, {
+                  prevMap: dp[j] !== up ? { [j]: up } : {},
+                  feeds: [{ from: j - 1, to: j, win: true, label: `+${left}` }],
+                }),
+                {
+                  at: "cell",
+                  facts: [
+                    ["位置", `(${i}, ${j})`],
+                    ["上面 (旧dp[j])", up],
+                    ["左边 dp[j-1]", left],
+                    dp[j] !== up ? [`dp[${j}]`, dp[j], up] : [`dp[${j}]`, dp[j]],
+                  ],
+                },
+              );
             }
           }
           col = -1;
-          snap("完成", `dp[${n - 1}] = <b>${dp[n - 1]}</b>，空间从 O(m·n) 降到 O(n)。`, view(true), { at: "done", kind: "ok", ans: dp[n - 1] });
+          snap("完成", `dp[${n - 1}] = <b>${dp[n - 1]}</b>，空间从 O(m·n) 降到 O(n)。`, view(true), {
+            at: "done",
+            kind: "ok",
+            ans: dp[n - 1],
+            facts: [["总路径数", dp[n - 1]], ["空间", `O(${n})`]],
+          });
         },
       }],
     },
@@ -220,23 +411,73 @@ class Solution:
       build(a, snap) {
         const W = a.weights, V = a.values, n = W.length, cap = a.capacity;
         const dp = Array.from({ length: n + 1 }, (_, i) => new Array(cap + 1).fill(i === 0 ? 0 : null));
-        const view = (ci, cc, reads, fin) => [{
+        const view = (ci, cc, reads, fin, opts = {}) => [{
           t: "grid", label: "dp[i][c]：前 i 件物品、容量 c（行是物品数，列是容量）",
           rowLabels: dp.map((_, i) => (i === 0 ? "0" : `${i}（${W[i - 1]}/${V[i - 1]}）`)),
           rows: dp.map((r, i) => r.map((v, c) => ({ v: v ?? "", cls: fin && i === n && c === cap ? "c" : i === ci && c === cc ? "a" : reads.some(([x, y]) => x === i && y === c) ? (i === 0 ? "x e" : "e") : i === 0 ? "x" : "" }))),
+          feeds: opts.feeds || [],
         }];
-        snap("边界", "第 0 行是边界：一件物品都没有，不管容量多大，价值都是 0。行号旁边写的是这件物品的「重量/价值」。", view(-1, -1, []), { at: "init" });
+        snap("边界", "第 0 行是边界：一件物品都没有，不管容量多大，价值都是 0。行号旁边写的是这件物品的「重量/价值」。", view(-1, -1, [], false), {
+          at: "init",
+          facts: [["物品数", n], ["背包容量", cap], ["第 0 行", 0]],
+        });
+        let prevVal = 0, prevItem = "—", prevC = "—";
         for (let i = 1; i <= n; i++) {
           const w = W[i - 1], v = V[i - 1];
+          const itemStr = `第 ${i} 件 (${w}/${v})`;
           for (let c = 0; c <= cap; c++) {
             const skip = dp[i - 1][c];
-            if (c < w) { dp[i][c] = skip; snap(`第 ${i} 件、容量 ${c}`, `第 ${i} 件重 ${w}，容量 ${c} 装不下，只能不选：dp = dp[${i - 1}][${c}] = <b>${skip}</b>。`, view(i, c, [[i - 1, c]]), { at: ["skip", "take"] }); continue; }
+            if (c < w) {
+              dp[i][c] = skip;
+              snap(
+                `第 ${i} 件、容量 ${c}`,
+                `第 ${i} 件重 ${w}，容量 ${c} 装不下，只能不选：dp = dp[${i - 1}][${c}] = <b>${skip}</b>。`,
+                view(i, c, [[i - 1, c]], false, {
+                  feeds: [{ from: [i - 1, c], to: [i, c], win: true, label: "装不下" }],
+                }),
+                {
+                  at: ["skip", "take"],
+                  facts: [
+                    itemStr !== prevItem ? ["物品", itemStr, prevItem] : ["物品", itemStr],
+                    ["容量 c", c, prevC],
+                    ["不选", skip],
+                    dp[i][c] !== prevVal ? ["dp[i][c]", dp[i][c], prevVal] : ["dp[i][c]", dp[i][c]],
+                  ],
+                },
+              );
+              prevItem = itemStr; prevC = c; prevVal = dp[i][c];
+              continue;
+            }
             const take = dp[i - 1][c - w] + v;
             dp[i][c] = Math.max(skip, take);
-            snap(`第 ${i} 件、容量 ${c}`, `不选：dp[${i - 1}][${c}] = ${skip}；选：让出 ${w} 的容量，dp[${i - 1}][${c - w}] + ${v} = ${take}。取大的，dp = <b>${dp[i][c]}</b>。`, view(i, c, [[i - 1, c], [i - 1, c - w]]), { at: ["skip", "take"] });
+            snap(
+              `第 ${i} 件、容量 ${c}`,
+              `不选：dp[${i - 1}][${c}] = ${skip}；选：让出 ${w} 的容量，dp[${i - 1}][${c - w}] + ${v} = ${take}。取大的，dp = <b>${dp[i][c]}</b>。`,
+              view(i, c, [[i - 1, c], [i - 1, c - w]], false, {
+                feeds: [
+                  { from: [i - 1, c], to: [i, c], win: skip >= take, label: "不选" },
+                  { from: [i - 1, c - w], to: [i, c], win: take > skip, label: `+${v}` },
+                ],
+              }),
+              {
+                at: ["skip", "take"],
+                facts: [
+                  itemStr !== prevItem ? ["物品", itemStr, prevItem] : ["物品", itemStr],
+                  ["容量 c", c, prevC],
+                  ["不选 / 选", `${skip} / ${take}`],
+                  dp[i][c] !== prevVal ? ["dp[i][c]", dp[i][c], prevVal] : ["dp[i][c]", dp[i][c]],
+                ],
+              },
+            );
+            prevItem = itemStr; prevC = c; prevVal = dp[i][c];
           }
         }
-        snap("完成", `前 ${n} 件物品、容量 ${cap} 时最多装 <b>${dp[n][cap]}</b> 的价值。`, view(-1, -1, [], true), { at: "done", kind: "ok", ans: dp[n][cap] });
+        snap("完成", `前 ${n} 件物品、容量 ${cap} 时最多装 <b>${dp[n][cap]}</b> 的价值。`, view(-1, -1, [], true), {
+          at: "done",
+          kind: "ok",
+          ans: dp[n][cap],
+          facts: [["容量", cap], ["最大价值", dp[n][cap]]],
+        });
       },
       alts: [{
         t: "空间压缩：一行，倒着更新",
@@ -246,21 +487,66 @@ class Solution:
         build(a, snap) {
           const W = a.weights, V = a.values, n = W.length, cap = a.capacity, dp = new Array(cap + 1).fill(0);
           let item = -1, cur = -1, rd = -1;
-          const view = (fin) => [{ t: "array", label: item < 0 ? "dp（一行）：现在是第 0 行" : `dp（一行）：放第 ${item + 1} 件（重 ${W[item]}、值 ${V[item]}），右边已经是这一行，左边还是上一行`, items: dp.map((v, c) => ({ v, cls: fin && c === cap ? "c" : c === cur ? "a" : c === rd ? "e" : item < 0 ? "x" : cur >= 0 && c > cur ? "k" : "g" })), ptrs: { c: cur >= 0 ? cur : null } }];
-          snap("开始", "一行 dp 先是第 0 行：一件物品都没有，全是 0。", view(false), { at: "init" });
+          const view = (fin, opts = {}) => {
+            const prevMap = opts.prevMap || {};
+            return [{
+              t: "array",
+              label: item < 0 ? "dp（一行）：现在是第 0 行" : `dp（一行）：放第 ${item + 1} 件（重 ${W[item]}、值 ${V[item]}），右边已经是这一行，左边还是上一行`,
+              items: dp.map((v, c) => ({
+                v,
+                ...(prevMap[c] !== undefined ? { prev: prevMap[c] } : {}),
+                cls: fin && c === cap ? "c" : c === cur ? "a" : c === rd ? "e" : item < 0 ? "x" : cur >= 0 && c > cur ? "k" : "g",
+              })),
+              ptrs: { c: cur >= 0 ? cur : null, ...(rd >= 0 ? { "c-w": rd } : {}) },
+              feeds: opts.feeds || [],
+            }];
+          };
+          snap("开始", "一行 dp 先是第 0 行：一件物品都没有，全是 0。", view(false), {
+            at: "init",
+            facts: [["物品数", n], ["容量", cap], ["dp[cap]", 0]],
+          });
+          let prevItem = "—";
           for (let i = 0; i < n; i++) {
             item = i; cur = -1; rd = -1;
             const w = W[i], v = V[i];
-            snap(`第 ${i + 1} 件`, `放第 ${i + 1} 件（重 ${w}、值 ${v}）。容量从 ${cap} 倒着更新到 ${w}（比 ${w} 小的装不下，不用改）。`, view(false), { at: "item" });
+            const itemStr = `第 ${i + 1} 件 (${w}/${v})`;
+            snap(`第 ${i + 1} 件`, `放第 ${i + 1} 件（重 ${w}、值 ${v}）。容量从 ${cap} 倒着更新到 ${w}（比 ${w} 小的装不下，不用改）。`, view(false), {
+              at: "item",
+              facts: [["物品", itemStr, prevItem], ["遍历方向", `${cap} → ${w}`], [`dp[${cap}]`, dp[cap]]],
+            });
+            prevItem = itemStr;
+            let prevC = "—";
             for (let c = cap; c >= w; c--) {
               cur = c; rd = c - w;
               const old = dp[c], take = dp[c - w] + v;
               dp[c] = Math.max(old, take);
-              snap(`容量 ${c}`, `不选：dp[${c}] 还是上一行的 ${old}；选：dp[${c - w}] = ${dp[c - w]}（在左边，还没更新，是上一行的值）+ ${v} = ${take}。dp[${c}] = <b>${dp[c]}</b>。`, view(false), { at: "cell" });
+              snap(
+                `容量 ${c}`,
+                `不选：dp[${c}] 还是上一行的 ${old}；选：dp[${c - w}] = ${dp[c - w]}（在左边，还没更新，是上一行的值）+ ${v} = ${take}。dp[${c}] = <b>${dp[c]}</b>。`,
+                view(false, {
+                  prevMap: dp[c] !== old ? { [c]: old } : {},
+                  feeds: [{ from: c - w, to: c, win: take > old, label: `+${v}` }],
+                }),
+                {
+                  at: "cell",
+                  facts: [
+                    ["物品", itemStr],
+                    ["容量 c", c, prevC],
+                    ["不选 / 选", `${old} / ${take}`],
+                    dp[c] !== old ? [`dp[${c}]`, dp[c], old] : [`dp[${c}]`, dp[c]],
+                  ],
+                },
+              );
+              prevC = c;
             }
           }
           cur = -1; rd = -1;
-          snap("完成", `dp[${cap}] = <b>${dp[cap]}</b>。只用了一行，空间 O(capacity)。`, view(true), { at: "done", kind: "ok", ans: dp[cap] });
+          snap("完成", `dp[${cap}] = <b>${dp[cap]}</b>。只用了一行，空间 O(capacity)。`, view(true), {
+            at: "done",
+            kind: "ok",
+            ans: dp[cap],
+            facts: [["最大价值", dp[cap]], ["空间", `O(${cap})`]],
+          });
         },
       }],
     },

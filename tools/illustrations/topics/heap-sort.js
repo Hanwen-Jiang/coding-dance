@@ -40,47 +40,103 @@ class Solution:
     cases: [[[5, 2, 3, 1]], [[5, 1, 1, 2, 0, 0]], [[7]], [[2, 2, 2]]],
     gen: (R) => { const nums = R.arr(R.int(4, 8), 1, 15); return { args: { nums }, note: `nums = ${R.fmt(nums)}` }; },
     demo: {
-      legend: [["a", "刚下沉 / 交换过的位置"], ["c", "已经排好"]],
+      legend: [["a", "正在下沉 / 堆顶"], ["b", "交换的对象"], ["c", "已经排好"]],
       presets: [{ label: "示例", args: { nums: [4, 10, 3, 5, 1, 8, 7] }, note: "nums = [4,10,3,5,1,8,7]", expect: [1, 3, 4, 5, 7, 8, 10] }],
       build(a, snap) {
         const nums = a.nums.slice(), n = nums.length;
-        let end = n, hot = [];
-        const view = () => {
+        let end = n, hot = [], cmp = -1;
+        const view = (opts = {}) => {
+          const prevMap = opts.prevMap || {};
           const N = {}, cls = {};
-          for (let i = 0; i < end; i++) { N[i] = { v: nums[i], l: 2 * i + 1 < end ? 2 * i + 1 : null, r: 2 * i + 2 < end ? 2 * i + 2 : null }; cls[i] = hot.includes(i) ? "a" : ""; }
+          for (let i = 0; i < end; i++) {
+            N[i] = {
+              v: nums[i],
+              ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),
+              l: 2 * i + 1 < end ? 2 * i + 1 : null,
+              r: 2 * i + 2 < end ? 2 * i + 2 : null,
+            };
+            cls[i] = hot.includes(i) ? "a" : i === cmp ? "b" : "";
+          }
           return [
-            end ? { t: "tree", label: `堆（前 ${end} 个数）`, nodes: N, root: 0, cls } : { t: "note", label: "堆", html: "空" },
-            { t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i >= end ? "c" : hot.includes(i) ? "a" : "" })) },
+            end
+              ? { t: "tree", label: `堆（前 ${end} 个数）`, nodes: N, root: 0, cls, swaps: opts.treeSwaps || [] }
+              : { t: "note", label: "堆", html: "空" },
+            {
+              t: "array",
+              label: "nums",
+              items: nums.map((v, i) => ({
+                v,
+                ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),
+                cls: i >= end ? "c" : hot.includes(i) ? "a" : i === cmp ? "b" : "",
+              })),
+              swaps: opts.swaps || [],
+            },
           ];
         };
-        const sift = (i, m) => {
-          const path = [i];
+        const siftStep = (start, m, tag, phaseName) => {
+          let i = start, moved = false;
           for (;;) {
             let b = i; const l = 2 * i + 1, r = 2 * i + 2;
             if (l < m && nums[l] > nums[b]) b = l;
             if (r < m && nums[r] > nums[b]) b = r;
-            if (b === i) return path;
-            [nums[i], nums[b]] = [nums[b], nums[i]]; i = b; path.push(i);
+            if (b === i) {
+              if (!moved) {
+                hot = [i]; cmp = -1;
+                snap(phaseName, `下标 ${i} 的 ${nums[i]} 不比孩子小，不用动。`, view(), {
+                  at: tag,
+                  facts: [["阶段", phaseName], ["堆大小", end], ["已排好", n - end], ["堆顶", nums[0]]],
+                });
+              }
+              return;
+            }
+            const vi = nums[i], vb = nums[b], oldTop = nums[0];
+            [nums[i], nums[b]] = [nums[b], nums[i]];
+            moved = true;
+            hot = [b]; cmp = i;
+            snap(phaseName, `${vi} 比更大的孩子 ${vb} 小，交换下沉。`, view({
+              swaps: [[i, b]],
+              treeSwaps: [[i, b]],
+              prevMap: { [i]: vi, [b]: vb },
+            }), {
+              at: tag,
+              facts: [["阶段", phaseName], ["堆大小", end], ["堆顶", nums[0], oldTop], ["交换节点", `${i} ↔ ${b}`]],
+            });
+            i = b;
           }
         };
-        snap("开始", "把数组看成一棵完全二叉树。先把它调成最大堆。", view(), { at: "build" });
+        snap("开始", "把数组看成一棵完全二叉树。先把它调成最大堆。", view(), {
+          at: "build",
+          facts: [["阶段", "建最大堆"], ["堆大小", end], ["已排好", 0], ["堆顶", nums[0]]],
+        });
         for (let i = (n >> 1) - 1; i >= 0; i--) {
-          const v = nums[i], path = sift(i, n);
-          hot = path;
-          snap("建堆：下沉", path.length > 1 ? `下标 ${i} 的 ${v} 比孩子小，一路下沉到下标 ${path[path.length - 1]}。` : `下标 ${i} 的 ${v} 不比孩子小，不用动。`, view(), { at: "build" });
+          siftStep(i, n, "build", "建堆：下沉");
         }
-        hot = [];
-        snap("堆建好了", `最大堆建好了，堆顶 ${nums[0]} 是最大的数。`, view(), { at: "build" });
+        hot = []; cmp = -1;
+        snap("堆建好了", `最大堆建好了，堆顶 ${nums[0]} 是最大的数。`, view(), {
+          at: "build",
+          facts: [["阶段", "建堆完成"], ["堆大小", end], ["已排好", 0], ["堆顶", nums[0]]],
+        });
         for (let e = n - 1; e > 0; e--) {
+          const oldEnd = end, oldSorted = n - end, v0 = nums[0], ve = nums[e];
           [nums[0], nums[e]] = [nums[e], nums[0]];
-          hot = [0]; end = e;
-          snap("堆顶换到末尾", `把堆顶 ${nums[e]} 和下标 ${e} 的 ${nums[0]} 交换，${nums[e]} 到了最终位置，堆里还剩 ${e} 个数。`, view(), { at: "pick" });
-          const v = nums[0], path = sift(0, end);
-          hot = path;
-          snap("重新调成堆", `剩下的 ${end} 个数里，新堆顶 ${v} 下沉${path.length > 1 ? `到下标 ${path[path.length - 1]}` : "（不用动）"}，堆顶又是最大的了。`, view(), { at: "fix" });
+          hot = [0]; cmp = e; end = e;
+          snap("堆顶换到末尾", `把堆顶 ${v0} 和下标 ${e} 的 ${ve} 交换，${v0} 到了最终位置，堆里还剩 ${e} 个数。`, view({
+            swaps: [[0, e]],
+            treeSwaps: [],
+            prevMap: { 0: v0, [e]: ve },
+          }), {
+            at: "pick",
+            facts: [["阶段", "取最大值"], ["堆大小", end, oldEnd], ["已排好", n - end, oldSorted], ["堆顶", nums[0], v0]],
+          });
+          siftStep(0, end, "fix", "重新调成堆");
         }
-        hot = []; end = 0;
-        snap("完成", `排好了：[${nums.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: nums.slice() });
+        hot = []; cmp = -1; end = 0;
+        snap("完成", `排好了：[${nums.join(", ")}]。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: nums.slice(),
+          facts: [["阶段", "完成"], ["堆大小", 0, 1], ["已排好", n, n - 1]],
+        });
       },
     },
   }, {
@@ -124,23 +180,44 @@ class KthLargest:
         const view = () => [
           { t: "chips", label: `最小堆（最多 ${k} 个，从小到大排给你看，左边是堆顶）`, items: heap.slice().sort((x, y) => x - y).map((v, i) => ({ v, cls: i === 0 && heap.length === k ? "c" : v === fresh ? "a" : "" })), empty: "空" },
           { t: "chips", label: "弹出的", items: gone === null ? [] : [{ v: gone, cls: "d" }], empty: "无" },
-          { t: "chips", label: "add 的返回值", items: out.slice(1), empty: "还没有" },
+          { t: "chips", label: "add 的返回值", items: out.slice(1).map((v, idx, arr) => ({ v, cls: idx === arr.length - 1 ? "c" : "" })), empty: "还没有" },
         ];
+        const topOf = () => (heap.length ? Math.min(...heap) : "空");
         const add = (x, init) => {
+          const oldSize = `${heap.length} / ${k}`, oldTop = topOf();
           heap.push(x); fresh = x; gone = null;
           let trimmed = false;
           if (heap.length > k) { heap.sort((p, q) => p - q); gone = heap.shift(); trimmed = true; }
-          snap(init ? `初始化：放进 ${x}` : `add(${x})`, `${x} 放进堆。` + (trimmed ? `堆里超过 ${k} 个了，弹出堆顶 ${gone}：它比另外 ${k} 个都小，不可能是前 ${k} 大。` : `堆里有 ${heap.length} 个，还没超过 ${k}。`), view(), { at: init ? ["init", "push", ...(trimmed ? ["trim"] : [])] : trimmed ? ["push", "trim"] : "push" });
+          snap(init ? `初始化：放进 ${x}` : `add(${x})`, `${x} 放进堆。` + (trimmed ? `堆里超过 ${k} 个了，弹出堆顶 ${gone}：它比另外 ${k} 个都小，不可能是前 ${k} 大。` : `堆里有 ${heap.length} 个，还没超过 ${k}。`), view(), {
+            at: init ? ["init", "push", ...(trimmed ? ["trim"] : [])] : trimmed ? ["push", "trim"] : "push",
+            facts: [
+              ["堆大小", `${heap.length} / ${k}`, oldSize],
+              ["堆顶 (第 k 大)", topOf(), oldTop],
+              ["弹出", gone ?? "—"],
+            ],
+          });
         };
-        snap("开始", `k = ${k}。先把 nums 里的数一个个加进去。`, view(), { at: "init" });
+        snap("开始", `k = ${k}。先把 nums 里的数一个个加进去。`, view(), {
+          at: "init",
+          facts: [["堆大小", `0 / ${k}`], ["堆顶 (第 k 大)", "空"], ["目标 k", k]],
+        });
         for (const x of a.nums) add(x, true);
         for (const x of a.adds) {
           add(x, false);
-          const top = Math.min(...heap); out.push(top); fresh = null;
-          snap("返回堆顶", `堆顶 ${top} 是这 ${k} 个里最小的，就是第 ${k} 大，返回 ${top}。`, view(), { at: "top" });
+          const top = Math.min(...heap);
+          out.push(top); fresh = null;
+          snap("返回堆顶", `堆顶 ${top} 是这 ${k} 个里最小的，就是第 ${k} 大，返回 ${top}。`, view(), {
+            at: "top",
+            facts: [["堆大小", `${heap.length} / ${k}`], ["堆顶 (第 k 大)", top], ["返回值", top]],
+          });
         }
         gone = null;
-        snap("完成", `每次 add 只做 O(log ${k}) 的堆操作。`, view(), { at: [], kind: "ok", ans: out });
+        snap("完成", `每次 add 只做 O(log ${k}) 的堆操作。`, view(), {
+          at: [],
+          kind: "ok",
+          ans: out,
+          facts: [["堆大小", `${heap.length} / ${k}`], ["最终第 k 大", topOf()]],
+        });
       },
     },
   }],

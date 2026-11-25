@@ -43,21 +43,58 @@ class Solution:
       build(a, snap) {
         const nums = a.nums, t = a.target, n = nums.length;
         let lo = 0, hi = n - 1, mid = null;
-        const view = (hit) => [{ t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i === hit ? "c" : i === mid ? "a" : i >= lo && i <= hi ? "e" : "d" })), ptrs: { lo: lo < n ? lo : null, hi: hi >= 0 ? hi : null, ...(mid !== null ? { mid } : {}) } }];
-        snap("开始", `要找 ${t}。还没排除的范围是整个数组：[lo, hi] = [0, ${n - 1}]。`, view(), { at: "init" });
+        const view = (hit) => [{
+          t: "array",
+          label: "nums",
+          items: nums.map((v, i) => ({ v, cls: i === hit ? "c" : i === mid ? "a" : i >= lo && i <= hi ? "e" : "d" })),
+          ptrs: { lo: lo < n ? lo : null, hi: hi >= 0 ? hi : null, ...(mid !== null ? { mid } : {}) },
+        }];
+        snap("开始", `要找 ${t}。还没排除的范围是整个数组：[lo, hi] = [0, ${n - 1}]。`, view(), {
+          at: "init",
+          facts: [["目标", t], ["lo", lo], ["hi", hi], ["候选数", n]],
+        });
         while (lo <= hi) {
+          const oldCnt = hi - lo + 1;
           mid = (lo + hi) >> 1;
-          snap("看中间", `lo = ${lo} ≤ hi = ${hi}，范围不空。mid = (${lo} + ${hi}) // 2 = ${mid}，nums[mid] = ${nums[mid]}。`, view(), { at: ["loop", "mid"] });
-          if (nums[mid] === t) { snap("找到了", `nums[${mid}] 正好是 ${t}，返回 ${mid}。`, view(mid), { at: "hit", kind: "ok", ans: mid }); return; }
+          snap("看中间", `lo = ${lo} ≤ hi = ${hi}，范围不空。mid = (${lo} + ${hi}) // 2 = ${mid}，nums[mid] = ${nums[mid]}。`, view(), {
+            at: ["loop", "mid"],
+            facts: [["目标", t], ["lo", lo], ["hi", hi], ["mid", `${mid} (值 ${nums[mid]})`, "—"], ["候选数", oldCnt]],
+          });
+          if (nums[mid] === t) {
+            snap("找到了", `nums[${mid}] 正好是 ${t}，返回 ${mid}。`, view(mid), {
+              at: "hit",
+              kind: "ok",
+              ans: mid,
+              facts: [["目标", t], ["命中下标", mid], ["nums[mid]", nums[mid]]],
+            });
+            return;
+          }
           if (nums[mid] < t) {
-            const m = mid; lo = mid + 1; mid = null;
-            snap("去右半边", `${nums[m]} &lt; ${t}：mid 和它左边的数都太小，全部排除。lo = mid + 1 = ${lo}。`, view(), { at: "right" });
+            const m = mid, oldLo = lo;
+            lo = mid + 1;
+            mid = null;
+            const newCnt = Math.max(0, hi - lo + 1);
+            snap("去右半边", `${nums[m]} &lt; ${t}：mid 和它左边的数都太小，全部排除。lo = mid + 1 = ${lo}。`, view(), {
+              at: "right",
+              facts: [["目标", t], ["lo", lo, oldLo], ["hi", hi], ["候选数", newCnt, oldCnt]],
+            });
           } else {
-            const m = mid; hi = mid - 1; mid = null;
-            snap("去左半边", `${nums[m]} &gt; ${t}：mid 和它右边的数都太大，全部排除。hi = mid - 1 = ${hi}。`, view(), { at: "left" });
+            const m = mid, oldHi = hi;
+            hi = mid - 1;
+            mid = null;
+            const newCnt = Math.max(0, hi - lo + 1);
+            snap("去左半边", `${nums[m]} &gt; ${t}：mid 和它右边的数都太大，全部排除。hi = mid - 1 = ${hi}。`, view(), {
+              at: "left",
+              facts: [["目标", t], ["lo", lo], ["hi", hi, oldHi], ["候选数", newCnt, oldCnt]],
+            });
           }
         }
-        snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，数组里没有 ${t}，返回 -1。`, view(), { at: "miss", kind: "ok", ans: -1 });
+        snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，数组里没有 ${t}，返回 -1。`, view(), {
+          at: "miss",
+          kind: "ok",
+          ans: -1,
+          facts: [["目标", t], ["lo", lo], ["hi", hi], ["结果", -1]],
+        });
       },
     },
   }, {
@@ -110,25 +147,67 @@ class Solution:
       build(a, snap) {
         const nums = a.nums, t = a.target, n = nums.length;
         let lo = 0, hi = n, mid = null, left = null, right = null;
-        const view = () => [{ t: "array", label: "scores", items: nums.map((v, i) => ({ v, cls: i === mid ? "a" : left !== null && right !== null && i >= left && i < right ? "c" : i >= lo && i < hi ? "e" : "d" })), ptrs: { lo: lo < n ? lo : null, hi: hi < n ? hi : null, ...(mid !== null ? { mid } : {}) } }];
+        const view = () => [{
+          t: "array",
+          label: "scores",
+          items: nums.map((v, i) => ({
+            v,
+            cls: i === mid ? "a" : left !== null && right !== null && i >= left && i < right ? "c" : i >= lo && i < hi ? "e" : "d",
+          })),
+          ptrs: { lo: lo < n ? lo : null, hi: hi < n ? hi : null, ...(mid !== null ? { mid } : {}) },
+        }];
         const lowerBound = (x, name) => {
           lo = 0; hi = n; mid = null;
-          snap(`${name}：开始`, `找第一个 &gt;= ${x} 的位置。区间 [lo, hi) = [0, ${n})${n ? "" : "，是空的"}。hi 从 ${n} 开始，因为答案可能是「数组长度」。`, view(), { at: "init" });
+          snap(`${name}：开始`, `找第一个 &gt;= ${x} 的位置。区间 [lo, hi) = [0, ${n})${n ? "" : "，是空的"}。hi 从 ${n} 开始，因为答案可能是「数组长度」。`, view(), {
+            at: "init",
+            facts: [["阶段", name], ["条件", `>= ${x}`], ["区间 [lo, hi)", `[${lo}, ${hi})`], ["left", left ?? "—"]],
+          });
           while (lo < hi) {
+            const oldRange = `[${lo}, ${hi})`;
             mid = (lo + hi) >> 1;
-            snap(`${name}：看中间`, `mid = (${lo} + ${hi}) // 2 = ${mid}，scores[mid] = ${nums[mid]}。`, view(), { at: ["loop", "mid"] });
-            if (nums[mid] < x) { const m = mid; lo = mid + 1; mid = null; snap(`${name}：去右边`, `${nums[m]} &lt; ${x}，mid 不可能是答案。lo = ${lo}。`, view(), { at: "right" }); }
-            else { const m = mid; hi = mid; mid = null; snap(`${name}：往左收`, `${nums[m]} &gt;= ${x}，mid 可能就是答案，留着。hi = mid = ${hi}。`, view(), { at: "left" }); }
+            snap(`${name}：看中间`, `mid = (${lo} + ${hi}) // 2 = ${mid}，scores[mid] = ${nums[mid]}。`, view(), {
+              at: ["loop", "mid"],
+              facts: [["阶段", name], ["条件", `>= ${x}`], ["区间 [lo, hi)", oldRange], ["mid", `${mid} (值 ${nums[mid]})`, "—"]],
+            });
+            if (nums[mid] < x) {
+              const m = mid;
+              lo = mid + 1;
+              mid = null;
+              snap(`${name}：去右边`, `${nums[m]} &lt; ${x}，mid 不可能是答案。lo = ${lo}。`, view(), {
+                at: "right",
+                facts: [["阶段", name], ["条件", `>= ${x}`], ["区间 [lo, hi)", `[${lo}, ${hi})`, oldRange], ["mid", "—"]],
+              });
+            } else {
+              const m = mid;
+              hi = mid;
+              mid = null;
+              snap(`${name}：往左收`, `${nums[m]} &gt;= ${x}，mid 可能就是答案，留着。hi = mid = ${hi}。`, view(), {
+                at: "left",
+                facts: [["阶段", name], ["条件", `>= ${x}`], ["区间 [lo, hi)", `[${lo}, ${hi})`, oldRange], ["mid", "—"]],
+              });
+            }
           }
           return lo;
         };
         left = null;
         const L = lowerBound(t, "左边界");
-        snap("左边界", `lo == hi = ${L}，区间空了。第一个 &gt;= ${t} 的位置是 ${L}${L < n ? `（scores[${L}] = ${nums[L]}）` : "（所有数都比它小）"}。`, view(), { at: ["ret", "first"] });
+        left = L;
+        snap("左边界", `lo == hi = ${L}，区间空了。第一个 &gt;= ${t} 的位置是 ${L}${L < n ? `（scores[${L}] = ${nums[L]}）` : "（所有数都比它小）"}。`, view(), {
+          at: ["ret", "first"],
+          facts: [["left", L, "—"], ["right", "—"], ["条件", `>= ${t}`]],
+        });
         const Rb = lowerBound(t + 1, "右边界");
-        snap("右边界", `第一个 &gt;= ${t + 1}（也就是比 ${t} 大）的位置是 ${Rb}。`, view(), { at: ["ret", "second"] });
-        left = L; right = Rb; lo = n; hi = n;
-        snap("完成", `${t} 出现在 [${L}, ${Rb}) 这一段，一共 ${Rb} - ${L} = ${Rb - L} 次。`, view(), { at: "done", kind: "ok", ans: Rb - L });
+        snap("右边界", `第一个 &gt;= ${t + 1}（也就是比 ${t} 大）的位置是 ${Rb}。`, view(), {
+          at: ["ret", "second"],
+          facts: [["left", L], ["right", Rb, "—"], ["条件", `>= ${t + 1}`]],
+        });
+        right = Rb; lo = n; hi = n;
+        snap("完成", `${t} 出现在 [${L}, ${Rb}) 这一段，一共 ${Rb} - ${L} = ${Rb - L} 次。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: Rb - L,
+          facts: [["left", L], ["right", Rb], ["出现次数", Rb - L]],
+        });
       },
     },
   }, {
@@ -173,27 +252,71 @@ class Solution:
       build(a, snap) {
         const P = a.piles, h = a.h, max = Math.max(...P);
         const hours = (k) => P.reduce((s, p) => s + Math.ceil(p / k), 0);
-        let lo = 1, hi = max, mid = null, ans = null;
+        let lo = 1, hi = max, mid = null, ans = null, prevNeed = null;
         // 速度很大时只画 lo..hi 附近：最多显示 20 个候选速度
         const view = (k) => {
           const from = max <= 20 ? 1 : Math.max(1, Math.min(lo, max - 19)), to = Math.min(max, from + 19), sp = [];
           for (let s = from; s <= to; s++) sp.push(s);
+          const idxOf = (val) => (val !== null && val >= from && val <= to ? val - from : null);
           return [
-            { t: "array", label: "候选速度 k", items: sp.map((s) => ({ v: s, cls: s === ans ? "c" : s === mid ? "a" : s >= lo && s <= hi ? "e" : "d" })), idx: false },
-            { t: "array", label: k ? `每堆要吃几小时（速度 ${k}）` : "piles", items: P.map((p) => (k ? { v: Math.ceil(p / k), cls: "e" } : p)), idx: false },
+            {
+              t: "array",
+              label: "候选速度 k",
+              items: sp.map((s) => ({ v: s, cls: s === ans ? "c" : s === mid ? "a" : s >= lo && s <= hi ? "e" : "d" })),
+              idx: false,
+              ptrs: { lo: idxOf(lo), hi: idxOf(hi), ...(mid !== null ? { mid: idxOf(mid) } : {}) },
+            },
+            {
+              t: "array",
+              label: k ? `每堆要吃几小时（速度 ${k}）` : "piles",
+              items: P.map((p) => (k ? { v: Math.ceil(p / k), cls: "e" } : p)),
+              idx: false,
+            },
           ];
         };
-        snap("开始", `速度最慢是 1，最快取 max(piles) = ${max}（每堆一小时，一定吃得完）。答案在 [${lo}, ${hi}] 里。`, view(), { at: "init" });
+        snap("开始", `速度最慢是 1，最快取 max(piles) = ${max}（每堆一小时，一定吃得完）。答案在 [${lo}, ${hi}] 里。`, view(), {
+          at: "init",
+          facts: [["范围 [lo, hi]", `[${lo}, ${hi}]`], ["限制", `${h} 小时`], ["速度 mid", "—"]],
+        });
         while (lo < hi) {
+          const oldRange = `[${lo}, ${hi}]`;
           mid = (lo + hi) >> 1;
           const need = hours(mid);
-          snap("猜一个速度", `mid = (${lo} + ${hi}) // 2 = ${mid}。按这个速度一共要 ${need} 小时，限制是 ${h} 小时。`, view(mid), { at: ["loop", "mid", "check"], facts: [["速度", mid], ["要几小时", need], ["限制", h]] });
-          if (need <= h) { hi = mid; snap("吃得完", `${need} ≤ ${h}，速度 ${mid} 够了。答案是 ${mid} 或更慢：hi = ${mid}。`, view(), { at: "ok" }); }
-          else { lo = mid + 1; snap("吃不完", `${need} &gt; ${h}，速度 ${mid} 太慢，比它慢的也不行：lo = ${lo}。`, view(), { at: "slow" }); }
-          mid = null;
+          snap("猜一个速度", `mid = (${lo} + ${hi}) // 2 = ${mid}。按这个速度一共要 ${need} 小时，限制是 ${h} 小时。`, view(mid), {
+            at: ["loop", "mid", "check"],
+            facts: [
+              ["范围 [lo, hi]", oldRange],
+              ["速度 mid", mid, "—"],
+              ["要几小时", `${need} 小时`, prevNeed ?? undefined],
+              ["限制", `${h} 小时`],
+            ],
+          });
+          prevNeed = `${need} 小时`;
+          if (need <= h) {
+            hi = mid;
+            mid = null;
+            snap("吃得完", `${need} ≤ ${h}，速度 ${hi} 够了。答案是 ${hi} 或更慢：hi = ${hi}。`, view(), {
+              at: "ok",
+              facts: [["范围 [lo, hi]", `[${lo}, ${hi}]`, oldRange], ["上次耗时", `${need} 小时`], ["限制", `${h} 小时`]],
+            });
+          } else {
+            const tried = mid;
+            lo = mid + 1;
+            mid = null;
+            snap("吃不完", `${need} &gt; ${h}，速度 ${tried} 太慢，比它慢的也不行：lo = ${lo}。`, view(), {
+              at: "slow",
+              facts: [["范围 [lo, hi]", `[${lo}, ${hi}]`, oldRange], ["上次耗时", `${need} 小时`], ["限制", `${h} 小时`]],
+            });
+          }
         }
         ans = lo;
-        snap("完成", `lo == hi = ${lo}，最小的够用的速度就是 ${lo}。`, view(lo), { at: "done", kind: "ok", ans: lo });
+        const finalNeed = hours(lo);
+        snap("完成", `lo == hi = ${lo}，最小的够用的速度就是 ${lo}。`, view(lo), {
+          at: "done",
+          kind: "ok",
+          ans: lo,
+          facts: [["最小速度", lo], ["耗时", `${finalNeed} 小时`], ["限制", `${h} 小时`]],
+        });
       },
     },
   }],

@@ -65,7 +65,7 @@ assert m.top() == 5 and m.getMin() == 5
     [["MinStack", "push", "push", "getMin", "push", "getMin", "pop", "getMin", "pop", "top"], [[], [2147483647], [-2147483648], [], [-2147483648], [], [], [], [], []]],
     [["MinStack", "push", "top", "getMin", "pop", "push", "getMin"], [[], [5], [], [], [], [-1], []]],
   ],
-  legend: [["a", "正在执行的操作"], ["c", "当前的最小值"]],
+  legend: [["a", "当前操作 / 栈顶元素"], ["e", "栈中元素"], ["c", "当前的最小值"]],
   presets: [
     { label: "示例", args: { ops: [["push", -2], ["push", 0], ["push", -3], ["getMin"], ["pop"], ["top"], ["getMin"]] }, note: "push(-2) push(0) push(-3) getMin() pop() top() getMin()", expect: [null, null, null, -3, null, 0, -2] },
     { label: "重复的最小值", args: { ops: [["push", 0], ["push", 1], ["push", 0], ["getMin"], ["pop"], ["getMin"]] }, note: "push(0) push(1) push(0) getMin() pop() getMin()", expect: [null, null, null, 0, null, 0] },
@@ -73,22 +73,89 @@ assert m.top() == 5 and m.getMin() == 5
   build(a, snap) {
     const ops = a.ops, st = [], mins = [], out = [];
     const name = (o) => (o[0] === "push" ? `push(${o[1]})` : `${o[0]}()`);
-    const view = (i) => [
+    const view = (i, opts = {}) => [
       { t: "chips", label: "操作", items: ops.map((o, t) => ({ v: name(o), cls: t === i ? "a" : t < i ? "d" : "" })) },
-      { t: "array", label: "stack（右边是栈顶）", items: st.length ? st.slice() : [{ v: "", cls: "d" }], ptrs: {} },
-      { t: "array", label: "mins（和 stack 一一对应）", items: mins.length ? mins.map((v, k) => ({ v, cls: k === mins.length - 1 ? "c" : "" })) : [{ v: "", cls: "d" }], ptrs: {} },
-      { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : v)), empty: "还没有" },
+      {
+        t: "array",
+        label: "stack（右边是栈顶）",
+        items: st.length ? st.map((v, k) => ({ v, cls: k === st.length - 1 && opts.hlStackTop ? opts.hlStackTop : "e" })) : [{ v: "", cls: "d" }],
+        ptrs: st.length ? { top: st.length - 1 } : {},
+      },
+      {
+        t: "array",
+        label: "mins（和 stack 一一对应）",
+        items: mins.length ? mins.map((v, k) => ({ v, cls: k === mins.length - 1 ? "c" : "e" })) : [{ v: "", cls: "d" }],
+        ptrs: mins.length ? { top: mins.length - 1 } : {},
+      },
+      {
+        t: "chips",
+        label: "输出",
+        items: out.map((v, t) => ({ v: v === null ? "null" : v, cls: t === i && v !== null ? "c" : v === null ? "d" : "" })),
+        empty: "还没有",
+      },
     ];
-    snap("开始", "两个栈都是空的。", view(-1), { at: "init" });
-    ops.forEach((o, i) => {
-      let msg;
-      if (o[0] === "push") { const m = mins.length ? Math.min(o[1], mins[mins.length - 1]) : o[1]; st.push(o[1]); mins.push(m); out.push(null); msg = `把 ${o[1]} 压进 stack。压入后的最小值是 ${mins.length > 1 ? `min(${o[1]}, ${mins[mins.length - 2]})` : o[1]} = <b>${m}</b>，压进 mins。`; }
-      else if (o[0] === "pop") { const v = st.pop(); mins.pop(); out.push(null); msg = `弹出 ${v}，mins 也同步弹出一层。现在的最小值是 ${mins.length ? mins[mins.length - 1] : "—"}。`; }
-      else if (o[0] === "top") { out.push(st[st.length - 1]); msg = `栈顶是 <b>${st[st.length - 1]}</b>。`; }
-      else { out.push(mins[mins.length - 1]); msg = `mins 的栈顶就是最小值，返回 <b>${mins[mins.length - 1]}</b>，O(1)。`; }
-      snap(name(o), msg, view(i), { at: o[0] });
+    snap("开始", "两个栈都是空的。", view(-1), {
+      at: "init",
+      facts: [["操作", "MinStack()"], ["栈大小", 0], ["栈顶", "—"], ["最小值", "—"]],
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { at: [], kind: "ok", ans: out.slice() });
+    ops.forEach((o, i) => {
+      const prevLen = st.length;
+      const prevTop = st.length ? st[st.length - 1] : "—";
+      const prevMin = mins.length ? mins[mins.length - 1] : "—";
+      if (o[0] === "push") {
+        const m = mins.length ? Math.min(o[1], mins[mins.length - 1]) : o[1];
+        st.push(o[1]);
+        mins.push(m);
+        out.push(null);
+        const msg = `把 ${o[1]} 压进 stack。压入后的最小值是 ${mins.length > 1 ? `min(${o[1]}, ${mins[mins.length - 2]})` : o[1]} = <b>${m}</b>，压进 mins。`;
+        snap(name(o), msg, view(i, { hlStackTop: "a" }), {
+          at: "push",
+          facts: [
+            ["操作", name(o)],
+            ["栈大小", st.length, prevLen],
+            ["栈顶", o[1], prevTop],
+            m !== prevMin ? ["最小值", m, prevMin] : ["最小值", m],
+          ],
+        });
+      } else if (o[0] === "pop") {
+        const v = st.pop();
+        mins.pop();
+        out.push(null);
+        const curTop = st.length ? st[st.length - 1] : "—";
+        const curMin = mins.length ? mins[mins.length - 1] : "—";
+        const msg = `弹出 ${v}，mins 也同步弹出一层。现在的最小值是 ${mins.length ? mins[mins.length - 1] : "—"}。`;
+        snap(name(o), msg, view(i), {
+          at: "pop",
+          kind: "warn",
+          facts: [
+            ["弹出", v],
+            ["栈大小", st.length, prevLen],
+            ["栈顶", curTop, prevTop],
+            curMin !== prevMin ? ["最小值", curMin, prevMin] : ["最小值", curMin],
+          ],
+        });
+      } else if (o[0] === "top") {
+        const val = st[st.length - 1];
+        out.push(val);
+        snap(name(o), `栈顶是 <b>${val}</b>。`, view(i, { hlStackTop: "a" }), {
+          at: "top",
+          facts: [["操作", "top()"], ["返回值", val], ["栈大小", st.length], ["最小值", mins[mins.length - 1]]],
+        });
+      } else {
+        const val = mins[mins.length - 1];
+        out.push(val);
+        snap(name(o), `mins 的栈顶就是最小值，返回 <b>${val}</b>，O(1)。`, view(i), {
+          at: "getMin",
+          facts: [["操作", "getMin()"], ["返回值", val], ["栈大小", st.length], ["栈顶", st[st.length - 1]]],
+        });
+      }
+    });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), {
+      at: [],
+      kind: "ok",
+      ans: out.slice(),
+      facts: [["操作数", ops.length], ["最终栈大小", st.length], ["输出", `[${out.map((v) => (v === null ? "null" : v)).join(", ")}]`]],
+    });
   },
   points: [
     { t: "重复的最小值也要压", body: "mins 每次都压一层，而不是只在更小时才压。否则弹出一个重复的最小值后，记录就对不上了。" },

@@ -247,7 +247,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>当前的词</span><span><i class="sw d"></i>已分组</span><span><i class="sw e"></i>刚放进去</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>当前的词 / 新加入</span><span><i class="sw e"></i>命中的已有分组</span><span><i class="sw d"></i>已分组</span><span><i class="sw c"></i>全部完成</span></div>
       </div>
     </div>
   </section>
@@ -330,21 +330,60 @@ const SPEC = { presets: [{"label":"示例 1","args":{"strs":["eat","tea","tan","
     const strs = R.shuffle(groups.flatMap((g) => R.shuffle(g).slice(0, R.int(1, g.length))));
     return { args: { strs }, note: `strs = ${R.fmt(strs)}`, py: `Solution().groupAnagrams(${R.py(strs)})`, cmp: "unordered" };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "标准解法", note: null, legend: [["a","当前的词"],["d","已分组"],["e","刚放进去"]], build(a, snap) {
+{ t: "标准解法", note: null, legend: [["a","当前的词 / 新加入"],["e","命中的已有分组"],["d","已分组"],["c","全部完成"]], build(a, snap) {
     const { strs } = a, groups = new Map();
-    const view = (i, key) => [
-      { t: "chips", label: "strs", items: strs.map((v, j) => ({ v, cls: j === i ? "a" : j < i ? "d" : "" })) },
-      ...[...groups].map(([k, g]) => ({ t: "chips", label: `键 "${k}"`, items: g.map((v, j) => ({ v, cls: k === key && j === g.length - 1 ? "e" : "" })) })),
+    const view = (i, opts = {}) => [
+      {
+        t: "chips",
+        label: "strs",
+        items: strs.map((v, j) => ({ v, cls: opts.done ? "d" : j === i ? "a" : j < i ? "d" : "" })),
+      },
+      ...[...groups].map(([k, g]) => ({
+        t: "chips",
+        label: `键 "${k}"`,
+        items: g.map((v, j) => ({
+          v,
+          cls: opts.done ? "c" : k === opts.lookupKey ? "e" : k === opts.addedKey && j === g.length - 1 ? "a" : "",
+        })),
+      })),
     ];
-    snap("开始", "逐个处理每个词：把字母排序得到键，再放进键对应的那一组。", view(-1), { at: "init" });
+    let prevWord = "—", prevKey = "—";
+    snap("开始", "逐个处理每个词：先把字母排序算出键，再放进键对应的分组。", view(-1), {
+      at: "init",
+      facts: [["当前词", "—"], ["排序键", "—"], ["组数", 0]],
+    });
     strs.forEach((s, i) => {
       const key = [...s].sort().join("");
-      const isNew = !groups.has(key);
-      if (isNew) groups.set(key, []);
+      const exists = groups.has(key);
+      snap(
+        "算键并查询",
+        `"${s}" 排序后得到键 <b>"${key}"</b>。` + (exists ? `哈希表里已经有 "${key}" 这一组，准备加入。` : `哈希表里还没有 "${key}"，需要新建一组。`),
+        view(i, { lookupKey: exists ? key : null }),
+        {
+          at: "key",
+          facts: [["当前词", s, prevWord], ["排序键", key, prevKey], ["组数", groups.size]],
+        },
+      );
+      const prevSize = groups.size;
+      if (!exists) groups.set(key, []);
       groups.get(key).push(s);
-      snap(isNew ? "新的一组" : "放进已有的组", `"${s}" 排序后是 <b>"${key}"</b>。` + (isNew ? "哈希表里还没有这个键，新建一组。" : `这个键已经有了，说明它和 "${groups.get(key)[0]}" 是异位词，放进同一组。`), view(i, key), { at: ["key", "add"], facts: [["当前键", key], ["组数", groups.size]] });
+      snap(
+        exists ? "放入已有分组" : "新建分组",
+        exists ? `把 "${s}" 放入键 "${key}" 的组里，现在这一组有 ${groups.get(key).length} 个词。` : `为键 "${key}" 新建分组，放入 "${s}"。`,
+        view(i, { addedKey: key }),
+        {
+          at: "add",
+          facts: [["当前词", s], ["排序键", key], ["组数", groups.size, prevSize]],
+        },
+      );
+      prevWord = s; prevKey = key;
     });
-    snap("完成", `所有词处理完，一共 <b>${groups.size}</b> 组。哈希表的所有值就是答案。`, view(strs.length), { at: "done", kind: "ok", ans: [...groups.values()], facts: [["组数", groups.size]] });
+    snap("完成", `所有词处理完，一共 <b>${groups.size}</b> 组。哈希表的所有值就是答案。`, view(strs.length, { done: true }), {
+      at: "done",
+      kind: "ok",
+      ans: [...groups.values()].map((g) => g.slice()),
+      facts: [["当前词", "—", prevWord], ["排序键", "—", prevKey], ["组数", groups.size]],
+    });
   } }
 ] };
 (function () {

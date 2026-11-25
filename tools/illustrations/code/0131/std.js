@@ -10,7 +10,7 @@ var partition = function(s) {
             if (piece === [...piece].reverse().join("")) {      // 这一段是回文才切 //@try,cut
                 path.push(piece);                   //@cut
                 dfs(end);                           //@cut
-                path.pop();
+                path.pop();                         //@back
             }
         }
     };

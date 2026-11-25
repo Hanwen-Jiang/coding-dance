@@ -50,31 +50,109 @@ class Solution:
       presets: [{ label: "示例", args: { data: "1,2,3,null,4,5,6,7" }, note: 'data = "1,2,3,null,4,5,6,7"', expect: [1, 2, 3, null, 4, 5, 6, 7] }],
       build(a, snap) {
         const vals = a.data ? a.data.split(",") : [], N = {}, q = [];
+        const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
         let i = 1, cur = -1, fresh = [];
-        const view = () => {
+        const view = (opts = {}) => {
           const cls = {};
           for (const id in N) cls[id] = +id === cur ? "a" : fresh.includes(+id) ? "c" : q.includes(+id) ? "e" : "";
           return [
-            { t: "array", label: "vals", items: vals.map((v, k) => ({ v, cls: k < i ? "d" : "" })) },
-            Object.keys(N).length ? { t: "tree", label: "树", nodes: N, root: 0, cls } : { t: "note", label: "树", html: "空" },
-            { t: "chips", label: "队列（左边先出）", items: q.map((id) => N[id].v), empty: "空" },
+            {
+              t: "array",
+              label: "vals",
+              items: vals.map((v, k) => ({ v, cls: k === opts.atVal ? "a" : k < i ? "d" : "" })),
+              ptrs: { i: i < vals.length ? i : null },
+            },
+            Object.keys(N).length
+              ? {
+                  t: "tree",
+                  label: "树（带 L/R 方向）",
+                  nodes: snapNodes(),
+                  root: 0,
+                  cls,
+                  directed: true,
+                  lrLabels: true,
+                  ptrs: { ...(cur >= 0 ? { node: cur } : {}), ...(fresh.length ? { new: fresh[0] } : {}) },
+                  ...(opts.prevNodes ? { prevNodes: opts.prevNodes } : {}),
+                  ...(opts.onEdges ? { onEdges: opts.onEdges } : {}),
+                  ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+                }
+              : { t: "note", label: "树", html: "空" },
+            {
+              t: "chips",
+              label: "队列（左边先出）",
+              items: q.map((id) => ({ v: N[id].v, cls: fresh.includes(id) ? "c" : "e" })),
+              empty: "空",
+            },
           ];
         };
-        if (!vals.length || vals[0] === "null") { i = vals.length; snap("空树", "没有值，返回空。", view(), { at: "init", kind: "ok", ans: [] }); return; }
+        if (!vals.length || vals[0] === "null") {
+          i = vals.length;
+          snap("空树", "没有值，返回空。", view(), { at: "init", kind: "ok", ans: [], facts: [["已建节点", 0], ["队列长度", 0]] });
+          return;
+        }
         i = 0;
-        snap("切分", `按逗号切开，一共 ${vals.length} 个值。`, view(), { at: "init" });
-        N[0] = { v: Number(vals[0]), l: null, r: null }; q.push(0); i = 1;
-        snap("根节点", `第一个值 ${vals[0]} 是根，放进队列。`, view(), { at: "root" });
+        snap("切分", `按逗号切开，一共 ${vals.length} 个值。`, view({ atVal: 0 }), {
+          at: "init",
+          facts: [["下标 i", 0], ["队列长度", 0], ["已建节点", 0]],
+        });
+        const prevRootSnap = snapNodes();
+        N[0] = { v: Number(vals[0]), l: null, r: null }; q.push(0); i = 1; fresh = [0];
+        snap("根节点", `第一个值 ${vals[0]} 是根，放进队列。`, view({ prevNodes: prevRootSnap }), {
+          at: "root",
+          facts: [["下标 i", 1, 0], ["队列长度", 1, 0], ["已建节点", 1, 0]],
+        });
+        let prevCurLabel = "—";
         while (q.length && i < vals.length) {
+          const oldQLen = q.length;
           cur = q.shift(); fresh = [];
-          snap("取出节点", `取出 ${N[cur].v}，接下来的两个值是它的左、右孩子。`, view(), { at: "take" });
+          const curLabel = String(N[cur].v);
+          snap("取出节点", `取出 ${N[cur].v}，接下来的两个值是它的左、右孩子。`, view(), {
+            at: "take",
+            facts: [
+              ["当前节点", curLabel, prevCurLabel],
+              ["下标 i", i],
+              ["队列长度", q.length, oldQLen],
+              ["已建节点", Object.keys(N).length],
+            ],
+          });
+          prevCurLabel = curLabel;
           const add = (side, tag) => {
             if (i >= vals.length) return;
+            const oldI = i, oldCnt = Object.keys(N).length, oldQ = q.length;
             const v = vals[i];
-            if (v !== "null") { N[i] = { v: Number(v), l: null, r: null }; N[cur][side] = i; q.push(i); fresh = [i]; }
-            else fresh = [];
+            let prevSnap = null, edge = null;
+            if (v !== "null") {
+              prevSnap = snapNodes();
+              N[i] = { v: Number(v), l: null, r: null };
+              N[cur][side] = i;
+              q.push(i);
+              fresh = [i];
+              edge = [cur, i];
+            } else {
+              fresh = [];
+            }
             i++;
-            snap(side === "l" ? "左孩子" : "右孩子", v === "null" ? `下一个值是 null：${N[cur].v} 没有${side === "l" ? "左" : "右"}孩子。` : `${v} 接成 ${N[cur].v} 的${side === "l" ? "左" : "右"}孩子，放进队尾。`, view(), { at: tag });
+            const newCnt = Object.keys(N).length;
+            snap(
+              side === "l" ? "左孩子" : "右孩子",
+              v === "null"
+                ? `下一个值是 null：${N[cur].v} 没有${side === "l" ? "左" : "右"}孩子。`
+                : `${v} 接成 ${N[cur].v} 的${side === "l" ? "左" : "右"}孩子，放进队尾。`,
+              view({
+                atVal: oldI,
+                ...(prevSnap ? { prevNodes: prevSnap } : {}),
+                ...(edge ? { onEdges: [edge], animEdges: [edge] } : {}),
+              }),
+              {
+                at: tag,
+                facts: [
+                  ["当前节点", curLabel],
+                  ["下标 i", i, oldI],
+                  q.length !== oldQ ? ["队列长度", q.length, oldQ] : ["队列长度", q.length],
+                  newCnt !== oldCnt ? ["已建节点", newCnt, oldCnt] : ["已建节点", newCnt],
+                ],
+              },
+            );
           };
           add("l", "left");
           add("r", "right");
@@ -83,7 +161,12 @@ class Solution:
         const out = [], bq = [0];
         while (bq.length) { const id = bq.shift(); if (id === null) { out.push(null); continue; } out.push(N[id].v); bq.push(N[id].l, N[id].r); }
         while (out.length && out[out.length - 1] === null) out.pop();
-        snap("完成", "值都读完了，返回根节点。", view(), { at: "done", kind: "ok", ans: out });
+        snap("完成", "值都读完了，返回根节点。", view(), {
+          at: "done",
+          kind: "ok",
+          ans: out,
+          facts: [["当前节点", "完成", prevCurLabel], ["已建节点", Object.keys(N).length]],
+        });
       },
     },
   }, {
@@ -121,33 +204,100 @@ class Solution:
       build(a, snap) {
         const N = {};
         a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+        const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
         const pre = [], ino = [], post = [], path = [], done = new Set();
-        const view = (cur) => {
+        const pathEdges = () => {
+          const e = [];
+          for (let k = 0; k + 1 < path.length; k++) e.push([path[k], path[k + 1]]);
+          return e;
+        };
+        const view = (cur, opts = {}) => {
           const cls = {};
           for (const id in N) cls[id] = +id === cur ? "a" : path.includes(+id) ? "e" : done.has(+id) ? "c" : "";
           return [
-            N[0] ? { t: "tree", nodes: N, root: 0, cls } : { t: "note", html: "空树" },
-            { t: "chips", label: "前序 pre", items: pre.slice(), empty: "空" },
-            { t: "chips", label: "中序 ino", items: ino.slice(), empty: "空" },
-            { t: "chips", label: "后序 post", items: post.slice(), empty: "空" },
+            N[0]
+              ? {
+                  t: "tree",
+                  label: "二叉树（带 L/R 方向）",
+                  nodes: snapNodes(),
+                  root: 0,
+                  cls,
+                  directed: true,
+                  lrLabels: true,
+                  on: path.slice(),
+                  onEdges: pathEdges().concat(opts.onEdges || []),
+                  ...(opts.animEdges && opts.animEdges.length ? { animEdges: opts.animEdges } : {}),
+                  ptrs: { node: cur >= 0 ? cur : null },
+                }
+              : { t: "note", html: "空树" },
+            { t: "chips", label: "前序 pre", items: pre.map((v, i) => ({ v, cls: opts.just === "pre" && i === pre.length - 1 ? "a" : "c" })), empty: "空" },
+            { t: "chips", label: "中序 ino", items: ino.map((v, i) => ({ v, cls: opts.just === "ino" && i === ino.length - 1 ? "a" : "c" })), empty: "空" },
+            { t: "chips", label: "后序 post", items: post.map((v, i) => ({ v, cls: opts.just === "post" && i === post.length - 1 ? "a" : "c" })), empty: "空" },
           ];
         };
-        snap("开始", "从根节点开始递归。", view(-1), { at: "start" });
-        const dfs = (id) => {
+        let prevNode = "—";
+        snap("开始", "从根节点开始递归。", view(-1), {
+          at: "start",
+          facts: [["当前节点", "—"], ["栈深", 0], ["pre / ino / post", "0 / 0 / 0"]],
+        });
+        const dfs = (id, par) => {
           if (id === null || !N[id]) return;
-          const v = N[id].v;
+          const v = N[id].v, sv = String(v);
+          const oldD = path.length, oldPre = pre.length;
           path.push(id); pre.push(v);
-          snap("前序", `进入 ${v}，先把它记进前序。接着递归左子树${N[id].l === null ? "（没有，马上返回）" : ""}。`, view(id), { at: ["pre", "left"] });
-          dfs(N[id].l);
+          snap("前序", `进入 ${v}，先把它记进前序。接着递归左子树${N[id].l === null ? "（没有，马上返回）" : ""}。`, view(id, {
+            just: "pre",
+            ...(par !== null ? { animEdges: [[par, id]] } : {}),
+          }), {
+            at: ["pre", "left"],
+            facts: [
+              ["当前节点", sv, prevNode],
+              ["栈深", path.length, oldD],
+              ["前序 pre", pre.length, oldPre],
+              ["中序 / 后序", `${ino.length} / ${post.length}`],
+            ],
+          });
+          prevNode = sv;
+          dfs(N[id].l, id);
+          const oldIno = ino.length;
           ino.push(v);
-          snap("中序", `${v} 的左子树走完了，把 ${v} 记进中序。接着递归右子树${N[id].r === null ? "（没有，马上返回）" : ""}。`, view(id), { at: ["in", "right"] });
-          dfs(N[id].r);
+          snap("中序", `${v} 的左子树走完了，把 ${v} 记进中序。接着递归右子树${N[id].r === null ? "（没有，马上返回）" : ""}。`, view(id, {
+            just: "ino",
+            ...(N[id].r !== null ? { onEdges: [[id, N[id].r]] } : {}),
+          }), {
+            at: ["in", "right"],
+            facts: [
+              ["当前节点", sv, prevNode],
+              ["栈深", path.length],
+              ["中序 ino", ino.length, oldIno],
+              ["前序 / 后序", `${pre.length} / ${post.length}`],
+            ],
+          });
+          prevNode = sv;
+          dfs(N[id].r, id);
+          const oldPost = post.length, oldDepth2 = path.length;
           post.push(v); path.pop(); done.add(id);
-          snap("后序", `${v} 的两棵子树都走完了，把 ${v} 记进后序，返回上一层。`, view(id), { at: "post" });
+          snap("后序", `${v} 的两棵子树都走完了，把 ${v} 记进后序，返回上一层。`, view(id, { just: "post" }), {
+            at: "post",
+            facts: [
+              ["当前节点", sv, prevNode],
+              ["栈深", path.length, oldDepth2],
+              ["后序 post", post.length, oldPost],
+              ["前序 / 中序", `${pre.length} / ${ino.length}`],
+            ],
+          });
+          prevNode = sv;
         };
-        if (!N[0]) { snap("空树", "根是空的，递归马上返回。", view(-1), { at: "base" }); }
-        dfs(0);
-        snap("完成", "同一个节点：进入时记前序，左边回来记中序，右边回来记后序。", view(-1), { at: "done", kind: "ok", ans: [pre, ino, post] });
+        if (!N[0]) {
+          snap("空树", "根是空的，递归马上返回。", view(-1), { at: "base", facts: [["当前节点", "空"], ["栈深", 0]] });
+        }
+        dfs(0, null);
+        snap("完成", "同一个节点：进入时记前序，左边回来记中序，右边回来记后序。", view(-1), {
+          at: "done",
+          kind: "ok",
+          ans: [pre, ino, post],
+          facts: [["前序 / 中序 / 后序", `${pre.length} / ${ino.length} / ${post.length}`]],
+        });
       },
     },
   }, {
@@ -183,31 +333,92 @@ class Solution:
       build(a, snap) {
         const N = {};
         a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-        const res = [], st = [], seen = new Set();
+        const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+        const res = [], st = [], seen = new Set(), order = {};
         let cur = N[0] ? 0 : null;
-        const view = () => {
+        const view = (opts = {}) => {
           const cls = {};
           for (const id in N) cls[id] = +id === cur ? "a" : st.includes(+id) ? "e" : seen.has(+id) ? "c" : "";
           return [
-            N[0] ? { t: "tree", nodes: N, root: 0, cls } : { t: "note", html: "空树" },
-            { t: "chips", label: "栈（右边是栈顶）", items: st.map((id) => N[id].v), empty: "空" },
-            { t: "chips", label: "res", items: res.slice(), empty: "空" },
+            N[0]
+              ? {
+                  t: "tree",
+                  label: "用栈模拟中序遍历",
+                  nodes: snapNodes(),
+                  root: 0,
+                  cls,
+                  directed: true,
+                  lrLabels: true,
+                  ptrs: { cur: cur !== null ? cur : null },
+                  badges: { ...order },
+                  ...(opts.onEdges && opts.onEdges.length ? { onEdges: opts.onEdges } : {}),
+                  ...(opts.animEdges && opts.animEdges.length ? { animEdges: opts.animEdges } : {}),
+                }
+              : { t: "note", html: "空树" },
+            {
+              t: "chips",
+              label: "栈（右边是栈顶）",
+              items: st.map((id, i) => ({ v: N[id].v, cls: opts.pushedCount && i >= st.length - opts.pushedCount ? "a" : "e" })),
+              empty: "空",
+            },
+            {
+              t: "chips",
+              label: "res",
+              items: res.map((v, i) => ({ v, cls: opts.justPopped && i === res.length - 1 ? "a" : "c" })),
+              empty: "空",
+            },
           ];
         };
-        snap("开始", "cur 指着根，栈是空的。", view(), { at: "init" });
+        let prevCurStr = cur !== null ? String(N[cur].v) : "空";
+        snap("开始", "cur 指着根，栈是空的。", view(), {
+          at: "init",
+          facts: [["当前 cur", prevCurStr], ["栈长度", 0], ["已访问", 0]],
+        });
         while (cur !== null || st.length) {
           if (cur !== null) {
-            const went = [];
-            while (cur !== null) { st.push(cur); went.push(N[cur].v); cur = N[cur].l; }
-            snap("一路往左", `从 ${went[0]} 往左走到头，沿途的 ${went.join("、")} 依次压栈。`, view(), { at: ["loop", "push"] });
+            const went = [], wentEdges = [], oldLen = st.length;
+            while (cur !== null) {
+              st.push(cur);
+              went.push(N[cur].v);
+              if (N[cur].l !== null) wentEdges.push([cur, N[cur].l]);
+              cur = N[cur].l;
+            }
+            const curStr = "空";
+            snap("一路往左", `从 ${went[0]} 往左走到头，沿途的 ${went.join("、")} 依次压栈。`, view({ pushedCount: went.length, onEdges: wentEdges, animEdges: wentEdges }), {
+              at: ["loop", "push"],
+              facts: [["当前 cur", curStr, prevCurStr], ["栈长度", st.length, oldLen], ["栈顶", N[st[st.length - 1]].v], ["已访问", res.length]],
+            });
+            prevCurStr = curStr;
           }
+          const oldLen = st.length, oldRes = res.length;
           cur = st.pop(); res.push(N[cur].v); seen.add(cur);
-          snap("弹出访问", `左边到头了。弹出栈顶 ${N[cur].v}，记进结果。`, view(), { at: "pop" });
-          const r = N[cur].r;
-          snap("转向右子树", r === null ? `${N[cur].v} 没有右子树，下一轮直接从栈里弹。` : `转到 ${N[cur].v} 的右孩子 ${N[r].v}，对它重复「一路往左」。`, view(), { at: "right" });
+          order[cur] = "第 " + res.length;
+          const curStr = String(N[cur].v);
+          snap("弹出访问", `左边到头了。弹出栈顶 ${N[cur].v}，记进结果。`, view({ justPopped: true }), {
+            at: "pop",
+            facts: [
+              ["弹出 cur", curStr, prevCurStr],
+              ["栈长度", st.length, oldLen],
+              ["栈顶", st.length ? N[st[st.length - 1]].v : "空"],
+              ["已访问", res.length, oldRes],
+            ],
+          });
+          prevCurStr = curStr;
+          const r = N[cur].r, rStr = r !== null ? String(N[r].v) : "空";
+          const rightEdge = r !== null ? [[cur, r]] : [];
+          snap("转向右子树", r === null ? `${N[cur].v} 没有右子树，下一轮直接从栈里弹。` : `转到 ${N[cur].v} 的右孩子 ${N[r].v}，对它重复「一路往左」。`, view({ onEdges: rightEdge, animEdges: rightEdge }), {
+            at: "right",
+            facts: [["下一 cur", rStr, prevCurStr], ["栈长度", st.length], ["已访问", res.length]],
+          });
           cur = r;
+          prevCurStr = rStr;
         }
-        snap("完成", "cur 是空，栈也空了。", view(), { at: ["loop", "done"], kind: "ok", ans: res });
+        snap("完成", "cur 是空，栈也空了。", view(), {
+          at: ["loop", "done"],
+          kind: "ok",
+          ans: res,
+          facts: [["当前 cur", "空"], ["栈长度", 0], ["已访问", res.length]],
+        });
       },
     },
   }, {
@@ -247,30 +458,85 @@ class Solution:
       build(a, snap) {
         const N = {};
         a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-        const q = N[0] ? [0] : [], res = [], done = new Set();
-        const view = (cur) => {
+        const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+        const q = N[0] ? [0] : [], res = [], done = new Set(), layerOf = N[0] ? { 0: "第 1 层" } : {};
+        const view = (cur, opts = {}) => {
           const cls = {};
           for (const id in N) cls[id] = +id === cur ? "a" : q.includes(+id) ? "e" : done.has(+id) ? "c" : "";
           return [
-            N[0] ? { t: "tree", nodes: N, root: 0, cls } : { t: "note", html: "空树" },
-            { t: "chips", label: "队列（左边先出）", items: q.map((id) => N[id].v), empty: "空" },
-            { t: "chips", label: "每层的最大值", items: res.slice(), empty: "还没有" },
+            N[0]
+              ? {
+                  t: "tree",
+                  label: "二叉树层序遍历（BFS 按层推进）",
+                  nodes: snapNodes(),
+                  root: 0,
+                  cls,
+                  directed: true,
+                  lrLabels: true,
+                  ptrs: { node: cur >= 0 ? cur : null },
+                  badges: { ...layerOf },
+                  ...(opts.onEdges && opts.onEdges.length ? { onEdges: opts.onEdges } : {}),
+                  ...(opts.animEdges && opts.animEdges.length ? { animEdges: opts.animEdges } : {}),
+                }
+              : { t: "note", html: "空树" },
+            {
+              t: "chips",
+              label: "队列（左边先出）",
+              items: q.map((id) => ({ v: N[id].v, cls: opts.pushed && opts.pushed.includes(id) ? "a" : "e" })),
+              empty: "空",
+            },
+            {
+              t: "chips",
+              label: "每层的最大值",
+              items: res.map((v, i) => ({ v, cls: opts.newLayer && i === res.length - 1 ? "a" : "c" })),
+              empty: "还没有",
+            },
           ];
         };
-        snap("开始", N[0] ? "根节点放进队列。" : "空树，队列是空的。", view(-1), { at: "init" });
+        snap("开始", N[0] ? "根节点放进队列。" : "空树，队列是空的。", view(-1), {
+          at: "init",
+          facts: [["当前层", "—"], ["队列长度", q.length]],
+        });
         while (q.length) {
-          const n = q.length;
+          const n = q.length, layerNo = res.length + 1;
           let best = N[q[0]].v;
-          snap(`第 ${res.length + 1} 层`, `队列里的 ${n} 个节点就是这一层。best 先取第一个的值 ${best}。`, view(-1), { at: "level", facts: [["这一层", n], ["best", best]] });
+          snap(`第 ${layerNo} 层`, `队列里的 ${n} 个节点就是这一层。best 先取第一个的值 ${best}。`, view(-1), {
+            at: "level",
+            facts: [["当前层", `第 ${layerNo} 层`], ["这一层节点数", n], ["best", best], ["队列长度", q.length]],
+          });
           for (let k = 0; k < n; k++) {
+            const oldQLen = q.length, prevBest = best;
             const id = q.shift(), nd = N[id], kids = [nd.l, nd.r].filter((c) => c !== null);
-            best = Math.max(best, nd.v); kids.forEach((c) => q.push(c)); done.add(id);
-            snap("出队", `取出 ${nd.v}，best = ${best}。` + (kids.length ? `孩子 ${kids.map((c) => N[c].v).join("、")} 放到队尾。` : "它没有孩子。"), view(id), { at: kids.length ? ["pop", "push"] : "pop", facts: [["这一层", n], ["best", best]] });
+            best = Math.max(best, nd.v);
+            kids.forEach((c) => {
+              q.push(c);
+              layerOf[c] = `第 ${layerNo + 1} 层`;
+            });
+            done.add(id);
+            const edges = kids.map((c) => [id, c]);
+            snap("出队", `取出 ${nd.v}，best = ${best}。` + (kids.length ? `孩子 ${kids.map((c) => N[c].v).join("、")} 放到队尾。` : "它没有孩子。"), view(id, { pushed: kids, onEdges: edges, animEdges: edges }), {
+              at: kids.length ? ["pop", "push"] : "pop",
+              facts: [
+                ["当前层", `第 ${layerNo} 层`],
+                ["本层进度", `${k + 1} / ${n}`, `${k} / ${n}`],
+                best !== prevBest ? ["best", best, prevBest] : ["best", best],
+                q.length !== oldQLen ? ["队列长度", q.length, oldQLen] : ["队列长度", q.length],
+              ],
+            });
           }
+          const prevResLen = res.length;
           res.push(best);
-          snap("这一层结束", `这一层的最大值是 ${best}。`, view(-1), { at: "end" });
+          snap("这一层结束", `这一层的最大值是 ${best}。`, view(-1, { newLayer: true }), {
+            at: "end",
+            facts: [["完成层", `第 ${layerNo} 层`], ["本层最大值", best], ["已记录层数", res.length, prevResLen]],
+          });
         }
-        snap("完成", `结果是 [${res.join(", ")}]。`, view(-1), { at: "done", kind: "ok", ans: res });
+        snap("完成", `结果是 [${res.join(", ")}]。`, view(-1), {
+          at: "done",
+          kind: "ok",
+          ans: res,
+          facts: [["总层数", res.length], ["结果", `[${res.join(", ")}]`]],
+        });
       },
     },
   }],

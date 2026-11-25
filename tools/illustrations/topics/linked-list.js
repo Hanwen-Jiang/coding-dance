@@ -36,21 +36,56 @@ class Solution:
       legend: [["g", "哑节点"], ["a", "刚接上的节点"], ["e", "已经在链表里"]],
       presets: [{ label: "示例", args: { nums: [1, 2, 3, 4] }, note: "nums = [1,2,3,4]", expect: [1, 2, 3, 4] }],
       build(a, snap) {
-        const nums = a.nums, nodes = [{ v: "D", cls: "g" }];
+        const nums = a.nums, nodes = [{ v: "D", cls: "g" }], next = [null];
         let tail = 0, fresh = -1;
-        const view = () => [
-          { t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i < nodes.length - 1 ? "d" : "" })) },
-          { t: "list", label: "链表（D 是哑节点）", nodes: nodes.map((nd, i) => ({ ...nd, cls: i === 0 ? "g" : i === fresh ? "a" : "e" })), ptrs: { dummy: 0, tail } },
+        const view = (opts = {}) => [
+          {
+            t: "array",
+            label: "nums",
+            items: nums.map((v, i) => ({ v, cls: i === opts.idx ? "a" : i < nodes.length - 1 ? "d" : "" })),
+            ptrs: { i: opts.idx !== undefined ? opts.idx : null },
+          },
+          {
+            t: "list",
+            label: "链表（D 是哑节点）",
+            nodes: nodes.map((nd, i) => ({
+              ...nd,
+              cls: i === 0 ? "g" : i === fresh ? "a" : "e",
+              ...(opts.hot === i ? { ecls: "on" } : {}),
+            })),
+            next: next.slice(),
+            ptrs: { dummy: 0, tail },
+            ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+          },
         ];
-        snap("开始", "先放一个哑节点 D，tail 指着它。现在链表里还没有真正的节点。", view(), { at: "init" });
-        for (const x of nums) {
-          nodes.push({ v: x }); fresh = nodes.length - 1;
-          snap("接上新节点", `新建值为 ${x} 的节点，让 tail.next 指向它。`, view(), { at: ["loop", "link"] });
+        snap("开始", "先放一个哑节点 D，tail 指着它。现在链表里还没有真正的节点。", view(), {
+          at: "init",
+          facts: [["当前节点", "—"], ["tail", "D"], ["链表长度", 0]],
+        });
+        nums.forEach((x, idx) => {
+          const oldLen = nodes.length - 1;
+          nodes.push({ v: x });
+          fresh = nodes.length - 1;
+          next[tail] = fresh;
+          next.push(null);
+          snap("接上新节点", `新建值为 ${x} 的节点，让 tail.next 指向它。`, view({ idx, hot: tail, animEdges: [tail] }), {
+            at: ["loop", "link"],
+            facts: [["当前节点", x], ["tail", nodes[tail].v], ["链表长度", nodes.length - 1, oldLen]],
+          });
+          const oldTail = nodes[tail].v;
           tail = fresh;
-          snap("尾巴后移", `tail 挪到新节点 ${x} 上，下一个节点就接在它后面。`, view(), { at: "move" });
-        }
+          snap("尾巴后移", `tail 挪到新节点 ${x} 上，下一个节点就接在它后面。`, view({ idx }), {
+            at: "move",
+            facts: [["当前节点", x], ["tail", nodes[tail].v, oldTail], ["链表长度", nodes.length - 1]],
+          });
+        });
         fresh = -1;
-        snap("完成", nums.length ? `返回 dummy.next，也就是节点 ${nums[0]}。` : "数组是空的，dummy.next 是空，返回空链表。", view(), { at: "done", kind: "ok", ans: nums.slice() });
+        snap("完成", nums.length ? `返回 dummy.next，也就是节点 ${nums[0]}。` : "数组是空的，dummy.next 是空，返回空链表。", view(), {
+          at: "done",
+          kind: "ok",
+          ans: nums.slice(),
+          facts: [["返回头节点", nums.length ? nums[0] : "空 (∅)"], ["链表长度", nums.length]],
+        });
       },
     },
   }, {
@@ -88,23 +123,63 @@ class Solution:
       build(a, snap) {
         const v = ["D", ...a.nums], n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null)), gone = new Set();
         let cur = 0, look = null;
-        const view = () => [{ t: "list", label: "链表（D 是哑节点）", nodes: v.map((x, i) => ({ v: x, cls: i === 0 ? "g" : gone.has(i) ? "d" : i === look ? "a" : "", noNil: gone.has(i) })), next: next.slice(), ptrs: { cur } }];
-        snap("开始", `在头节点前面接一个哑节点 D，cur 从 D 开始。要删掉所有值为 ${a.val} 的节点。`, view(), { at: "init" });
+        const view = (opts = {}) => [{
+          t: "list",
+          label: "链表（D 是哑节点；虚红线 × 表示断开的旧指针）",
+          nodes: v.map((x, i) => ({
+            v: x,
+            cls: i === 0 ? "g" : gone.has(i) ? "d" : i === look ? "a" : "",
+            noNil: gone.has(i),
+            ...(opts.hot === i ? { ecls: "on" } : {}),
+          })),
+          next: next.slice(),
+          ptrs: { cur, ...(look !== null ? { "cur.next": look } : {}) },
+          ...(opts.ghostEdges ? { ghostEdges: opts.ghostEdges } : {}),
+          ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+        }];
+        snap("开始", `在头节点前面接一个哑节点 D，cur 从 D 开始。要删掉所有值为 ${a.val} 的节点。`, view(), {
+          at: "init",
+          facts: [["目标值 val", a.val], ["cur", "D"], ["已删节点数", 0]],
+        });
         while (next[cur] !== null) {
           look = next[cur];
           if (v[look] === a.val) {
-            snap("检查", `cur.next 的值是 ${v[look]}，等于 ${a.val}，要删掉。`, view(), { at: "check" });
-            next[cur] = next[look]; next[look] = null; gone.add(look); look = null;
-            snap("删除", `cur.next = cur.next.next：${v[cur]} 直接指向${next[cur] === null ? "空" : " " + v[next[cur]]}，被跳过的节点就不在链表里了。cur 不动，接着检查新的 cur.next。`, view(), { at: "del" });
+            snap("检查", `cur.next 的值是 ${v[look]}，等于 ${a.val}，要删掉。`, view({ hot: cur }), {
+              at: "check",
+              facts: [["目标值 val", a.val], ["cur", v[cur]], ["cur.next", v[look]], ["已删节点数", gone.size]],
+            });
+            const delIdx = look, oldGone = gone.size;
+            next[cur] = next[delIdx];
+            next[delIdx] = null;
+            gone.add(delIdx);
+            look = null;
+            snap("删除", `cur.next = cur.next.next：${v[cur]} 直接指向${next[cur] === null ? "空（∅）" : " " + v[next[cur]]}，被跳过的节点就不在链表里了。cur 不动，接着检查新的 cur.next。`, view({ hot: cur, animEdges: [cur], ghostEdges: [[cur, delIdx]] }), {
+              at: "del",
+              kind: "warn",
+              facts: [["目标值 val", a.val], ["cur", v[cur]], ["删除节点", v[delIdx]], ["已删节点数", gone.size, oldGone]],
+            });
           } else {
-            snap("检查", `cur.next 的值是 ${v[look]}，不用删。`, view(), { at: "check" });
-            cur = look; look = null;
-            snap("往后走", `cur 挪到 ${v[cur]}。`, view(), { at: "keep" });
+            snap("检查", `cur.next 的值是 ${v[look]}，不用删。`, view({ hot: cur }), {
+              at: "check",
+              facts: [["目标值 val", a.val], ["cur", v[cur]], ["cur.next", v[look]], ["已删节点数", gone.size]],
+            });
+            const oldCur = v[cur];
+            cur = look;
+            look = null;
+            snap("往后走", `cur 挪到 ${v[cur]}。`, view(), {
+              at: "keep",
+              facts: [["目标值 val", a.val], ["cur", v[cur], oldCur], ["已删节点数", gone.size]],
+            });
           }
         }
         const out = [];
         for (let i = next[0]; i !== null; i = next[i]) out.push(v[i]);
-        snap("完成", `cur.next 是空，检查完了。返回 dummy.next：${out.length ? out.join(" → ") : "空链表"}。`, view(), { at: "done", kind: "ok", ans: out });
+        snap("完成", `cur.next 是空，检查完了。返回 dummy.next：${out.length ? out.join(" → ") : "空链表"}。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: out,
+          facts: [["已删节点数", gone.size], ["剩余节点", out.length ? out.join(" → ") : "空"]],
+        });
       },
     },
   }, {
@@ -137,16 +212,47 @@ class Solution:
         { label: "偶数个", args: { nums: [1, 2, 3, 4, 5, 6] }, note: "head = [1,2,3,4,5,6]", expect: [4, 5, 6] },
       ],
       build(a, snap) {
-        const v = a.nums, n = v.length;
-        let slow = 0, fast = 0, done = false;
-        const view = () => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: done && i === slow ? "c" : i === fast && fast < n ? "b" : i === slow ? "a" : "" })), ptrs: { slow, ...(fast < n ? { fast } : {}) } }];
-        snap("开始", "slow 和 fast 都从头节点出发。", view(), { at: "init" });
+        const v = a.nums, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null));
+        let slow = 0, fast = 0, done = false, stepsCnt = 0;
+        const view = (opts = {}) => {
+          const hotSet = new Set(opts.hot || []);
+          return [{
+            t: "list",
+            label: "链表",
+            nodes: v.map((x, i) => ({
+              v: x,
+              cls: done && i === slow ? "c" : i === fast && fast < n ? "b" : i === slow ? "a" : "",
+              ...(hotSet.has(i) ? { ecls: "on" } : {}),
+            })),
+            next: next.slice(),
+            ptrs: { slow, ...(fast < n ? { fast } : {}) },
+            ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+          }];
+        };
+        snap("开始", "slow 和 fast 都从头节点出发。", view(), {
+          at: "init",
+          facts: [["步数", 0], ["slow", `${v[0]} (下标 0)`], ["fast", `${v[0]} (下标 0)`]],
+        });
         while (fast < n && fast + 1 < n) {
-          slow += 1; fast += 2;
-          snap("各走一步 / 两步", `fast 后面还有节点，slow 走一步到 ${v[slow]}，fast 走两步到${fast < n ? " " + v[fast] : "空"}。`, view(), { at: ["loop", "step"] });
+          const prevSlow = slow, prevFast = fast, prevSteps = stepsCnt;
+          slow += 1; fast += 2; stepsCnt += 1;
+          const anim = [prevSlow, prevFast, ...(prevFast + 1 < n ? [prevFast + 1] : [])];
+          snap("各走一步 / 两步", `fast 后面还有节点，slow 走一步到 ${v[slow]}，fast 走两步到${fast < n ? " " + v[fast] : "空（∅）"}。`, view({ hot: anim, animEdges: anim }), {
+            at: ["loop", "step"],
+            facts: [
+              ["步数", stepsCnt, prevSteps],
+              ["slow", `${v[slow]} (下标 ${slow})`, `${v[prevSlow]} (下标 ${prevSlow})`],
+              ["fast", fast < n ? `${v[fast]} (下标 ${fast})` : "空 (∅)", `${v[prevFast]} (下标 ${prevFast})`],
+            ],
+          });
         }
         done = true;
-        snap("完成", `${fast < n ? "fast 是最后一个节点" : "fast 走到了空"}，不能再走两步了。slow 停在 ${v[slow]}，就是中点。`, view(), { at: ["loop", "done"], kind: "ok", ans: v.slice(slow) });
+        snap("完成", `${fast < n ? "fast 是最后一个节点" : "fast 走到了空"}，不能再走两步了。slow 停在 ${v[slow]}，就是中点。`, view(), {
+          at: ["loop", "done"],
+          kind: "ok",
+          ans: v.slice(slow),
+          facts: [["步数", stepsCnt], ["中点 slow", `${v[slow]} (下标 ${slow})`]],
+        });
       },
     },
   }],

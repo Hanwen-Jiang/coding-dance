@@ -269,7 +269,7 @@ svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw e"></i>当前路径上的格子</span><span><i class="sw a"></i>正在看的格子</span><span><i class="sw c"></i>找到的路径</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>当前格子</span><span><i class="sw e"></i>当前路径（已占住 #）</span><span><i class="sw w"></i>走不通 / 已占冲突</span><span><i class="sw d"></i>已试过的起点</span><span><i class="sw c"></i>找到的路径</span></div>
       </div>
     </div>
   </section>
@@ -366,31 +366,121 @@ const SPEC = { presets: [{"label":"示例 1","args":{"board":["ABCE","SFCS","ADE
     } else word = R.word(R.int(3, 4), "ABCDE");
     return { args: { board: B, word }, note: `board = ${R.fmt(B)}, word = "${word}"`, py: `Solution().exist([list(r) for r in ${R.py(B)}], "${word}")` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "标准解法", note: null, legend: [["e","当前路径上的格子"],["a","正在看的格子"],["c","找到的路径"]], build(a, snap) {
-    const B = a.board.map((r) => r.split("")), word = a.word, m = B.length, n = B[0].length, path = [];
-    const view = (cur, done) => [
-      { t: "grid", label: "board", rows: B.map((r, i) => r.map((v, j) => { const on = path.some(([x, y]) => x === i && y === j); return { v, cls: done && on ? "c" : cur && cur[0] === i && cur[1] === j ? "a" : on ? "e" : "" }; })) },
-      { t: "array", label: "word", items: word.split("").map((ch, k) => ({ v: ch, cls: k < path.length ? (done ? "c" : "e") : "" })), ptrs: { k: path.length < word.length ? path.length : null } },
-    ];
-    snap("开始", `在网格里找单词 <b>${word}</b>。每个格子都当一次起点，相邻是指上下左右。`, view(null), { at: "init" });
+{ t: "标准解法", note: null, legend: [["a","当前格子"],["e","当前路径（已占住 #）"],["w","走不通 / 已占冲突"],["d","已试过的起点"],["c","找到的路径"]], build(a, snap) {
+    const B = a.board.map((r) => r.split("")), word = a.word, m = B.length, n = B[0].length;
+    const grid = B.map((r) => r.slice()), path = [], tried = new Set();
+    const pathStr = () => (path.length ? path.map(([i, j]) => B[i][j]).join("→") : "空");
+    const view = (opts = {}) => {
+      const cur = opts.cur || null, done = !!opts.done, prevMap = opts.prevMap || {};
+      const conflictSet = new Set((opts.conflict || []).map(([x, y]) => `${x},${y}`));
+      return [
+        {
+          t: "grid",
+          label: "board（进入格子标 '#' 占住，回溯时还原）",
+          rows: grid.map((r, i) => r.map((v, j) => {
+            const key = `${i},${j}`, on = path.some(([x, y]) => x === i && y === j);
+            const isCur = cur && cur[0] === i && cur[1] === j;
+            return {
+              v,
+              ...(prevMap[key] !== undefined ? { prev: prevMap[key] } : {}),
+              cls: done && on ? "c" : isCur ? (opts.curCls || "a") : conflictSet.has(key) ? "w" : on ? "e" : tried.has(key) ? "d" : "",
+            };
+          })),
+        },
+        {
+          t: "array",
+          label: "word",
+          items: word.split("").map((ch, k) => ({
+            v: ch,
+            cls: done ? "c" : k < path.length ? "e" : k === path.length && opts.matchIdx === k ? "a" : "",
+          })),
+          ptrs: { k: !done && path.length < word.length ? path.length : null },
+        },
+        {
+          t: "chips",
+          label: "path（当前路径）",
+          items: path.map(([i, j], idx) => ({
+            v: `${B[i][j]}(${i},${j})`,
+            cls: done ? "c" : idx === path.length - 1 ? "a" : "e",
+          })),
+          empty: "空",
+        },
+      ];
+    };
+    snap("开始", `在网格里找单词 <b>${word}</b>。每个格子都当一次起点，相邻是指上下左右。`, view(), {
+      at: "init",
+      facts: [["path", "空"], ["已找到", "否"], ["剩余", word]],
+    });
     const dfs = (i, j, k) => {
+      const prevPath = pathStr(), prevRem = word.slice(k);
       path.push([i, j]);
       if (k === word.length - 1) return true;
-      snap("匹配", `(${i},${j}) 是 ${word[k]}，对上了 word[${k}]。占住它，去相邻格子找 <b>${word[k + 1]}</b>。`, view([i, j]), { at: "match", facts: [["已匹配", `${k + 1} / ${word.length}`]] });
+      const curPath = pathStr(), curRem = word.slice(k + 1);
+      grid[i][j] = "#";
+      snap("做选择（占住格子）", `(${i},${j}) 是 '${B[i][j]}'，匹配 word[${k}]。把它标成 '#' 占住，去相邻格子找 <b>'${word[k + 1]}'</b>。`, view({
+        cur: [i, j],
+        prevMap: { [`${i},${j}`]: B[i][j] },
+      }), {
+        at: "match",
+        facts: [["path", curPath, prevPath], ["已找到", "否"], ["剩余", curRem, prevRem]],
+      });
+      const conflicts = [];
       for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {
-        if (x < 0 || y < 0 || x >= m || y >= n || path.some(([p, q]) => p === x && q === y) || B[x][y] !== word[k + 1]) continue;
+        if (x < 0 || y < 0 || x >= m || y >= n) continue;
+        if (grid[x][y] === "#") {
+          if (B[x][y] === word[k + 1]) conflicts.push([x, y]);
+          continue;
+        }
+        if (B[x][y] !== word[k + 1]) continue;
         if (dfs(x, y, k + 1)) return true;
       }
+      const beforeBackPath = pathStr(), beforeBackRem = word.slice(k + 1);
       path.pop();
-      snap("回退", `(${i},${j}) 周围没有能接上的 ${word[k + 1]}，这条路走不通。去掉它的标记，退回上一步。`, view(path.length ? path[path.length - 1] : null), { at: "back", kind: "warn", facts: [["已匹配", `${k} / ${word.length}`]] });
+      grid[i][j] = B[i][j];
+      if (k === 0) tried.add(`${i},${j}`);
+      const why = conflicts.length
+        ? `相邻的 '${word[k + 1]}' 已被标为 '#' 占住，不能回头`
+        : `周围没有能接上的 '${word[k + 1]}'`;
+      snap("撤销选择（回溯）", `(${i},${j}) 走不通（${why}）。把 '#' 还原回 '${B[i][j]}'，退回上一步。`, view({
+        cur: [i, j],
+        curCls: "w",
+        conflict: conflicts,
+        prevMap: { [`${i},${j}`]: "#" },
+      }), {
+        at: "back",
+        kind: "warn",
+        facts: [["path", pathStr(), beforeBackPath], ["已找到", "否"], ["剩余", word.slice(k), beforeBackRem]],
+      });
       return false;
     };
     for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
       if (B[i][j] !== word[0]) continue;
-      snap("起点", `(${i},${j}) 是 ${word[0]}，从这里出发试试。`, view([i, j]), { at: "start" });
-      if (dfs(i, j, 0)) { snap("找到", `最后一个字母也对上了，路径是 ${path.map(([x, y]) => `(${x},${y})`).join(" → ")}。返回 <b>true</b>。`, view(null, true), { at: ["found", "yes"], kind: "ok", ans: true, facts: [["已匹配", `${word.length} / ${word.length}`]] }); return; }
+      snap("尝试起点", `(${i},${j}) 是 '${word[0]}'，从这里出发试试。`, view({ cur: [i, j], matchIdx: 0 }), {
+        at: "start",
+        facts: [["path", "空"], ["已找到", "否"], ["剩余", word]],
+      });
+      if (dfs(i, j, 0)) {
+        const prevMap = {};
+        for (const [x, y] of path) {
+          if (grid[x][y] === "#") { prevMap[`${x},${y}`] = "#"; grid[x][y] = B[x][y]; }
+        }
+        const fullPath = pathStr();
+        const prevPath = path.length > 1 ? path.slice(0, -1).map(([x, y]) => B[x][y]).join("→") : "空";
+        snap("找到路径", `最后一个字母 '${word[word.length - 1]}' 也对上了，路径是 ${path.map(([x, y]) => `(${x},${y})`).join(" → ")}。还原棋盘并返回 <b>true</b>。`, view({ done: true, prevMap }), {
+          at: ["found", "yes"],
+          kind: "ok",
+          ans: true,
+          facts: [["path", fullPath, prevPath], ["已找到", "是", "否"], ["剩余", "无", word[word.length - 1]]],
+        });
+        return;
+      }
     }
-    snap("找不到", `所有起点都试过了，拼不出 ${word}，返回 <b>false</b>。`, view(null), { at: "no", kind: "warn", ans: false });
+    snap("找不到", `所有起点都试过了，拼不出 ${word}，返回 <b>false</b>。`, view(), {
+      at: "no",
+      kind: "warn",
+      ans: false,
+      facts: [["path", "空"], ["已找到", "否"], ["剩余", word]],
+    });
   } }
 ] };
 (function () {

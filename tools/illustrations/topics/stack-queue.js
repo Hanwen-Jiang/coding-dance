@@ -60,21 +60,56 @@ class Solution:
         const T = a.tokens, st = [];
         let at = -1;
         const view = (hot) => [
-          { t: "array", label: "tokens", items: T.map((x, i) => ({ v: x, cls: i === at ? "a" : i < at ? "d" : "" })) },
-          { t: "chips", label: "栈（右边是栈顶）", items: st.map((x, i) => ({ v: x, cls: hot && i >= st.length - hot ? "a" : "" })), empty: "空" },
+          {
+            t: "array",
+            label: "tokens",
+            items: T.map((x, i) => ({ v: x, cls: i === at ? "a" : i < at ? "d" : "" })),
+            ptrs: { i: at >= 0 && at < T.length ? at : null },
+          },
+          {
+            t: "chips",
+            label: "栈（右边是栈顶）",
+            items: st.map((x, i) => ({ v: x, cls: hot && i >= st.length - hot ? "a" : "" })),
+            empty: "空",
+          },
         ];
-        snap("开始", "从左往右读，栈一开始是空的。", view(), { at: "init" });
+        snap("开始", "从左往右读，栈一开始是空的。", view(), {
+          at: "init",
+          facts: [["当前记号", "—"], ["栈大小", 0], ["栈顶", "空"]],
+        });
         T.forEach((t, i) => {
           at = i;
-          if (!["+", "-", "*", "/"].includes(t)) { st.push(Number(t)); snap("数字", `${t} 是数字，压栈。`, view(1), { at: ["loop", "push"] }); return; }
+          if (!["+", "-", "*", "/"].includes(t)) {
+            const oldLen = st.length, oldTop = oldLen ? st[oldLen - 1] : "空";
+            const num = Number(t);
+            st.push(num);
+            snap("数字", `${t} 是数字，压栈。`, view(1), {
+              at: ["loop", "push"],
+              facts: [["当前记号", t], ["操作", `压入 ${num}`], ["栈大小", st.length, oldLen], ["栈顶", num, oldTop]],
+            });
+            return;
+          }
+          const oldLen = st.length, oldTop = st[oldLen - 1];
           const b = st.pop(), x = st.pop();
           const v = t === "+" ? x + b : t === "-" ? x - b : t === "*" ? x * b : Math.trunc(x / b);
-          snap("运算符", `遇到 ${t}：先弹出右边的数 ${b}，再弹出左边的数 ${x}。`, view(), { at: ["loop", "pop"] });
+          snap("运算符", `遇到 ${t}：先弹出右边的数 ${b}，再弹出左边的数 ${x}。`, view(), {
+            at: ["loop", "pop"],
+            facts: [["当前记号", t], ["弹出右数 b / 左数 a", `${b} / ${x}`], ["栈大小", st.length, oldLen], ["栈顶", st.length ? st[st.length - 1] : "空", oldTop]],
+          });
+          const lenBeforePush = st.length, topBeforePush = lenBeforePush ? st[lenBeforePush - 1] : "空";
           st.push(v);
-          snap("算完压回", `${x} ${t} ${b} = ${v}，把结果压回栈里。`, view(1), { at: "calc" });
+          snap("算完压回", `${x} ${t} ${b} = ${v}，把结果压回栈里。`, view(1), {
+            at: "calc",
+            facts: [["计算", `${x} ${t} ${b} = ${v}`], ["栈大小", st.length, lenBeforePush], ["栈顶", v, topBeforePush]],
+          });
         });
         at = T.length;
-        snap("完成", `读完了，栈里只剩一个数 ${st[0]}，就是答案。`, view(1), { at: "done", kind: "ok", ans: st[0] });
+        snap("完成", `读完了，栈里只剩一个数 ${st[0]}，就是答案。`, view(1), {
+          at: "done",
+          kind: "ok",
+          ans: st[0],
+          facts: [["表达式结果", st[0]], ["栈大小", st.length]],
+        });
       },
     },
   }, {
@@ -127,33 +162,88 @@ class MyQueue:
       presets: [{ label: "示例", args: { ops: [["push", 1], ["push", 2], ["push", 3], ["pop"], ["push", 4], ["pop"], ["peek"], ["pop"], ["empty"]] }, note: "push(1) push(2) push(3) pop() push(4) pop() peek() pop() empty()", expect: [null, null, null, null, 1, null, 2, 3, 3, false] }],
       build(a, snap) {
         const inbox = [], outbox = [], out = [null];
-        let hot = null;
+        const opLabels = a.ops.map((o) => (o.length > 1 ? `${o[0]}(${o[1]})` : `${o[0]}()`));
+        let hot = null, opIdx = -1;
         const view = () => [
+          {
+            t: "array",
+            label: "操作序列",
+            items: opLabels.map((lbl, i) => ({ v: lbl, cls: i === opIdx ? "a" : i < opIdx ? "d" : "" })),
+            ptrs: { op: opIdx >= 0 && opIdx < opLabels.length ? opIdx : null },
+          },
           { t: "chips", label: "inbox（右边是栈顶）", items: inbox.map((x) => ({ v: x, cls: x === hot ? "a" : "" })), empty: "空" },
           { t: "chips", label: "outbox（右边是栈顶）", items: outbox.map((x) => ({ v: x, cls: x === hot ? "a" : "" })), empty: "空" },
           { t: "chips", label: "返回值", items: out.map((x) => (x === null ? "null" : String(x))) },
         ];
-        snap("开始", "两个空栈。", view(), { at: "init" });
-        const fill = () => {
-          if (outbox.length) return false;
-          while (inbox.length) outbox.push(inbox.pop());
-          return true;
-        };
-        for (const [op, x] of a.ops) {
+        snap("开始", "初始化两个空栈 inbox 和 outbox。", view(), {
+          at: "init",
+          facts: [["当前操作", "MyQueue()"], ["inbox 长度", 0], ["outbox 长度", 0], ["返回值数", 1]],
+        });
+        a.ops.forEach(([op, x], idx) => {
+          opIdx = idx;
           hot = null;
-          if (op === "push") { inbox.push(x); hot = x; out.push(null); snap(`push(${x})`, `${x} 压进 inbox。`, view(), { at: "push" }); }
-          else if (op === "empty") { const e = !inbox.length && !outbox.length; out.push(e); snap("empty()", `两个栈${e ? "都空了，返回 true" : "里还有元素，返回 false"}。`, view(), { at: "empty" }); }
-          else {
-            const moved = fill() && outbox.length > 0;
-            if (moved) snap(`${op}()：倒一遍`, "outbox 空了，把 inbox 的元素一个个弹出、压进 outbox。顺序翻了过来，最早进来的到了栈顶。", view(), { at: op === "pop" ? ["pop", "move"] : "move" });
+          const opStr = opLabels[idx];
+          if (op === "push") {
+            const oldIn = inbox.length, oldOutLen = out.length;
+            inbox.push(x);
+            hot = x;
+            out.push(null);
+            snap(`push(${x})`, `${x} 压进 inbox。`, view(), {
+              at: "push",
+              facts: [["当前操作", opStr], ["inbox 长度", inbox.length, oldIn], ["outbox 长度", outbox.length], ["返回值数", out.length, oldOutLen]],
+            });
+          } else if (op === "empty") {
+            const oldOutLen = out.length;
+            const e = !inbox.length && !outbox.length;
+            out.push(e);
+            snap("empty()", `两个栈${e ? "都空了，返回 true" : "里还有元素，返回 false"}。`, view(), {
+              at: "empty",
+              facts: [["当前操作", opStr], ["inbox 长度", inbox.length], ["outbox 长度", outbox.length], ["返回", String(e)], ["返回值数", out.length, oldOutLen]],
+            });
+          } else {
+            let moved = false;
+            if (!outbox.length && inbox.length) {
+              moved = true;
+              while (inbox.length) {
+                const oldIn = inbox.length, oldOut = outbox.length;
+                const oldOutTop = oldOut ? outbox[oldOut - 1] : "空";
+                const mv = inbox.pop();
+                outbox.push(mv);
+                hot = mv;
+                snap(`${op}()：倒出 ${mv}`, `outbox 空了，把 inbox 栈顶的 ${mv} 弹出并压进 outbox，顺序逐渐翻正。`, view(), {
+                  at: op === "pop" ? ["pop", "move"] : "move",
+                  facts: [["当前操作", opStr], ["inbox 长度", inbox.length, oldIn], ["outbox 长度", outbox.length, oldOut], ["outbox 栈顶", mv, oldOutTop]],
+                });
+              }
+            }
             const top = outbox[outbox.length - 1];
             hot = top;
-            if (op === "pop") { outbox.pop(); out.push(top); snap("pop()", `${moved ? "" : "outbox 里还有元素，不用倒。"}弹出 outbox 的栈顶 ${top}，它是最早进队的。`, view(), { at: "pop" }); }
-            else { out.push(top); snap("peek()", `${moved ? "" : "outbox 里还有元素，不用倒。"}outbox 的栈顶是 ${top}，只看不弹。`, view(), { at: "peek" }); }
+            const oldOutLen = out.length;
+            if (op === "pop") {
+              const oldOut = outbox.length;
+              outbox.pop();
+              out.push(top);
+              snap("pop()", `${moved ? "倒完后，" : "outbox 里还有元素，不用倒。"}弹出 outbox 的栈顶 ${top}，它是最早进队的。`, view(), {
+                at: "pop",
+                facts: [["当前操作", opStr], ["弹出返回", top], ["outbox 长度", outbox.length, oldOut], ["返回值数", out.length, oldOutLen]],
+              });
+            } else {
+              out.push(top);
+              snap("peek()", `${moved ? "倒完后，" : "outbox 里还有元素，不用倒。"}outbox 的栈顶是 ${top}，只看不弹。`, view(), {
+                at: "peek",
+                facts: [["当前操作", opStr], ["队头元素", top], ["outbox 长度", outbox.length], ["返回值数", out.length, oldOutLen]],
+              });
+            }
           }
-        }
+        });
         hot = null;
-        snap("完成", "每个元素最多进出两个栈各一次。", view(), { at: [], kind: "ok", ans: out });
+        opIdx = opLabels.length;
+        snap("完成", "每个元素最多进出两个栈各一次。", view(), {
+          at: [],
+          kind: "ok",
+          ans: out,
+          facts: [["执行操作数", opLabels.length], ["inbox 长度", inbox.length], ["outbox 长度", outbox.length]],
+        });
       },
     },
   }],

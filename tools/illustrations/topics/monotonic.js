@@ -34,22 +34,90 @@ class Solution:
       build(a, snap) {
         const P = a.prices, ans = P.slice(), st = [], done = new Set();
         let cur = -1;
-        const view = () => [
-          { t: "bars", label: "prices", items: P.map((v, i) => ({ v, cls: i === cur ? "a" : st.includes(i) ? "e" : done.has(i) ? "c" : "" })) },
-          { t: "chips", label: "栈（右边是栈顶，写的是 下标:价格）", items: st.map((i) => `${i}:${P[i]}`), empty: "空" },
-          { t: "array", label: "ans", items: ans.map((v, i) => ({ v, cls: done.has(i) ? "c" : "" })) },
-        ];
-        snap("开始", "栈是空的。ans 先复制一份原价。", view(), { at: "init" });
+        const view = (hit = -1, opts = {}) => {
+          const prevMap = opts.prevMap || {};
+          return [
+            {
+              t: "bars",
+              label: "prices",
+              items: P.map((v, i) => ({ v, cls: i === cur ? "a" : i === hit ? "c" : st.includes(i) ? "e" : done.has(i) ? "c" : "" })),
+              ptrs: { ...(cur >= 0 ? { i: cur } : {}), ...(hit >= 0 ? { j: hit } : {}) },
+            },
+            {
+              t: "chips",
+              label: "栈（右边是栈顶，写的是 下标:价格）",
+              items: st.map((i, idx) => ({ v: `${i}:${P[i]}`, cls: opts.hlTop && idx === st.length - 1 ? "a" : "e" })),
+              empty: "空",
+            },
+            {
+              t: "array",
+              label: "ans",
+              items: ans.map((v, i) => ({
+                v,
+                ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),
+                cls: i === hit ? "c" : done.has(i) ? "c" : "",
+              })),
+              ptrs: hit >= 0 ? { 更新: hit } : {},
+              feeds: opts.feeds || [],
+            },
+          ];
+        };
+        snap("开始", "栈是空的。ans 先复制一份原价。", view(), {
+          at: "init",
+          facts: [["当前下标 i", "—"], ["栈大小", 0], ["ans", `[${ans.join(", ")}]`]],
+        });
         P.forEach((p, i) => {
           cur = i;
-          const popped = [];
-          while (st.length && P[st[st.length - 1]] >= p) { const j = st.pop(); ans[j] -= p; done.add(j); popped.push(j); }
-          if (popped.length) snap("弹出", `新来的价格 ${p}。栈顶 ${popped.map((j) => `${j}:${P[j]}`).join("、")} 的价格都 &gt;= ${p}，${p} 就是它们右边第一个不超过它们的价格，依次弹出、减去 ${p}。`, view(), { at: ["loop", "pop"] });
+          let poppedCount = 0;
+          while (st.length && P[st[st.length - 1]] >= p) {
+            const prevStLen = st.length;
+            const j = st.pop();
+            const oldAns = ans[j];
+            ans[j] -= p;
+            done.add(j);
+            poppedCount++;
+            snap(
+              "弹出折扣",
+              `新来价格 ${p}，栈顶 ${j}:${P[j]} 的价格 &gt;= ${p}，${p} 就是它右边第一个不超过它的价格，弹出并更新 ans[${j}] = ${oldAns} - ${p} = <b>${ans[j]}</b>。`,
+              view(j, {
+                prevMap: { [j]: oldAns },
+                feeds: [{ from: i, to: j, win: true, label: `-${p}` }],
+              }),
+              {
+                at: ["loop", "pop"],
+                kind: "ok",
+                facts: [
+                  ["当前下标 i", `${i} (价格 ${p})`],
+                  ["弹出下标 j", `${j} (原价 ${P[j]})`],
+                  [`ans[${j}]`, ans[j], oldAns],
+                  ["栈大小", st.length, prevStLen],
+                ],
+              },
+            );
+          }
+          const prevStLen = st.length;
           st.push(i);
-          snap("压栈", `${popped.length ? "栈顶比 " + p + " 小了，" : `栈顶${st.length > 1 ? "比 " + p + " 小" : "是空的"}，`}把下标 ${i} 压进去。栈里的价格仍然递增。`, view(), { at: popped.length ? "push" : ["loop", "pop", "push"] });
+          snap(
+            "压栈",
+            `${poppedCount ? "栈顶比 " + p + " 小了，" : `栈顶${st.length > 1 ? "比 " + p + " 小" : "是空的"}，`}把下标 ${i}（价格 ${p}）压进去。栈里的价格仍然递增。`,
+            view(-1, { hlTop: true }),
+            {
+              at: poppedCount ? "push" : ["loop", "pop", "push"],
+              facts: [
+                ["当前下标 i", `${i} (价格 ${p})`],
+                ["压入栈", `${i}:${p}`],
+                ["栈大小", st.length, prevStLen],
+              ],
+            },
+          );
         });
         cur = -1;
-        snap("完成", st.length ? `栈里剩下的 ${st.map((i) => `${i}:${P[i]}`).join("、")} 右边没有更便宜的，按原价。` : "所有商品都找到了折扣。", view(), { at: "done", kind: "ok", ans: ans.slice() });
+        snap("完成", st.length ? `栈里剩下的 ${st.map((i) => `${i}:${P[i]}`).join("、")} 右边没有更便宜的，按原价。` : "所有商品都找到了折扣。", view(), {
+          at: "done",
+          kind: "ok",
+          ans: ans.slice(),
+          facts: [["商品数", P.length], ["未打折", st.length], ["ans", `[${ans.join(", ")}]`]],
+        });
       },
     },
   }, {
@@ -87,26 +155,125 @@ class Solution:
       presets: [{ label: "示例", args: { nums: [1, 3, -1, -3, 5, 3, 6, 7], k: 3 }, note: "nums = [1,3,-1,-3,5,3,6,7], k = 3", expect: [-1, -3, -3, -3, 3, 3] }],
       build(a, snap) {
         const A = a.nums, k = a.k, q = [], res = [];
-        let cur = -1;
-        const view = () => [
-          { t: "array", label: "nums", items: A.map((v, i) => ({ v, cls: i === cur ? "a" : q.length && i === q[0] && cur >= k - 1 ? "c" : q.includes(i) ? "g" : cur >= 0 && i > cur - k && i <= cur ? "e" : "" })) },
-          { t: "chips", label: "队列（左边是队头，写的是 下标:值）", items: q.map((i) => `${i}:${A[i]}`), empty: "空" },
-          { t: "chips", label: "res", items: res.slice(), empty: "空" },
+        let cur = -1, prevMin = null;
+        const view = (opts = {}) => [
+          {
+            t: "array",
+            label: "nums",
+            items: A.map((v, i) => ({
+              v,
+              cls: i === cur ? "a" : i === opts.expired ? "d" : q.length && i === q[0] && cur >= k - 1 ? "c" : q.includes(i) ? "g" : cur >= 0 && i > cur - k && i <= cur ? "e" : "",
+            })),
+            ptrs: { ...(cur >= 0 ? { i: cur } : {}), ...(q.length ? { 队头: q[0] } : {}) },
+            feeds: opts.feeds || [],
+          },
+          {
+            t: "chips",
+            label: "队列（左边是队头，写的是 下标:值）",
+            items: q.map((i, idx) => ({ v: `${i}:${A[i]}`, cls: idx === 0 && cur >= k - 1 ? "c" : opts.hlTail && idx === q.length - 1 ? "a" : "g" })),
+            empty: "空",
+          },
+          {
+            t: "chips",
+            label: "res",
+            items: res.map((v, idx) => ({ v, cls: opts.newestRes && idx === res.length - 1 ? "c" : "" })),
+            empty: "空",
+          },
         ];
-        snap("开始", `队列是空的，窗口长度 k = ${k}。`, view(), { at: "init" });
+        snap("开始", `队列是空的，窗口长度 k = ${k}。`, view(), {
+          at: "init",
+          facts: [["窗口长度 k", k], ["队列大小", 0], ["队头最小值", "—"], ["res 长度", 0]],
+        });
         A.forEach((x, i) => {
           cur = i;
           const popped = [];
+          const beforePopLen = q.length;
           while (q.length && A[q[q.length - 1]] >= x) popped.push(q.pop());
+          if (popped.length) {
+            snap(
+              "队尾淘汰",
+              `新来 nums[${i}] = ${x}。队尾 ${popped.map((j) => `${j}:${A[j]}`).join("、")} 都 &gt;= ${x}，它们比 ${x} 先离开窗口又更大，不可能再是最小值，弹掉。`,
+              view({
+                feeds: popped.map((j, idx) => ({
+                  from: i,
+                  to: j,
+                  win: idx === 0,
+                  ...(idx === 0 ? { label: `淘汰≥${x}` } : {}),
+                })),
+              }),
+              {
+                at: ["loop", "pop"],
+                facts: [
+                  ["当前下标 i", `${i} (值 ${x})`],
+                  ["淘汰数量", popped.length],
+                  ["队列大小", q.length, beforePopLen],
+                ],
+              },
+            );
+          }
+          const beforePushLen = q.length;
           q.push(i);
-          const tags = ["loop", "pop", "push"];
-          let msg = `新来 nums[${i}] = ${x}。` + (popped.length ? `队尾 ${popped.map((j) => A[j]).join("、")} 都 &gt;= ${x}，它们比 ${x} 先离开窗口又更大，不可能再是最小值，弹掉。` : "队尾比它小（或者队列空），不用弹。") + `把 ${i} 放到队尾。`;
-          if (q[0] <= i - k) { const e = q.shift(); msg += `队头的下标 ${e} 已经滑出窗口，从队头弹掉。`; tags.push("expire"); }
-          if (i >= k - 1) { res.push(A[q[0]]); msg += `窗口 [${i - k + 1}, ${i}] 满了，队头 ${A[q[0]]} 就是最小值。`; tags.push("record"); }
-          snap(i >= k - 1 ? "记下最小值" : "窗口还没满", msg, view(), { at: tags });
+          snap(
+            "入队",
+            `${popped.length ? "" : `新来 nums[${i}] = ${x}，队尾比它小（或队列空）。`}把下标 ${i} 放到队尾，队列保持递增。`,
+            view({ hlTail: true }),
+            {
+              at: popped.length ? "push" : ["loop", "pop", "push"],
+              facts: [
+                ["当前下标 i", `${i} (值 ${x})`],
+                ["队列大小", q.length, beforePushLen],
+                ["队头", `${q[0]}:${A[q[0]]}`],
+              ],
+            },
+          );
+          if (q[0] <= i - k) {
+            const oldLen = q.length;
+            const e = q.shift();
+            snap(
+              "队头过期",
+              `队头下标 ${e}（值 ${A[e]}）已经滑出窗口 [${i - k + 1}, ${i}]，从队头弹掉。`,
+              view({ expired: e }),
+              {
+                at: "expire",
+                facts: [
+                  ["当前窗口", `[${i - k + 1}, ${i}]`],
+                  ["队列大小", q.length, oldLen],
+                  ["队头", `${q[0]}:${A[q[0]]}`, `${e}:${A[e]}`],
+                ],
+              },
+            );
+          }
+          if (i >= k - 1) {
+            const oldResLen = res.length;
+            const curMin = A[q[0]];
+            res.push(curMin);
+            snap(
+              "记下最小值",
+              `窗口 [${i - k + 1}, ${i}] 满了，队头 ${q[0]}:${curMin} 就是当前窗口最小值。`,
+              view({
+                newestRes: true,
+                feeds: q[0] !== i ? [{ from: q[0], to: i, win: true, label: `min=${curMin}` }] : [],
+              }),
+              {
+                at: "record",
+                kind: "ok",
+                facts: [
+                  ["当前窗口", `[${i - k + 1}, ${i}]`],
+                  ["窗口最小值", curMin, prevMin ?? undefined],
+                  ["res 长度", res.length, oldResLen],
+                ],
+              },
+            );
+            prevMin = curMin;
+          }
         });
         cur = -1;
-        snap("完成", `结果是 [${res.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: res.slice() });
+        snap("完成", `结果是 [${res.join(", ")}]。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: res.slice(),
+          facts: [["窗口长度 k", k], ["res", `[${res.join(", ")}]`]],
+        });
       },
     },
   }],

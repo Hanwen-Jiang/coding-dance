@@ -48,26 +48,94 @@ assert s.largestRectangleArea([1]) == 1
 assert s.largestRectangleArea([2,2,2]) == 6
 assert s.largestRectangleArea([6,2,5,4,5,1,6]) == 12
 `,
-  legend: [["e", "在栈里"], ["a", "当前柱子"], ["b", "被弹出、正在结算的柱子"], ["w", "它撑出来的矩形"], ["c", "目前最大的矩形"]],
+  legend: [["e", "在栈里"], ["a", "当前柱子 / 新压栈"], ["b", "被弹出、正在结算的柱子"], ["w", "它撑出来的矩形"], ["c", "目前最大的矩形"], ["d", "哨兵 0"]],
   presets: [
     { label: "示例 1", args: { h: [2, 1, 5, 6, 2, 3] }, note: "heights = [2,1,5,6,2,3]", expect: 10 },
     { label: "示例 2", args: { h: [2, 4] }, note: "heights = [2,4]", expect: 4 },
   ],
   build(a, snap) {
-    const H = [0, ...a.h, 0], stack = []; let best = 0, bestR = null;
-    const view = (i, top, rect) => [{ t: "bars", label: "heights（两头是哨兵 0）", items: H.map((v, k) => ({ v, cls: k === top ? "b" : k === i ? "a" : rect && k > rect[0] && k < rect[1] ? "w" : bestR && k > bestR[0] && k < bestR[1] && !rect ? "c" : stack.includes(k) ? "e" : (k === 0 || k === H.length - 1) ? "d" : "" })), ptrs: { i: i >= 0 ? i : null } },
-      { t: "chips", label: "栈（存下标，右边是栈顶）", items: stack.map((k) => `${k}:${H[k]}`), empty: "空" }];
-    snap("开始", "两头各加一根高度为 0 的哨兵柱子。栈里存下标，对应高度递增。", view(-1, -1), { at: "init", facts: [["最大面积", best]] });
+    const H = [0, ...a.h, 0], stack = []; let best = 0, bestR = null, bestW = 0, bestH = 0;
+    const view = (i, top, rect, opts = {}) => {
+      const done = !!opts.done, better = !!opts.better;
+      return [
+        {
+          t: "bars",
+          label: "heights（两头是哨兵 0）",
+          items: H.map((v, k) => ({
+            v,
+            cls: done
+              ? (bestR && k > bestR[0] && k < bestR[1] ? "c" : (k === 0 || k === H.length - 1) ? "d" : "")
+              : k === top ? "b"
+              : k === i ? "a"
+              : rect && k > rect[0] && k < rect[1] ? (better ? "c" : "w")
+              : stack.includes(k) ? "e"
+              : (k === 0 || k === H.length - 1) ? "d"
+              : "",
+          })),
+          ptrs: { i: !done && i >= 0 ? i : null },
+          feeds: opts.feeds || [],
+        },
+        {
+          t: "chips",
+          label: "栈（存下标，右边是栈顶）",
+          items: stack.map((k, idx) => ({
+            v: `${k}:${H[k]}`,
+            cls: opts.pushed && idx === stack.length - 1 ? "a" : "e",
+          })),
+          empty: "空",
+        },
+      ];
+    };
+    let prevBest = 0, prevArea = "—", prevLen = 0;
+    snap("开始", "两头各加一根高度为 0 的哨兵柱子。栈里存下标，对应高度递增。", view(-1, -1), {
+      at: "init",
+      facts: [["最大面积", 0], ["本次面积", "—"], ["栈长度", 0]],
+    });
     for (let i = 0; i < H.length; i++) {
       while (stack.length && H[stack[stack.length - 1]] > H[i]) {
-        const top = stack.pop(), left = stack[stack.length - 1], area = H[top] * (i - left - 1);
-        const better = area > best; if (better) { best = area; bestR = [left, i]; }
-        snap("结算", `${H[i]} 比栈顶的 ${H[top]} 矮，以 ${H[top]} 为高的矩形右边到不了 ${i}，左边到不了新栈顶 ${left}。宽 ${i - left - 1}，面积 <b>${area}</b>${better ? "，是目前最大的" : ""}。`, view(i, top, [left, i]), { at: "pop", facts: [["最大面积", best]] });
+        const top = stack.pop(), left = stack[stack.length - 1], w = i - left - 1, area = H[top] * w;
+        const better = area > best;
+        if (better) { best = area; bestR = [left, i]; bestW = w; bestH = H[top]; }
+        const curArea = `${H[top]}×${w}=${area}`;
+        snap(
+          "结算",
+          `${H[i]} 比栈顶的 ${H[top]} 矮，以 ${H[top]} 为高的矩形右边到不了 ${i}，左边到不了新栈顶 ${left}。宽 ${w}，面积 <b>${area}</b>${better ? "，是目前最大的" : ""}。`,
+          view(i, top, [left, i], {
+            better,
+            feeds: [{ from: top, to: i, win: better, label: `宽${w}×${H[top]}=${area}` }],
+          }),
+          {
+            at: "pop",
+            kind: better ? "ok" : "",
+            facts: [
+              best !== prevBest ? ["最大面积", best, prevBest] : ["最大面积", best],
+              curArea !== prevArea ? ["本次面积", curArea, prevArea] : ["本次面积", curArea],
+              stack.length !== prevLen ? ["栈长度", stack.length, prevLen] : ["栈长度", stack.length],
+            ],
+          },
+        );
+        prevBest = best; prevArea = curArea; prevLen = stack.length;
       }
       stack.push(i);
-      if (i > 0 && i < H.length - 1) snap("压栈", `${H[i]} 不比栈顶矮，压栈。`, view(i, -1), { at: "push", facts: [["最大面积", best]] });
+      if (i > 0 && i < H.length - 1) {
+        snap("压栈", `${H[i]} 不比栈顶矮，压栈。`, view(i, -1, null, { pushed: true }), {
+          at: "push",
+          facts: [
+            ["最大面积", best],
+            ["当前高", H[i]],
+            stack.length !== prevLen ? ["栈长度", stack.length, prevLen] : ["栈长度", stack.length],
+          ],
+        });
+        prevArea = "—";
+      }
+      prevLen = stack.length;
     }
-    snap("完成", `最大矩形面积是 <b>${best}</b>。`, view(-1, -1), { at: "done", kind: "ok", ans: best, facts: [["最大面积", best]] });
+    snap("完成", `最大矩形面积是 <b>${best}</b>。`, view(-1, -1, null, { done: true }), {
+      at: "done",
+      kind: "ok",
+      ans: best,
+      facts: [["最大面积", best], ["最佳宽×高", bestR ? `${bestW}×${bestH}` : "0"]],
+    });
   },
   points: [
     { t: "宽度是 i − left − 1", body: "左右边界都是比它矮的柱子，本身不算在矩形里。" },

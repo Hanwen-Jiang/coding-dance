@@ -35,22 +35,49 @@ class Solution:
       build(a, snap) {
         const A = a.nums, n = A.length, t = a.target;
         let left = 0, total = 0, best = n + 1, bl = -1, br = -2, R = -1, hot = -1;
-        const view = () => [{ t: "array", label: "nums", items: A.map((v, i) => ({ v, cls: i === hot ? "a" : i >= left && i <= R ? "e" : i >= bl && i <= br ? "c" : "" })), ptrs: { left: left <= R ? left : null, right: R >= 0 ? R : null } }];
-        const facts = () => [["窗口的和", total], ["最短", best > n ? "—" : best]];
-        snap("开始", `窗口是空的，和是 0。要找和 &gt;= ${t} 的最短窗口。`, view(), { at: "init", facts: facts() });
+        const view = () => [{
+          t: "array",
+          label: "nums",
+          items: A.map((v, i) => ({ v, cls: i === hot ? "a" : i >= left && i <= R ? "e" : i >= bl && i <= br ? "c" : "" })),
+          ptrs: { left: left < n ? left : null, right: R >= 0 && R < n ? R : null },
+        }];
+        const winStr = () => (R >= left && R >= 0 ? `[${left}, ${R}]` : "空");
+        const bestStr = () => (best > n ? "—" : best);
+        snap("开始", `窗口是空的，和是 0。要找和 &gt;= ${t} 的最短窗口。`, view(), {
+          at: "init",
+          facts: [["窗口", "空"], ["窗口的和", 0], ["target", t], ["最短长度", "—"]],
+        });
         for (let right = 0; right < n; right++) {
+          const prevWin = winStr(), oldTotal = total;
           R = right; total += A[right]; hot = right;
-          snap("扩右端", `${A[right]} 进窗口，和变成 ${total}${total >= t ? `，&gt;= ${t} 了` : `，还不到 ${t}`}。`, view(), { at: "grow", facts: facts() });
+          snap("扩右端", `${A[right]} 进窗口，和从 ${oldTotal} 变成 ${total}${total >= t ? `，&gt;= ${t} 了` : `，还不到 ${t}`}。`, view(), {
+            at: "grow",
+            facts: [["窗口", winStr(), prevWin], ["窗口的和", total, oldTotal], ["target", t], ["最短长度", bestStr()]],
+          });
           while (total >= t) {
-            if (right - left + 1 < best) { best = right - left + 1; bl = left; br = right; }
-            hot = left;
-            snap("收左端", `窗口 [${left}, ${right}] 的和 ${total} 够了，长度 ${right - left + 1}，最短是 ${best}。把左端的 ${A[left]} 扔掉试试。`, view(), { at: "shrink", facts: facts() });
-            total -= A[left]; left++; hot = -1;
+            const curWinBefore = winStr(), prevBest = bestStr(), oldTotalShrink = total, oldLeft = left;
+            const len = right - left + 1;
+            if (len < best) { best = len; bl = left; br = right; }
+            const outVal = A[left];
+            total -= outVal;
+            left++;
+            hot = oldLeft;
+            snap("收左端", `窗口 [${oldLeft}, ${right}] 的和 ${oldTotalShrink} 够了，长度 ${len}，最短是 ${best}。把左端的 ${outVal} 移出，和变成 ${total}。`, view(), {
+              at: "shrink",
+              kind: total >= t ? "ok" : "warn",
+              facts: [["窗口", winStr(), curWinBefore], ["窗口的和", total, oldTotalShrink], ["target", t], ["最短长度", bestStr(), prevBest]],
+            });
+            hot = -1;
           }
         }
         hot = -1; R = -1; left = 0;
         const ans = best <= n ? best : 0;
-        snap("完成", ans ? `最短的窗口长度是 ${ans}。` : `整个数组的和都不到 ${t}，返回 0。`, view(), { at: "done", kind: "ok", ans, facts: facts() });
+        snap("完成", ans ? `最短的窗口长度是 ${ans}。` : `整个数组的和都不到 ${t}，返回 0。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans,
+          facts: [["最短长度", ans], ["target", t]],
+        });
       },
     },
   }, {
@@ -83,18 +110,35 @@ class Solution:
       presets: [{ label: "示例 1", args: { s: "abciiidef", k: 3 }, note: 's = "abciiidef", k = 3', expect: 3 }],
       build(a, snap) {
         const s = [...a.s], k = a.k, V = "aeiou";
-        let lo = 0, hi = k - 1, inn = -1, out = -1, cnt = 0, best = 0;
-        const view = () => [{ t: "array", label: "s（窗口里紫底的是元音）", items: s.map((c, i) => ({ v: c, cls: i === inn ? "a" : i === out ? "d" : i >= lo && i <= hi ? (V.includes(c) ? "g" : "e") : "" })) }];
+        let lo = 0, hi = k - 1, inn = -1, out = -1, cnt = 0, best = 0, done = false;
+        const view = () => [{
+          t: "array",
+          label: "s（窗口里紫底的是元音）",
+          items: s.map((c, i) => ({ v: c, cls: i === inn ? "a" : i === out ? "d" : i >= lo && i <= hi ? (V.includes(c) ? "g" : "e") : "" })),
+          ptrs: done ? {} : { left: lo, right: hi },
+        }];
         for (let i = 0; i < k; i++) if (V.includes(s[i])) cnt++;
         best = cnt;
-        snap("第一个窗口", `s[0..${k - 1}] 里有 ${cnt} 个元音。`, view(), { at: "init", facts: [["窗口里的元音", cnt], ["最多", best]] });
+        snap("第一个窗口", `s[0..${k - 1}] 里有 ${cnt} 个元音。`, view(), {
+          at: "init",
+          facts: [["窗口", `[0, ${k - 1}]`], ["窗口里的元音", cnt], ["最多", best]],
+        });
         for (let i = k; i < s.length; i++) {
+          const oldCnt = cnt, oldBest = best, prevWin = `[${lo}, ${hi}]`;
           const add = V.includes(s[i]) ? 1 : 0, del = V.includes(s[i - k]) ? 1 : 0;
           cnt += add - del; best = Math.max(best, cnt); lo = i - k + 1; hi = i; inn = i; out = i - k;
-          snap("右移一格", `进来 '${s[i]}'（${add ? "元音 +1" : "不是元音"}），出去 '${s[i - k]}'（${del ? "元音 −1" : "不是元音"}）。窗口里有 ${cnt} 个元音，最多是 ${best}。`, view(), { at: "slide", facts: [["窗口里的元音", cnt], ["最多", best]] });
+          snap("右移一格", `进来 '${s[i]}'（${add ? "元音 +1" : "不是元音"}），出去 '${s[i - k]}'（${del ? "元音 −1" : "不是元音"}）。窗口里有 ${cnt} 个元音，最多是 ${best}。`, view(), {
+            at: "slide",
+            facts: [["窗口", `[${lo}, ${hi}]`, prevWin], ["进 / 出", `+${s[i]} / -${s[i - k]}`], ["窗口里的元音", cnt, oldCnt], ["最多", best, oldBest]],
+          });
         }
-        inn = out = -1;
-        snap("完成", `最多有 ${best} 个元音。`, view(), { at: "done", kind: "ok", ans: best, facts: [["最多", best]] });
+        inn = out = -1; done = true;
+        snap("完成", `最多有 ${best} 个元音。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: best,
+          facts: [["最多元音数", best]],
+        });
       },
     },
   }],

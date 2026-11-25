@@ -271,7 +271,7 @@ svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw e"></i>窗口</span><span><i class="sw a"></i>刚进来</span><span><i class="sw b"></i>刚移出</span><span><i class="sw c"></i>目前最短的合格窗口</span></div>
+        <div class="legend" id="legend"><span><i class="sw e"></i>窗口</span><span><i class="sw a"></i>刚进来</span><span><i class="sw b"></i>刚移出</span><span><i class="sw d"></i>已滑过</span><span><i class="sw c"></i>目前最短的合格窗口</span></div>
       </div>
     </div>
   </section>
@@ -353,32 +353,89 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"ADOBECODEBANC","t":"AB
     const s = R.word(R.int(8, 13), "ABCDE"), t = R.word(R.int(2, 3), "ABC");
     return { args: { s, t }, note: `s = "${s}", t = "${t}"`, py: `len(Solution().minWindow("${s}", "${t}"))`, cmp: "length" };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "标准解法", note: null, legend: [["e","窗口"],["a","刚进来"],["b","刚移出"],["c","目前最短的合格窗口"]], build(a, snap) {
+{ t: "标准解法", note: null, legend: [["e","窗口"],["a","刚进来"],["b","刚移出"],["d","已滑过"],["c","目前最短的合格窗口"]], build(a, snap) {
     const { s, t } = a, need = {}; let missing = t.length, l = 0, start = -1, size = Infinity;
     for (const c of t) need[c] = (need[c] || 0) + 1;
     const keys = [...new Set(t)];
-    const view = (r, out, final) => [
-      { t: "array", label: "s", items: [...s].map((v, i) => ({ v, cls: final ? (i >= start && i < start + size ? "c" : "") : i === out ? "b" : i === r ? "a" : i >= l && i <= r ? "e" : "" })), ptrs: final ? {} : { l, r: r >= 0 ? r : null } },
-      { t: "chips", label: "need（t 里的字符还差几个，负数是多出来的）", items: keys.map((c) => ({ v: `${c}: ${need[c]}`, cls: need[c] > 0 ? "w" : "k" })) },
+    const bestStr = () => (size === Infinity ? "无" : s.slice(start, start + size));
+    const view = (r, out, final, activeChar = "", broke = false) => [
+      {
+        t: "array",
+        label: "s",
+        items: [...s].map((v, i) => ({
+          v,
+          cls: final
+            ? (i >= start && i < start + size ? "c" : "")
+            : i === out ? "b"
+            : i === r ? "a"
+            : i >= l && i <= r ? "e"
+            : i < l ? "d"
+            : "",
+        })),
+        ptrs: final ? {} : { l: l < s.length ? l : null, r: r >= 0 && r < s.length ? r : null },
+      },
+      {
+        t: "chips",
+        label: "need（t 里的字符还差几个，负数是多出来的）",
+        items: keys.map((c) => ({
+          v: `${c}: ${need[c]}`,
+          cls: c === activeChar ? (broke ? "b" : "a") : need[c] > 0 ? "w" : "k",
+        })),
+      },
     ];
-    const facts = () => [["还差", missing], ["最短", size === Infinity ? "无" : s.slice(start, start + size)]];
-    snap("开始", `t = "${t}"，一共需要 ${missing} 个字符。r 向右扩张，直到一个都不差。`, view(-1), { at: "init", facts: facts() });
+    let prevWin = "空", prevMiss = missing, prevBest = "无";
+    const emit = (phase, msg, views, curWin, o = {}) => {
+      const curBest = bestStr();
+      const facts = o.facts || [
+        curWin !== prevWin ? ["窗口", curWin, prevWin] : ["窗口", curWin],
+        missing !== prevMiss ? ["还差", missing, prevMiss] : ["还差", missing],
+        curBest !== prevBest ? ["最短", curBest, prevBest] : ["最短", curBest],
+      ];
+      prevWin = curWin; prevMiss = missing; prevBest = curBest;
+      snap(phase, msg, views, { ...o, facts });
+    };
+    emit("开始", `t = "${t}"，一共需要 ${missing} 个字符。r 向右扩张，直到一个都不差。`, view(-1, -1, false), "空", {
+      at: "init",
+      facts: [["窗口", "空"], ["还差", missing], ["最短", "无"]],
+    });
     for (let r = 0; r < s.length; r++) {
       const ch = s[r], useful = (need[ch] || 0) > 0;
       if (useful) missing--;
       need[ch] = (need[ch] || 0) - 1;
-      snap("扩张", `'${ch}' 进入窗口。` + (useful ? `它正是需要的，还差 ${missing} 个。` : keys.includes(ch) ? "这种字符已经够了，算多出来的。" : "t 里没有它，不影响。") + (missing === 0 ? "窗口<b>合格</b>了，开始收缩左边。" : ""), view(r), { at: "grow", facts: facts() });
+      const curWin = s.slice(l, r + 1) || "空";
+      emit(
+        "扩张",
+        `'${ch}' 进入窗口。` + (useful ? `它正是需要的，还差 ${missing} 个。` : keys.includes(ch) ? "这种字符已经够了，算多出来的。" : "t 里没有它，不影响。") + (missing === 0 ? "窗口<b>合格</b>了，开始收缩左边。" : ""),
+        view(r, -1, false, ch, false),
+        curWin,
+        { at: "grow" },
+      );
       while (missing === 0) {
-        if (r - l + 1 < size) { start = l; size = r - l + 1; }
-        const c = s[l]; need[c]++;
+        const winLen = r - l + 1, validWin = s.slice(l, r + 1);
+        const improved = winLen < size;
+        if (improved) { start = l; size = winLen; }
+        const outIdx = l, c = s[l];
+        need[c]++;
         const broke = need[c] > 0;
         if (broke) missing++;
-        snap(broke ? "收缩到头" : "收缩", `当前窗口 "${s.slice(l, r + 1)}" 合格，长度 ${r - l + 1}` + (start === l ? "，是目前最短的" : "") + `。移出左边的 '${c}'，` + (broke ? `这下 '${c}' 不够了，窗口不再合格，继续扩张右边。` : "窗口仍然合格，继续收缩。"), view(r, l), { at: broke ? ["shrink", "broke"] : "shrink", kind: broke ? "warn" : "", facts: facts() });
         l++;
+        const afterWin = s.slice(l, r + 1) || "空";
+        emit(
+          broke ? "收缩到头" : "收缩",
+          `当前窗口 "${validWin}" 合格，长度 ${winLen}` + (improved ? "，是目前最短的" : "") + `。移出左边的 '${c}'，` + (broke ? `这下 '${c}' 不够了，窗口不再合格，继续扩张右边。` : "窗口仍然合格，继续收缩。"),
+          view(r, outIdx, false, c, broke),
+          afterWin,
+          { at: broke ? ["shrink", "broke"] : "shrink", kind: broke ? "warn" : "" },
+        );
       }
     }
     const ans = size === Infinity ? "" : s.slice(start, start + size);
-    snap("完成", `r 走到头了。最短的覆盖子串是 <b>"${ans}"</b>。`, view(-1, -1, true), { at: "done", kind: "ok", ans, facts: facts() });
+    snap("完成", `r 走到头了。最短的覆盖子串是 <b>"${ans}"</b>。`, view(-1, -1, true), {
+      at: "done",
+      kind: "ok",
+      ans,
+      facts: [["还差", missing], ["最短", ans || "无"]],
+    });
   } }
 ] };
 (function () {

@@ -263,7 +263,7 @@ class Solution:
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>正在选的这一位</span><span><i class="sw e"></i>当前路径</span><span><i class="sw k"></i>刚记下的组合</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在选的字母 / 当前位</span><span><i class="sw e"></i>当前路径</span><span><i class="sw c"></i>刚收集的组合</span><span><i class="sw d"></i>已试过的字母</span><span><i class="sw w"></i>撤销（回溯）</span></div>
       </div>
     </div>
   </section>
@@ -347,46 +347,90 @@ const SPEC = { presets: [{"label":"示例 1","args":{"d":"23"},"note":"digits = 
     if (d.length > 2) return { args: { d }, note: `digits = "${d}"（只演示前几个组合的过程）`, py: `len(Solution().letterCombinations("${d}"))` };
     return { args: { d }, note: `digits = "${d}"`, py: `Solution().letterCombinations("${d}")`, cmp: "unordered" };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "回溯", note: null, legend: [["a","正在选的这一位"],["e","当前路径"],["k","刚记下的组合"]], build(a, snap) {
+{ t: "回溯", note: null, legend: [["a","正在选的字母 / 当前位"],["e","当前路径"],["c","刚收集的组合"],["d","已试过的字母"],["w","撤销（回溯）"]], build(a, snap) {
     const d = a.d, phone = { 2: "abc", 3: "def", 4: "ghi", 5: "jkl", 6: "mno", 7: "pqrs", 8: "tuv", 9: "wxyz" }, res = [], path = [];
+    const tried = Array.from({ length: d.length }, () => new Set());
     const quiet = d.length > 2; let shown = true;
-    const view = (i, fresh) => [
-      { t: "array", label: "digits", items: [...d].map((v, t) => ({ v, cls: t === i ? "a" : "" })), idx: false, ptrs: { i: i >= 0 && i < d.length ? i : null } },
-      { t: "chips", label: i >= 0 && i < d.length ? `数字 ${d[i]} 对应的字母` : "对应的字母", items: i >= 0 && i < d.length ? [...phone[d[i]]].map((c) => ({ v: c, cls: path[i] === c ? "a" : "" })) : [], empty: "所有位都选完了" },
-      { t: "chips", label: "当前路径 path", items: path.map((c) => ({ v: c, cls: "e" })), empty: "空" },
-      { t: "chips", label: `结果（${res.length} 个）`, items: res.map((r, t) => ({ v: r, cls: fresh && t === res.length - 1 ? "k" : "" })), empty: "还没有" },
-    ];
-    const S = (...x) => { if (shown) snap(...x); };
-    snap("开始", `一共 ${d.length} 位数字，从第 0 位开始选。`, view(0), { at: "init" });
+    const pStr = () => (path.length ? path.join("") : "空");
+    let prevP = pStr(), prevF = 0, prevR = d.length;
+    const emit = (phase, msg, views, o = {}) => {
+      const curP = pStr(), curF = res.length, curR = d.length - path.length;
+      const facts = o.facts || [
+        ["path", curP, prevP],
+        ["已找到", curF, prevF],
+        ["剩余", curR, prevR],
+      ];
+      prevP = curP; prevF = curF; prevR = curR;
+      if (shown) snap(phase, msg, views, { ...o, facts });
+    };
+    const view = (i, opts = {}) => {
+      const prevSlot = opts.prevSlot || {};
+      return [
+        { t: "array", label: "digits", items: [...d].map((v, t) => ({ v, cls: t === i ? "a" : t < i ? "d" : "" })), idx: false, ptrs: { i: i >= 0 && i < d.length ? i : null } },
+        {
+          t: "chips",
+          label: i >= 0 && i < d.length ? `数字 ${d[i]} 对应的字母` : "对应的字母",
+          items: i >= 0 && i < d.length ? [...phone[d[i]]].map((c) => ({
+            v: c,
+            cls: opts.undoCh === c ? "w" : path[i] === c ? "a" : tried[i].has(c) ? "d" : "",
+          })) : [],
+          empty: "所有位都选完了",
+        },
+        {
+          t: "array",
+          label: "当前路径 path",
+          items: Array.from({ length: d.length }, (_, k) => ({
+            v: k < path.length ? path[k] : "",
+            ...(prevSlot[k] !== undefined ? { prev: prevSlot[k] } : {}),
+            cls: opts.undoIdx === k ? "w" : k < path.length ? (opts.fresh ? "c" : k === path.length - 1 && opts.pickIdx === k ? "a" : "e") : "",
+          })),
+          idx: true,
+        },
+        { t: "chips", label: `结果（${res.length} 个）`, items: res.map((r, t) => ({ v: r, cls: opts.fresh && t === res.length - 1 ? "c" : "" })), empty: "还没有" },
+      ];
+    };
+    if (!d.length) {
+      snap("完成", "digits 是空的，返回 []。", view(-1), { at: "done", kind: "ok", ans: [], facts: [["path", "空"], ["已找到", 0], ["剩余", 0]] });
+      return;
+    }
+    emit("开始", `一共 ${d.length} 位数字，从第 0 位开始选。`, view(0), { at: "init", facts: [["path", "空"], ["已找到", 0], ["剩余", d.length]] });
     const dfs = (i) => {
-      if (i === d.length) { res.push(path.join("")); S("记下一个组合", `每一位都选好了，把 <b>"${path.join("")}"</b> 记进结果。然后退回上一位。`, view(i, true), { at: "record", kind: "ok" }); if (quiet && res.length === 6) shown = false; return; }
+      if (i === d.length) {
+        res.push(path.join(""));
+        emit("记下一个组合", `每一位都选好了，把 <b>"${path.join("")}"</b> 记进结果。然后退回上一位。`, view(i, { fresh: true }), { at: "record", kind: "ok" });
+        if (quiet && res.length === 6) shown = false;
+        return;
+      }
+      tried[i].clear();
       for (const ch of phone[d[i]]) {
         path.push(ch);
-        S("选", `第 ${i} 位是数字 ${d[i]}，选字母 <b>${ch}</b>，放进路径。` + (i + 1 < d.length ? `接着去选第 ${i + 1} 位。` : ""), view(i), { at: "pick" });
+        emit("选", `第 ${i} 位是数字 ${d[i]}，选字母 <b>${ch}</b>，放进路径。` + (i + 1 < d.length ? `接着去选第 ${i + 1} 位。` : ""), view(i, { pickIdx: i, prevSlot: { [i]: "" } }), { at: "pick" });
         dfs(i + 1);
         path.pop();
-        S("撤销", `把 ${ch} 从路径里拿出来。` + (ch === phone[d[i]].slice(-1) ? `数字 ${d[i]} 的字母都试过了，再往上退一位。` : "换这一位的下一个字母。"), view(i), { at: "undo", kind: "warn" });
+        tried[i].add(ch);
+        emit("撤销", `把 ${ch} 从路径里拿出来。` + (ch === phone[d[i]].slice(-1) ? `数字 ${d[i]} 的字母都试过了，再往上退一位。` : "换这一位的下一个字母。"), view(i, { undoCh: ch, undoIdx: i, prevSlot: { [i]: ch } }), { at: "undo", kind: "warn" });
       }
     };
     dfs(0);
-    snap("完成", `所有选法都走完了，一共 <b>${res.length}</b> 个组合` + (quiet ? "（后面的过程和前面一样，没有逐步演示）。" : "。"), view(-1), { at: "done", kind: "ok", ans: quiet ? res.length : res });
+    shown = true;
+    snap("完成", `所有选法都走完了，一共 <b>${res.length}</b> 个组合` + (quiet ? "（后面的过程和前面一样，没有逐步演示）。" : "。"), view(-1), { at: "done", kind: "ok", ans: quiet ? res.length : res.slice(), facts: [["path", "空"], ["已找到", res.length], ["剩余", d.length]] });
   } },
-{ t: "笛卡尔积", note: "和简洁写法一样：所有组合就是几组字母的笛卡尔积。一位一位地乘上去：已有的每个前缀，后面分别接上这一位的每个字母。", legend: [["a","正在乘上的这一位"],["k","这一轮得到的组合"]], build(a, snap) {
+{ t: "笛卡尔积", note: "和简洁写法一样：所有组合就是几组字母的笛卡尔积。一位一位地乘上去：已有的每个前缀，后面分别接上这一位的每个字母。", legend: [["a","正在乘上的这一位"],["d","已处理完的位"],["c","这一轮得到的组合"]], build(a, snap) {
       const d = a.d, phone = { 2: "abc", 3: "def", 4: "ghi", 5: "jkl", 6: "mno", 7: "pqrs", 8: "tuv", 9: "wxyz" };
       let combos = [""];
       const view = (i) => [
-        { t: "array", label: "digits", items: [...d].map((v, t) => ({ v, cls: t === i ? "a" : t < i ? "d" : "" })), idx: false },
-        { t: "chips", label: i >= 0 && i < d.length ? `数字 ${d[i]} 对应的字母` : "对应的字母", items: i >= 0 && i < d.length ? [...phone[d[i]]] : [], empty: "—" },
-        { t: "chips", label: `组合（${combos.length} 个）`, items: combos.map((c) => ({ v: c === "" ? "空串" : c, cls: i >= 0 ? "k" : "" })) },
+        { t: "array", label: "digits", items: [...d].map((v, t) => ({ v, cls: t === i ? "a" : t < i ? "d" : "" })), idx: false, ptrs: { i: i >= 0 && i < d.length ? i : null } },
+        { t: "chips", label: i >= 0 && i < d.length ? `数字 ${d[i]} 对应的字母` : "对应的字母", items: i >= 0 && i < d.length ? [...phone[d[i]]].map((c) => ({ v: c, cls: "a" })) : [], empty: "—" },
+        { t: "chips", label: `组合（${combos.length} 个）`, items: combos.map((c) => ({ v: c === "" ? "空串" : c, cls: i >= 0 ? "c" : "" })) },
       ];
-      if (!d.length) { snap("完成", "digits 是空的，返回 []。", view(-1), { at: "empty", kind: "ok", ans: [] }); return; }
-      snap("开始", "一开始只有一个空前缀。", view(-1), { at: "init" });
+      if (!d.length) { snap("完成", "digits 是空的，返回 []。", view(-1), { at: "empty", kind: "ok", ans: [], facts: [["已处理", "0 位"], ["组合数", 0], ["剩余", 0]] }); return; }
+      snap("开始", "一开始只有一个空前缀。", view(-1), { at: "init", facts: [["已处理", "0 位"], ["组合数", 1], ["剩余", d.length]] });
       for (let i = 0; i < d.length; i++) {
         const L = phone[d[i]], old = combos.length;
         combos = combos.flatMap((c) => [...L].map((ch) => c + ch));
-        snap(`乘上第 ${i} 位`, `第 ${i} 位是 ${d[i]}，对应 ${L.length} 个字母。已有的 ${old} 个前缀后面各接一个字母，变成 ${old} × ${L.length} = <b>${combos.length}</b> 个。`, view(i), { at: "mul" });
+        snap(`乘上第 ${i} 位`, `第 ${i} 位是 ${d[i]}，对应 ${L.length} 个字母。已有的 ${old} 个前缀后面各接一个字母，变成 ${old} × ${L.length} = <b>${combos.length}</b> 个。`, view(i), { at: "mul", facts: [["已处理", `${i + 1} 位`, `${i} 位`], ["组合数", combos.length, old], ["剩余", d.length - (i + 1), d.length - i]] });
       }
-      snap("完成", `一共 <b>${combos.length}</b> 个组合，顺序和回溯的结果一样。`, view(-1), { at: "done", kind: "ok", ans: d.length > 2 ? combos.length : combos });
+      snap("完成", `一共 <b>${combos.length}</b> 个组合，顺序和回溯的结果一样。`, view(-1), { at: "done", kind: "ok", ans: d.length > 2 ? combos.length : combos.slice(), facts: [["已处理", `${d.length} 位`], ["组合数", combos.length], ["剩余", 0]] });
     } }
 ] };
 (function () {

@@ -24,7 +24,7 @@ assert s.twoSum([2,7,11,15], 9) == [0,1]
 assert s.twoSum([3,2,4], 6) == [1,2]
 assert s.twoSum([3,3], 6) == [0,1]
 `,
-  legend: [["a", "当前的数"], ["d", "已经记进哈希表"], ["c", "找到的一对"]],
+  legend: [["a", "当前的数 / 刚存入"], ["d", "已存入哈希表"], ["c", "找到的一对"]],
   presets: [
     { label: "示例 1", args: { nums: [2, 7, 11, 15], target: 9 }, note: "nums = [2,7,11,15], target = 9", expect: [0, 1] },
     { label: "示例 2", args: { nums: [3, 2, 4], target: 6 }, note: "nums = [3,2,4], target = 6", expect: [1, 2] },
@@ -32,21 +32,48 @@ assert s.twoSum([3,3], 6) == [0,1]
   ],
   build(a, snap) {
     const { nums, target } = a, seen = new Map();
-    const view = (i, hit) => [
-      { t: "array", label: "nums", items: nums.map((v, j) => ({ v, cls: hit && (j === i || j === hit[0]) ? "c" : j === i ? "a" : j < i ? "d" : "" })), ptrs: { i } },
-      { t: "chips", label: "哈希表 seen（数值 → 下标）", items: [...seen].map(([k, v]) => ({ v: `${k} → ${v}`, cls: hit && v === hit[0] ? "c" : "" })) },
+    const view = (i, hit, opts = {}) => [
+      {
+        t: "array",
+        label: "nums",
+        items: nums.map((v, j) => ({ v, cls: hit && (j === i || j === hit[0]) ? "c" : j === i ? "a" : j < i ? "d" : "" })),
+        ptrs: { i: i >= 0 && i < nums.length ? i : null },
+      },
+      {
+        t: "chips",
+        label: "哈希表 seen（数值 → 下标）",
+        items: [...seen].map(([k, v]) => ({ v: `${k} → ${v}`, cls: hit && v === hit[0] ? "c" : opts.justSaved === k ? "a" : "" })),
+        empty: "空",
+      },
     ];
-    snap("开始", `目标是找两个数加起来等于 <b>${target}</b>。从左往右走，哈希表一开始是空的。`, view(-1), { at: "init", facts: [["target", target]] });
+    let prevX = "—", prevNeed = "—";
+    snap("开始", `目标是找两个数加起来等于 <b>${target}</b>。从左往右走，哈希表一开始是空的。`, view(-1), {
+      at: "init",
+      facts: [["target", target], ["当前 x", "—"], ["需要", "—"], ["已存", 0]],
+    });
     for (let i = 0; i < nums.length; i++) {
       const x = nums[i], need = target - x;
       if (seen.has(need)) {
         const hit = [seen.get(need), i];
-        snap("找到", `当前 ${x}，需要 ${target} − ${x} = <b>${need}</b>。哈希表里有它，下标是 ${hit[0]}。答案是 [${hit[0]}, ${i}]。`, view(i, hit), { at: ["check", "found"], kind: "ok", ans: hit, facts: [["target", target], ["需要", need]] });
+        snap("找到配对", `当前 ${x}，需要 ${target} − ${x} = <b>${need}</b>。哈希表里已有 ${need}（下标 ${hit[0]}），答案是 [${hit[0]}, ${i}]。`, view(i, hit), {
+          at: ["check", "found"],
+          kind: "ok",
+          ans: hit.slice(),
+          facts: [["target", target], ["当前 x", x, prevX], ["需要", need, prevNeed], ["已存", seen.size]],
+        });
         return;
       }
-      snap("先查", `当前 ${x}，需要 ${target} − ${x} = <b>${need}</b>。哈希表里没有 ${need}。`, view(i), { at: "check", facts: [["target", target], ["需要", need]] });
+      snap("先查哈希表", `当前 ${x}，需要 ${target} − ${x} = <b>${need}</b>。哈希表里还没有 ${need}。`, view(i), {
+        at: "check",
+        facts: [["target", target], ["当前 x", x, prevX], ["需要", need, prevNeed], ["已存", seen.size]],
+      });
+      const oldSize = seen.size;
       seen.set(x, i);
-      snap("再存", `把 ${x} 和它的下标 ${i} 记进哈希表，留给后面的数来查。`, view(i), { at: "save", facts: [["target", target], ["需要", need]] });
+      snap("再存入哈希表", `把 ${x} → ${i} 记进哈希表，留给后面的数来查。`, view(i, null, { justSaved: x }), {
+        at: "save",
+        facts: [["target", target], ["当前 x", x], ["需要", need], ["已存", seen.size, oldSize]],
+      });
+      prevX = x; prevNeed = need;
     }
   },
   points: [
