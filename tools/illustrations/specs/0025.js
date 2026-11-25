@@ -75,11 +75,11 @@ assert toL(s.reverseKGroup(L([1]), 1)) == [1]
    */
   build(a, snap) {
     const k = a.k;
-    let o = ["D", ...a.v], nx = o.map((_, i) => (i + 1 < o.length ? i + 1 : null)), done = 0; // done：前面已经翻好的到第几号（不含 group_prev）
+    let o = ["D", ...a.v], nx = o.map((_, i) => (i + 1 < o.length ? i + 1 : null)), done = 0, groups = 0; // done：前面已经翻好的到第几号（不含 group_prev）
     const name = (i) => (i === null || i === undefined ? "空" : o[i]);
     // st：这一步的指针（位置下标）和标记：lo..hi 是这一组（数的时候 hi 是 kth 数到哪儿）；hot：这一行改了谁的 next
     const view = (st = {}, hot = []) => [{
-      t: "list", label: "链表（D 是哑节点；掉头的箭头画在下面）",
+      t: "list", label: "链表（D 是哑节点；虚红线 × 表示断开的旧指针，掉头的箭头画在下面）",
       nodes: o.map((v, i) => {
         let cls = "";
         if (i === st.gp) cls = "g";
@@ -90,8 +90,15 @@ assert toL(s.reverseKGroup(L([1]), 1)) == [1]
       }),
       next: nx.slice(),
       ptrs: { dummy: st.dummy, group_prev: st.gp, kth: st.kth, group_next: st.gn, prev: st.prev, cur: st.cur, nxt: st.nxt, first: st.first },
+      ...(st.ghostEdges && st.ghostEdges.length ? { ghostEdges: st.ghostEdges.map((e) => e.slice()) } : {}),
+      ...(st.animEdges && st.animEdges.length ? { animEdges: st.animEdges.slice() } : {}),
     }];
-    const facts = (gn) => [["k", k], ...(gn !== undefined ? [["group_next", name(gn)]] : [])];
+    const facts = (gn, opts = {}) => [
+      ["k", k],
+      ["已翻组数", groups, opts.prevGroups],
+      ...(gn !== undefined ? [["group_next", name(gn)]] : []),
+      ...(opts.flipCnt !== undefined ? [["组内已掉头", `${opts.flipCnt}/${k}`, opts.prevFlipCnt !== undefined ? `${opts.prevFlipCnt}/${k}` : undefined]] : []),
+    ];
     snap("dummy = ListNode(0, head)", "在最前面放一个哑节点 D，D.next 是原来的头 " + name(1) + "。这样第一组前面也有一个节点，接头时不用单独处理。", view({ dummy: 0 }), { at: "dummy", facts: facts() });
     let gp = 0;
     snap("group_prev = dummy", "group_prev 永远是「这一组前面的那个节点」：这一组翻好以后要靠它接上新的头。第一组前面就是 D。", view({ dummy: 0, gp }), { at: "gp0", facts: facts() });
@@ -125,27 +132,41 @@ assert toL(s.reverseKGroup(L([1]), 1)) == [1]
       const flipped = new Set();
       while (cur !== gn) {
         const nxt = nx[cur];
-        snap("nxt = cur.next", `先用 nxt 记住 ${o[cur]} 的下一个：${name(nxt)}。下一行要改 ${o[cur]}.next，不先记下就走不到后面了。`, view({ ...base, gn, prev, cur, nxt, flipped }), { at: "save", facts: facts(gn) });
+        snap("nxt = cur.next", `先用 nxt 记住 ${o[cur]} 的下一个：${name(nxt)}。下一行要改 ${o[cur]}.next，不先记下就走不到后面了。`, view({ ...base, gn, prev, cur, nxt, flipped }), { at: "save", facts: facts(gn, { flipCnt: flipped.size }) });
         nx[cur] = prev;
+        const prevFlipCnt = flipped.size;
         flipped.add(cur);
-        snap("cur.next = prev", `${o[cur]}.next 改成指向 prev（${name(prev)}）。${cur === lo ? `${o[cur]} 直接接上了下一组（这就是 prev 从 group_next 开始的好处）。` : "这根箭头掉了头：从往后指变成往前指。"}`, view({ ...base, gn, prev, cur, nxt, flipped }, [cur]), { at: "flip", facts: facts(gn) });
+        snap(
+          "cur.next = prev",
+          `${o[cur]}.next 改成指向 prev（${name(prev)}）${nxt !== null ? `，断开原本指往 ${name(nxt)} 的箭头` : ""}。${cur === lo ? `${o[cur]} 直接接上了下一组（这就是 prev 从 group_next 开始的好处）。` : "这根箭头掉了头：从往后指变成往前指。"}`,
+          view({ ...base, gn, prev, cur, nxt, flipped, animEdges: [cur], ...(nxt !== null ? { ghostEdges: [[cur, nxt]] } : {}) }, [cur]),
+          { at: "flip", facts: facts(gn, { flipCnt: flipped.size, prevFlipCnt }) },
+        );
         prev = cur;
-        snap("prev = cur", `prev 前进到 ${o[prev]}：下一个节点要指回它。`, view({ ...base, gn, prev, cur, nxt, flipped }), { at: "mprev", facts: facts(gn) });
+        snap("prev = cur", `prev 前进到 ${o[prev]}：下一个节点要指回它。`, view({ ...base, gn, prev, cur, nxt, flipped }), { at: "mprev", facts: facts(gn, { flipCnt: flipped.size }) });
         cur = nxt;
-        snap("cur = nxt", cur === gn ? `cur 前进到 ${name(cur)}，也就是 group_next。` : `cur 前进到 ${o[cur]}。注意 group_prev（${name(gp)}）还指着 ${o[lo]}：这一组还没接回去。`, view({ ...base, gn, prev, cur, flipped }), { at: "mcur", facts: facts(gn) });
+        snap("cur = nxt", cur === gn ? `cur 前进到 ${name(cur)}，也就是 group_next。` : `cur 前进到 ${o[cur]}。注意 group_prev（${name(gp)}）还指着 ${o[lo]}：这一组还没接回去。`, view({ ...base, gn, prev, cur, flipped }), { at: "mcur", facts: facts(gn, { flipCnt: flipped.size }) });
       }
-      snap("while cur is not group_next", `cur 已经是 group_next，循环结束：这一组的 ${k} 根箭头都掉了头。prev 停在 ${o[prev]}，它是这一组新的头。`, view({ ...base, gn, prev, cur, flipped }), { at: "exit", facts: facts(gn) });
+      snap("while cur is not group_next", `cur 已经是 group_next，循环结束：这一组的 ${k} 根箭头都掉了头。prev 停在 ${o[prev]}，它是这一组新的头。`, view({ ...base, gn, prev, cur, flipped }), { at: "exit", facts: facts(gn, { flipCnt: flipped.size }) });
       // 四、接回前面
-      snap("first = group_prev.next", `group_prev（${name(gp)}）的 next 还指着这一组原来的头 ${o[lo]}。它现在是这一组的尾巴，也是下一组前面的那个节点，先用 first 记住。`, view({ ...base, gn, prev, first: lo, flipped }), { at: "first", facts: facts(gn) });
+      snap("first = group_prev.next", `group_prev（${name(gp)}）的 next 还指着这一组原来的头 ${o[lo]}。它现在是这一组的尾巴，也是下一组前面的那个节点，先用 first 记住。`, view({ ...base, gn, prev, first: lo, flipped }), { at: "first", facts: facts(gn, { flipCnt: flipped.size }) });
+      const oldGpNext = nx[gp];
       nx[gp] = hi;
-      snap("group_prev.next = kth", `${name(gp)}.next 改成指向 kth（${o[hi]}）：前面接上了这一组新的头。现在 ${name(gp)} → ${o.slice(lo, hi + 1).reverse().join(" → ")} → ${name(gn)}。`, view({ ...base, gn, prev, first: lo, flipped }, [gp]), { at: "link", facts: facts(gn) });
+      const prevGroups = groups;
+      groups += 1;
+      snap(
+        "group_prev.next = kth",
+        `${name(gp)}.next 改成指向 kth（${o[hi]}）：前面接上了这一组新的头，断开原来指往 ${name(oldGpNext)} 的箭头。现在 ${name(gp)} → ${o.slice(lo, hi + 1).reverse().join(" → ")} → ${name(gn)}。`,
+        view({ ...base, gn, prev, first: lo, flipped, animEdges: [gp], ghostEdges: [[gp, oldGpNext]] }, [gp]),
+        { at: "link", facts: facts(gn, { prevGroups }) },
+      );
       // group_prev 移到 first；按新的链接顺序把链表重新排一遍
       const order = []; for (let j = 0; j !== null; j = nx[j]) order.push(j);
       const firstLabel = o[lo];
       o = order.map((j) => o[j]);
       nx = o.map((_, j) => (j + 1 < o.length ? j + 1 : null));
       done = hi;
-      gp = o.indexOf(firstLabel);
+      gp = order.indexOf(lo);
       snap("group_prev = first", `group_prev 移到 first（${firstLabel}），下一组从它后面开始。（按新的链接顺序重新排了一下：${o.slice(1).join(" → ")}。）`, view({ gp }), { at: "next", facts: facts() });
     }
     snap("完成", `返回的 dummy.next 就是结果：[${o.slice(1).join(", ")}]。`, view({}), { at: "ret", kind: "ok", ans: o.slice(1), facts: facts() });

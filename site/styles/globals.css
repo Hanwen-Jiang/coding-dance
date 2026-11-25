@@ -90,7 +90,6 @@ html {
 .demo svg.dm-g2 .ah { fill: var(--muted); }
 .demo svg.dm-g2 .ah-on { fill: var(--dm-accent); }
 .demo svg.dm-g2 .ah-cut { fill: var(--danger, oklch(0.62 0.21 25)); }
-.demo svg.dm-g2 .dm-tnode { transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1); }
 .demo .dm-fx-run svg.dm-g2 .dm-tnode.dm-tswap circle.n { animation: dm-node-pop 0.5s ease both; }
 .demo svg.dm-g2 text.dm-lr { font-size: 9px; font-weight: 700; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 .demo svg.dm-g2 text.dm-cut-x { font-size: 13px; font-weight: 700; fill: var(--danger, oklch(0.62 0.21 25)); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }

@@ -60,25 +60,91 @@ for vals, pos in [([3,2,0,-4],1), ([1,2],0), ([1],-1), ([1,2,3,4,5,6,7],3), ([1]
     { label: "没有环", args: { v: [1, 2, 3], pos: -1 }, note: "head = [1,2,3], pos = -1", expect: null },
   ],
   build(a, snap) {
-    const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null));
+    const v = a.v, n = v.length;
+    const next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null));
+    if (!n) {
+      snap("空链表", "链表是空的，没有环，返回空。", [{ t: "note", label: "链表", html: "空" }], { at: "none", kind: "warn", ans: null });
+      return;
+    }
     let slow = 0, fast = 0, p = null;
-    const view = (entry) => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === entry ? "c" : i === slow ? "a" : i === p ? "g" : i === fast ? "b" : "" })), next, ptrs: p === null ? { slow, fast } : { p, slow } }];
-    snap("第一阶段", "slow 每次走一步，fast 每次走两步，先找到相遇点。", view(), { at: "init" });
+    let sSteps = 0, fSteps = 0, pSteps = 0;
+    const view = (opts = {}) => [{
+      t: "list",
+      label: "链表（实线弧线是尾节点接回环入口的指针）",
+      nodes: v.map((x, i) => ({
+        v: x,
+        cls: i === opts.entry ? "c" : i === slow ? "a" : i === p ? "g" : i === fast ? "b" : "",
+        ...(opts.hot && opts.hot.includes(i) ? { ecls: "on" } : {}),
+      })),
+      next: next.slice(),
+      ptrs: p === null ? { slow, fast } : { p, slow },
+      ...(opts.animEdges ? { animEdges: opts.animEdges.slice() } : {}),
+    }];
+    snap("slow = fast = head", "第一阶段：slow 每次走 1 步，fast 每次走 2 步，从头节点出发寻找相遇点。", view(), {
+      at: "init",
+      facts: [["阶段", "1. 找相遇点"], ["slow 步数", 0], ["fast 步数", 0]],
+    });
     let met = false;
     while (fast !== null && next[fast] !== null) {
-      slow = next[slow]; fast = next[next[fast]];
-      if (slow === fast) { met = true; break; }
-      snap("第一阶段", `slow 到 ${v[slow]}，fast ${fast === null ? "走出了链表" : "到 " + v[fast]}。`, view(), { at: "step" });
+      const prevS = slow, prevF1 = fast, prevF2 = next[fast];
+      slow = next[slow];
+      fast = next[next[fast]];
+      sSteps += 1;
+      fSteps += 2;
+      const hot = [prevS, prevF1, ...(prevF2 !== null ? [prevF2] : [])];
+      if (slow === fast) {
+        met = true;
+        snap("相遇！有环", `slow 走 1 步、fast 走 2 步后在 <b>${v[slow]}</b>（下标 ${slow}）相遇，说明链表有环！但相遇点一般不是环的入口。`, view({ hot, animEdges: hot }), {
+          at: ["step", "meet"],
+          facts: [["阶段", "已相遇", "1. 找相遇点"], ["slow 步数", sSteps, sSteps - 1], ["fast 步数", fSteps, fSteps - 2]],
+        });
+        break;
+      }
+      snap("各走一步/两步", `slow 走到 <b>${v[slow]}</b>，fast ${fast === null ? "走出了链表" : `走到 <b>${v[fast]}</b>`}。`, view({ hot, animEdges: hot }), {
+        at: "step",
+        facts: [["阶段", "1. 找相遇点"], ["slow 步数", sSteps, sSteps - 1], ["fast 步数", fSteps, fSteps - 2]],
+      });
     }
-    if (!met) { snap("没有环", "fast 走到了尽头，链表没有环，返回空。", view(), { at: "none", kind: "warn", ans: null }); return; }
-    snap("相遇", `slow 和 fast 在 ${v[slow]} 相遇，说明有环。但这里不一定是入口。`, view(), { at: ["step", "meet"] });
-    fast = null; p = 0;
-    snap("第二阶段", "让一个新指针 p 从头节点出发，slow 留在相遇点。接下来两个指针每次都只走一步。", view(), { at: "meet" });
+    if (!met) {
+      snap("没有环", "fast 走到了尽头（空），链表没有环，返回空。", view(), {
+        at: "none",
+        kind: "warn",
+        ans: null,
+        facts: [["阶段", "无环", "1. 找相遇点"], ["slow 步数", sSteps], ["fast 步数", fSteps]],
+      });
+      return;
+    }
+    fast = null;
+    p = 0;
+    snap("p = head（第二阶段）", `设指针 p 从头节点 <b>${v[0]}</b> 出发，slow 留在相遇点 <b>${v[slow]}</b>。接下来两边每次都只走 1 步。`, view(), {
+      at: "meet",
+      facts: [["阶段", "2. 找入口", "已相遇"], ["p 步数", 0], ["slow 步数", sSteps]],
+    });
     while (p !== slow) {
-      p = next[p]; slow = next[slow];
-      if (p !== slow) snap("第二阶段", `p 走到 ${v[p]}，slow 走到 ${v[slow]}。`, view(), { at: "walk" });
+      const prevP = p, prevS = slow;
+      p = next[p];
+      slow = next[slow];
+      pSteps += 1;
+      sSteps += 1;
+      if (p !== slow) {
+        snap("两边各走一步", `p 往前走到 <b>${v[p]}</b>，slow 往前走到 <b>${v[slow]}</b>，还没相遇，继续走。`, view({ hot: [prevP, prevS], animEdges: [prevP, prevS] }), {
+          at: "walk",
+          facts: [["阶段", "2. 找入口"], ["p 步数", pSteps, pSteps - 1], ["slow 步数", sSteps, sSteps - 1]],
+        });
+      } else {
+        snap("再次相遇", `p 走到 <b>${v[p]}</b>，slow 也走到了 <b>${v[slow]}</b>，两个指针重合！`, view({ hot: [prevP, prevS], animEdges: [prevP, prevS] }), {
+          at: "walk",
+          facts: [["阶段", "2. 找入口"], ["p 步数", pSteps, pSteps - 1], ["slow 步数", sSteps, sSteps - 1]],
+        });
+      }
     }
-    snap("找到入口", `p 和 slow 在 <b>${v[p]}</b> 相遇，这里就是环的入口（下标 ${p}）。`, view(p), { at: "entry", kind: "ok", ans: p });
+    const backHot = a.pos >= 0 ? [n - 1] : [];
+    snap("找到入口", `p 和 slow 在 <b>${v[p]}</b> 相遇，这里就是环的入口（下标 ${p}）。`, view({ entry: p, hot: backHot, animEdges: backHot }), {
+      at: "entry",
+      kind: "ok",
+      ans: p,
+      facts: [["阶段", "找到入口", "2. 找入口"], ["入口下标", p], ["p 步数", pSteps]],
+    });
   },
   alts: [{
     t: "集合",
@@ -86,20 +152,60 @@ for vals, pos in [([3,2,0,-4],1), ([1,2],0), ([1],-1), ([1,2,3,4,5,6,7],3), ([1]
     note: "和简洁写法一样：把走过的节点放进集合，第一个第二次走到的节点就是环的入口。要 O(n) 额外空间。",
     legend: [["a", "当前节点"], ["e", "已经在 seen 里"], ["c", "环的入口"]],
     build(a, snap) {
-      const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null)), seen = [];
-      let h = n ? 0 : null;
-      const view = (hit) => [
-        { t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === hit ? "c" : i === h ? "a" : seen.includes(i) ? "e" : "" })), next, ptrs: { head: h } },
-        { t: "chips", label: "seen（存的是节点本身，这里写成 值#下标）", items: seen.map((i) => `${v[i]}#${i}`), empty: "空" },
-      ];
-      snap("开始", "从头节点出发，把走过的每个节点都放进集合 seen。", view(-1), { at: "init", facts: [["seen 大小", 0]] });
-      while (h !== null && !seen.includes(h)) {
-        seen.push(h);
-        const cur = h; h = next[h];
-        snap("记下", `${v[cur]}#${cur} 第一次走到，放进 seen，再走到${h === null ? "空" : ` ${v[h]}#${h}`}。`, view(-1), { at: "add", facts: [["seen 大小", seen.length]] });
+      const v = a.v, n = v.length;
+      const next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null));
+      if (!n) {
+        snap("空链表", "链表是空的，没有环，返回空。", [{ t: "note", label: "链表", html: "空" }], { at: "none", kind: "warn", ans: null });
+        return;
       }
-      if (h === null) snap("没有环", "走到了空，链表没有环，返回空。", view(-1), { at: "none", kind: "warn", ans: null, facts: [["seen 大小", seen.length]] });
-      else snap("找到入口", `${v[h]}#${h} 已经在 seen 里了。它是第一个被走到两次的节点：从链表尾巴绕回来的箭头指的就是它，所以它是环的入口（下标 ${h}）。`, view(h), { at: "found", kind: "ok", ans: h, facts: [["seen 大小", seen.length]] });
+      const seen = [];
+      let h = 0;
+      const view = (opts = {}) => [
+        {
+          t: "list",
+          label: "链表",
+          nodes: v.map((x, i) => ({
+            v: x,
+            cls: i === opts.hit ? "c" : i === h ? "a" : seen.includes(i) ? "e" : "",
+            ...(opts.hot === i ? { ecls: "on" } : {}),
+          })),
+          next: next.slice(),
+          ptrs: { head: h },
+          ...(opts.animEdges ? { animEdges: opts.animEdges.slice() } : {}),
+        },
+        {
+          t: "chips",
+          label: "seen（存的是节点本身，这里写成 值#下标）",
+          items: seen.map((i) => ({ v: `${v[i]}#${i}`, cls: i === opts.added ? "a" : i === opts.hit ? "c" : "" })),
+          empty: "空",
+        },
+      ];
+      snap("seen = set()", "从头节点出发，把走过的每个节点都放进集合 seen。", view(), { at: "init", facts: [["seen 大小", 0]] });
+      while (h !== null && !seen.includes(h)) {
+        const cur = h;
+        const prevSize = seen.length;
+        seen.push(cur);
+        snap("seen.add(head)", `${v[cur]}#${cur} 不在 seen 里，它是第一次走到，放进 seen。`, view({ added: cur }), {
+          at: "add",
+          facts: [["seen 大小", seen.length, prevSize]],
+        });
+        h = next[cur];
+        snap("head = head.next", `head 往前移动到${h === null ? "空（链表末尾）" : ` <b>${v[h]}#${h}</b>`}。`, view({ hot: h !== null ? cur : undefined, animEdges: h !== null ? [cur] : undefined }), {
+          at: "add",
+          facts: [["seen 大小", seen.length]],
+        });
+      }
+      if (h === null) {
+        snap("没有环", "走到了空，链表没有环，返回空。", view(), { at: "none", kind: "warn", ans: null, facts: [["seen 大小", seen.length]] });
+      } else {
+        const backHot = a.pos >= 0 ? [n - 1] : [];
+        snap("找到入口", `${v[h]}#${h} 已经在 seen 里了！它是第一个被走到两次的节点，就是环的入口（下标 ${h}）。`, view({ hit: h, hot: backHot[0], animEdges: backHot }), {
+          at: "found",
+          kind: "ok",
+          ans: h,
+          facts: [["seen 大小", seen.length], ["入口下标", h]],
+        });
+      }
     },
   }],
   points: [

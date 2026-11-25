@@ -436,8 +436,10 @@ const SPEC = { presets: [{"label":"示例 1","args":{"iv":[[1,3],[2,6],[8,10],[1
     nodes.forEach((nd, i) => {
       if (nd.hide) return;
       const c = (nd.cls || "").split(" ")[0];
+      const nodeHasPrev = nd.prev !== undefined && String(nd.prev) !== String(nd.v);
       s += `<rect class="n ${nd.cls || ""}" x="${cx(i) - BW / 2}" y="${Y - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
       s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx(i)}" y="${Y}">${show(nd.v)}</text>`;
+      if (nodeHasPrev) s += `<text class="tprev" x="${cx(i)}" y="${Y - BH / 2 - 7}">${show(nd.prev)}→</text>`;
       (pm[String(i)] || []).forEach((nm, k) => { s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`; });
     });
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;

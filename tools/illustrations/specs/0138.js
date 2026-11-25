@@ -74,22 +74,90 @@ for data in [[[7,None],[13,0],[11,4],[10,2],[1,0]], [[1,1],[2,1]], [[3,None],[3,
     { label: "示例 2", args: { d: [[1, 1], [2, 1]] }, note: "head = [[1,1],[2,1]]", expect: [[1, 1], [2, 1]] },
   ],
   build(a, snap) {
-    const d = a.d, n = d.length, made = [], nnext = d.map(() => null), nrand = [];
-    const view = (i) => [
-      { t: "list", label: "原链表（实线 next，虚线 random）", nodes: d.map(([v], t) => ({ v, cls: t === i ? "a" : "" })), extra: d.map(([, r], t) => [t, r]).filter(([, r]) => r !== null), ptrs: { cur: i >= 0 && i < n ? i : null } },
-      { t: "chips", label: "哈希表（旧节点 → 新节点）", items: made.map((t) => `旧 ${d[t][0]} → 新 ${d[t][0]}`), empty: "空" },
-      { t: "list", label: "新链表", nodes: d.map(([v], t) => ({ v, cls: "k", hide: !made.includes(t) })), next: nnext.slice(), showNil: false, extra: nrand.slice() },
+    const d = a.d, n = d.length, made = [], nnext = d.map(() => null), nrand = [], linkedNext = new Set();
+    if (!n) {
+      snap("完成", "链表是空的，直接返回空。", [{ t: "note", label: "链表", html: "空" }], { at: "done", kind: "ok", ans: [] });
+      return;
+    }
+    const view = (i, opts = {}) => [
+      {
+        t: "list",
+        label: "原链表（实线 next，虚线 random）",
+        nodes: d.map(([v], t) => ({ v, cls: t === i ? "a" : "" })),
+        next: d.map((_, t) => (t + 1 < n ? t + 1 : null)),
+        extra: d.map(([, r], t) => [t, r]).filter(([, r]) => r !== null),
+        ptrs: { cur: i >= 0 && i < n ? i : null },
+      },
+      {
+        t: "chips",
+        label: "哈希表 m（旧节点 → 新节点）",
+        items: made.map((t) => ({ v: `旧 ${d[t][0]}#${t} → 新 ${d[t][0]}#${t}`, cls: t === i ? "a" : "k" })),
+        empty: "空",
+      },
+      {
+        t: "list",
+        label: "新链表（虚线 random）",
+        nodes: d.map(([v], t) => ({
+          v,
+          cls: t === i && opts.hlNew ? "a" : "k",
+          hide: !made.includes(t),
+          noNil: nnext[t] === null && !linkedNext.has(t),
+          ...(opts.hot === t ? { ecls: "on" } : {}),
+        })),
+        next: nnext.slice(),
+        extra: nrand.map((pair) => pair.slice()),
+        ptrs: { "m[cur]": opts.showNewPtr && i >= 0 && i < n ? i : null },
+        ...(opts.animEdges && opts.animEdges.length ? { animEdges: opts.animEdges.slice() } : {}),
+      },
     ];
-    snap("开始", "分两遍。第一遍只造新节点，不连任何指针。", view(-1), { at: "init" });
-    for (let i = 0; i < n; i++) { made.push(i); snap("第一遍：造节点", `为旧节点 ${d[i][0]} 造一个值相同的新节点，在哈希表里记下对应关系。`, view(i), { at: "make" }); }
-    snap("第二遍", "所有新节点都有了。再走一遍，照着旧节点的 next 和 random，把新节点连起来。", view(-1), { at: "link" });
+    snap("开始", "分两遍。第一遍只造新节点，并用哈希表 m 记下每个旧节点对应哪个新节点。", view(-1), {
+      at: "init",
+      facts: [["阶段", "准备"], ["已造节点", 0]],
+    });
     for (let i = 0; i < n; i++) {
-      nnext[i] = i + 1 < n ? i + 1 : null;
+      const prevMade = made.length;
+      made.push(i);
+      snap(
+        "第一遍：造节点",
+        `为旧节点 <b>${d[i][0]}#${i}</b> 造一个值相同的新节点，并在哈希表 m 里记下映射关系。`,
+        view(i, { hlNew: true, showNewPtr: true }),
+        { at: "make", facts: [["阶段", "第一遍：造节点", i === 0 ? "准备" : undefined], ["已造节点", made.length, prevMade]] },
+      );
+    }
+    snap("第二遍", "所有新节点都造好了，cur 回到头节点。再走一遍，照着旧节点的 next 和 random 把新节点连起来。", view(-1), {
+      at: "link",
+      facts: [["阶段", "第二遍：连指针", "第一遍：造节点"], ["已造节点", n], ["已连指针", 0]],
+    });
+    let links = 0;
+    for (let i = 0; i < n; i++) {
+      const nxt = i + 1 < n ? i + 1 : null;
+      nnext[i] = nxt;
+      linkedNext.add(i);
+      const prevLinks1 = links;
+      links += 1;
+      snap(
+        "连 next 指针",
+        `旧节点 <b>${d[i][0]}#${i}</b> 的 next 是${nxt !== null ? ` <b>${d[nxt][0]}#${nxt}</b>，查表让新节点 next 指向 <b>新 ${d[nxt][0]}#${nxt}</b>` : "<b>空</b>，新节点 next 也指向空"}。`,
+        view(i, { hlNew: true, showNewPtr: true, hot: i, animEdges: [i] }),
+        { at: "link", facts: [["阶段", "第二遍：连指针"], ["已造节点", n], ["已连指针", links, prevLinks1]] },
+      );
       const r = d[i][1];
       if (r !== null) nrand.push([i, r]);
-      snap("第二遍：连指针", `旧 ${d[i][0]} 的 next 是${i + 1 < n ? " " + d[i + 1][0] : "空"}，random 是${r === null ? "空" : " " + d[r][0]}。查表，让新 ${d[i][0]} 的 next 指向${i + 1 < n ? "新 " + d[i + 1][0] : "空"}，random 指向${r === null ? "空" : "新 " + d[r][0]}。`, view(i), { at: "link" });
+      const prevLinks2 = links;
+      links += 1;
+      snap(
+        "连 random 指针",
+        `旧节点 <b>${d[i][0]}#${i}</b> 的 random 是${r === null ? "<b>空</b>，m.get(None) 返回空，新节点 random 也指向空" : ` <b>${d[r][0]}#${r}</b>，查表让新节点 random 指向 <b>新 ${d[r][0]}#${r}</b>`}。`,
+        view(i, { hlNew: true, showNewPtr: true }),
+        { at: "link", facts: [["阶段", "第二遍：连指针"], ["已造节点", n], ["已连指针", links, prevLinks2]] },
+      );
     }
-    snap("完成", "新链表的结构和原链表一模一样，但每个节点都是新造的。返回表里头节点对应的新节点。", view(-1), { at: "done", kind: "ok", ans: d });
+    snap("完成", `新链表的结构和原链表一模一样，但每个节点都是新造的。返回 m[head]（<b>新 ${d[0][0]}#0</b>）。`, view(-1), {
+      at: "done",
+      kind: "ok",
+      ans: d.map(([v, r]) => [v, r]),
+      facts: [["阶段", "完成", "第二遍：连指针"], ["已造节点", n], ["已连指针", links]],
+    });
   },
   points: [
     { t: "用 m.get 处理空指针", body: "<code>m.get(None)</code> 返回 <code>None</code>，正好对应「旧指针是空，新指针也是空」，不用单独判断。" },

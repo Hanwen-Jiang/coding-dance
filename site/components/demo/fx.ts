@@ -65,7 +65,9 @@ function centerIn(el: Element, wrap: Element): { x: number; y: number; w: number
   };
 }
 
-function runSwaps(scroll: HTMLElement, arr: HTMLElement, swaps: [number, number][], reduce: boolean) {
+type SwapPair = [number, number] | [[number, number], [number, number]];
+
+function runSwaps(scroll: HTMLElement, arr: HTMLElement, swaps: SwapPair[], reduce: boolean) {
   if (!swaps.length) return;
   const w = Math.max(scroll.scrollWidth, scroll.clientWidth);
   const h = Math.max(scroll.scrollHeight, scroll.clientHeight);
@@ -75,7 +77,60 @@ function runSwaps(scroll: HTMLElement, arr: HTMLElement, swaps: [number, number]
   const mid = `dmfxsw${fxUid++}`;
   addMarker(svg, mid, "dm-fx-ah");
 
-  for (const [i, j] of swaps) {
+  for (const pair of swaps) {
+    if (Array.isArray(pair[0]) && Array.isArray(pair[1])) {
+      const [r1, c1] = pair[0];
+      const [r2, c2] = pair[1];
+      if (r1 === r2 && c1 === c2) continue;
+      const aEl = arr.querySelector<HTMLElement>(`[data-rc="${r1},${c1}"]`);
+      const bEl = arr.querySelector<HTMLElement>(`[data-rc="${r2},${c2}"]`);
+      if (!aEl || !bEl) continue;
+
+      const ca = centerIn(aEl, scroll);
+      const cb = centerIn(bEl, scroll);
+      const dx = cb.x - ca.x, dy = cb.y - ca.y, dist = Math.hypot(dx, dy) || 1;
+      let nx = -dy / dist, ny = dx / dist;
+      if (ny > 0) { nx = -nx; ny = -ny; }
+      const bow = Math.min(34, 14 + dist * 0.16);
+      const cx = (ca.x + cb.x) / 2 + nx * bow;
+      const cy = Math.max(8, (ca.y + cb.y) / 2 + ny * bow);
+      const p1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p1.setAttribute("class", "dm-fx-swap-arc");
+      p1.setAttribute("marker-start", `url(#${mid})`);
+      p1.setAttribute("marker-end", `url(#${mid})`);
+      p1.setAttribute("d", `M${ca.x} ${ca.y} Q${cx} ${cy} ${cb.x} ${cb.y}`);
+      svg.appendChild(p1);
+
+      if (!reduce && typeof HTMLElement.prototype.animate === "function") {
+        const valNowAtA = aEl.getAttribute("data-val") ?? aEl.textContent ?? "";
+        const valNowAtB = bEl.getAttribute("data-val") ?? bEl.textContent ?? "";
+        const pairs: [string, number, number, number, number, number, number][] = [
+          [valNowAtB, ca.x, ca.y, cb.x, cb.y, nx * bow * 0.65, ny * bow * 0.65],
+          [valNowAtA, cb.x, cb.y, ca.x, ca.y, -nx * bow * 0.45, -ny * bow * 0.45],
+        ];
+        for (const [txt, x0, y0, x1, y1, mx, my] of pairs) {
+          if (!txt) continue;
+          const chip = document.createElement("span");
+          chip.className = "dm-fly-chip";
+          chip.textContent = txt;
+          chip.style.left = `${x0}px`;
+          chip.style.top = `${y0}px`;
+          scroll.appendChild(chip);
+          const anim = chip.animate(
+            [
+              { transform: "translate(-50%, -50%) scale(0.9)", opacity: 0.95 },
+              { transform: `translate(calc(-50% + ${(x1 - x0) / 2 + mx}px), calc(-50% + ${(y1 - y0) / 2 + my}px)) scale(1.05)`, opacity: 1, offset: 0.5 },
+              { transform: `translate(calc(-50% + ${x1 - x0}px), calc(-50% + ${y1 - y0}px)) scale(0.92)`, opacity: 0 },
+            ],
+            { duration: 640, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" },
+          );
+          anim.onfinish = () => chip.remove();
+        }
+      }
+      continue;
+    }
+
+    const [i, j] = pair as [number, number];
     if (i === j) continue;
     const aEl = arr.querySelector<HTMLElement>(`[data-idx="${i}"]`);
     const bEl = arr.querySelector<HTMLElement>(`[data-idx="${j}"]`);
@@ -224,11 +279,10 @@ function runFeeds(scroll: HTMLElement, root: HTMLElement, feeds: FeedItem[], red
 function runTreeMorph(container: HTMLElement, svg: SVGSVGElement, data: TreeMorphData, reduce: boolean) {
   if (reduce) return;
   const { R, directed, from, to } = data;
-  const nodes = new Map<string, HTMLElement>();
-  svg.querySelectorAll<HTMLElement>(".dm-tnode[data-key]").forEach((el) => {
+  const nodes = new Map<string, SVGGElement>();
+  svg.querySelectorAll<SVGGElement>(".dm-tnode[data-key]").forEach((el) => {
     const k = el.getAttribute("data-key") || "";
     if (k.startsWith("tn-")) {
-      el.style.transition = "none";
       nodes.set(k.slice(3), el);
     }
   });
@@ -236,6 +290,7 @@ function runTreeMorph(container: HTMLElement, svg: SVGSVGElement, data: TreeMorp
   const lrTexts = Array.from(svg.querySelectorAll<SVGTextElement>("text.dm-lr[data-efrom][data-eto]"));
 
   const ids = Object.keys(to);
+  const addedIds = new Set(ids.filter((id) => !from[id]));
   const lerpPos = (t: number) => {
     const cur: Record<string, [number, number]> = {};
     for (const id of ids) {
@@ -246,11 +301,16 @@ function runTreeMorph(container: HTMLElement, svg: SVGSVGElement, data: TreeMorp
     return cur;
   };
 
-  const applyFrame = (pMap: Record<string, [number, number]>) => {
+  const applyFrame = (pMap: Record<string, [number, number]>, fadeT?: number) => {
     for (const id of ids) {
       const el = nodes.get(id);
       const p = pMap[id];
-      if (el && p) el.style.transform = `translate(${p[0]}px,${p[1]}px)`;
+      if (el && p) {
+        el.setAttribute("transform", `translate(${p[0]},${p[1]})`);
+        if (fadeT !== undefined && addedIds.has(id)) {
+          el.style.opacity = String(fadeT);
+        }
+      }
     }
     for (const line of lines) {
       const fid = line.getAttribute("data-from") || "";
@@ -280,8 +340,8 @@ function runTreeMorph(container: HTMLElement, svg: SVGSVGElement, data: TreeMorp
     }
   };
 
-  // 先在原位停顿 120ms 看清变形前位置，再 800ms 平滑展开，节点和边同步移动
-  applyFrame(lerpPos(0));
+  // 先在原位停顿 120ms 看清变形前位置，再 800ms 平滑展开，节点和边同步移动；新增节点渐显融入
+  applyFrame(lerpPos(0), 0);
   const HOLD = 120;
   const DUR = 800;
   const t0 = performance.now();
@@ -294,12 +354,15 @@ function runTreeMorph(container: HTMLElement, svg: SVGSVGElement, data: TreeMorp
     }
     const raw = Math.min(1, (elapsed - HOLD) / DUR);
     const eased = raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
-    applyFrame(lerpPos(eased));
+    applyFrame(lerpPos(eased), raw);
     if (raw < 1) {
       list.push(requestAnimationFrame(step));
     } else {
       applyFrame(to);
-      nodes.forEach((el) => { el.style.transition = ""; });
+      for (const id of addedIds) {
+        const el = nodes.get(id);
+        if (el) el.style.opacity = "";
+      }
     }
   };
   list.push(requestAnimationFrame(step));
@@ -333,7 +396,7 @@ export function playDemoFx(container: HTMLElement | null) {
     const scroll = el.closest<HTMLElement>(".dm-scroll");
     if (!scroll) return;
     try {
-      const swaps = JSON.parse(el.getAttribute("data-swaps") || "[]") as [number, number][];
+      const swaps = JSON.parse(el.getAttribute("data-swaps") || "[]") as SwapPair[];
       runSwaps(scroll, el, swaps, reduce);
     } catch { /* 忽略格式异常 */ }
   });
