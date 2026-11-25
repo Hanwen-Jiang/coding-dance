@@ -325,21 +325,93 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[3,9,20,null,null,15,7]
     return { args: { t: t.heap }, note: `root = ${R.fmt(t.lc)}`, py: `Solution().maxDepth(T(${R.py(t.lc)}))` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "标准解法", note: null, legend: [["e","在调用栈上"],["a","当前节点"],["c","已经算出深度"]], build(a, snap) {
-    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-    const dep = {}, stack = [];
-    const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : id in dep ? "c" : stack.includes(+id) ? "e" : ""; const b = {}; for (const id in dep) b[id] = "深度 " + dep[id]; return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: b }]; };
-    snap("开始", "每个节点下方会标出它这棵子树的深度。空节点的深度是 0。", view(-1), { at: "base" });
+    const N = {};
+    a.t.forEach((v, i) => {
+      if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null };
+    });
+    const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+    if (!N[0]) {
+      snap("完成", "空树的深度是 0。", [{ t: "note", label: "二叉树", html: "空" }], { at: "base", kind: "ok", ans: 0, facts: [["最大深度", 0]] });
+      return;
+    }
+    const dep = {}, stack = [], deepChild = {};
+    let maxSeen = 0;
+    const stackEdges = () => {
+      const e = [];
+      for (let i = 0; i + 1 < stack.length; i++) e.push([stack[i], stack[i + 1]]);
+      return e;
+    };
+    const bestSubtreeEdges = (startId) => {
+      const e = [];
+      let p = startId;
+      while (p !== null && p !== undefined && deepChild[p] !== null && deepChild[p] !== undefined) {
+        e.push([p, deepChild[p]]);
+        p = deepChild[p];
+      }
+      return e;
+    };
+    const view = (cur, opts = {}) => {
+      const cls = {}, b = {};
+      for (const id in N) cls[id] = +id === cur ? "a" : id in dep ? "c" : stack.includes(+id) ? "e" : "";
+      for (const id in dep) b[id] = "深度 " + dep[id];
+      return [{
+        t: "tree",
+        label: "二叉树最大深度（后序返回 max(左, 右) + 1）",
+        nodes: snapNodes(),
+        root: 0,
+        cls,
+        directed: true,
+        lrLabels: true,
+        on: stack.slice(),
+        onEdges: stackEdges().concat(opts.onEdges || []),
+        ptrs: { root: cur >= 0 ? cur : null },
+        badges: b,
+      }];
+    };
+    snap("开始", "每个节点下方会标出它这棵子树的深度。空节点的深度是 0。", view(-1), {
+      at: "base",
+      facts: [["调用栈深", 0], ["已算最大深度", 0]],
+    });
     const dfs = (id) => {
-      const nd = N[id]; stack.push(id);
-      if (nd.l !== null || nd.r !== null) snap("进入", `进入 ${nd.v}，先分别问左右子树的深度。`, view(id), { at: "down" });
-      const L = nd.l !== null ? dfs(nd.l) : 0, R = nd.r !== null ? dfs(nd.r) : 0;
+      const nd = N[id];
+      const prevDepth = stack.length;
+      stack.push(id);
+      if (nd.l !== null || nd.r !== null) {
+        snap("进入", `进入 <b>${nd.v}</b>，先分别问左右子树的深度。`, view(id), {
+          at: "down",
+          facts: [["当前 root", nd.v], ["调用栈深", stack.length, prevDepth], ["已算最大深度", maxSeen]],
+        });
+      }
+      const L = nd.l !== null ? dfs(nd.l) : 0;
+      const R = nd.r !== null ? dfs(nd.r) : 0;
       dep[id] = Math.max(L, R) + 1;
-      snap("算出深度", nd.l === null && nd.r === null ? `${nd.v} 是叶子，左右都是空（深度 0），所以它的深度是 0 + 1 = <b>1</b>。` : `${nd.v}：左子树深度 ${L}，右子树深度 ${R}。取较大的再加 1，得到 <b>${dep[id]}</b>。`, view(id), { at: "depth" });
+      deepChild[id] = L === 0 && R === 0 ? null : L >= R ? nd.l : nd.r;
+      const prevMax = maxSeen;
+      maxSeen = Math.max(maxSeen, dep[id]);
+      const maxFact = maxSeen !== prevMax ? ["已算最大深度", maxSeen, prevMax] : ["已算最大深度", maxSeen];
+      snap(
+        "算出深度",
+        nd.l === null && nd.r === null
+          ? `<b>${nd.v}</b> 是叶子，左右都是空（深度 0），所以它的深度是 max(0, 0) + 1 = <b>1</b>。`
+          : `<b>${nd.v}</b>：左子树深度 ${L}，右子树深度 ${R}。取较大的再加 1，得到 <b>${dep[id]}</b>。`,
+        view(id, { onEdges: bestSubtreeEdges(id) }),
+        {
+          at: "depth",
+          facts: nd.l === null && nd.r === null
+            ? [["当前 root", nd.v], ["子树深度", 1], maxFact]
+            : [["当前 root", nd.v], ["左 / 右深度", `${L} / ${R}`], ["子树深度", dep[id]], maxFact],
+        },
+      );
       stack.pop();
       return dep[id];
     };
     const ans = dfs(0);
-    snap("完成", `根节点的深度是 <b>${ans}</b>，这就是整棵树的最大深度。`, view(-1), { at: "depth", kind: "ok", ans });
+    snap("完成", `根节点的深度是 <b>${ans}</b>，高亮路径就是最深的一条根到叶路径。`, view(-1, { onEdges: bestSubtreeEdges(0) }), {
+      at: "depth",
+      kind: "ok",
+      ans,
+      facts: [["调用栈深", 0], ["最大深度", ans]],
+    });
   } }
 ] };
 (function () {

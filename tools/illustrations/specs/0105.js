@@ -55,24 +55,66 @@ assert toT(s.buildTree([1,2,3], [3,2,1])) == [1,2,None,3]
     { label: "满一点的树", args: { pre: [1, 2, 4, 5, 3, 6], ino: [4, 2, 5, 1, 6, 3] }, note: "preorder = [1,2,4,5,3,6], inorder = [4,2,5,1,6,3]", expect: [1, 2, 3, 4, 5, 6] },
   ],
   build(a, snap) {
-    const P = a.pre, I = a.ino, idx = {}, N = {};
+    const P = a.pre, I = a.ino, idx = {}, N = {}, built = new Set();
     I.forEach((v, i) => (idx[v] = i));
-    const view = (pl, pr, il, ir, k, ls, nid) => {
-      const pc = (i) => (i === pl && k >= 0 ? "a" : k >= 0 && i > pl && i <= pl + ls ? "e" : k >= 0 && i > pl + ls && i < pr ? "g" : "");
-      const ic = (i) => (i === k ? "a" : k >= 0 && i >= il && i < k ? "e" : k >= 0 && i > k && i < ir ? "g" : "");
-      const cls = {}; for (const id in N) cls[id] = +id === nid ? "a" : "c";
+    const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+    const view = (pl, pr, il, ir, k, ls, nid, opts = {}) => {
+      const pc = (i) => (i === pl && k >= 0 ? "a" : k >= 0 && i > pl && i <= pl + ls ? "e" : k >= 0 && i > pl + ls && i < pr ? "g" : built.has(P[i]) ? "c" : "");
+      const ic = (i) => (i === k ? "a" : k >= 0 && i >= il && i < k ? "e" : k >= 0 && i > k && i < ir ? "g" : built.has(I[i]) ? "c" : "");
+      const cls = {};
+      for (const id in N) cls[id] = +id === nid ? "a" : "c";
+      const tree = Object.keys(N).length
+        ? {
+            t: "tree",
+            label: "正在构造的二叉树（带 L/R 方向）",
+            nodes: snapNodes(),
+            root: 0,
+            cls,
+            directed: true,
+            lrLabels: true,
+            ptrs: nid >= 0 ? { root: nid } : {},
+            ...(opts.prevNodes ? { prevNodes: opts.prevNodes } : {}),
+            ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+            ...(opts.onEdges ? { onEdges: opts.onEdges } : {}),
+          }
+        : { t: "note", label: "树", html: "还没有节点" };
       return [
-        { t: "array", label: "preorder", items: P.map((v, i) => ({ v, cls: pc(i) })), ptrs: {} },
-        { t: "array", label: "inorder", items: I.map((v, i) => ({ v, cls: ic(i) })), ptrs: {} },
-        Object.keys(N).length ? { t: "tree", nodes: N, root: 0, cls } : { t: "note", label: "树", html: "还没有节点" },
+        { t: "array", label: "preorder", items: P.map((v, i) => ({ v, cls: pc(i) })), ptrs: k >= 0 ? { pl } : {} },
+        { t: "array", label: "inorder", items: I.map((v, i) => ({ v, cls: ic(i) })), ptrs: k >= 0 ? { k } : {} },
+        tree,
       ];
     };
-    snap("开始", "先用哈希表记下每个值在中序里的下标。前序的第一个数是整棵树的根。", view(-1, -1, -1, -1, -1, 0, -1), { at: "init" });
+    let prevRoot, prevLs, prevCount = 0;
+    snap("开始", "先用哈希表记下每个值在中序里的下标。前序的第一个数是整棵树的根。", view(-1, -1, -1, -1, -1, 0, -1), {
+      at: "init",
+      facts: [["已建节点", 0]],
+    });
     const build = (pl, pr, il, ir, id, par, side) => {
       if (pl === pr) return;
       const v = P[pl], k = idx[v], ls = k - il;
-      N[id] = { v, l: null, r: null }; if (par !== null) N[par][side] = id;
-      snap(`根 ${v}`, `这一段前序的第一个是 <b>${v}</b>，它是根。在中序里它在下标 ${k}，左边 ${ls} 个数是左子树${ls ? `（${I.slice(il, k).join(",")}）` : "（空）"}，右边 ${ir - k - 1} 个是右子树${ir - k - 1 ? `（${I.slice(k + 1, ir).join(",")}）` : "（空）"}。两段分别递归建左右子树。`, view(pl, pr, il, ir, k, ls, id), { at: ["root", "sub"] });
+      const prevSnap = snapNodes();
+      N[id] = { v, l: null, r: null };
+      if (par !== null) N[par][side] = id;
+      built.add(v);
+      const curCount = built.size;
+      const facts = [
+        ["当前根", v, prevRoot],
+        ["中序下标 k", k],
+        ["left_size", ls, prevLs],
+        ["已建节点", curCount, prevCount],
+      ];
+      prevRoot = v;
+      prevLs = ls;
+      prevCount = curCount;
+      snap(
+        `根 ${v}`,
+        `这一段前序的第一个是 <b>${v}</b>，它是${par === null ? "整棵树的根" : ` ${N[par].v} 的${side === "l" ? "左" : "右"}孩子`}。在中序里它在下标 ${k}，左边 ${ls} 个数是左子树${ls ? `（${I.slice(il, k).join(",")}）` : "（空）"}，右边 ${ir - k - 1} 个是右子树${ir - k - 1 ? `（${I.slice(k + 1, ir).join(",")}）` : "（空）"}。`,
+        view(pl, pr, il, ir, k, ls, id, {
+          prevNodes: prevSnap,
+          ...(par !== null ? { animEdges: [[par, id]], onEdges: [[par, id]] } : {}),
+        }),
+        { at: ["root", "sub"], facts },
+      );
       build(pl + 1, pl + 1 + ls, il, k, 2 * id + 1, id, "l");
       build(pl + 1 + ls, pr, k + 1, ir, 2 * id + 2, id, "r");
     };
@@ -80,7 +122,12 @@ assert toT(s.buildTree([1,2,3], [3,2,1])) == [1,2,None,3]
     const out = [], q = [0];
     while (q.length) { const id = q.shift(); if (id === null || !N[id]) { out.push(null); continue; } out.push(N[id].v); q.push(N[id].l, N[id].r); }
     while (out.length && out[out.length - 1] === null) out.pop();
-    snap("完成", `树建好了，按层序写出来是 [${out.map((v) => (v === null ? "null" : v)).join(",")}]。`, view(-1, -1, -1, -1, -1, 0, -1), { at: "done", kind: "ok", ans: out });
+    snap("完成", `树建好了，按层序写出来是 [${out.map((v) => (v === null ? "null" : v)).join(",")}]。`, view(-1, -1, -1, -1, -1, 0, -1), {
+      at: "done",
+      kind: "ok",
+      ans: out,
+      facts: [["已建节点", built.size]],
+    });
   },
   points: [
     { t: "左子树大小是关键", body: "left_size = k − il。前序里左子树的范围是 [pl+1, pl+1+left_size)，算错一位整棵树就错了。" },

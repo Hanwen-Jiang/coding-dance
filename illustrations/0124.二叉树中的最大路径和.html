@@ -343,25 +343,113 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,3]},"note":"root =
     return { args: { t: t.heap }, note: `root = ${R.fmt(t.lc)}`, py: `Solution().maxPathSum(T(${R.py(t.lc)}))` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "标准解法", note: null, legend: [["e","在调用栈上"],["a","当前节点"],["c","已经算完（下面标的是往上交的链和）"],["k","最大路径"]], build(a, snap) {
-    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-    const stack = [], badges = {}, done = new Set(); let best = -Infinity, bestSet = [];
+    const N = {};
+    a.t.forEach((v, i) => {
+      if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null };
+    });
+    const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+    const stack = [], upVal = {}, badges = {}, done = new Set();
+    let best = -Infinity, bestSet = [], bestEdges = [];
     // 从 id 往下沿着「往上交的链」走，得到这条链上的节点
-    const sub = (id) => { const out = [id]; let c = id; while (true) { const nd = N[c], gl = nd.l !== null ? Math.max(badges[nd.l], 0) : 0, gr = nd.r !== null ? Math.max(badges[nd.r], 0) : 0; const nx = gl >= gr ? (gl > 0 ? nd.l : null) : nd.r; if (nx === null) break; out.push(nx); c = nx; } return out; };
-    const view = (cur, fin) => { const cls = {}; for (const id in N) cls[id] = fin && bestSet.includes(+id) ? "k" : +id === cur ? "a" : done.has(+id) ? "c" : stack.includes(+id) ? "e" : ""; return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: { ...badges } }]; };
-    const f = () => ({ facts: [["目前最大", best === -Infinity ? "−∞" : best]] });
-    snap("开始", "后序遍历：先算左右子树往下的链，再算自己。", view(-1), { at: "init", ...f() });
+    const sub = (id) => {
+      const out = [id];
+      let c = id;
+      while (true) {
+        const nd = N[c];
+        const gl = nd.l !== null ? Math.max(upVal[nd.l], 0) : 0;
+        const gr = nd.r !== null ? Math.max(upVal[nd.r], 0) : 0;
+        const nx = gl >= gr ? (gl > 0 ? nd.l : null) : nd.r;
+        if (nx === null) break;
+        out.push(nx);
+        c = nx;
+      }
+      return out;
+    };
+    const subEdges = (id) => {
+      const chain = sub(id), edges = [];
+      for (let i = 0; i + 1 < chain.length; i++) edges.push([chain[i], chain[i + 1]]);
+      return edges;
+    };
+    const stackEdges = (extraNode = -1) => {
+      const path = extraNode >= 0 && stack[stack.length - 1] !== extraNode ? [...stack, extraNode] : stack;
+      const edges = [];
+      for (let i = 0; i + 1 < path.length; i++) edges.push([path[i], path[i + 1]]);
+      return edges;
+    };
+    const view = (cur, opts = {}) => {
+      const cls = {};
+      for (const id in N) {
+        const nid = +id;
+        cls[id] = opts.fin && bestSet.includes(nid) ? "k" : nid === cur ? "a" : opts.showBest && bestSet.includes(nid) ? "k" : done.has(nid) ? "c" : stack.includes(nid) ? "e" : "";
+      }
+      return [{
+        t: "tree",
+        label: "二叉树（向下递归，向上返回最大单链）",
+        nodes: snapNodes(),
+        root: N[0] ? 0 : null,
+        cls,
+        directed: true,
+        lrLabels: true,
+        on: stack.slice(),
+        ptrs: cur >= 0 ? { node: cur } : {},
+        onEdges: opts.onEdges || stackEdges(cur),
+        badges: { ...badges },
+      }];
+    };
+    const fmtBest = (x) => (x === -Infinity ? "−∞" : x);
+    let prevNodeVal;
+    snap("开始", "后序遍历：先算左右子树往下的链，再算以当前节点为最高点的路径。", view(-1), {
+      at: "init",
+      facts: [["目前最大 best", "−∞"]],
+    });
     const gain = (id) => {
       if (id === null || !N[id]) return 0;
+      const nd = N[id], v = nd.v;
       stack.push(id);
-      const l = Math.max(gain(N[id].l), 0), r = Math.max(gain(N[id].r), 0), v = N[id].v;
+      if (nd.l !== null || nd.r !== null) {
+        snap(`深入 ${v}`, `到达 <b>${v}</b>，先递归计算它的左右子树能往上提供的最大链和。`, view(id), {
+          at: "node",
+          facts: [["当前节点", v, prevNodeVal], ["目前最大 best", fmtBest(best)]],
+        });
+        prevNodeVal = v;
+      }
+      const l = Math.max(gain(nd.l), 0), r = Math.max(gain(nd.r), 0);
       const through = v + l + r, up = v + Math.max(l, r);
-      if (through > best) { best = through; bestSet = [id]; if (l > 0) bestSet.push(...sub(N[id].l)); if (r > 0) bestSet.push(...sub(N[id].r)); }
-      badges[id] = up; done.add(id); stack.pop();
-      snap(`节点 ${v}`, `左链 ${l}，右链 ${r}（负的按 0 算）。以 ${v} 为最高点的路径和是 ${v} + ${l} + ${r} = <b>${through}</b>。往上交 ${v} + max(${l}, ${r}) = ${up}。`, view(id), { at: "node", ...f() });
+      const prevBest = best, improved = through > best;
+      if (improved) {
+        best = through;
+        bestSet = [id];
+        bestEdges = [];
+        if (l > 0) { bestSet.push(...sub(nd.l)); bestEdges.push([id, nd.l], ...subEdges(nd.l)); }
+        if (r > 0) { bestSet.push(...sub(nd.r)); bestEdges.push([id, nd.r], ...subEdges(nd.r)); }
+      }
+      upVal[id] = up;
+      badges[id] = `↑${up}`;
+      done.add(id);
+      stack.pop();
+      const activeEdges = [...stackEdges(id), ...(improved ? bestEdges : [])];
+      const facts = [
+        ["当前节点", v, prevNodeVal],
+        ["左链 / 右链", `${l} / ${r}`],
+        ["拐弯路径和", through],
+        improved ? ["目前最大 best", best, fmtBest(prevBest)] : ["目前最大 best", fmtBest(best)],
+      ];
+      prevNodeVal = v;
+      snap(
+        `节点 ${v}`,
+        `左链 ${l}，右链 ${r}（负的按 0 算）。以 <b>${v}</b> 为最高点的路径和是 ${v} + ${l} + ${r} = <b>${through}</b>${improved ? `，刷新最大路径和为 <b>${best}</b>！` : "。"}往上只能带一条链：${v} + max(${l}, ${r}) = ${up}。`,
+        view(id, { showBest: improved, onEdges: activeEdges }),
+        { at: "node", facts },
+      );
       return up;
     };
-    gain(0);
-    snap("完成", `最大路径和是 <b>${best}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: best, ...f() });
+    gain(N[0] ? 0 : null);
+    snap("完成", `最大路径和是 <b>${best}</b>（高亮为最优路径）。`, view(-1, { fin: true, onEdges: bestEdges }), {
+      at: "done",
+      kind: "ok",
+      ans: best,
+      facts: [["目前最大 best", best]],
+    });
   } }
 ] };
 (function () {
