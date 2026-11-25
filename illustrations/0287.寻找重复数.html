@@ -339,44 +339,143 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[1,3,4,2,2]},"note":
     return { args: { nums: out }, note: `nums = ${R.fmt(out)}`, py: `Solution().findDuplicate(${R.py(out)})` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "快慢指针", note: null, legend: [["a","slow"],["b","fast"],["c","两者相遇"]], build(a, snap) {
-    const nums = a.nums;
+    const nums = a.nums.slice();
     let slow = 0, fast = 0;
-    const view = (meet) => [
-      { t: "array", label: "nums（下标 i 指向下标 nums[i]）", items: nums.map((v, k) => ({ v, cls: meet && k === slow ? "c" : k === slow ? "a" : k === fast ? "b" : "" })), ptrs: { slow, fast } },
-      { t: "chips", label: "从 0 出发走过的路", items: (() => { const out = [0]; let p = 0; for (let t = 0; t < nums.length + 2; t++) { p = nums[p]; out.push(p); } return out.map(String); })() },
+    const path = (() => {
+      const out = [0];
+      let p = 0;
+      for (let t = 0; t < nums.length + 2; t++) { p = nums[p]; out.push(p); }
+      return out.map(String);
+    })();
+    const view = (meet, opts = {}) => [
+      {
+        t: "array",
+        label: "nums（下标 i 指向下标 nums[i]）",
+        items: nums.map((v, k) => ({ v, cls: meet && k === slow ? "c" : k === slow ? "a" : k === fast ? "b" : "" })),
+        ptrs: { slow, fast },
+        feeds: opts.feeds || [],
+      },
+      { t: "chips", label: "从 0 出发走过的路", items: path.slice() },
     ];
-    snap("开始", `把下标当节点：0 → ${nums[0]} → ${nums[nums[0]]} → …，一定会进入一个环。slow、fast 都从 0 出发。`, view(false), { at: "init", facts: [["slow", slow], ["fast", fast]] });
+    snap(
+      "开始",
+      `把下标当节点：0 → ${nums[0]} → ${nums[nums[0]]} → …，一定会进入一个环。slow、fast 都从 0 出发。`,
+      view(false),
+      { at: "init", facts: [["slow", slow], ["fast", fast], ["阶段", "找相遇点"]] },
+    );
     do {
-      slow = nums[slow]; fast = nums[nums[fast]];
-      snap(slow === fast ? "相遇" : "快慢指针", slow === fast ? `slow 和 fast 在下标 ${slow} 相遇，说明有环。` : `slow 走一步到 ${slow}，fast 走两步到 ${fast}。`, view(slow === fast), { at: slow === fast ? ["run", "meet"] : "run", kind: slow === fast ? "ok" : "", facts: [["slow", slow], ["fast", fast]] });
+      const oldS = slow, oldF = fast;
+      slow = nums[slow];
+      fast = nums[nums[fast]];
+      const feeds = [];
+      if (oldS !== slow) feeds.push({ from: oldS, to: slow, win: false, label: "slow×1" });
+      if (oldF !== fast) feeds.push({ from: oldF, to: fast, win: true, label: "fast×2" });
+      const met = slow === fast;
+      snap(
+        met ? "相遇" : "快慢指针",
+        met
+          ? `slow 和 fast 在下标 <b>${slow}</b> 相遇，说明有环。`
+          : `slow 走一步：${oldS} → <b>${slow}</b>；fast 走两步：${oldF} → ${nums[oldF]} → <b>${fast}</b>。`,
+        view(met, { feeds }),
+        {
+          at: met ? ["run", "meet"] : "run",
+          kind: met ? "ok" : "",
+          facts: [["slow", slow, oldS], ["fast", fast, oldF], ["阶段", met ? "首次相遇" : "找相遇点"]],
+        },
+      );
     } while (slow !== fast);
+    const meetAt = slow;
     slow = 0;
-    snap("回到起点", "slow 回到起点 0，fast 留在相遇点。接下来两个指针每次都只走一步。", view(false), { at: "reset", facts: [["slow", slow], ["fast", fast]] });
+    snap(
+      "回到起点",
+      "slow 回到起点 0，fast 留在相遇点。接下来两个指针每次都只走一步。",
+      view(false),
+      { at: "reset", facts: [["slow", slow, meetAt], ["fast", fast], ["阶段", "同速找入口"]] },
+    );
     while (slow !== fast) {
-      slow = nums[slow]; fast = nums[fast];
-      snap(slow === fast ? "入口" : "同速走", slow === fast ? `两个指针在 ${slow} 再次相遇，这就是环的入口，也就是重复的数。` : `slow 到 ${slow}，fast 到 ${fast}。`, view(slow === fast), { at: "walk", facts: [["slow", slow], ["fast", fast]] });
+      const oldS = slow, oldF = fast;
+      slow = nums[slow];
+      fast = nums[fast];
+      const feeds = [];
+      if (oldS !== slow) feeds.push({ from: oldS, to: slow, win: false, label: "slow" });
+      if (oldF !== fast) feeds.push({ from: oldF, to: fast, win: true, label: "fast" });
+      const met = slow === fast;
+      snap(
+        met ? "入口" : "同速走",
+        met
+          ? `两个指针在 <b>${slow}</b> 再次相遇，这就是环的入口，也就是重复的数。`
+          : `slow 走一步到 <b>${slow}</b>，fast 走一步到 <b>${fast}</b>。`,
+        view(met, { feeds }),
+        { at: "walk", facts: [["slow", slow, oldS], ["fast", fast, oldF], ["阶段", met ? "找到入口" : "同速找入口"]] },
+      );
     }
-    snap("完成", `重复的数是 <b>${slow}</b>。`, view(true), { at: "done", kind: "ok", ans: slow, facts: [["slow", slow], ["fast", fast]] });
+    snap("完成", `重复的数是 <b>${slow}</b>。`, view(true), {
+      at: "done",
+      kind: "ok",
+      ans: slow,
+      facts: [["slow", slow], ["fast", fast], ["重复数", slow]],
+    });
   } },
 { t: "对值二分", note: "和简洁写法一样：设重复的数是 d。数一数 nums 里 ≤ x 的有几个：x &lt; d 时不会超过 x，x ≥ d 时一定超过 x。二分找第一个超过的 x。", legend: [["a","mid"],["e","nums 里 ≤ mid 的数"],["d","已经排除的值"],["c","答案"]], build(a, snap) {
-      const nums = a.nums, n = nums.length; let lo = 0, hi = n;
+      const nums = a.nums.slice(), n = nums.length;
+      let lo = 0, hi = n, prevMid;
       const view = (mid, ans) => [
         { t: "array", label: "nums", items: nums.map((v) => ({ v, cls: mid >= 0 && v <= mid ? "e" : "" })) },
-        { t: "array", label: "候选的值 x（0 到 n − 1）", items: Array.from({ length: n }, (_, x) => ({ v: x, cls: x === ans ? "c" : x === mid ? "a" : x < lo || x >= hi ? "d" : "" })), idx: false, ptrs: { lo, hi: hi < n ? hi : null, mid: mid >= 0 ? mid : null } },
+        {
+          t: "array",
+          label: "候选的值 x（0 到 n − 1）",
+          items: Array.from({ length: n }, (_, x) => ({
+            v: x,
+            cls: x === ans ? "c" : x === mid ? "a" : x < lo || x >= hi ? "d" : "",
+          })),
+          idx: false,
+          ptrs: { lo, hi: hi < n ? hi : null, mid: mid >= 0 ? mid : null },
+        },
       ];
-      const f = (c) => ({ facts: [["lo", lo], ["hi", hi], ["≤ mid 的个数", c === undefined ? "—" : c]] });
+      const f = (mid, c, prevRange) => ({
+        facts: [
+          ["区间 [lo, hi)", `[${lo}, ${hi})`, prevRange],
+          ["mid", mid === undefined ? "—" : mid, prevMid],
+          ["≤ mid 的个数", c === undefined ? "—" : c],
+        ],
+      });
       snap("开始", `值都在 1 到 ${n - 1} 之间。1 到 x 只有 x 个不同的值，如果 nums 里 ≤ x 的数超过 x 个，1 到 x 里一定有重复。在 [${lo}, ${hi}) 里二分。`, view(-1, -1), { at: "init", ...f() });
       while (lo < hi) {
-        const mid = (lo + hi) >> 1, c = nums.filter((v) => v <= mid).length;
+        const mid = (lo + hi) >> 1;
+        const c = nums.filter((v) => v <= mid).length;
+        const at = c > mid ? "left" : "right";
+        snap(
+          "计算 mid 并统计",
+          `mid = (${lo} + ${hi}) >> 1 = <b>${mid}</b>。数一数 nums 里 ≤ ${mid} 的数，共有 <b>${c}</b> 个。`,
+          view(mid, -1),
+          { at, ...f(mid, c) },
+        );
+        prevMid = mid;
+        const prevRange = `[${lo}, ${hi})`;
         if (c > mid) {
           hi = mid;
-          snap("往左", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，比 ${mid} 多，重复的数 ≤ ${mid}。hi = ${mid}。`, view(mid, -1), { at: "left", ...f(c) });
+          snap(
+            "排除右半，收缩区间",
+            `≤ ${mid} 的数有 ${c} 个 &gt; ${mid}，说明 [1, ${mid}] 里一定有重复，重复数 ≤ ${mid}。收缩右边界：hi = <b>${hi}</b>。`,
+            view(mid, -1),
+            { at: "left", ...f(mid, c, prevRange) },
+          );
         } else {
           lo = mid + 1;
-          snap("往右", `mid = ${mid}：≤ ${mid} 的数有 ${c} 个，没有超过 ${mid}，重复的数比 ${mid} 大。lo = ${mid + 1}。`, view(mid, -1), { at: "right", ...f(c) });
+          snap(
+            "排除左半，收缩区间",
+            `≤ ${mid} 的数只有 ${c} 个 ≤ ${mid}，说明重复数一定比 ${mid} 大。排除 ≤ ${mid} 的值，收缩左边界：lo = <b>${lo}</b>。`,
+            view(mid, -1),
+            { at: "right", ...f(mid, c, prevRange) },
+          );
         }
       }
-      snap("完成", `lo = hi = ${lo}，它是第一个「≤ x 的数超过 x 个」的值，重复的数是 <b>${lo}</b>。时间 O(n log n)。`, view(-1, lo), { at: "done", kind: "ok", ans: lo, ...f() });
+      snap("完成", `lo = hi = ${lo}，它是第一个「≤ x 的数超过 x 个」的值，重复的数是 <b>${lo}</b>。时间 O(n log n)。`, view(-1, lo), {
+        at: "done",
+        kind: "ok",
+        ans: lo,
+        facts: [["区间 [lo, hi)", `[${lo}, ${hi})`], ["重复数", lo]],
+      });
     } }
 ] };
 (function () {

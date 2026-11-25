@@ -40,17 +40,56 @@ assert s.maxProfit([3,2,6,5,0,3]) == 4
     { label: "最低价在后面", args: { prices: [3, 2, 6, 5, 0, 3] }, note: "prices = [3,2,6,5,0,3]", expect: 4 },
   ],
   build(a, snap) {
-    const P = a.prices; let mi = -1, best = 0, bb = -1, bs = -1;
-    const view = (i, fin) => [{ t: "bars", label: "prices", items: P.map((v, k) => ({ v, cls: fin ? (k === bb || k === bs ? "c" : "") : k === i ? "a" : k === mi ? "b" : k > i ? "d" : "" })), ptrs: { 今天: fin ? null : i, 最低: !fin && mi >= 0 && mi !== i ? mi : null } }];
-    const f = () => ({ facts: [["最低价", mi >= 0 ? P[mi] : "—"], ["最大利润", best]] });
-    snap("开始", "从第 0 天开始，每一天都假设自己在这天卖出。", view(-1), { at: "init", ...f() });
-    P.forEach((p, i) => {
-      if (mi < 0 || p < P[mi]) { mi = i; snap("新低", `第 ${i} 天价格 ${p}，比之前都低，记成最低价。今天买今天卖赚 0。`, view(i), { at: "low", ...f() }); return; }
-      const g = p - P[mi];
-      if (g > best) { best = g; bb = mi; bs = i; snap("更好的一笔", `第 ${i} 天卖出：${p} − ${P[mi]} = <b>${g}</b>，比之前的都多，更新答案。`, view(i), { at: "sell", ...f() }); }
-      else snap("卖出试试", `第 ${i} 天卖出：${p} − ${P[mi]} = ${g}，没有超过 ${best}。`, view(i), { at: "sell", ...f() });
+    const P = a.prices.slice();
+    let mi = -1, best = 0, bb = -1, bs = -1;
+    const view = (i, fin) => [{
+      t: "bars",
+      label: "prices",
+      items: P.map((v, k) => ({
+        v,
+        cls: fin ? (k === bb || k === bs ? "c" : "") : k === i ? "a" : k === mi ? "b" : k > i ? "d" : "",
+      })),
+      ptrs: { 今天: fin ? null : i, 最低: !fin && mi >= 0 && mi !== i ? mi : null },
+    }];
+    const f = (i, prevMin, prevBest) => ({
+      facts: [
+        ["最低价", mi >= 0 ? P[mi] : "—", prevMin],
+        ["今日价格", i >= 0 && i < P.length ? P[i] : "—"],
+        ["最大利润", best, prevBest],
+      ],
     });
-    snap("完成", best ? `最大利润是 <b>${best}</b>：第 ${bb} 天以 ${P[bb]} 买入，第 ${bs} 天以 ${P[bs]} 卖出。` : "每天卖出都不赚钱，不交易，利润 <b>0</b>。", view(-1, true), { at: "done", kind: "ok", ans: best, ...f() });
+    snap("开始", "从第 0 天开始，每一天都假设自己在这天卖出。", view(-1, false), { at: "init", ...f(-1) });
+    P.forEach((p, i) => {
+      if (mi < 0 || p < P[mi]) {
+        const prevMin = mi >= 0 ? P[mi] : "—";
+        mi = i;
+        snap("新低", `第 ${i} 天价格 ${p}，比之前都低，记成最低价。今天买今天卖赚 0。`, view(i, false), { at: "low", ...f(i, prevMin) });
+        return;
+      }
+      const g = p - P[mi];
+      if (g > best) {
+        const prevBest = best;
+        best = g; bb = mi; bs = i;
+        snap("更好的一笔", `第 ${i} 天卖出：${p} − ${P[mi]} = <b>${g}</b>，比之前的都多，更新答案。`, view(i, false), { at: "sell", ...f(i, undefined, prevBest) });
+      } else {
+        snap("卖出试试", `第 ${i} 天卖出：${p} − ${P[mi]} = ${g}，没有超过 ${best}。`, view(i, false), { at: "sell", ...f(i) });
+      }
+    });
+    snap(
+      "完成",
+      best ? `最大利润是 <b>${best}</b>：第 ${bb} 天以 ${P[bb]} 买入，第 ${bs} 天以 ${P[bs]} 卖出。` : "每天卖出都不赚钱，不交易，利润 <b>0</b>。",
+      view(-1, true),
+      {
+        at: "done",
+        kind: "ok",
+        ans: best,
+        facts: [
+          ["最低价", mi >= 0 ? P[mi] : "—"],
+          ["最佳买卖", bb >= 0 ? `第${bb}→${bs}天` : "不交易"],
+          ["最大利润", best],
+        ],
+      },
+    );
   },
   points: [
     { t: "先更新最低价再算利润", body: "两句顺序反过来也对，因为当天买当天卖利润是 0，不会影响答案。" },

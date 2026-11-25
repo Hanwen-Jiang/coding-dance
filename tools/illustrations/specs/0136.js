@@ -38,16 +38,46 @@ assert s.singleNumber([-3,7,-3]) == 7
     { label: "示例 1", args: { nums: [2, 2, 1] }, note: "nums = [2,2,1]", expect: 1 },
   ],
   build(a, snap) {
-    const nums = a.nums, w = Math.max(3, ...nums.map((x) => x.toString(2).length));
-    const bin = (x) => x.toString(2).padStart(w, "0");
+    const nums = a.nums.slice(), w = Math.max(3, ...nums.map((x) => Math.abs(x).toString(2).length));
+    const bin = (x) => (x < 0 ? "-" : "") + Math.abs(x).toString(2).padStart(w, "0");
     let res = 0;
-    const view = (i) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k < i ? "d" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", "res 从 0 开始，依次和每个数做异或。", view(-1), { at: "init", facts: [["res", res], ["二进制", bin(res)]] });
-    nums.forEach((x, i) => {
-      const old = res; res ^= x;
-      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，也就是 ${old} ^ ${x} = ${res}。`, view(i), { at: "xor", facts: [["res", res], ["二进制", bin(res)]] });
+    const view = (i, prevRes, fin) => [
+      {
+        t: "array",
+        label: "nums",
+        items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k < i ? "d" : "" })),
+        ptrs: { i: i >= 0 ? i : null },
+      },
+      {
+        t: "array",
+        label: "异或累积 res",
+        idx: false,
+        items: [{
+          v: res,
+          ...(prevRes !== undefined && prevRes !== res ? { prev: prevRes } : {}),
+          cls: fin ? "c" : "a",
+        }],
+        ptrs: {},
+      },
+    ];
+    snap("开始", "res 从 0 开始（x ^ 0 = x），依次和每个数做异或。", view(-1), {
+      at: "init",
+      facts: [["res", res], ["二进制", bin(res)]],
     });
-    snap("完成", `成对的数都抵消了，剩下 <b>${res}</b>。`, view(-1), { at: "done", kind: "ok", ans: res, facts: [["res", res], ["二进制", bin(res)]] });
+    nums.forEach((x, i) => {
+      const old = res;
+      res ^= x;
+      snap(`^ ${x}`, `${bin(old)} ^ ${bin(x)} = <b>${bin(res)}</b>，即 ${old} ^ ${x} = <b>${res}</b>。`, view(i, old), {
+        at: "xor",
+        facts: [["当前数 x", x], ["res", res, old], ["二进制", bin(res), bin(old)]],
+      });
+    });
+    snap("完成", `成对的数两两抵消成 0，最后剩下 <b>${res}</b>。`, view(-1, undefined, true), {
+      at: "done",
+      kind: "ok",
+      ans: res,
+      facts: [["res", res], ["二进制", bin(res)]],
+    });
   },
   points: [
     { t: "初始值是 0", body: "0 是异或的单位元，x ^ 0 = x。" },

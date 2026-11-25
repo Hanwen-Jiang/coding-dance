@@ -44,20 +44,44 @@ assert s.firstMissingPositive([1,2,3]) == 4
   ],
   build(a, snap) {
     const n = a.nums.slice(), len = n.length;
-    const view = (i, j, bad) => [{ t: "array", label: "nums（下标 i 上应该坐 i + 1）", items: n.map((v, t) => ({ v, cls: t === bad ? "w" : t === i ? "a" : t === j ? "b" : v === t + 1 ? "c" : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    snap("开始", `n = ${len}，答案只可能在 1 到 ${len + 1} 之间。规则：数 x 应该放在下标 x − 1。`, view(-1), { at: "init" });
+    const view = (opts = {}) => {
+      const i = opts.i ?? -1, j = opts.j ?? -1, bad = opts.bad ?? -1;
+      const prevMap = opts.prevMap || {};
+      return [{
+        t: "array",
+        label: "nums（下标 i 上应该坐 i + 1）",
+        items: n.map((v, t) => ({
+          v,
+          ...(prevMap[t] !== undefined ? { prev: prevMap[t] } : {}),
+          cls: t === bad ? "w" : t === i ? "a" : t === j ? "b" : v === t + 1 ? "c" : "",
+        })),
+        ptrs: { i: i >= 0 ? i : null },
+        swaps: opts.swaps || [],
+      }];
+    };
+    snap("开始", `n = ${len}，答案只可能在 1 到 ${len + 1} 之间。规则：数 x 应该放在下标 x − 1。`, view(), { at: "init", facts: [["n", len]] });
     for (let i = 0; i < len; i++) {
       while (n[i] >= 1 && n[i] <= len && n[n[i] - 1] !== n[i]) {
         const j = n[i] - 1, x = n[i];
-        snap("交换", `nums[${i}] = ${x}，它应该在下标 ${j}，那里现在是 ${n[j]}。把 ${x} 换过去。`, view(i, j), { at: "swap" });
+        snap("检查目标座位", `nums[${i}] = ${x} 应该坐在下标 ${j}，那里现在是 ${n[j]} ≠ ${x}，需要把它换过去。`, view({ i, j }), { at: "swap", facts: [["i", i], ["nums[i]", x], ["目标位置 j", j]] });
+        const oldI = n[i], oldJ = n[j];
         [n[i], n[j]] = [n[j], n[i]];
+        snap(
+          "交换归位",
+          `把 ${oldI} 换到下标 ${j}，原来的 ${oldJ} 换回下标 ${i}（换回来的数还没检查，i 留在原地继续看）。`,
+          view({ i, j, swaps: [[i, j]], prevMap: { [i]: oldI, [j]: oldJ } }),
+          { at: "swap", facts: [["i", i], ["nums[i]", n[i], oldI], ["归位", `${oldI} → [${j}]`]] },
+        );
       }
       const x = n[i];
-      snap("不用动", x === i + 1 ? `nums[${i}] = ${x}，已经坐对了。` : x < 1 || x > len ? `nums[${i}] = ${x} 不在 1 到 ${len} 之间，没有它的座位，留在这里。` : `nums[${i}] = ${x}，它的座位（下标 ${x - 1}）上已经有一个 ${x} 了，是重复的，留在这里。`, view(i), { at: "stay", kind: x === i + 1 ? "" : "warn" });
+      snap("不用动", x === i + 1 ? `nums[${i}] = ${x}，已经坐对了。` : x < 1 || x > len ? `nums[${i}] = ${x} 不在 1 到 ${len} 之间，没有它的座位，留在这里。` : `nums[${i}] = ${x}，它的座位（下标 ${x - 1}）上已经有一个 ${x} 了，是重复的，留在这里。`, view({ i }), { at: "stay", kind: x === i + 1 ? "" : "warn", facts: [["i", i], ["nums[i]", x]] });
     }
     let ans = len + 1, bad = -1;
-    for (let i = 0; i < len; i++) if (n[i] !== i + 1) { ans = i + 1; bad = i; break; }
-    snap("完成", bad >= 0 ? `从左往右找第一个坐错的位置：下标 ${bad} 上应该是 ${bad + 1}，实际是 ${n[bad]}。缺失的第一个正数是 <b>${ans}</b>。` : `每个位置都坐对了，1 到 ${len} 都在，答案是 <b>${ans}</b>。`, view(-1, -1, bad), { at: bad >= 0 ? "scan" : ["scan", "done"], kind: "ok", ans });
+    for (let i = 0; i < len; i++) {
+      if (n[i] !== i + 1) { ans = i + 1; bad = i; break; }
+      snap("扫描检查", `下标 ${i} 上坐着 ${n[i]} == ${i + 1}，已归位，继续检查下一个。`, view({ i }), { at: "scan", facts: [["i", i], ["期望值", i + 1], ["实际值", n[i]]] });
+    }
+    snap("完成", bad >= 0 ? `从左往右找第一个坐错的位置：下标 ${bad} 上应该是 ${bad + 1}，实际是 ${n[bad]}。缺失的第一个正数是 <b>${ans}</b>。` : `每个位置都坐对了，1 到 ${len} 都在，答案是 <b>${ans}</b>。`, view({ bad }), { at: bad >= 0 ? "scan" : ["scan", "done"], kind: "ok", ans, facts: [["答案", ans]] });
   },
   points: [
     { t: "while 的第二个条件", body: "要比较 <code>nums[nums[i] - 1] != nums[i]</code>，而不是 <code>nums[i] != i + 1</code>。遇到重复的数时，后一种写法会死循环。" },

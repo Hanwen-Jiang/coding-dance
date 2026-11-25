@@ -68,35 +68,58 @@ assert s.spiralOrder([[1],[2],[3]]) == [1,2,3]
     { label: "示例 2", args: { m: [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]] }, note: "matrix = [[1,2,3,4],[5,6,7,8],[9,10,11,12]]", expect: [1, 2, 3, 4, 8, 12, 11, 10, 9, 5, 6, 7] },
   ],
   build(a, snap) {
-    const M = a.m, res = [], seen = M.map((r) => r.map(() => 0));
+    const M = a.m.map((r) => r.slice()), res = [], seen = M.map((r) => r.map(() => 0));
     let top = 0, bottom = M.length - 1, left = 0, right = M[0].length - 1;
     const view = () => [
       { t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: seen[i][j] === 2 ? "a" : seen[i][j] === 1 ? "d" : i >= top && i <= bottom && j >= left && j <= right ? "e" : "" }))) },
       { t: "chips", label: "结果", items: res.slice(), empty: "还没有" },
     ];
-    const facts = () => [["top", top], ["bottom", bottom], ["left", left], ["right", right]];
-    const walk = (cells) => { for (const r of seen) for (let j = 0; j < r.length; j++) if (r[j] === 2) r[j] = 1; for (const [i, j] of cells) { seen[i][j] = 2; res.push(M[i][j]); } };
+    const facts = (p = {}) => [
+      ["top", top, p.top],
+      ["bottom", bottom, p.bottom],
+      ["left", left, p.left],
+      ["right", right, p.right],
+    ];
+    const walk = (cells) => {
+      for (const r of seen) for (let j = 0; j < r.length; j++) if (r[j] === 2) r[j] = 1;
+      for (const [i, j] of cells) { seen[i][j] = 2; res.push(M[i][j]); }
+    };
     snap("开始", "四个边界围住整个矩阵。", view(), { at: "init", facts: facts() });
     while (top <= bottom && left <= right) {
-      let c = []; for (let j = left; j <= right; j++) c.push([top, j]);
+      let c = [];
+      for (let j = left; j <= right; j++) c.push([top, j]);
+      const oldTop = top;
       walk(c); top++;
-      snap("上边：左 → 右", `沿着上边界从左走到右，然后 top 下移到 ${top}。`, view(), { at: "top", facts: facts() });
-      c = []; for (let i = top; i <= bottom; i++) c.push([i, right]);
+      snap("上边：左 → 右", `沿着上边界（第 ${oldTop} 行）从左走到右，然后 top 下移：${oldTop} → ${top}。`, view(), { at: "top", facts: facts({ top: oldTop }) });
+
+      c = [];
+      for (let i = top; i <= bottom; i++) c.push([i, right]);
+      const oldRight = right;
       walk(c); right--;
-      snap("右边：上 → 下", c.length ? `沿着右边界从上走到下，然后 right 左移到 ${right}。` : `右边已经没有格子可走，right 左移到 ${right}。`, view(), { at: "right", facts: facts() });
+      snap("右边：上 → 下", c.length ? `沿着右边界（第 ${oldRight} 列）从上走到下，然后 right 左移：${oldRight} → ${right}。` : `右边已经没有格子可走，right 左移：${oldRight} → ${right}。`, view(), { at: "right", facts: facts({ right: oldRight }) });
+
       if (top <= bottom) {
-        c = []; for (let j = right; j >= left; j--) c.push([bottom, j]);
+        c = [];
+        for (let j = right; j >= left; j--) c.push([bottom, j]);
+        const oldBottom = bottom;
         walk(c); bottom--;
-        snap("下边：右 → 左", c.length ? `top ≤ bottom，还有行。沿着下边界从右走到左，然后 bottom 上移到 ${bottom}。` : `下边没有格子可走，bottom 上移到 ${bottom}。`, view(), { at: "bottom", facts: facts() });
-      } else snap("跳过下边", "top 已经大于 bottom，没有剩余的行了。跳过下边，否则会把刚才那一行倒着再走一遍。", view(), { at: "skipb", kind: "warn", facts: facts() });
+        snap("下边：右 → 左", c.length ? `top ≤ bottom，还有行。沿着下边界（第 ${oldBottom} 行）从右走到左，然后 bottom 上移：${oldBottom} → ${bottom}。` : `下边没有格子可走，bottom 上移：${oldBottom} → ${bottom}。`, view(), { at: "bottom", facts: facts({ bottom: oldBottom }) });
+      } else {
+        snap("跳过下边", `top (${top}) > bottom (${bottom})，没有剩余的行了。跳过下边，否则会把刚才那一行倒着再走一遍。`, view(), { at: "skipb", kind: "warn", facts: facts() });
+      }
+
       if (left <= right) {
-        c = []; for (let i = bottom; i >= top; i--) c.push([i, left]);
+        c = [];
+        for (let i = bottom; i >= top; i--) c.push([i, left]);
+        const oldLeft = left;
         walk(c); left++;
-        snap("左边：下 → 上", c.length ? `left ≤ right，还有列。沿着左边界从下走到上，然后 left 右移到 ${left}。` : `左边没有格子可走，left 右移到 ${left}。`, view(), { at: "left", facts: facts() });
-      } else snap("跳过左边", "left 已经大于 right，没有剩余的列了，跳过左边。", view(), { at: "skipl", kind: "warn", facts: facts() });
+        snap("左边：下 → 上", c.length ? `left ≤ right，还有列。沿着左边界（第 ${oldLeft} 列）从下走到上，然后 left 右移：${oldLeft} → ${left}。` : `左边没有格子可走，left 右移：${oldLeft} → ${left}。`, view(), { at: "left", facts: facts({ left: oldLeft }) });
+      } else {
+        snap("跳过左边", `left (${left}) > right (${right})，没有剩余的列了，跳过左边。`, view(), { at: "skipl", kind: "warn", facts: facts() });
+      }
     }
     walk([]);
-    snap("完成", `边界交错，所有格子都走过了。结果是 [${res.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: res, facts: facts() });
+    snap("完成", `边界交错，所有格子都走过了。结果是 [${res.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: res.slice(), facts: facts() });
   },
   alts: [{
     t: "取第一行再旋转",
@@ -106,21 +129,38 @@ assert s.spiralOrder([[1],[2],[3]]) == [1,2,3]
     build(a, snap) {
       let M = a.m.map((r) => r.slice()), round = 0;
       const res = [];
+      const dim = (m) => (m.length ? `${m.length}×${m[0].length}` : "空");
       const view = (hl) => [
         M.length ? { t: "grid", label: "matrix（剩下的部分）", rows: M.map((r, i) => r.map((v) => ({ v, cls: hl && i === 0 ? "a" : "" }))) } : { t: "note", label: "matrix", html: "空" },
         { t: "chips", label: "结果", items: res.slice(), empty: "还没有" },
       ];
-      snap("开始", "每一轮：拿走第一行接到结果后面，再把剩下的逆时针转 90°。", view(false), { at: "init" });
+      snap("开始", "每一轮：拿走第一行接到结果后面，再把剩下的逆时针转 90°。", view(false), {
+        at: "init",
+        facts: [["轮次", round], ["剩余尺寸", dim(M)], ["已收集", res.length]],
+      });
       while (M.length) {
+        const prevRound = round, prevDim = dim(M), prevLen = res.length;
         round++;
-        snap("拿走第一行", `第一行是 [${M[0].join(", ")}]，接到结果后面。`, view(true), { at: "take" });
+        snap("拿走第一行", `第一行是 [${M[0].join(", ")}]，接到结果后面。`, view(true), {
+          at: "take",
+          facts: [["轮次", round, prevRound], ["剩余尺寸", dim(M)], ["已收集", prevLen + M[0].length, prevLen]],
+        });
         res.push(...M.shift());
         if (!M.length) break;
+        const afterPopDim = dim(M);
         const col = M.map((r) => r[r.length - 1]);
         M = M[0].map((_, j) => M.map((r) => r[j])).reverse();
-        snap("逆时针转 90°", `剩下的部分逆时针转 90°：zip(*matrix) 把列变成行，再 [::-1] 倒过来。原来最右边一列 [${col.join(", ")}] 现在是第一行。`, view(false), { at: "turn" });
+        snap("逆时针转 90°", `剩下的部分逆时针转 90°：zip(*matrix) 把列变成行，再 [::-1] 倒过来。原来最右边一列 [${col.join(", ")}] 现在是第一行。`, view(false), {
+          at: "turn",
+          facts: [["轮次", round], ["剩余尺寸", dim(M), afterPopDim], ["已收集", res.length]],
+        });
       }
-      snap("完成", `矩阵拿空了，结果是 [${res.join(", ")}]。`, view(false), { at: "done", kind: "ok", ans: res });
+      snap("完成", `矩阵拿空了，结果是 [${res.join(", ")}]。`, view(false), {
+        at: "done",
+        kind: "ok",
+        ans: res.slice(),
+        facts: [["轮次", round], ["剩余尺寸", "空"], ["已收集", res.length]],
+      });
     },
   }],
   points: [

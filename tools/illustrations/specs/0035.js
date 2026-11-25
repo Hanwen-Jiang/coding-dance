@@ -43,18 +43,63 @@ assert s.searchInsert([1], 1) == 0
     { label: "插在末尾", args: { nums: [1, 3, 5, 6], target: 7 }, note: "nums = [1,3,5,6], target = 7", expect: 4 },
   ],
   build(a, snap) {
-    const { nums, target } = a, n = nums.length;
+    const nums = a.nums.slice(), target = a.target, n = nums.length;
     let lo = 0, hi = n;
-    const view = (mid, ans) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === ans ? "c" : k === mid ? "a" : k < lo ? "d" : k >= hi ? "k" : "e" })), ptrs: { lo, mid, hi: hi < n ? hi : null } }];
-    const f = () => ({ facts: [["target", target], ["lo", lo], ["hi", hi]] });
-    snap("开始", `找第一个 ≥ ${target} 的下标。区间是 [0, ${n})，右端开着，因为可能要插在最后。`, view(-1), { at: "init", ...f() });
+    const view = (mid, ans) => [{
+      t: "array",
+      label: "nums",
+      items: nums.map((v, k) => ({
+        v,
+        cls: k === ans ? "c" : k === mid ? "a" : k < lo ? "d" : k >= hi ? "k" : "e",
+      })),
+      ptrs: { lo: lo < n ? lo : null, mid: mid >= 0 ? mid : null, hi: hi < n ? hi : null },
+    }];
+    snap(
+      "开始",
+      `找第一个 ≥ ${target} 的下标。区间是左闭右开 [0, ${n})，右端开着，因为可能要插在最后。`,
+      view(-1),
+      { at: "init", facts: [["target", target], ["区间", `[${lo}, ${hi})`], ["lo", lo], ["hi", hi]] },
+    );
     while (lo < hi) {
       const mid = (lo + hi) >> 1;
-      if (nums[mid] < target) { snap("太小", `nums[${mid}] = ${nums[mid]} &lt; ${target}，答案在 mid 右边，lo = ${mid + 1}。`, view(mid), { at: "small", ...f() }); lo = mid + 1; }
-      else { snap("够大", `nums[${mid}] = ${nums[mid]} ≥ ${target}，mid 可能就是答案，hi = ${mid}。`, view(mid), { at: "big", ...f() }); hi = mid; }
+      const small = nums[mid] < target;
+      snap(
+        "计算 mid 并比较",
+        `mid = (${lo} + ${hi}) // 2 = ${mid}，nums[${mid}] = ${nums[mid]}，和 target = ${target} 比较。`,
+        view(mid),
+        { at: small ? "small" : "big", facts: [["target", target], ["mid", `${mid} (值 ${nums[mid]})`], ["lo", lo], ["hi", hi]] },
+      );
+      if (small) {
+        const prevLo = lo, prevRange = `[${lo}, ${hi})`;
+        lo = mid + 1;
+        snap(
+          "排除左半，收缩区间",
+          `nums[${mid}] = ${nums[mid]} &lt; ${target}，mid 和它左边都太小，全部排除！lo 右移到 ${lo}。`,
+          view(-1),
+          { at: "small", facts: [["target", target], ["区间", `[${lo}, ${hi})`, prevRange], ["lo", lo, prevLo], ["hi", hi]] },
+        );
+      } else {
+        const prevHi = hi, prevRange = `[${lo}, ${hi})`;
+        hi = mid;
+        snap(
+          "收缩右边界",
+          `nums[${mid}] = ${nums[mid]} ≥ ${target}，mid 右边排除，mid 自己可能是答案，右开边界收到 hi = ${hi}。`,
+          view(-1),
+          { at: "big", facts: [["target", target], ["区间", `[${lo}, ${hi})`, prevRange], ["lo", lo], ["hi", hi, prevHi]] },
+        );
+      }
     }
-    const msg = lo === n ? `所有数都比 ${target} 小，插在末尾，返回 <b>${n}</b>。` : nums[lo] === target ? `nums[${lo}] 就是 ${target}，返回 <b>${lo}</b>。` : `数组里没有 ${target}，它应该插在下标 <b>${lo}</b>，也就是 ${nums[lo]} 前面。`;
-    snap("完成", `lo = hi = ${lo}。` + msg, view(-1, lo), { at: "done", kind: "ok", ans: lo, ...f() });
+    const msg = lo === n
+      ? `所有数都比 ${target} 小，插在末尾，返回 <b>${n}</b>。`
+      : nums[lo] === target
+        ? `nums[${lo}] 就是 ${target}，返回 <b>${lo}</b>。`
+        : `数组里没有 ${target}，它应该插在下标 <b>${lo}</b>，也就是 ${nums[lo]} 前面。`;
+    snap(
+      "完成",
+      `lo = hi = ${lo}。` + msg,
+      view(-1, lo),
+      { at: "done", kind: "ok", ans: lo, facts: [["target", target], ["插入位置", lo], ["lo", lo], ["hi", hi]] },
+    );
   },
   points: [
     { t: "hi 从 n 开始", body: "target 比所有数都大时，答案是 n。hi 从 n-1 开始就会漏掉这种情况。" },

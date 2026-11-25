@@ -51,20 +51,33 @@ assert s.lengthOfLongestSubstring("abba") == 2
   build(a, snap) {
     const s = a.s, seen = new Set(); let l = 0, best = 0;
     const view = (r, out) => [
-      { t: "array", label: "s", items: [...s].map((v, i) => ({ v, cls: i === out ? "b" : i === r ? "a" : i >= l && i < r ? "e" : i < l ? "d" : "" })), ptrs: { l, r } },
+      { t: "array", label: "s", items: [...s].map((v, i) => ({ v, cls: i === out ? "b" : i === r ? "a" : i >= l && i < r ? "e" : i < l ? "d" : "" })), ptrs: { l: s.length ? l : null, r: r >= 0 && r < s.length ? r : null } },
       { t: "chips", label: "集合 seen", items: [...seen] },
     ];
-    const facts = (r) => [["最长", best], ["窗口长度", Math.max(0, r - l + 1)]];
-    snap("开始", "窗口一开始是空的，l 和 r 都在最左边。", view(-1), { at: "init", facts: [["最长", 0]] });
+    snap("开始", "窗口一开始是空的，l 和 r 都在最左边。", view(-1), { at: "init", facts: [["窗口", "空"], ["窗口长度", 0], ["最长", 0]] });
     for (let r = 0; r < s.length; r++) {
       const ch = s[r];
       while (seen.has(ch)) {
-        seen.delete(s[l]);
-        snap("收缩", `新字符 '${ch}' 已经在窗口里。把最左边的 '${s[l]}' 移出去，l 右移。`, view(r, l), { at: "shrink", kind: "warn", facts: facts(r - 1) });
+        const outChar = s[l], outIdx = l;
+        const prevWin = s.slice(l, r) || "空", prevLen = r - l;
+        seen.delete(outChar);
         l++;
+        const curWin = s.slice(l, r) || "空", curLen = r - l;
+        snap("收缩", `新字符 '${ch}' 已经在窗口里。把最左边的 '${outChar}' 移出去，l 从 ${outIdx} 右移到 <b>${l}</b>。`, view(r, outIdx), {
+          at: "shrink",
+          kind: "warn",
+          facts: [["窗口", curWin, prevWin], ["窗口长度", curLen, prevLen], ["最长", best]],
+        });
       }
-      seen.add(ch); best = Math.max(best, r - l + 1);
-      snap("扩张", `'${ch}' 不在窗口里，放进来。窗口是 "${s.slice(l, r + 1)}"，长度 ${r - l + 1}。`, view(r), { at: "grow", facts: facts(r) });
+      const prevWin = s.slice(l, r) || "空", prevLen = r - l, prevBest = best;
+      seen.add(ch);
+      const curLen = r - l + 1;
+      best = Math.max(best, curLen);
+      const curWin = s.slice(l, r + 1);
+      snap("扩张", `'${ch}' 不在窗口里，放进来。窗口是 "${curWin}"，长度 <b>${curLen}</b>。`, view(r), {
+        at: "grow",
+        facts: [["窗口", curWin, prevWin], ["窗口长度", curLen, prevLen], ["最长", best, prevBest]],
+      });
     }
     snap("完成", `r 走到头了。最长的无重复子串长度是 <b>${best}</b>。`, view(s.length), { at: "done", kind: "ok", ans: best, facts: [["最长", best]] });
   },
@@ -75,21 +88,33 @@ assert s.lengthOfLongestSubstring("abba") == 2
     legend: [["e", "窗口里的字符"], ["a", "刚进来的字符"], ["b", "它上次出现的位置"], ["d", "窗口左边"]],
     build(a, snap) {
       const s = a.s, last = {}; let left = 0, best = 0;
-      const view = (i, prev) => [
-        { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t === prev ? "b" : t === i ? "a" : t >= left && t < i ? "e" : t < left ? "d" : "" })), ptrs: { left, i: i >= 0 && i < s.length ? i : null } },
-        { t: "chips", label: "last：每个字符上次出现的下标", items: Object.keys(last).map((c) => `${c} → ${last[c]}`), empty: "空" },
+      const view = (i, prev, hlChar) => [
+        { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t === prev ? "b" : t === i ? "a" : t >= left && t < i ? "e" : t < left ? "d" : "" })), ptrs: { left: s.length ? left : null, i: i >= 0 && i < s.length ? i : null } },
+        { t: "chips", label: "last：每个字符上次出现的下标", items: Object.keys(last).map((c) => ({ v: `${c} → ${last[c]}`, cls: c === hlChar ? "a" : "" })), empty: "空" },
       ];
-      const facts = (i) => ({ facts: [["最长", best], ["窗口长度", Math.max(0, i - left + 1)]] });
-      snap("开始", "字典 last 是空的，左边界 left = 0。", view(-1, -1), { at: "init", facts: [["最长", 0]] });
+      snap("开始", "字典 last 是空的，左边界 left = 0。", view(-1, -1), { at: "init", facts: [["窗口", "空"], ["窗口长度", 0], ["left", 0], ["最长", 0]] });
       for (let i = 0; i < s.length; i++) {
         const c = s[i], p = c in last ? last[c] : -1;
+        const prevWin = s.slice(left, i) || "空", prevLen = i - left, prevBest = best, oldLeft = left;
         if (p >= left) {
-          const old = left;
-          left = p + 1; last[c] = i; best = Math.max(best, i - left + 1);
-          snap("跳", `'${c}' 上次出现在下标 ${p}，还在窗口 [${old}, ${i - 1}] 里。left 直接从 ${old} 跳到 ${p} + 1 = <b>${left}</b>，窗口变成 "${s.slice(left, i + 1)}"。`, view(i, p), { at: "jump", kind: "warn", ...facts(i) });
+          left = p + 1; last[c] = i;
+          const curLen = i - left + 1;
+          best = Math.max(best, curLen);
+          const curWin = s.slice(left, i + 1);
+          snap("跳", `'${c}' 上次出现在下标 ${p}，还在窗口 [${oldLeft}, ${i - 1}] 里。left 直接从 ${oldLeft} 跳到 ${p} + 1 = <b>${left}</b>，窗口变成 "${curWin}"。`, view(i, p, c), {
+            at: "jump",
+            kind: "warn",
+            facts: [["窗口", curWin, prevWin], ["窗口长度", curLen, prevLen], ["left", left, oldLeft], ["最长", best, prevBest]],
+          });
         } else {
-          last[c] = i; best = Math.max(best, i - left + 1);
-          snap("扩张", (p >= 0 ? `'${c}' 上次出现在下标 ${p}，已经在窗口左边了，不算重复。` : `'${c}' 第一次出现。`) + `记下 last['${c}'] = ${i}。窗口是 "${s.slice(left, i + 1)}"，长度 ${i - left + 1}。`, view(i, -1), { at: "grow", ...facts(i) });
+          last[c] = i;
+          const curLen = i - left + 1;
+          best = Math.max(best, curLen);
+          const curWin = s.slice(left, i + 1);
+          snap("扩张", (p >= 0 ? `'${c}' 上次出现在下标 ${p}，已经在窗口左边了，不算重复。` : `'${c}' 第一次出现。`) + `记下 last['${c}'] = ${i}。窗口是 "${curWin}"，长度 <b>${curLen}</b>。`, view(i, -1, c), {
+            at: "grow",
+            facts: [["窗口", curWin, prevWin], ["窗口长度", curLen, prevLen], ["left", left], ["最长", best, prevBest]],
+          });
         }
       }
       snap("完成", `走到头了。最长的无重复子串长度是 <b>${best}</b>。`, view(s.length, -1), { at: "done", kind: "ok", ans: best, facts: [["最长", best]] });

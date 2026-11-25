@@ -61,33 +61,103 @@ for i, x in enumerate(data):
     { label: "乱序", args: { ops: [["add", 5], ["find"], ["add", 15], ["find"], ["add", 1], ["find"], ["add", 3], ["find"]] }, note: "依次加入 5, 15, 1, 3，每次后查一次中位数", expect: [null, 5, null, 10, null, 5, null, 4] },
   ],
   build(a, snap) {
-    const ops = a.ops, lo = [], hi = [], out = [];
+    const ops = a.ops.map((o) => o.slice()), lo = [], hi = [], out = [];
     const name = (o) => (o[0] === "add" ? `addNum(${o[1]})` : "findMedian()");
-    const view = (i) => [
+    const topLo = () => (lo.length ? lo[lo.length - 1] : "—");
+    const topHi = () => (hi.length ? hi[0] : "—");
+    const view = (i, opts = {}) => [
       { t: "chips", label: "操作", items: ops.map((o, t) => ({ v: name(o), cls: t === i ? "a" : t < i ? "d" : "" })) },
-      { t: "array", label: "lo：较小的一半（大顶堆，右边是堆顶）", items: lo.length ? lo.map((v, k) => ({ v, cls: k === lo.length - 1 ? "c" : "" })) : [{ v: "", cls: "d" }], idx: false },
-      { t: "array", label: "hi：较大的一半（小顶堆，左边是堆顶）", items: hi.length ? hi.map((v, k) => ({ v, cls: k === 0 ? "c" : "" })) : [{ v: "", cls: "d" }], idx: false },
+      {
+        t: "array",
+        label: "lo：较小的一半（大顶堆，右边是堆顶）",
+        items: lo.length
+          ? lo.map((v, k) => ({
+              v,
+              cls: k === opts.hlLo ? "a" : k === lo.length - 1 ? "c" : "",
+            }))
+          : [{ v: "", cls: "d" }],
+        idx: false,
+      },
+      {
+        t: "array",
+        label: "hi：较大的一半（小顶堆，左边是堆顶）",
+        items: hi.length
+          ? hi.map((v, k) => ({
+              v,
+              cls: k === opts.hlHi ? "a" : k === 0 ? "c" : "",
+            }))
+          : [{ v: "", cls: "d" }],
+        idx: false,
+      },
       { t: "chips", label: "输出", items: out.map((v) => (v === null ? "null" : v)), empty: "还没有" },
     ];
-    const ins = (arr, x) => { arr.push(x); arr.sort((p, q) => p - q); };
-    snap("开始", "两个堆都是空的。", view(-1), { at: "init", facts: [["lo", 0], ["hi", 0]] });
+    const f = (pLoLen, pLoTop, pHiLen, pHiTop, med) => ({
+      facts: [
+        ["lo 大小", lo.length, pLoLen],
+        ["lo 堆顶(最大)", topLo(), pLoTop],
+        ["hi 大小", hi.length, pHiLen],
+        ["hi 堆顶(最小)", topHi(), pHiTop],
+        ...(med !== undefined ? [["中位数", med]] : []),
+      ],
+    });
+    const ins = (arr, x) => {
+      arr.push(x);
+      arr.sort((p, q) => p - q);
+      return arr.lastIndexOf(x);
+    };
+    snap("开始", "两个堆都是空的。", view(-1), { at: "init", ...f() });
     ops.forEach((o, i) => {
-      let msg, at;
       if (o[0] === "add") {
-        at = "add";
-        const x = o[1]; ins(lo, x); const m1 = lo.pop(); ins(hi, m1);
-        msg = `先把 ${x} 放进 lo，再把 lo 里最大的 ${m1} 挪到 hi。`;
-        if (hi.length > lo.length) { const m2 = hi.shift(); ins(lo, m2); msg += `hi 比 lo 多了，把 hi 里最小的 ${m2} 挪回 lo。`; at = ["add", "rebal"]; }
-        out.push(null);
+        const x = o[1];
+        const pLoLen0 = lo.length, pLoTop0 = topLo();
+        const hlLo1 = ins(lo, x);
+        snap(
+          `${name(o)}：入 lo`,
+          `先把 <b>${x}</b> 放进 lo，它可能比 hi 里的数大，所以先过一遍 lo。`,
+          view(i, { hlLo: hlLo1 }),
+          { at: "add", ...f(pLoLen0, pLoTop0) },
+        );
+
+        const pLoLen1 = lo.length, pLoTop1 = topLo(), pHiLen1 = hi.length, pHiTop1 = topHi();
+        const m1 = lo.pop();
+        const hlHi2 = ins(hi, m1);
+        const needRebal = hi.length > lo.length;
+        if (!needRebal) out.push(null);
+        snap(
+          `${name(o)}：最大挪到 hi`,
+          `把 lo 堆顶（最大值 <b>${m1}</b>）弹出放入 hi，保证 lo 的每个数都不大于 hi。`,
+          view(i, { hlHi: hlHi2 }),
+          { at: "add", ...f(pLoLen1, pLoTop1, pHiLen1, pHiTop1) },
+        );
+
+        if (needRebal) {
+          const pLoLen2 = lo.length, pLoTop2 = topLo(), pHiLen2 = hi.length, pHiTop2 = topHi();
+          const m2 = hi.shift();
+          const hlLo3 = ins(lo, m2);
+          out.push(null);
+          snap(
+            `${name(o)}：平衡回 lo`,
+            `hi（${hi.length} 个）比 lo（${lo.length - 1} 个）多了，把 hi 堆顶（最小值 <b>${m2}</b>）挪回 lo，保持 lo 不少于 hi。`,
+            view(i, { hlLo: hlLo3 }),
+            { at: "rebal", ...f(pLoLen2, pLoTop2, pHiLen2, pHiTop2) },
+          );
+        }
       } else {
         const med = lo.length > hi.length ? lo[lo.length - 1] : (lo[lo.length - 1] + hi[0]) / 2;
         out.push(med);
-        at = lo.length > hi.length ? "odd" : "even";
-        msg = lo.length > hi.length ? `一共 ${lo.length + hi.length} 个数，是奇数，中位数是 lo 的堆顶 <b>${med}</b>。` : `一共 ${lo.length + hi.length} 个数，是偶数，中位数是两个堆顶的平均 (${lo[lo.length - 1]} + ${hi[0]}) / 2 = <b>${med}</b>。`;
+        const at = lo.length > hi.length ? "odd" : "even";
+        const msg = lo.length > hi.length
+          ? `一共 ${lo.length + hi.length} 个数，是奇数，中位数是 lo 的堆顶 <b>${med}</b>。`
+          : `一共 ${lo.length + hi.length} 个数，是偶数，中位数是两个堆顶的平均 (${lo[lo.length - 1]} + ${hi[0]}) / 2 = <b>${med}</b>。`;
+        snap(name(o), msg, view(i), { at, ...f(undefined, undefined, undefined, undefined, med) });
       }
-      snap(name(o), msg, view(i), { at, facts: [["lo", lo.length], ["hi", hi.length]] });
     });
-    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), { at: [], kind: "ok", ans: out.slice(), facts: [["lo", lo.length], ["hi", hi.length]] });
+    snap("完成", `输出是 [${out.map((v) => (v === null ? "null" : v)).join(", ")}]。`, view(ops.length), {
+      at: [],
+      kind: "ok",
+      ans: out.slice(),
+      ...f(),
+    });
   },
   points: [
     { t: "先过一遍另一个堆", body: "新数不能直接放进少的那个堆，要先经过另一个堆，才能保证 lo 的最大值 ≤ hi 的最小值。" },

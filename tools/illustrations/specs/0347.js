@@ -53,52 +53,145 @@ assert sorted(s.topKFrequent([5,5,6,6,6,7], 1)) == [6]
   build(a, snap) {
     const { nums, k } = a, cnt = new Map();
     for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);
-    const ents = [...cnt], heap = [];
+    const ents = [...cnt], heap = [], outs = [], doneSet = new Set();
     const cmp = (p, q) => p[0] - q[0] || p[1] - q[1];
-    const view = (cur, out) => [
-      { t: "chips", label: "计数（数 × 次数）", items: ents.map(([x, c]) => ({ v: `${x} × ${c}`, cls: x === cur ? "a" : "" })) },
-      { t: "array", label: `小顶堆（按次数从小到大排，最左边是堆顶，最多 ${k} 个）`, items: heap.length ? heap.map(([c, x], i) => ({ v: `${x}(${c}次)`, cls: i === 0 ? "c" : "" })) : [{ v: "", cls: "d" }], idx: false },
-      { t: "chips", label: "挤掉的", items: out.map(([c, x]) => ({ v: `${x}(${c}次)`, cls: "b" })), empty: "还没有" },
+    const topStr = () => (heap.length ? `${heap[0][1]}(${heap[0][0]}次)` : "—");
+    const sizeStr = () => `${heap.length} / ${k}`;
+    const view = (cur, hlIdx = -1) => [
+      {
+        t: "chips",
+        label: "计数（数 × 次数）",
+        items: ents.map(([x, c]) => ({ v: `${x} × ${c}`, cls: x === cur ? "a" : doneSet.has(x) ? "d" : "" })),
+      },
+      {
+        t: "array",
+        label: `小顶堆（按次数从小到大排，最左边是堆顶，最多 ${k} 个）`,
+        items: heap.length
+          ? heap.map(([c, x], i) => ({
+              v: `${x}(${c}次)`,
+              cls: i === hlIdx ? "a" : i === 0 ? "c" : "",
+            }))
+          : [{ v: "", cls: "d" }],
+        idx: false,
+      },
+      { t: "chips", label: "挤掉的", items: outs.map(([c, x]) => ({ v: `${x}(${c}次)`, cls: "b" })), empty: "还没有" },
     ];
-    snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null, []), { at: "count" });
-    const outs = [];
+    const f = (prevSize, prevTop, popped) => ({
+      facts: [
+        ["堆大小", sizeStr(), prevSize],
+        ["堆顶门槛", topStr(), prevTop],
+        ...(popped ? [["刚挤掉", popped]] : [["目标 k", k]]),
+      ],
+    });
+    snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null), { at: "count", ...f() });
     for (const [x, c] of ents) {
-      heap.push([c, x]); heap.sort(cmp);
-      if (heap.length > k) { const o = heap.shift(); outs.push(o); snap("挤掉", `放入 ${x}（${c} 次）后堆里超过 ${k} 个，弹出堆顶 ${o[1]}（${o[0]} 次），它是次数最少的。`, view(x, outs), { at: "pop", kind: "warn" }); }
-      else snap("入堆", `放入 ${x}（${c} 次）。堆里还不到 ${k + 1} 个，不用挤。`, view(x, outs), { at: "push" });
+      const prevSize = sizeStr(), prevTop = topStr();
+      const item = [c, x];
+      heap.push(item);
+      heap.sort(cmp);
+      const hlIdx = heap.indexOf(item);
+      const over = heap.length > k;
+      snap(
+        "入堆",
+        `把 <b>${x}（${c} 次）</b> 放入小顶堆。` + (over ? `现在堆里有 ${heap.length} 个，超过了 k = ${k}。` : `堆里只有 ${heap.length} 个，还没超过 ${k}，不用挤。`),
+        view(x, hlIdx),
+        { at: "push", ...f(prevSize, prevTop) },
+      );
+      if (over) {
+        const prevSize2 = sizeStr(), prevTop2 = topStr();
+        const o = heap.shift();
+        outs.push(o);
+        snap(
+          "挤掉堆顶",
+          `弹出堆顶 <b>${o[1]}（${o[0]} 次）</b>，它是堆里次数最少的。堆里重新保留 ${k} 个。`,
+          view(x),
+          { at: "pop", kind: "warn", ...f(prevSize2, prevTop2, `${o[1]}(${o[0]}次)`) },
+        );
+      }
+      doneSet.add(x);
     }
     const ans = heap.slice().reverse().map(([, x]) => x);
-    snap("完成", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(",")}]。`, view(null, outs), { at: "done", kind: "ok", ans });
+    snap("完成", `堆里剩下的就是出现最多的 ${k} 个：[${ans.join(",")}]。`, view(null), {
+      at: "done",
+      kind: "ok",
+      ans,
+      facts: [["堆大小", sizeStr()], ["堆顶门槛", topStr()], ["结果", `[${ans.join(",")}]`]],
+    });
   },
   alts: [{
     t: "桶排序",
     code: "bucket",
     note: "和 O(n) 写法一样：出现次数不会超过 n，所以开 n + 1 个桶，第 c 个桶放出现 c 次的数。再从次数最大的桶往回取，取够 k 个就停。",
-    legend: [["a", "正在处理"], ["c", "已经取进结果"], ["d", "第 0 个桶用不到"]],
+    legend: [["a", "正在处理"], ["c", "已经取进结果"], ["d", "第 0 个桶用不到 / 已处理"]],
     build(a, snap) {
       const { nums, k } = a, n = nums.length, cnt = new Map();
       for (const x of nums) cnt.set(x, (cnt.get(x) || 0) + 1);
-      const ents = [...cnt], B = Array.from({ length: n + 1 }, () => []), res = [];
+      const ents = [...cnt], B = Array.from({ length: n + 1 }, () => []), res = [], doneSet = new Set();
       let cur = -1, low = n + 1;
-      const view = (x) => [
-        { t: "chips", label: "计数（数 × 次数）", items: ents.map(([v, c]) => ({ v: `${v} × ${c}`, cls: v === x ? "a" : "" })) },
-        { t: "array", label: "buckets[c]：出现 c 次的数", items: B.map((b, c) => ({ v: b.join(","), cls: c === cur ? "a" : c >= low && b.length ? "c" : c === 0 ? "d" : "" })) },
+      const view = (x, prevMap = {}) => [
+        {
+          t: "chips",
+          label: "计数（数 × 次数）",
+          items: ents.map(([v, c]) => ({ v: `${v} × ${c}`, cls: v === x ? "a" : doneSet.has(v) ? "d" : "" })),
+        },
+        {
+          t: "array",
+          label: "buckets[c]：出现 c 次的数",
+          items: B.map((b, c) => ({
+            v: b.join(","),
+            ...(prevMap[c] !== undefined ? { prev: prevMap[c] } : {}),
+            cls: c === cur ? "a" : c >= low && b.length ? "c" : c === 0 ? "d" : "",
+          })),
+        },
         { t: "chips", label: "结果", items: res.map((v) => ({ v, cls: "c" })), empty: "还没有" },
       ];
-      snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null), { at: "count" });
-      for (const [x, c] of ents) { B[c].push(x); cur = c; snap("放进桶", `${x} 出现 ${c} 次，放进第 ${c} 个桶。`, view(x), { at: "put" }); }
+      snap("计数", `先数一遍：${ents.map(([x, c]) => `${x} 出现 ${c} 次`).join("，")}。`, view(null), {
+        at: "count",
+        facts: [["不同元素数", ents.length], ["桶数量", n + 1], ["目标 k", k]],
+      });
+      for (const [x, c] of ents) {
+        const oldVal = B[c].join(",");
+        B[c].push(x);
+        cur = c;
+        const prevMap = oldVal !== "" ? { [c]: oldVal } : {};
+        snap("放进桶", `<b>${x}</b> 出现 ${c} 次，放进第 ${c} 个桶。`, view(x, prevMap), {
+          at: "put",
+          facts: [["当前放入", `${x} → 桶 ${c}`], ["桶内元素", B[c].join(",")], ["目标 k", k]],
+        });
+        doneSet.add(x);
+      }
       cur = -1;
-      snap("从后往前取", `次数越大越靠后。从第 ${n} 个桶往回扫，空桶直接跳过。`, view(null), { at: "scan" });
+      snap("从后往前取", `次数越大越靠后。从第 ${n} 个桶往回扫，空桶直接跳过。`, view(null), {
+        at: "scan",
+        facts: [["扫描桶下标", n], ["已收集", 0], ["目标 k", k]],
+      });
+      let prevC = n;
       for (let c = n; c >= 1; c--) {
         if (!B[c].length) continue;
-        cur = c; low = c; res.push(...B[c]);
+        const prevLen = res.length;
+        cur = c; low = c;
+        res.push(...B[c]);
         const enough = res.length >= k;
-        snap("取出", `第 ${c} 个桶里有 ${B[c].join("、")}（各出现 ${c} 次），放进结果。` + (enough ? `已经有 ${res.length} 个，够 k = ${k} 个了。` : `还不够 ${k} 个，继续往回扫。`), view(null), { at: "take" });
+        snap(
+          "取出",
+          `第 ${c} 个桶里有 <b>${B[c].join("、")}</b>（各出现 ${c} 次），放进结果。` + (enough ? `已经有 ${res.length} 个，够 k = ${k} 个了。` : `还不够 ${k} 个，继续往回扫。`),
+          view(null),
+          {
+            at: "take",
+            facts: [["扫描桶下标", c, prevC], ["已收集", res.length, prevLen], ["目标 k", k]],
+          },
+        );
+        prevC = c;
         if (enough) break;
       }
       const ans = res.slice(0, k);
       cur = -1;
-      snap("完成", `前 ${k} 个高频元素是 [${ans.join(",")}]。`, view(null), { at: "done", kind: "ok", ans });
+      snap("完成", `前 ${k} 个高频元素是 [${ans.join(",")}]。`, view(null), {
+        at: "done",
+        kind: "ok",
+        ans,
+        facts: [["已收集", ans.length], ["目标 k", k], ["结果", `[${ans.join(",")}]`]],
+      });
     },
   }],
   points: [

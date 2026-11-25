@@ -53,15 +53,46 @@ assert s.partitionLabels("abc") == [1,1,1]
       { t: "array", label: "s", items: s.split("").map((c, k) => { const g = segOf(k); return { v: c, cls: g >= 0 ? (g % 2 ? "g" : "k") : k === i ? "a" : i >= 0 && k === last[s[i]] ? "b" : k >= start && k <= end && i >= 0 ? "e" : "" }; }), ptrs: { i: i >= 0 ? i : null, end: i >= 0 ? end : null } },
       { t: "chips", label: "片段长度", items: res.slice(), empty: "还没有" },
     ];
-    snap("开始", `先记下每个字母最后出现的位置，比如 '${s[0]}' 最后在 ${last[s[0]]}。然后从左往右走。`, view(-1), { at: "init" });
+    snap("开始", `先记下每个字母最后出现的位置，比如 '${s[0]}' 最后在 ${last[s[0]]}。然后从左往右走。`, view(-1), {
+      at: "init",
+      facts: [["start", 0], ["end", 0], ["已切段数", 0]],
+    });
     for (let i = 0; i < s.length; i++) {
-      const old = end; end = Math.max(end, last[s[i]]);
+      const oldEnd = end;
+      end = Math.max(end, last[s[i]]);
       if (i === end) {
-        snap("切一刀", `'${s[i]}' 最后出现在 ${last[s[i]]}。走到了 end = ${end}，这一段 [${start}, ${end}] 里的字母都不会再出现了，切下来，长度 <b>${end - start + 1}</b>。`, view(i), { at: ["grow", "cut"], kind: "ok", facts: [["start", start], ["end", end]] });
-        res.push(end - start + 1); segs.push([start, end]); start = i + 1;
-      } else snap(end > old ? "撑大边界" : "继续", `'${s[i]}' 最后出现在 ${last[s[i]]}。` + (end > old ? `片段至少要到 ${end}，end 从 ${old} 变成 <b>${end}</b>。` : `没有超过 end = ${end}。`), view(i), { at: "grow", facts: [["start", start], ["end", end]] });
+        const oldStart = start, segLen = end - start + 1, oldCuts = res.length;
+        res.push(segLen);
+        segs.push([start, end]);
+        start = i + 1;
+        snap(
+          "切一刀",
+          `'${s[i]}' 最后出现在 ${last[s[i]]}。走到了 end = ${end}，这一段 [${oldStart}, ${end}] 里的字母都不会再出现了，切下来，长度 <b>${segLen}</b>。`,
+          view(i),
+          {
+            at: ["grow", "cut"],
+            kind: "ok",
+            facts: [["start", start, oldStart], ["end", end, oldEnd], ["当前字母末位", last[s[i]]], ["已切段数", res.length, oldCuts]],
+          },
+        );
+      } else {
+        snap(
+          end > oldEnd ? "撑大边界" : "继续",
+          `'${s[i]}' 最后出现在 ${last[s[i]]}。` + (end > oldEnd ? `片段至少要到 ${end}，end 从 ${oldEnd} 变成 <b>${end}</b>。` : `没有超过 end = ${end}。`),
+          view(i),
+          {
+            at: "grow",
+            facts: [["start", start], ["end", end, oldEnd], ["当前字母末位", last[s[i]]], ["已切段数", res.length]],
+          },
+        );
+      }
     }
-    snap("完成", `一共切成 ${res.length} 段，长度是 [${res.join(",")}]。`, view(-1), { at: "done", kind: "ok", ans: res.slice() });
+    snap("完成", `一共切成 ${res.length} 段，长度是 [${res.join(",")}]。`, view(-1), {
+      at: "done",
+      kind: "ok",
+      ans: res.slice(),
+      facts: [["已切段数", res.length]],
+    });
   },
   points: [
     { t: "end 只增不减", body: "用 max 更新。片段里出现过的字母，边界只会越撑越大。" },

@@ -53,36 +53,82 @@ assert s.searchRange([1,2,3], 4) == [-1,-1]
     { label: "一长串相同", args: { nums: [1, 3, 3, 3, 3, 3, 3, 5], target: 3 }, note: "nums = [1,3,3,3,3,3,3,5], target = 3", expect: [1, 6] },
   ],
   build(a, snap) {
-    const { nums, target } = a, n = nums.length;
+    const nums = a.nums.slice(), target = a.target, n = nums.length;
     let found = [];
-    const view = (lo, hi, mid, x) => [{ t: "array", label: `nums（找第一个 ≥ ${x} 的位置）`, items: nums.map((v, k) => ({ v, cls: found.includes(k) ? "c" : k === mid ? "a" : k < lo ? "d" : k >= hi ? "k" : "e" })), ptrs: { lo, mid, hi: hi < n ? hi : null } }];
+    const view = (lo, hi, mid, x) => [{
+      t: "array",
+      label: `nums（找第一个 ≥ ${x} 的位置）`,
+      items: nums.map((v, k) => ({
+        v,
+        cls: found.includes(k) ? "c" : k === mid ? "a" : k < lo ? "d" : k >= hi ? "k" : "e",
+      })),
+      ptrs: { lo: lo < n ? lo : null, mid: mid >= 0 ? mid : null, hi: hi < n ? hi : null },
+    }];
     // call：这次 lower_bound 是从哪一行调用的（start 或 end）
     const lb = (x, tag, call) => {
       let lo = 0, hi = n;
-      snap(tag, `找第一个 ≥ <b>${x}</b> 的下标。区间是左闭右开的 [${lo}, ${hi})。`, view(lo, hi, -1, x), { at: [call, "lb"], facts: [["x", x], ["lo", lo], ["hi", hi]] });
+      snap(
+        `${tag}：开始`,
+        `找第一个 ≥ <b>${x}</b> 的下标。区间是左闭右开的 [${lo}, ${hi})${n === 0 ? "（空数组）" : ""}。`,
+        view(lo, hi, -1, x),
+        { at: [call, "lb"], facts: [["目标", `≥ ${x}`], ["区间", `[${lo}, ${hi})`], ["lo", lo], ["hi", hi]] },
+      );
       while (lo < hi) {
         const mid = (lo + hi) >> 1;
+        snap(
+          `${tag}：计算 mid 并比较`,
+          `mid = (${lo} + ${hi}) // 2 = ${mid}，nums[${mid}] = ${nums[mid]}，和 ${x} 比较。`,
+          view(lo, hi, mid, x),
+          { at: "mid", facts: [["目标", `≥ ${x}`], ["mid", `${mid} (值 ${nums[mid]})`], ["lo", lo], ["hi", hi]] },
+        );
         if (nums[mid] < x) {
-          snap(tag, `nums[${mid}] = ${nums[mid]} &lt; ${x}，mid 和它左边都不是答案，lo = ${mid + 1}。`, view(lo, hi, mid, x), { at: ["mid", "right"], facts: [["x", x], ["lo", lo], ["hi", hi]] });
+          const prevLo = lo, prevRange = `[${lo}, ${hi})`;
           lo = mid + 1;
+          snap(
+            `${tag}：排除左半，收缩区间`,
+            `nums[${mid}] = ${nums[mid]} &lt; ${x}，mid 和它左边都太小，全部排除。lo 右移到 ${lo}。`,
+            view(lo, hi, -1, x),
+            { at: "right", facts: [["目标", `≥ ${x}`], ["区间", `[${lo}, ${hi})`, prevRange], ["lo", lo, prevLo], ["hi", hi]] },
+          );
         } else {
-          snap(tag, `nums[${mid}] = ${nums[mid]} ≥ ${x}，mid 可能就是答案，右边界收到 hi = ${mid}。`, view(lo, hi, mid, x), { at: ["mid", "left"], facts: [["x", x], ["lo", lo], ["hi", hi]] });
+          const prevHi = hi, prevRange = `[${lo}, ${hi})`;
           hi = mid;
+          snap(
+            `${tag}：收缩右边界`,
+            `nums[${mid}] = ${nums[mid]} ≥ ${x}，mid 右边太大排除，但 mid 自己可能就是答案，右开边界收到 hi = ${hi}。`,
+            view(lo, hi, -1, x),
+            { at: "left", facts: [["目标", `≥ ${x}`], ["区间", `[${lo}, ${hi})`, prevRange], ["lo", lo], ["hi", hi, prevHi]] },
+          );
         }
       }
-      snap(tag, `lo = hi = ${lo}，第一个 ≥ ${x} 的下标是 <b>${lo}</b>${lo === n ? "（等于 n，说明都比它小）" : ""}。`, view(lo, hi, -1, x), { at: "lbret", facts: [["x", x], ["lo", lo], ["hi", hi]] });
+      snap(
+        `${tag}：返回结果`,
+        `lo = hi = ${lo}，第一个 ≥ ${x} 的下标是 <b>${lo}</b>${lo === n ? "（等于 n，说明都比它小）" : ""}。`,
+        view(lo, hi, -1, x),
+        { at: "lbret", facts: [["目标", `≥ ${x}`], ["返回值", lo], ["lo", lo], ["hi", hi]] },
+      );
       return lo;
     };
     const start = lb(target, "找开始", "start");
     if (start === n || nums[start] !== target) {
-      snap("不存在", `下标 ${start} ${start === n ? "已经出界" : `上的数是 ${nums[start]}，不是 ${target}`}。数组里没有 ${target}，返回 <b>[-1, -1]</b>。`, view(start, start, -1, target), { at: "none", kind: "warn", ans: [-1, -1] });
+      snap(
+        "不存在",
+        `下标 ${start} ${start === n ? "已经出界" : `上的数是 ${nums[start]}，不是 ${target}`}。数组里没有 ${target}，返回 <b>[-1, -1]</b>。`,
+        view(start, start, -1, target),
+        { at: "none", kind: "warn", ans: [-1, -1], facts: [["start", start], ["答案", "[-1, -1]"]] },
+      );
       return;
     }
     found = [start];
     const end = lb(target + 1, "找结束", "end") - 1;
     found = [];
     for (let k = start; k <= end; k++) found.push(k);
-    snap("完成", `开始位置 ${start}，结束位置是第一个 ≥ ${target + 1} 的下标减一，等于 ${end}。答案 <b>[${start}, ${end}]</b>。`, view(end + 1, end + 1, -1, target + 1), { at: "end", kind: "ok", ans: [start, end] });
+    snap(
+      "完成",
+      `开始位置 ${start}，结束位置是第一个 ≥ ${target + 1} 的下标减一，等于 ${end}。答案 <b>[${start}, ${end}]</b>。`,
+      view(end + 1, end + 1, -1, target + 1),
+      { at: "end", kind: "ok", ans: [start, end], facts: [["开始位置", start], ["结束位置", end], ["答案", `[${start}, ${end}]`]] },
+    );
   },
   points: [
     { t: "左闭右开", body: "hi 初始是 n 而不是 n-1，这样「都比 x 小」时能自然返回 n。" },

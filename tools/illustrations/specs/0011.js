@@ -35,21 +35,44 @@ assert s.maxArea([4,3,2,1,4]) == 16
   sig: { fn: "maxArea", params: ["int[]"], ret: "int" },
   call: (a) => [a.h],
   cases: [[[1, 1]], [[1, 2]], [[0, 0, 0]]],
-  legend: [["a", "当前的两块板"], ["c", "目前最大的一对"], ["d", "已经排除"]],
+  legend: [["a", "当前两块板（较长或相等）"], ["b", "较矮的短板"], ["c", "目前最大的一对"], ["d", "已经排除"]],
   presets: [
     { label: "示例 1", args: { h: [1, 8, 6, 2, 5, 4, 8, 3, 7] }, note: "height = [1,8,6,2,5,4,8,3,7]", expect: 49 },
     { label: "两边高", args: { h: [4, 3, 2, 1, 4] }, note: "height = [4,3,2,1,4]", expect: 16 },
   ],
   build(a, snap) {
-    const h = a.h; let l = 0, r = h.length - 1, best = 0, bp = [-1, -1];
-    const view = (done) => [{ t: "bars", label: "height", items: h.map((v, i) => ({ v, cls: !done && (i === l || i === r) ? "a" : i === bp[0] || i === bp[1] ? "c" : i < l || i > r ? "d" : "" })), ptrs: done ? {} : { l, r } }];
-    snap("开始", "l 在最左，r 在最右，这是最宽的容器。", view(), { at: "init", facts: [["最大面积", 0]] });
+    const h = a.h; let l = 0, r = h.length - 1, best = 0, bp = [-1, -1], prevArea = "—";
+    const view = (done, shortIdx = -1) => [{
+      t: "bars",
+      label: "height",
+      items: h.map((v, i) => ({
+        v,
+        cls: !done && i === shortIdx ? "b" : !done && (i === l || i === r) ? "a" : i === bp[0] || i === bp[1] ? "c" : i < l || i > r ? "d" : "",
+      })),
+      ptrs: done ? {} : { l, r },
+    }];
+    snap("开始", "l 在最左，r 在最右，从最宽的容器开始。", view(false), { at: "init", facts: [["最大面积", 0], ["当前面积", "—"], ["宽度 r − l", r - l]] });
     while (l < r) {
-      const area = Math.min(h[l], h[r]) * (r - l), up = area > best;
-      if (up) { best = area; bp = [l, r]; }
-      const moveL = h[l] < h[r];
-      snap("计算", `面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? "比之前大，更新最大面积。" : `没有超过 ${best}。`) + (moveL ? `左边的 ${h[l]} 是短板，l 右移。` : `右边的 ${h[r]} ${h[l] === h[r] ? "和左边一样高" : "是短板"}，r 左移。`), view(), { at: ["area", "move"], facts: [["最大面积", best], ["当前面积", area]] });
+      const w = r - l, minH = Math.min(h[l], h[r]), area = minH * w, oldBest = best, up = area > best;
+      if (up || bp[0] === -1) { best = Math.max(best, area); bp = [l, r]; }
+      const moveL = h[l] < h[r], shortIdx = moveL ? l : r;
+      snap(
+        "计算面积",
+        `短板是 ${moveL ? `左边 h[${l}] = ${h[l]}` : `右边 h[${r}] = ${h[r]}`}，面积 = min(${h[l]}, ${h[r]}) × (${r} − ${l}) = <b>${area}</b>。` + (up ? `超过 ${oldBest}，更新最大面积！` : `没有超过最大面积 ${best}。`),
+        view(false, shortIdx),
+        { at: "area", facts: [["最大面积", best, oldBest], ["当前面积", area, prevArea], ["宽 × 高", `${w} × ${minH}`]] },
+      );
+      const oldL = l, oldR = r;
       if (moveL) l++; else r--;
+      snap(
+        "移动短板",
+        moveL
+          ? `左边 ${h[oldL]} &lt; 右边 ${h[oldR]}：移动长板只会让宽度变小、高度仍受限于 ${h[oldL]}，面积必减；只有把短板 <b>l 右移</b>（${oldL} → ${l}）才可能更大。`
+          : `右边 ${h[oldR]} ${h[oldL] === h[oldR] ? "等于" : "≤"} 左边 ${h[oldL]}：移动左边只会让宽度变小、高度不超过 ${h[oldR]}，面积必减；所以把 <b>r 左移</b>（${oldR} → ${r}）。`,
+        view(false),
+        { at: "move", facts: [["最大面积", best], ["当前面积", area], ["宽度 r − l", r - l, w]] },
+      );
+      prevArea = area;
     }
     snap("完成", `两个指针相遇，结束。最大面积是 <b>${best}</b>，由下标 ${bp[0]} 和 ${bp[1]} 的两块板围成。`, view(true), { at: "done", kind: "ok", ans: best, facts: [["最大面积", best]] });
   },

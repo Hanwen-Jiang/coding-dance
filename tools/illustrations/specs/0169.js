@@ -31,22 +31,47 @@ assert s.majorityElement([6,5,5]) == 5
   sig: { fn: "majorityElement", params: ["int[]"], ret: "int" },
   call: (a) => [a.nums],
   cases: [[[1]], [[6, 5, 5]], [[-1, -1, 2]]],
-  legend: [["a", "当前的数"], ["k", "看过的、和当前候选人相同的数"], ["d", "看过的其他数"]],
+  legend: [["a", "当前的数"], ["k", "看过的、和当前候选人相同的数"], ["d", "看过的其他数"], ["c", "最终胜出的多数元素"]],
   presets: [
     { label: "示例 2", args: { nums: [2, 2, 1, 1, 1, 2, 2] }, note: "nums = [2,2,1,1,1,2,2]", expect: 2 },
     { label: "示例 1", args: { nums: [3, 2, 3] }, note: "nums = [3,2,3]", expect: 3 },
   ],
   build(a, snap) {
-    const nums = a.nums; let cand = null, count = 0;
-    const view = (i) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k < i ? (v === cand ? "k" : "d") : "" })), ptrs: { i: i >= 0 ? i : null } }];
-    const f = (at) => ({ at, facts: [["候选人", cand === null ? "—" : cand], ["票数", count]] });
+    const nums = a.nums.slice();
+    let cand = null, count = 0;
+    const view = (i, fin) => [{
+      t: "array",
+      label: "nums",
+      items: nums.map((v, k) => ({
+        v,
+        cls: fin ? (v === cand ? "c" : "d") : k === i ? "a" : k < i ? (v === cand ? "k" : "d") : "",
+      })),
+      ptrs: { i: i >= 0 ? i : null },
+    }];
+    const f = (at, x, prevCand, prevCount) => ({
+      at,
+      facts: [
+        ...(x !== undefined ? [["当前数 x", x]] : []),
+        ["候选人", cand === null ? "—" : cand, prevCand],
+        ["票数", count, prevCount],
+      ],
+    });
     snap("开始", "还没有候选人，票数 0。", view(-1), f("init"));
     nums.forEach((x, i) => {
-      if (count === 0) { cand = x; count = 1; snap("新候选人", `票数是 0，${x} 成为新的候选人，票数 1。`, view(i), f("new")); }
-      else if (x === cand) { count++; snap("+1", `${x} 和候选人相同，票数 +1，变成 ${count}。`, view(i), f("vote")); }
-      else { count--; snap("抵消", `${x} 和候选人 ${cand} 不同，两者抵消，票数 −1，变成 ${count}。`, view(i), { kind: count === 0 ? "warn" : "", ...f("vote") }); }
+      const oldCand = cand === null ? "—" : cand, oldCount = count;
+      if (count === 0) {
+        cand = x;
+        count = 1;
+        snap("新候选人", `票数是 0，<b>${x}</b> 成为新的候选人，票数变为 1。`, view(i), f("new", x, oldCand, oldCount));
+      } else if (x === cand) {
+        count++;
+        snap("+1", `${x} 和候选人 ${cand} 相同，票数 +1，变成 ${count}。`, view(i), f("vote", x, undefined, oldCount));
+      } else {
+        count--;
+        snap("抵消", `${x} 和候选人 ${cand} 不同，两两抵消，票数 −1，变成 ${count}${count === 0 ? "（归零，下个数会换人）" : ""}。`, view(i), { kind: count === 0 ? "warn" : "", ...f("vote", x, undefined, oldCount) });
+      }
     });
-    snap("完成", `最后的候选人是 <b>${cand}</b>，它就是多数元素。`, view(-1), { kind: "ok", ans: cand, ...f("done") });
+    snap("完成", `最后的候选人是 <b>${cand}</b>，它就是多数元素。`, view(-1, true), { kind: "ok", ans: cand, ...f("done") });
   },
   points: [
     { t: "票数为 0 时先换人", body: "先判断 count == 0 换候选人，再根据是否相同加减票数。" },
