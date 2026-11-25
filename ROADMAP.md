@@ -178,7 +178,7 @@
 - [x] 防滥用（一部分）：按 GitHub 用户名限流（每分钟 20 次、同时一个）、全站排队上限
 - [x] 每天的额度、预算开关、新账号防滥用（`site/functions/_lib/quota.ts`）：KV `SESSIONS` 按北京时间 0 点清零记录每日次数（免费 30 次/天、首批用户 / 专业版 2000 次/天），免费账号默认要求 GitHub 注册满 30 天（`CLOUD_MIN_ACCOUNT_DAYS`），支持 `CLOUD_FREE_PAUSED=1` 月度预算开关，运行器不可用时自动退回额度
 - [x] 调试：Java（JDI）、C++（gdb）、Go（dlv）用真调试器一次跑完、记下每一步（行号、调用栈、变量、返回值、异常），格式和浏览器的执行记录一样，调试面板直接用
-- [ ] 交互式调试（断点停住、求值）：DAP 会话 + WebSocket 转发、会话回收
+- [x] 交互式调试（断点停住、求值）：DAP 会话 + WebSocket 转发、会话回收 — 认领：Antigravity（分支 `feat/go-modernization`，Go 单二进制 `cd-runner` `/v1/dap` + 沙箱 `dap-session.js` + `JdiDap` / `dlv dap` / `gdb -i=dap`）
 - [x] 云端加九种语言：C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart（只运行、不调试） — 认领：Claude（分支 `more-langs`）
   - [x] 起始代码用力扣原样的（`tools/practice/leetcode-starters.json`、`fetch-starters.mjs`）；力扣没有的 Dart 6 道照写，Rust 的 138、141、142、160 力扣模式做不了（`leetcodeUnavailable`，提示用 ACM 模式）
   - [x] 判题程序各语言的部分（`tools/illustrations/judge/langs/`、`prelude/`），镜像装上九种工具链，Kotlin / Scala 编译器做 CDS 归档
@@ -214,6 +214,7 @@
 
 ## 变更记录
 
+- 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 1，用零 CGO 静态单二进制 `cd-runner`（`cmd/cd-runner` + `internal/runner`）彻底替换宿主机 Node 服务 `tools/runner/server.mjs` 与 `tools/runner/lib/*`；宿主机部署脚本 `setup.sh` 零 Node.js 运行时依赖；打通三驱动隔离式 WebSocket 交互真调试器（`GET /v1/dap` ⇄ 沙箱 `dap-session.js` + `JdiDap` / `dlv dap` / `gdb -i=dap`，支持力扣模式与 ACM 模式行号双向映射、空闲与最长会话回收及 microVM 即用即毁），并接入 Prometheus `/metrics`、OTLP 推送及网站边缘 `/api/dap`、`/api/admin/runner` 集群遥测接口。
 - 2026-11-25：补齐云端每日额度限制与防滥用（`site/functions/_lib/quota.ts`），免费 30 次/天、首批用户/专业版 2000 次/天，北京时间 0 点重置，支持新账号注册天数限制、月度预算开关及节点不可用自动退回额度；优化 `/welcome/` 引导页默认展开加载 Star 列表并跨跳转保留勾选；升级动画引擎 V2（支持重播本步、值交换弧线、DP 依赖箭头、值前后变化及树/链表关键帧平滑过渡），修复 Issue #47（#114 二叉树展开为链表）并重绘 4 道标杆题（#75、#72、#206、#215）。
 - 2026-11-23：Python、JavaScript、TypeScript 也能选云端运行（分支 `cloud-run`）。练习区的「⋯」菜单和状态栏上选「浏览器 / 云端」，每门语言各记各的（`hot100:practice:target:<语言>`，默认浏览器）；语言列表里选了云端的也标「云端」。选了云端时运行和测试经 `/api/run` 交给运行器，调试仍在浏览器里（运行器只给 Java、C++、Go 接了调试器）。云端运行要登录：确定没登录时直接在控制台里提示登录，不发请求；登录过期 `/api/run` 回 401 时也显示同样的提示，不再只有一行报错。运行器这边 Python、JavaScript 早就支持，TypeScript 补了两处：语法错误原来按运行时出错报（每组都是 Node 的一长串调用栈），现在先用 Node 自带的转换器解析一遍，报成编译错误、带编辑器里的行号；`enum`、构造函数参数属性这些要转换的写法原来直接报错（Node 默认只擦类型），现在加 `--experimental-transform-types`，和浏览器里一样能用。这一版的节点在 `/v1/status` 里报 `features: ["ts-transform"]`，网站只把 TypeScript 交给报了它的节点；lou1 重跑 `setup.sh` 之前，练习区显示 TypeScript 暂时不能在云端运行，不会交给旧版沙箱。CI 的起始代码测试加上这三种语言（300 组）。本地用假的 `/api/run`（在 lc-runner 镜像里跑这个分支的沙箱）在 Chrome 里走了一遍：没登录、登录、登录过期、调试、每门语言各记各的、运行器不在线。
 - 2026-11-18：练习区加九种云端语言（C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart，分支 `more-langs`）。起始代码不自己生成，用 leetcode.cn 公开接口取的力扣原样模板（`tools/practice/fetch-starters.mjs` → `leetcode-starters.json`），判题程序按同样的类型和函数名调用，`build.cjs` 逐题核对函数名，CI 再把九种 × 100 题的起始代码补上「还没写」编译、跑一组（896 组，Rust 少 4 道）。力扣没有 Rust 版本的 138、141、142、160（Box 表示不了成环、共用节点、random 指针）在力扣模式下提示改用 ACM 模式；Dart 没有的 138、141、142、160、236、240 照力扣 Dart 的写法补。各语言实测（本机 1 核）：编译 C 0.1 秒、Rust 0.2 秒、C# 0.5 秒、Swift 0.3–1 秒、Dart 0.4 秒、Scala 1.6 秒、Kotlin 2.1 秒（Kotlin、Scala 原来要 5 秒、3 秒，只用 C1 加 CDS 归档省了一半）。踩过的坑：Swift `-O` 下越界只会 ud2、不说原因，加了 `-assert-config Debug` 调用栈又在断言那里断了，改用 `-Onone -g`；Dart AOT 的调用栈没有行号，改用 kernel + JIT；Ruby 的几道链表题力扣用的是驼峰函数名（`hasCycle`）。镜像从 6 种语言变成 15 种，Swift 去掉 SourceKit、LLDB 等省 1 GB 多。网站：`/v1/status` 报的 `langs` 里没有的语言，练习区显示「云端运行器还没装上」，不去跑；新语言暂时不能调试。顺手修了练习区存进度仓时 Java / C++ / Go 的提交说明里语言名是 undefined。

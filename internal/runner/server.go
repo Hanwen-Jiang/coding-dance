@@ -138,6 +138,7 @@ func NewServer(cfg Config, driver Driver, logFn func(map[string]any)) *Server {
 		return float64(q)
 	})
 	dapMgr := NewDAPManager(
+		driver,
 		time.Duration(cfg.DAPIdleMs)*time.Millisecond,
 		time.Duration(cfg.DAPMaxMs)*time.Millisecond,
 		cfg.DAPMaxActive,

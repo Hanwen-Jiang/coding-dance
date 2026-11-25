@@ -8,9 +8,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -72,18 +69,35 @@ type DAPInitRequest struct {
 	Code  string          `json:"code"`
 	Sig   json.RawMessage `json:"sig,omitempty"`
 	Stdin string          `json:"stdin,omitempty"`
+	Cases []JobCase       `json:"cases,omitempty"`
 }
 
-// DAPAdapterSession represents a running stdio/socket DAP backend inside an isolated workspace/microVM.
+// DAPInitMeta is returned by the guest sandbox after compiling the debug target.
+type DAPInitMeta struct {
+	OK           bool   `json:"ok"`
+	Lang         string `json:"lang"`
+	Mode         string `json:"mode"`
+	UserFile     string `json:"userFile"`
+	Lines        int    `json:"lines"`
+	CompileError string `json:"compileError,omitempty"`
+	Error        string `json:"error,omitempty"`
+}
+
+type DAPCompileError struct {
+	Message string
+}
+
+func (e *DAPCompileError) Error() string { return e.Message }
+
+// DAPAdapterSession represents a running DAP backend inside an isolated Firecracker microVM or Docker container.
 type DAPAdapterSession interface {
 	Reader() *bufio.Reader
 	Writer() io.Writer
-	ExecutablePath() string
-	SourcePath() string
+	Meta() DAPInitMeta
 	Close() error
 }
 
-// DAPSpawner creates a language-specific DAP adapter process for an interactive session.
+// DAPSpawner creates an isolated DAP adapter session for an interactive request.
 type DAPSpawner func(ctx context.Context, initReq DAPInitRequest) (DAPAdapterSession, error)
 
 type DAPManager struct {
@@ -99,7 +113,7 @@ type DAPManager struct {
 	byUser map[string]string
 }
 
-func NewDAPManager(idle, maxDur time.Duration, maxSessions int, metrics *otel.Registry, logFn func(map[string]any)) *DAPManager {
+func NewDAPManager(driver Driver, idle, maxDur time.Duration, maxSessions int, metrics *otel.Registry, logFn func(map[string]any)) *DAPManager {
 	if idle <= 0 {
 		idle = 5 * time.Minute
 	}
@@ -109,11 +123,15 @@ func NewDAPManager(idle, maxDur time.Duration, maxSessions int, metrics *otel.Re
 	if maxSessions <= 0 {
 		maxSessions = 8
 	}
+	var spawner DAPSpawner
+	if driver != nil {
+		spawner = driver.StartDAP
+	}
 	m := &DAPManager{
 		IdleTimeout: idle,
 		MaxDuration: maxDur,
 		MaxSessions: maxSessions,
-		Spawner:     defaultLocalDAPSpawner,
+		Spawner:     spawner,
 		Metrics:     metrics,
 		LogFn:       logFn,
 		byUser:      make(map[string]string),
@@ -179,30 +197,59 @@ func (m *DAPManager) HandleWebSocket(w http.ResponseWriter, r *http.Request, use
 		_ = conn.WriteJSON(map[string]any{"type": "error", "error": "这门语言暂不支持云端交互式 DAP 调试"})
 		return
 	}
+	if initReq.Mode == "" {
+		initReq.Mode = "acm"
+	}
+	if initReq.Mode != "leetcode" && initReq.Mode != "acm" {
+		_ = conn.WriteJSON(map[string]any{"type": "error", "error": "模式只能是 leetcode 或 acm"})
+		return
+	}
+	if initReq.Mode == "leetcode" && len(initReq.Sig) == 0 {
+		_ = conn.WriteJSON(map[string]any{"type": "error", "error": "力扣模式要有函数签名"})
+		return
+	}
 	if strings.TrimSpace(initReq.Code) == "" || len(initReq.Code) > 100000 {
 		_ = conn.WriteJSON(map[string]any{"type": "error", "error": "调试代码为空或超过 100 KB"})
+		return
+	}
+	if m.Spawner == nil {
+		_ = conn.WriteJSON(map[string]any{"type": "error", "error": "运行器未配置调试驱动"})
 		return
 	}
 
 	adapter, err := m.Spawner(sessionCtx, initReq)
 	if err != nil {
-		_ = conn.WriteJSON(map[string]any{"type": "error", "error": err.Error()})
+		var ce *DAPCompileError
+		if errors.As(err, &ce) {
+			_ = conn.WriteJSON(map[string]any{"type": "compile_error", "compileError": ce.Message, "error": "编译出错：\n" + ce.Message})
+			if m.Metrics != nil {
+				m.Metrics.IncCounter("cd_runner_dap_sessions_total", map[string]string{"status": "compile_error"})
+			}
+			return
+		}
+		statusTag := "spawn_error"
+		if errors.Is(err, ErrDAPCapacityBusy) {
+			statusTag = "vm_busy"
+		}
+		_ = conn.WriteJSON(map[string]any{"type": "error", "busy": errors.Is(err, ErrDAPCapacityBusy), "error": err.Error()})
 		if m.Metrics != nil {
-			m.Metrics.IncCounter("cd_runner_dap_sessions_total", map[string]string{"status": "compile_or_spawn_error"})
+			m.Metrics.IncCounter("cd_runner_dap_sessions_total", map[string]string{"status": statusTag})
 		}
 		return
 	}
 	defer adapter.Close()
 
+	meta := adapter.Meta()
 	if m.LogFn != nil {
-		m.LogFn(map[string]any{"event": "dap-start", "sessionId": sessionID, "user": user, "lang": initReq.Lang})
+		m.LogFn(map[string]any{"event": "dap-start", "sessionId": sessionID, "user": user, "lang": initReq.Lang, "mode": initReq.Mode})
 	}
 	_ = conn.WriteJSON(map[string]any{
 		"type":       "ready",
 		"sessionId":  sessionID,
 		"lang":       initReq.Lang,
-		"program":    adapter.ExecutablePath(),
-		"sourcePath": adapter.SourcePath(),
+		"mode":       initReq.Mode,
+		"sourceName": meta.UserFile,
+		"lines":      meta.Lines,
 	})
 
 	done := make(chan struct{})
@@ -216,7 +263,7 @@ func (m *DAPManager) HandleWebSocket(w http.ResponseWriter, r *http.Request, use
 		})
 	}
 
-	// Adapter stdout (DAP Content-Length frames) -> WebSocket UTF-8 JSON frames
+	// Sandbox DAP stdout (Content-Length frames) -> Browser WebSocket JSON text frames
 	go func() {
 		defer stopAll()
 		for {
@@ -230,7 +277,7 @@ func (m *DAPManager) HandleWebSocket(w http.ResponseWriter, r *http.Request, use
 		}
 	}()
 
-	// WebSocket UTF-8 JSON frames -> Adapter stdin (DAP Content-Length frames)
+	// Browser WebSocket JSON text frames -> Sandbox DAP stdin (Content-Length frames)
 	var writeMu sync.Mutex
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(m.IdleTimeout))
@@ -255,119 +302,4 @@ func (m *DAPManager) HandleWebSocket(w http.ResponseWriter, r *http.Request, use
 	if m.LogFn != nil {
 		m.LogFn(map[string]any{"event": "dap-end", "sessionId": sessionID, "user": user, "lang": initReq.Lang})
 	}
-}
-
-type localProcDAPSession struct {
-	cmd     *exec.Cmd
-	stdin   io.WriteCloser
-	reader  *bufio.Reader
-	workDir string
-	exePath string
-	srcPath string
-}
-
-func (s *localProcDAPSession) Reader() *bufio.Reader  { return s.reader }
-func (s *localProcDAPSession) Writer() io.Writer      { return s.stdin }
-func (s *localProcDAPSession) ExecutablePath() string { return s.exePath }
-func (s *localProcDAPSession) SourcePath() string     { return s.srcPath }
-func (s *localProcDAPSession) Close() error {
-	_ = s.stdin.Close()
-	if s.cmd != nil && s.cmd.Process != nil {
-		_ = s.cmd.Process.Kill()
-		_ = s.cmd.Wait()
-	}
-	if s.workDir != "" {
-		_ = os.RemoveAll(s.workDir)
-	}
-	return nil
-}
-
-// defaultLocalDAPSpawner compiles user code with debug symbols (-gcflags="all=-N -l" / -g -O0)
-// and starts the native stdio DAP adapter (dlv dap / lldb-dap / gdb -i=dap).
-func defaultLocalDAPSpawner(ctx context.Context, req DAPInitRequest) (DAPAdapterSession, error) {
-	workDir, err := os.MkdirTemp("", "cd-dap-")
-	if err != nil {
-		return nil, err
-	}
-	cleanupOnErr := func(e error) (DAPAdapterSession, error) {
-		_ = os.RemoveAll(workDir)
-		return nil, e
-	}
-
-	var srcPath, exePath string
-	var dapCmd *exec.Cmd
-
-	switch req.Lang {
-	case "go":
-		srcPath = filepath.Join(workDir, "main.go")
-		exePath = filepath.Join(workDir, "prog")
-		if err := os.WriteFile(srcPath, []byte(req.Code), 0o600); err != nil {
-			return cleanupOnErr(err)
-		}
-		if err := os.WriteFile(filepath.Join(workDir, "go.mod"), []byte("module dapjob\ngo 1.22\n"), 0o600); err != nil {
-			return cleanupOnErr(err)
-		}
-		buildOut, err := exec.CommandContext(ctx, "go", "build", `-gcflags=all=-N -l`, "-o", exePath, srcPath).CombinedOutput()
-		if err != nil {
-			return cleanupOnErr(fmt.Errorf("编译出错：\n%s", strings.TrimSpace(string(buildOut))))
-		}
-		dapCmd = exec.CommandContext(ctx, "dlv", "dap", "--log=false")
-	case "cpp":
-		srcPath = filepath.Join(workDir, "main.cpp")
-		exePath = filepath.Join(workDir, "prog")
-		if err := os.WriteFile(srcPath, []byte(req.Code), 0o600); err != nil {
-			return cleanupOnErr(err)
-		}
-		compiler := "g++"
-		if _, err := exec.LookPath("g++"); err != nil {
-			compiler = "clang++"
-		}
-		buildOut, err := exec.CommandContext(ctx, compiler, "-std=c++20", "-g", "-O0", "-o", exePath, srcPath).CombinedOutput()
-		if err != nil {
-			return cleanupOnErr(fmt.Errorf("编译出错：\n%s", strings.TrimSpace(string(buildOut))))
-		}
-		if _, err := exec.LookPath("lldb-dap"); err == nil {
-			dapCmd = exec.CommandContext(ctx, "lldb-dap")
-		} else {
-			dapCmd = exec.CommandContext(ctx, "gdb", "-q", "-nx", "-i=dap")
-		}
-	case "java":
-		srcPath = filepath.Join(workDir, "Main.java")
-		exePath = workDir
-		if err := os.WriteFile(srcPath, []byte(req.Code), 0o600); err != nil {
-			return cleanupOnErr(err)
-		}
-		buildOut, err := exec.CommandContext(ctx, "javac", "-encoding", "UTF-8", "-g", "-d", workDir, srcPath).CombinedOutput()
-		if err != nil {
-			return cleanupOnErr(fmt.Errorf("编译出错：\n%s", strings.TrimSpace(string(buildOut))))
-		}
-		javaDAP := os.Getenv("RUNNER_JAVA_DAP_BIN")
-		if javaDAP == "" {
-			javaDAP = "java-dap"
-		}
-		dapCmd = exec.CommandContext(ctx, javaDAP)
-	default:
-		return cleanupOnErr(errors.New("不支持的调试语言"))
-	}
-
-	dapCmd.Dir = workDir
-	stdin, err := dapCmd.StdinPipe()
-	if err != nil {
-		return cleanupOnErr(err)
-	}
-	stdout, err := dapCmd.StdoutPipe()
-	if err != nil {
-		return cleanupOnErr(err)
-	}
-	if err := dapCmd.Start(); err != nil {
-		return cleanupOnErr(fmt.Errorf("启动调试器失败：%w", err))
-	}
-	return &localProcDAPSession{
-		cmd:     dapCmd,
-		stdin:   stdin,
-		reader:  bufio.NewReader(stdout),
-		workDir: workDir,
-		exePath: exePath,
-		srcPath: srcPath,
-	}, nil
 }

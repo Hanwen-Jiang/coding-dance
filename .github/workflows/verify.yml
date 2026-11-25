@@ -48,6 +48,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -55,7 +59,7 @@ jobs:
         run: node tools/illustrations/build.js --strict
       - name: 生成的文件要和提交的一致
         run: git diff --exit-code -- tools/illustrations/data tools/illustrations/cases illustrations
-      - name: 同步逻辑、练习区写进度仓的测试
+      - name: 同步逻辑、练习区写进度仓与 cd-runner 集群的测试
         working-directory: site
         run: |
           node lib/sync/test/sync.test.ts
@@ -133,9 +137,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: 编译静态 cd-runner 二进制
+        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-runner ./cmd/cd-runner
       - name: 腾出磁盘空间（镜像里有十几种语言的工具链，好几 GB）
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium
@@ -151,11 +161,7 @@ jobs:
           load: true
           cache-from: type=gha,scope=lc-runner
           cache-to: type=gha,mode=max,scope=lc-runner
-      - name: 沙箱（十五种语言、调试、容器限制）
-        run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/sandbox.test.mjs
+      - name: cd-runner + Docker 沙箱（十五种语言、执行记录、WebSocket DAP 真调试器、容器隔离限制）
+        run: CD_RUNNER_BIN=/tmp/cd-runner RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/sandbox.test.mjs
       - name: 起始代码和判题程序对得上（C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart × 100 题）
         run: docker run --rm -v "$PWD:/src:ro" -w /src -e RUNNER_WORK=/tmp/work lc-runner:ci node tools/runner/test/starters.test.mjs
-      - name: 服务（签名、限流、容器池）
-        run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/server.test.mjs
-      - name: Firecracker 驱动的协议（假 fc-manager；真 microVM 见 firecracker.yml）
-        run: node tools/runner/test/firecracker.test.mjs

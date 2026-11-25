@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -21,7 +22,12 @@ import (
 	"time"
 )
 
-const SandboxInImage = "/opt/lc/tools/runner/sandbox/sandbox.js"
+const (
+	SandboxInImage    = "/opt/lc/tools/runner/sandbox/sandbox.js"
+	DAPSessionInImage = "/opt/lc/tools/runner/sandbox/dap-session.js"
+)
+
+var ErrDAPCapacityBusy = errors.New("这台机器上的调试沙箱容量满了")
 
 type RunOutcome struct {
 	OK     bool
@@ -34,6 +40,7 @@ type RunOutcome struct {
 type Driver interface {
 	Init(ctx context.Context) error
 	Run(ctx context.Context, input []byte, timeout time.Duration) RunOutcome
+	StartDAP(ctx context.Context, req DAPInitRequest) (DAPAdapterSession, error)
 	Status() map[string]any
 	Close() error
 }
@@ -87,6 +94,145 @@ func pipeJobCommand(parentCtx context.Context, name string, args []string, env [
 	return RunOutcome{OK: true, JSON: parsed}
 }
 
+// startStdioDAPBridge launches dap-session.js in stdio mode (inside Docker or local dev),
+// reads the initial compilation/handshake JSON line, and returns a live bidirectional DAPAdapterSession.
+func startStdioDAPBridge(ctx context.Context, cmd *exec.Cmd, req DAPInitRequest, onClose func()) (DAPAdapterSession, error) {
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		if onClose != nil {
+			onClose()
+		}
+		return nil, err
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		if onClose != nil {
+			onClose()
+		}
+		return nil, err
+	}
+	var stderr tailBuffer
+	stderr.buf = &bytes.Buffer{}
+	stderr.max = 4000
+	cmd.Stderr = &stderr
+
+	if err := cmd.Start(); err != nil {
+		if onClose != nil {
+			onClose()
+		}
+		return nil, fmt.Errorf("启动调试沙箱失败：%w", err)
+	}
+
+	reqBytes, _ := json.Marshal(req)
+	if _, err := stdin.Write(append(reqBytes, '\n')); err != nil {
+		_ = stdin.Close()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		if onClose != nil {
+			onClose()
+		}
+		return nil, fmt.Errorf("写入调试初始化参数失败：%w", err)
+	}
+
+	br := bufio.NewReaderSize(stdout, 64<<10)
+	type initRes struct {
+		line string
+		err  error
+	}
+	ch := make(chan initRes, 1)
+	go func() {
+		line, rErr := br.ReadString('\n')
+		ch <- initRes{line: line, err: rErr}
+	}()
+
+	var handshakeLine string
+	select {
+	case <-ctx.Done():
+		_ = stdin.Close()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		if onClose != nil {
+			onClose()
+		}
+		return nil, ctx.Err()
+	case r := <-ch:
+		if r.err != nil {
+			_ = stdin.Close()
+			_ = cmd.Process.Kill()
+			_ = cmd.Wait()
+			if onClose != nil {
+				onClose()
+			}
+			tail := lastLines(stderr.buf.String(), 4)
+			if tail != "" {
+				return nil, fmt.Errorf("调试沙箱启动失败：%s", tail)
+			}
+			return nil, fmt.Errorf("调试沙箱启动失败：%w", r.err)
+		}
+		handshakeLine = r.line
+	}
+
+	var meta DAPInitMeta
+	if err := json.Unmarshal([]byte(strings.TrimSpace(handshakeLine)), &meta); err != nil {
+		_ = stdin.Close()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		if onClose != nil {
+			onClose()
+		}
+		return nil, fmt.Errorf("解析调试沙箱响应失败：%w", err)
+	}
+	if !meta.OK {
+		_ = stdin.Close()
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		if onClose != nil {
+			onClose()
+		}
+		if meta.CompileError != "" {
+			return nil, &DAPCompileError{Message: meta.CompileError}
+		}
+		if meta.Error != "" {
+			return nil, errors.New(meta.Error)
+		}
+		return nil, errors.New("调试程序编译失败")
+	}
+
+	return &stdioDAPSession{
+		cmd:     cmd,
+		stdin:   stdin,
+		reader:  br,
+		meta:    meta,
+		onClose: onClose,
+	}, nil
+}
+
+type stdioDAPSession struct {
+	cmd       *exec.Cmd
+	stdin     io.WriteCloser
+	reader    *bufio.Reader
+	meta      DAPInitMeta
+	onClose   func()
+	closeOnce sync.Once
+}
+
+func (s *stdioDAPSession) Reader() *bufio.Reader { return s.reader }
+func (s *stdioDAPSession) Writer() io.Writer     { return s.stdin }
+func (s *stdioDAPSession) Meta() DAPInitMeta     { return s.meta }
+func (s *stdioDAPSession) Close() error {
+	s.closeOnce.Do(func() {
+		_ = s.stdin.Close()
+		if s.cmd != nil && s.cmd.Process != nil {
+			_ = s.cmd.Process.Kill()
+			_ = s.cmd.Wait()
+		}
+		if s.onClose != nil {
+			s.onClose()
+		}
+	})
+	return nil
+}
+
 type limitedBuffer struct {
 	buf *bytes.Buffer
 	max int
@@ -132,19 +278,20 @@ func lastLines(s string, n int) string {
 }
 
 type FirecrackerConfig struct {
-	URL         string
-	Token       string
-	TokenFile   string
-	Owner       string
-	Runtime     string
-	CPUMillis   int
-	MemoryMB    int
-	SandboxArgv []string
-	LogFn       func(map[string]any)
+	URL            string
+	Token          string
+	TokenFile      string
+	Owner          string
+	Runtime        string
+	CPUMillis      int
+	MemoryMB       int
+	SandboxArgv    []string
+	DAPSessionPath string
+	LogFn          func(map[string]any)
 }
 
 // FirecrackerDriver calls agent-runtime's fc-manager HTTP/Unix API directly.
-// Each execution runs in a fresh, networkless Firecracker microVM via Rust sandbox-agent.
+// Each execution or interactive DAP session runs in a dedicated, networkless Firecracker microVM via Rust sandbox-agent.
 type FirecrackerDriver struct {
 	FirecrackerConfig
 	client *http.Client
@@ -167,6 +314,9 @@ func NewFirecrackerDriver(cfg FirecrackerConfig) *FirecrackerDriver {
 	}
 	if len(cfg.SandboxArgv) == 0 {
 		cfg.SandboxArgv = []string{"node", SandboxInImage}
+	}
+	if cfg.DAPSessionPath == "" {
+		cfg.DAPSessionPath = DAPSessionInImage
 	}
 	rawURL := strings.TrimRight(cfg.URL, "/")
 	if rawURL == "" {
@@ -276,6 +426,27 @@ func (d *FirecrackerDriver) Init(ctx context.Context) error {
 	return err
 }
 
+func (d *FirecrackerDriver) destroyEnvAsync(envID string) {
+	go func(id string) {
+		delStatus, _, _, delErr := d.call(context.Background(), http.MethodDelete, "/v1/envs/"+id, nil, 30*time.Second)
+		if delErr != nil && d.LogFn != nil {
+			d.LogFn(map[string]any{"event": "fc-delete", "env": id, "error": delErr.Error()})
+		} else if delStatus != http.StatusNoContent && d.LogFn != nil {
+			d.LogFn(map[string]any{"event": "fc-delete", "env": id, "status": delStatus})
+		}
+	}(envID)
+}
+
+func guestDefaultEnv() map[string]string {
+	return map[string]string{
+		"RUNNER_WORK":     "/workspace",
+		"RUNNER_PREPARED": "/opt/lc/prepared",
+		"PYTHON":          "python3",
+		"GOTOOLCHAIN":     "local",
+		"CGO_ENABLED":     "0",
+	}
+}
+
 func (d *FirecrackerDriver) Run(ctx context.Context, input []byte, timeout time.Duration) RunOutcome {
 	t0 := time.Now()
 	status, created, text, err := d.call(ctx, http.MethodPost, "/v1/envs", map[string]any{
@@ -303,21 +474,14 @@ func (d *FirecrackerDriver) Run(ctx context.Context, input []byte, timeout time.
 	bootMs := time.Since(t0).Milliseconds()
 	defer func() {
 		d.live.Add(-1)
-		go func(id string) {
-			delStatus, _, _, delErr := d.call(context.Background(), http.MethodDelete, "/v1/envs/"+id, nil, 30*time.Second)
-			if delErr != nil && d.LogFn != nil {
-				d.LogFn(map[string]any{"event": "fc-delete", "env": id, "error": delErr.Error()})
-			} else if delStatus != http.StatusNoContent && d.LogFn != nil {
-				d.LogFn(map[string]any{"event": "fc-delete", "env": id, "status": delStatus})
-			}
-		}(envID)
+		d.destroyEnvAsync(envID)
 	}()
 
 	execStatus, execRes, execText, err := d.call(ctx, http.MethodPost, fmt.Sprintf("/v1/envs/%s/agent/v1/exec", envID), map[string]any{
 		"argv":                 d.SandboxArgv,
 		"stdin":                base64.StdEncoding.EncodeToString(input),
 		"timeout_ms":           timeout.Milliseconds(),
-		"env":                  map[string]string{"RUNNER_WORK": "/workspace", "RUNNER_PREPARED": "/opt/lc/prepared", "PYTHON": "python3", "GOTOOLCHAIN": "local", "CGO_ENABLED": "0"},
+		"env":                  guestDefaultEnv(),
 		"exec_id":              randomUUID(),
 		"offload_inline_bytes": 0,
 	}, timeout+15*time.Second)
@@ -349,6 +513,185 @@ func (d *FirecrackerDriver) Run(ctx context.Context, input []byte, timeout time.
 		return RunOutcome{OK: false, BootMs: bootMs, Error: msg}
 	}
 	return RunOutcome{OK: true, BootMs: bootMs, JSON: outJSON}
+}
+
+// StartDAP allocates an exclusive Firecracker microVM via fc-manager, compiles user code inside the guest,
+// starts the guest Unix-socket DAP daemon, and bridges Content-Length DAP frames over /agent/v1/exec.
+func (d *FirecrackerDriver) StartDAP(ctx context.Context, req DAPInitRequest) (DAPAdapterSession, error) {
+	status, created, text, err := d.call(ctx, http.MethodPost, "/v1/envs", map[string]any{
+		"runtime":    d.Runtime,
+		"cpu_millis": d.CPUMillis,
+		"memory_mb":  d.MemoryMB,
+		"labels":     map[string]string{"app": "lc-hot100", "kind": "dap"},
+	}, 30*time.Second)
+	if err != nil {
+		return nil, fmt.Errorf("连不上 fc-manager：%w", err)
+	}
+	if status == http.StatusServiceUnavailable {
+		return nil, ErrDAPCapacityBusy
+	}
+	envID, _ := created["env_id"].(string)
+	if status != http.StatusCreated || envID == "" {
+		msg, _ := created["message"].(string)
+		if msg == "" {
+			msg = truncateStr(text, 200)
+		}
+		return nil, fmt.Errorf("建调试 microVM 失败（%d）：%s", status, msg)
+	}
+
+	d.live.Add(1)
+	stateDir := "/tmp/cd-dap-" + randomHex(4)
+	specBytes, _ := json.Marshal(req)
+
+	execStatus, execRes, execText, err := d.call(ctx, http.MethodPost, fmt.Sprintf("/v1/envs/%s/agent/v1/exec", envID), map[string]any{
+		"argv":                 []string{"node", d.DAPSessionPath, "daemon", stateDir},
+		"stdin":                base64.StdEncoding.EncodeToString(specBytes),
+		"timeout_ms":           60000,
+		"env":                  guestDefaultEnv(),
+		"exec_id":              randomUUID(),
+		"offload_inline_bytes": 0,
+	}, 70*time.Second)
+	if err != nil || execStatus != http.StatusOK || execRes == nil {
+		d.live.Add(-1)
+		d.destroyEnvAsync(envID)
+		if err != nil {
+			return nil, fmt.Errorf("microVM 调试初始化出错：%w", err)
+		}
+		return nil, fmt.Errorf("microVM 调试初始化失败（%d）：%s", execStatus, truncateStr(execText, 200))
+	}
+
+	stdoutB64, _ := execRes["stdout"].(string)
+	stdoutBytes, _ := base64.StdEncoding.DecodeString(stdoutB64)
+	var meta DAPInitMeta
+	if err := json.Unmarshal(stdoutBytes, &meta); err != nil {
+		d.live.Add(-1)
+		d.destroyEnvAsync(envID)
+		return nil, fmt.Errorf("microVM 调试初始化返回异常：%s", truncateStr(string(stdoutBytes), 200))
+	}
+	if !meta.OK {
+		d.live.Add(-1)
+		d.destroyEnvAsync(envID)
+		if meta.CompileError != "" {
+			return nil, &DAPCompileError{Message: meta.CompileError}
+		}
+		return nil, errors.New(meta.Error)
+	}
+
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	sessCtx, cancel := context.WithCancel(ctx)
+
+	fcSess := &fcDAPSession{
+		driver:   d,
+		envID:    envID,
+		stateDir: stateDir,
+		meta:     meta,
+		inW:      inW,
+		outR:     bufio.NewReaderSize(outR, 64<<10),
+		cancel:   cancel,
+	}
+
+	// Parse client DAP frames written to inW into a wakeable queue
+	frameWake := make(chan struct{}, 1)
+	var outMu sync.Mutex
+	var pendingFrames []string
+
+	go func() {
+		br := bufio.NewReaderSize(inR, 64<<10)
+		for {
+			f, rErr := ReadDAPFrame(br)
+			if rErr != nil {
+				cancel()
+				return
+			}
+			outMu.Lock()
+			pendingFrames = append(pendingFrames, string(f))
+			outMu.Unlock()
+			select {
+			case frameWake <- struct{}{}:
+			default:
+			}
+		}
+	}()
+
+	// Poll / push loop over fc-manager /agent/v1/exec
+	go func() {
+		defer func() {
+			_ = outW.Close()
+			_ = inR.Close()
+		}()
+		for {
+			if sessCtx.Err() != nil {
+				return
+			}
+			outMu.Lock()
+			batch := append([]string(nil), pendingFrames...)
+			pendingFrames = pendingFrames[:0]
+			outMu.Unlock()
+
+			waitMs := "1200"
+			if len(batch) > 0 {
+				waitMs = "150"
+			}
+			pollReq, _ := json.Marshal(map[string]any{"frames": batch})
+			st, pRes, _, pErr := d.call(sessCtx, http.MethodPost, fmt.Sprintf("/v1/envs/%s/agent/v1/exec", envID), map[string]any{
+				"argv":                 []string{"node", d.DAPSessionPath, "poll", stateDir, waitMs},
+				"stdin":                base64.StdEncoding.EncodeToString(pollReq),
+				"timeout_ms":           10000,
+				"env":                  guestDefaultEnv(),
+				"exec_id":              randomUUID(),
+				"offload_inline_bytes": 0,
+			}, 15*time.Second)
+			if pErr != nil || st != http.StatusOK || pRes == nil {
+				return
+			}
+			sb64, _ := pRes["stdout"].(string)
+			rawPoll, _ := base64.StdEncoding.DecodeString(sb64)
+			var pr struct {
+				OK     bool     `json:"ok"`
+				Frames []string `json:"frames"`
+				Exited bool     `json:"exited"`
+			}
+			if json.Unmarshal(rawPoll, &pr) != nil {
+				return
+			}
+			for _, f := range pr.Frames {
+				if WriteDAPFrame(outW, []byte(f)) != nil {
+					return
+				}
+			}
+			if pr.Exited {
+				return
+			}
+		}
+	}()
+	_ = frameWake // drain handled continuously by tight long-poll
+
+	return fcSess, nil
+}
+
+type fcDAPSession struct {
+	driver    *FirecrackerDriver
+	envID     string
+	stateDir  string
+	meta      DAPInitMeta
+	inW       *io.PipeWriter
+	outR      *bufio.Reader
+	cancel    context.CancelFunc
+	closeOnce sync.Once
+}
+
+func (s *fcDAPSession) Reader() *bufio.Reader { return s.outR }
+func (s *fcDAPSession) Writer() io.Writer     { return s.inW }
+func (s *fcDAPSession) Meta() DAPInitMeta     { return s.meta }
+func (s *fcDAPSession) Close() error {
+	s.closeOnce.Do(func() {
+		s.cancel()
+		_ = s.inW.Close()
+		s.driver.live.Add(-1)
+		s.driver.destroyEnvAsync(s.envID)
+	})
+	return nil
 }
 
 func (d *FirecrackerDriver) Status() map[string]any {
@@ -437,6 +780,21 @@ func (p *DockerPool) createContainer(ctx context.Context) (string, error) {
 	return name, nil
 }
 
+func (p *DockerPool) acquireContainer(ctx context.Context) (string, error) {
+	p.mu.Lock()
+	var name string
+	if len(p.ready) > 0 {
+		name = p.ready[0]
+		p.ready = p.ready[1:]
+	}
+	p.mu.Unlock()
+	p.fill()
+	if name != "" {
+		return name, nil
+	}
+	return p.createContainer(ctx)
+}
+
 func (p *DockerPool) fill() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -467,26 +825,26 @@ func (p *DockerPool) fill() {
 }
 
 func (p *DockerPool) Run(ctx context.Context, input []byte, timeout time.Duration) RunOutcome {
-	p.mu.Lock()
-	var name string
-	if len(p.ready) > 0 {
-		name = p.ready[0]
-		p.ready = p.ready[1:]
-	}
-	p.mu.Unlock()
-	p.fill()
-
-	if name == "" {
-		var err error
-		name, err = p.createContainer(ctx)
-		if err != nil {
-			return RunOutcome{OK: false, Error: "启动容器失败：" + err.Error()}
-		}
+	name, err := p.acquireContainer(ctx)
+	if err != nil {
+		return RunOutcome{OK: false, Error: "启动容器失败：" + err.Error()}
 	}
 	defer func() {
 		go func(n string) { _ = exec.Command("docker", "rm", "-f", n).Run() }(name)
 	}()
 	return pipeJobCommand(ctx, "docker", []string{"exec", "-i", name, "node", SandboxInImage}, nil, input, timeout)
+}
+
+func (p *DockerPool) StartDAP(ctx context.Context, req DAPInitRequest) (DAPAdapterSession, error) {
+	name, err := p.acquireContainer(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("启动调试容器失败：%w", err)
+	}
+	cmd := exec.CommandContext(ctx, "docker", "exec", "-i", name, "node", DAPSessionInImage, "stdio")
+	rmContainer := func() {
+		go func(n string) { _ = exec.Command("docker", "rm", "-f", n).Run() }(name)
+	}
+	return startStdioDAPBridge(ctx, cmd, req, rmContainer)
 }
 
 func (p *DockerPool) Status() map[string]any {
@@ -514,8 +872,9 @@ func (p *DockerPool) Close() error {
 
 // LocalDriver runs the sandbox script directly on the local machine (development & unit tests only).
 type LocalDriver struct {
-	SandboxPath string
-	NodeBin     string
+	SandboxPath    string
+	DAPSessionPath string
+	NodeBin        string
 }
 
 func (l *LocalDriver) Init(_ context.Context) error {
@@ -523,19 +882,25 @@ func (l *LocalDriver) Init(_ context.Context) error {
 		l.NodeBin = "node"
 	}
 	if l.SandboxPath == "" {
-		l.SandboxPath = resolveLocalSandboxPath()
+		l.SandboxPath = resolveLocalSandboxFile("sandbox.js")
+	}
+	if l.DAPSessionPath == "" {
+		l.DAPSessionPath = resolveLocalSandboxFile("dap-session.js")
 	}
 	return nil
 }
 
-func resolveLocalSandboxPath() string {
-	if v := os.Getenv("RUNNER_LOCAL_SANDBOX"); v != "" {
-		return v
+func resolveLocalSandboxFile(fileName string) string {
+	if fileName == "sandbox.js" {
+		if v := os.Getenv("RUNNER_LOCAL_SANDBOX"); v != "" {
+			return v
+		}
 	}
 	candidates := []string{
-		"tools/runner/sandbox/sandbox.js",
-		"../../tools/runner/sandbox/sandbox.js",
-		"../sandbox/sandbox.js",
+		filepath.Join("tools/runner/sandbox", fileName),
+		filepath.Join("../../tools/runner/sandbox", fileName),
+		filepath.Join("../../../tools/runner/sandbox", fileName),
+		filepath.Join("../sandbox", fileName),
 	}
 	for _, c := range candidates {
 		if abs, err := filepath.Abs(c); err == nil {
@@ -544,7 +909,7 @@ func resolveLocalSandboxPath() string {
 			}
 		}
 	}
-	return "tools/runner/sandbox/sandbox.js"
+	return filepath.Join("tools/runner/sandbox", fileName)
 }
 
 func (l *LocalDriver) Run(ctx context.Context, input []byte, timeout time.Duration) RunOutcome {
@@ -554,7 +919,7 @@ func (l *LocalDriver) Run(ctx context.Context, input []byte, timeout time.Durati
 	}
 	sbPath := l.SandboxPath
 	if sbPath == "" {
-		sbPath = resolveLocalSandboxPath()
+		sbPath = resolveLocalSandboxFile("sandbox.js")
 	}
 	workDir, err := os.MkdirTemp("", "lc-runner-")
 	if err != nil {
@@ -563,6 +928,26 @@ func (l *LocalDriver) Run(ctx context.Context, input []byte, timeout time.Durati
 	defer os.RemoveAll(workDir)
 	env := append(os.Environ(), "RUNNER_WORK="+workDir)
 	return pipeJobCommand(ctx, nodeBin, []string{sbPath}, env, input, timeout)
+}
+
+func (l *LocalDriver) StartDAP(ctx context.Context, req DAPInitRequest) (DAPAdapterSession, error) {
+	nodeBin := l.NodeBin
+	if nodeBin == "" {
+		nodeBin = "node"
+	}
+	dapPath := l.DAPSessionPath
+	if dapPath == "" {
+		dapPath = resolveLocalSandboxFile("dap-session.js")
+	}
+	workDir, err := os.MkdirTemp("", "lc-dap-")
+	if err != nil {
+		return nil, err
+	}
+	cmd := exec.CommandContext(ctx, nodeBin, dapPath, "stdio")
+	cmd.Env = append(os.Environ(), "RUNNER_WORK="+workDir)
+	return startStdioDAPBridge(ctx, cmd, req, func() {
+		_ = os.RemoveAll(workDir)
+	})
 }
 
 func (l *LocalDriver) Status() map[string]any {

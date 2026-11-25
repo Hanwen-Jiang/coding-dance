@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/base64"
@@ -12,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -22,7 +22,7 @@ import (
 )
 
 func TestSignFixedVectorAndVerify(t *testing.T) {
-	// Must match tools/runner/test/server.test.mjs & site/functions/_lib/test/runner.test.ts exact vector.
+	// Must match site/functions/_lib/test/runner.test.ts exact vector.
 	secret := strings.Repeat("k", 32)
 	got := Sign(secret, SignParts{
 		Method:   "post",
@@ -51,17 +51,14 @@ func TestSignFixedVectorAndVerify(t *testing.T) {
 	if !res.OK || res.User != "alice" {
 		t.Fatalf("expected valid signature, got %+v", res)
 	}
-	// Replay rejected
 	replay := Verify(testSecret, VerifyInput{Method: "POST", Path: "/v1/run", Headers: hdr, Body: body, Node: "lou1", Now: now, Nonces: nonces})
 	if replay.OK || replay.Reason != "这个请求已经用过了" {
 		t.Fatalf("expected replay rejection, got %+v", replay)
 	}
-	// Wrong node rejected
 	wrongNode := Verify(testSecret, VerifyInput{Method: "POST", Path: "/v1/run", Headers: hdr, Body: body, Node: "lou2", Now: now})
 	if wrongNode.OK || !strings.Contains(wrongNode.Reason, "发给节点 lou1") {
 		t.Fatalf("expected wrong node rejection, got %+v", wrongNode)
 	}
-	// Skew rejected
 	expired := Verify(testSecret, VerifyInput{Method: "POST", Path: "/v1/run", Headers: hdr, Body: body, Node: "lou1", Now: now.Add(10 * time.Minute)})
 	if expired.OK || !strings.Contains(expired.Reason, "签名过期") {
 		t.Fatalf("expected skew rejection, got %+v", expired)
@@ -149,11 +146,53 @@ func startFakeFC(token string, maxVMs int) *fakeFCServer {
 			}
 			if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/agent/v1/exec") {
 				var req struct {
-					Stdin     string `json:"stdin"`
-					TimeoutMs int64  `json:"timeout_ms"`
+					Argv      []string `json:"argv"`
+					Stdin     string   `json:"stdin"`
+					TimeoutMs int64    `json:"timeout_ms"`
 				}
 				_ = json.NewDecoder(r.Body).Decode(&req)
 				stdinRaw, _ := base64.StdEncoding.DecodeString(req.Stdin)
+
+				// Support FirecrackerDriver DAP daemon + poll protocol in fake fc-manager!
+				if len(req.Argv) >= 3 && req.Argv[2] == "daemon" {
+					out := `{"ok":true,"lang":"go","mode":"acm","userFile":"main.go","lines":4}`
+					writeJSON(w, http.StatusOK, map[string]any{
+						"exit_code": 0, "timed_out": false,
+						"stdout": base64.StdEncoding.EncodeToString([]byte(out)), "stderr": "",
+					}, nil)
+					return
+				}
+				if len(req.Argv) >= 3 && req.Argv[2] == "poll" {
+					var pollIn struct {
+						Frames []string `json:"frames"`
+					}
+					_ = json.Unmarshal(stdinRaw, &pollIn)
+					var outFrames []string
+					exited := false
+					for _, fr := range pollIn.Frames {
+						var m map[string]any
+						_ = json.Unmarshal([]byte(fr), &m)
+						cmd, _ := m["command"].(string)
+						b, _ := json.Marshal(map[string]any{
+							"seq": 1, "type": "response", "request_seq": m["seq"],
+							"success": true, "command": cmd,
+						})
+						outFrames = append(outFrames, string(b))
+						if cmd == "disconnect" {
+							exited = true
+						}
+					}
+					if len(outFrames) == 0 {
+						time.Sleep(30 * time.Millisecond)
+					}
+					pollOut, _ := json.Marshal(map[string]any{"ok": true, "frames": outFrames, "exited": exited})
+					writeJSON(w, http.StatusOK, map[string]any{
+						"exit_code": 0, "timed_out": false,
+						"stdout": base64.StdEncoding.EncodeToString(pollOut), "stderr": "",
+					}, nil)
+					return
+				}
+
 				if strings.Contains(string(stdinRaw), "SLEEP_SLOW") {
 					time.Sleep(250 * time.Millisecond)
 				}
@@ -176,7 +215,7 @@ func startFakeFC(token string, maxVMs int) *fakeFCServer {
 	return f
 }
 
-func TestServerFirecrackerSecretStoreOTelAndRateLimit(t *testing.T) {
+func TestServerFirecrackerSecretStoreOTelAndDAPMicroVMLifecycle(t *testing.T) {
 	fcToken := strings.Repeat("t", 40)
 	fake := startFakeFC(fcToken, 1)
 	defer fake.srv.Close()
@@ -198,15 +237,18 @@ func TestServerFirecrackerSecretStoreOTelAndRateLimit(t *testing.T) {
 
 	secret := strings.Repeat("s", 40)
 	srv := NewServer(Config{
-		Node:      "lou1",
-		Secret:    secret,
-		PerMinute: 3,
-		Slots:     2,
-		Queue:     2,
-		CaseMs:    3000,
-		TotalMs:   20000,
-		JobMs:     60000,
-		Version:   "test-go",
+		Node:         "lou1",
+		Secret:       secret,
+		PerMinute:    3,
+		Slots:        2,
+		Queue:        2,
+		CaseMs:       3000,
+		TotalMs:      20000,
+		JobMs:        60000,
+		DAPIdleMs:    5000,
+		DAPMaxMs:     30000,
+		DAPMaxActive: 4,
+		Version:      "test-go",
 	}, drv, func(map[string]any) {})
 
 	ts := httptest.NewServer(srv)
@@ -236,14 +278,14 @@ func TestServerFirecrackerSecretStoreOTelAndRateLimit(t *testing.T) {
 		return resp, out
 	}
 
-	// 1) Unauthenticated /healthz & /metrics
+	// 1) Unauthenticated /healthz
 	hResp, err := http.Get(ts.URL + "/healthz")
 	if err != nil || hResp.StatusCode != 200 {
 		t.Fatalf("healthz failed: %v", err)
 	}
 	_ = hResp.Body.Close()
 
-	// 2) Signed /v1/status includes dap-ws & ts-transform
+	// 2) Signed /v1/status
 	stResp, stJSON := doSigned("GET", "/v1/status", "", "")
 	if stResp.StatusCode != 200 || stJSON["node"] != "lou1" {
 		t.Fatalf("status failed: %d %#v", stResp.StatusCode, stJSON)
@@ -255,24 +297,36 @@ func TestServerFirecrackerSecretStoreOTelAndRateLimit(t *testing.T) {
 	if runResp.StatusCode != 200 || runJSON["node"] != "lou1" {
 		t.Fatalf("run failed: %d %#v", runResp.StatusCode, runJSON)
 	}
-	deadline := time.Now().Add(time.Second)
-	for time.Now().Before(deadline) {
-		fake.mu.Lock()
-		n := len(fake.envs)
-		fake.mu.Unlock()
-		if n == 0 {
-			break
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	fake.mu.Lock()
-	leftover := len(fake.envs)
-	fake.mu.Unlock()
-	if leftover != 0 {
-		t.Fatalf("expected 0 leftover microVMs, got %d", leftover)
-	}
+	waitZeroEnvs(t, fake)
 
-	// 4) Per-user rate limit (PerMinute=3)
+	// 4) Interactive WebSocket DAP via FirecrackerDriver (microVM daemon + poll + DELETE cleanup!)
+	hdrs := SignedHeaders(secret, "GET", "/v1/dap", "lou1", "fc-debugger", nil, time.Now())
+	q := url.Values{}
+	q.Set("time", hdrs["x-runner-time"])
+	q.Set("nonce", hdrs["x-runner-nonce"])
+	q.Set("user", hdrs["x-runner-user"])
+	q.Set("node", hdrs["x-runner-node"])
+	q.Set("sig", hdrs["x-runner-signature"])
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/v1/dap?" + q.Encode()
+	dapConn, err := ws.Dial(context.Background(), wsURL, nil)
+	if err != nil {
+		t.Fatalf("ws dial /v1/dap failed: %v", err)
+	}
+	_ = dapConn.WriteJSON(DAPInitRequest{Type: "init", Lang: "go", Mode: "acm", Code: "package main\nfunc main() {}\n"})
+	_, readyRaw, err := dapConn.ReadMessage()
+	if err != nil || !bytes.Contains(readyRaw, []byte(`"ready"`)) {
+		t.Fatalf("expected ready over Firecracker DAP, got %q err=%v", string(readyRaw), err)
+	}
+	_ = dapConn.WriteJSON(map[string]any{"seq": 1, "type": "request", "command": "initialize"})
+	_, initReply, err := dapConn.ReadMessage()
+	if err != nil || !bytes.Contains(initReply, []byte(`"initialize"`)) {
+		t.Fatalf("expected initialize response from microVM DAP, got %q err=%v", string(initReply), err)
+	}
+	_ = dapConn.WriteJSON(map[string]any{"seq": 2, "type": "request", "command": "disconnect"})
+	_ = dapConn.Close()
+	waitZeroEnvs(t, fake)
+
+	// 5) Per-user rate limit (PerMinute=3)
 	for range 3 {
 		r, _ := doSigned("POST", "/v1/run", "bob", jobBody)
 		if r.StatusCode != 200 {
@@ -284,7 +338,8 @@ func TestServerFirecrackerSecretStoreOTelAndRateLimit(t *testing.T) {
 		t.Fatalf("expected 429 on 4th call within a minute, got %d", rlResp.StatusCode)
 	}
 
-	// 5) VM capacity 503 -> Retry-After: 5
+	// 6) VM capacity 503 -> Retry-After: 5
+	waitZeroEnvs(t, fake)
 	slowJob := `{"lang":"python","mode":"acm","code":"SLEEP_SLOW","cases":[{"stdin":""}]}`
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -302,7 +357,7 @@ func TestServerFirecrackerSecretStoreOTelAndRateLimit(t *testing.T) {
 	}
 	wg.Wait()
 
-	// 6) #/admin telemetry snapshot & Prometheus exposition
+	// 7) #/admin telemetry snapshot & Prometheus exposition
 	telResp, telJSON := doSigned("GET", "/v1/admin/telemetry", "admin", "")
 	if telResp.StatusCode != 200 || telJSON["service"] != "cd-runner" {
 		t.Fatalf("telemetry failed: %d %#v", telResp.StatusCode, telJSON)
@@ -318,76 +373,49 @@ func TestServerFirecrackerSecretStoreOTelAndRateLimit(t *testing.T) {
 	}
 }
 
-type mockDAPAdapter struct {
-	inR  *io.PipeReader
-	inW  *io.PipeWriter
-	outR *bufio.Reader
-	outW *io.PipeWriter
-}
-
-func newMockDAPAdapter() *mockDAPAdapter {
-	inR, inW := io.Pipe()
-	outR, outW := io.Pipe()
-	m := &mockDAPAdapter{
-		inR:  inR,
-		inW:  inW,
-		outR: bufio.NewReader(outR),
-		outW: outW,
-	}
-	go func() {
-		br := bufio.NewReader(inR)
-		for {
-			frame, err := ReadDAPFrame(br)
-			if err != nil {
-				return
-			}
-			var req map[string]any
-			_ = json.Unmarshal(frame, &req)
-			cmd, _ := req["command"].(string)
-			resp, _ := json.Marshal(map[string]any{
-				"seq":         1,
-				"type":        "response",
-				"request_seq": req["seq"],
-				"success":     true,
-				"command":     cmd,
-			})
-			_ = WriteDAPFrame(outW, resp)
-			if cmd == "disconnect" {
-				return
-			}
+func waitZeroEnvs(t *testing.T, fake *fakeFCServer) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		fake.mu.Lock()
+		n := len(fake.envs)
+		fake.mu.Unlock()
+		if n == 0 {
+			return
 		}
-	}()
-	return m
+		time.Sleep(15 * time.Millisecond)
+	}
+	fake.mu.Lock()
+	left := len(fake.envs)
+	fake.mu.Unlock()
+	t.Fatalf("expected 0 leftover microVMs, got %d", left)
 }
 
-func (m *mockDAPAdapter) Reader() *bufio.Reader  { return m.outR }
-func (m *mockDAPAdapter) Writer() io.Writer      { return m.inW }
-func (m *mockDAPAdapter) ExecutablePath() string { return "/workspace/prog" }
-func (m *mockDAPAdapter) SourcePath() string     { return "/workspace/main.go" }
-func (m *mockDAPAdapter) Close() error {
-	_ = m.inW.Close()
-	_ = m.outW.Close()
-	return nil
-}
+func TestLiveJavaLeetCodeDAPBreakpointVarsAndStep(t *testing.T) {
+	if _, err := exec.LookPath("javac"); err != nil {
+		t.Skip("javac not installed locally")
+	}
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node not installed locally")
+	}
 
-func TestWebSocketDAPRelayAndQuerySignature(t *testing.T) {
-	secret := strings.Repeat("d", 36)
+	drv := &LocalDriver{}
+	if err := drv.Init(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	secret := strings.Repeat("j", 36)
 	srv := NewServer(Config{
 		Node:         "lou1",
 		Secret:       secret,
-		DAPIdleMs:    5000,
-		DAPMaxMs:     30000,
+		DAPIdleMs:    15000,
+		DAPMaxMs:     60000,
 		DAPMaxActive: 4,
-	}, &LocalDriver{}, func(map[string]any) {})
-	srv.DAP().Spawner = func(_ context.Context, _ DAPInitRequest) (DAPAdapterSession, error) {
-		return newMockDAPAdapter(), nil
-	}
+	}, drv, func(map[string]any) {})
 
 	ts := httptest.NewServer(srv)
 	defer ts.Close()
 
-	now := time.Now()
-	hdrs := SignedHeaders(secret, "GET", "/v1/dap", "lou1", "debugger-user", nil, now)
+	hdrs := SignedHeaders(secret, "GET", "/v1/dap", "lou1", "java-user", nil, time.Now())
 	q := url.Values{}
 	q.Set("time", hdrs["x-runner-time"])
 	q.Set("nonce", hdrs["x-runner-nonce"])
@@ -395,41 +423,108 @@ func TestWebSocketDAPRelayAndQuerySignature(t *testing.T) {
 	q.Set("node", hdrs["x-runner-node"])
 	q.Set("sig", hdrs["x-runner-signature"])
 
-	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/v1/dap?" + q.Encode()
-	conn, err := ws.Dial(context.Background(), wsURL, nil)
+	conn, err := ws.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/v1/dap?"+q.Encode(), nil)
 	if err != nil {
-		t.Fatalf("ws dial /v1/dap failed: %v", err)
+		t.Fatalf("ws dial failed: %v", err)
 	}
 	defer conn.Close()
 
+	javaCode := strings.Join([]string{
+		"class Solution {",                                              // line 1
+		"    public int[] twoSum(int[] nums, int target) {",             // line 2
+		"        Map<Integer, Integer> seen = new HashMap<>();",         // line 3
+		"        for (int i = 0; i < nums.length; i++) {",               // line 4
+		"            int need = target - nums[i];",                      // line 5 <- breakpoint!
+		"            if (seen.containsKey(need)) return new int[]{seen.get(need), i};", // line 6
+		"            seen.put(nums[i], i);",                             // line 7
+		"        }",                                                     // line 8
+		"        return new int[0];",                                    // line 9
+		"    }",                                                         // line 10
+		"}",                                                             // line 11
+	}, "\n")
+
 	if err := conn.WriteJSON(DAPInitRequest{
-		Type: "init",
-		Lang: "go",
-		Mode: "acm",
-		Code: "package main\nfunc main() {}\n",
+		Type:  "init",
+		Lang:  "java",
+		Mode:  "leetcode",
+		Code:  javaCode,
+		Sig:   json.RawMessage(`{"fn":"twoSum","params":["int[]","int"],"ret":"int[]"}`),
+		Cases: []JobCase{{Input: json.RawMessage(`[[3, 2, 4], 6]`)}},
 	}); err != nil {
 		t.Fatal(err)
 	}
-	_, readyRaw, err := conn.ReadMessage()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var ready map[string]any
-	_ = json.Unmarshal(readyRaw, &ready)
-	if ready["type"] != "ready" || ready["lang"] != "go" {
-		t.Fatalf("unexpected ready message: %s", string(readyRaw))
+
+	readUntil := func(match func(map[string]any) bool) map[string]any {
+		_ = conn.SetReadDeadline(time.Now().Add(20 * time.Second))
+		for {
+			_, raw, rErr := conn.ReadMessage()
+			if rErr != nil {
+				t.Fatalf("ws read failed waiting for DAP message: %v", rErr)
+			}
+			var m map[string]any
+			if json.Unmarshal(raw, &m) == nil && match(m) {
+				return m
+			}
+		}
 	}
 
-	if err := conn.WriteJSON(map[string]any{"seq": 1, "type": "request", "command": "initialize"}); err != nil {
-		t.Fatal(err)
+	ready := readUntil(func(m map[string]any) bool { return m["type"] == "ready" || m["type"] == "compile_error" || m["type"] == "error" })
+	if ready["type"] != "ready" {
+		t.Fatalf("expected ready, got %#v", ready)
 	}
-	_, dapRespRaw, err := conn.ReadMessage()
-	if err != nil {
-		t.Fatal(err)
+
+	// 1. initialize -> setBreakpoints(line 5) -> launch -> configurationDone
+	_ = conn.WriteJSON(map[string]any{"seq": 1, "type": "request", "command": "initialize"})
+	readUntil(func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "initialize" })
+
+	_ = conn.WriteJSON(map[string]any{
+		"seq": 2, "type": "request", "command": "setBreakpoints",
+		"arguments": map[string]any{"breakpoints": []map[string]any{{"line": 5}}},
+	})
+	readUntil(func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "setBreakpoints" })
+
+	_ = conn.WriteJSON(map[string]any{"seq": 3, "type": "request", "command": "launch"})
+	_ = conn.WriteJSON(map[string]any{"seq": 4, "type": "request", "command": "configurationDone"})
+
+	stopped := readUntil(func(m map[string]any) bool { return m["type"] == "event" && m["event"] == "stopped" })
+	threadID := int64(stopped["body"].(map[string]any)["threadId"].(float64))
+
+	// 2. stackTrace -> verify editor line is mapped back to 5 (subtracting JudgeMain prelude offset!)
+	_ = conn.WriteJSON(map[string]any{"seq": 5, "type": "request", "command": "stackTrace", "arguments": map[string]any{"threadId": threadID}})
+	stResp := readUntil(func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "stackTrace" })
+	frames := stResp["body"].(map[string]any)["stackFrames"].([]any)
+	if len(frames) == 0 {
+		t.Fatalf("expected non-empty stackFrames, got %#v", stResp)
 	}
-	var dapResp map[string]any
-	_ = json.Unmarshal(dapRespRaw, &dapResp)
-	if dapResp["command"] != "initialize" || dapResp["success"] != true {
-		t.Fatalf("unexpected DAP response: %s", string(dapRespRaw))
+	topFrame := frames[0].(map[string]any)
+	if int(topFrame["line"].(float64)) != 5 {
+		t.Fatalf("expected mapped user line 5, got %#v", topFrame)
 	}
+	frameID := int(topFrame["id"].(float64))
+
+	// 3. step over line 5 -> stops on line 6 -> evaluate "need" == "3" (6 - nums[0])!
+	_ = conn.WriteJSON(map[string]any{"seq": 6, "type": "request", "command": "next", "arguments": map[string]any{"threadId": threadID}})
+	readUntil(func(m map[string]any) bool { return m["type"] == "event" && m["event"] == "stopped" })
+
+	_ = conn.WriteJSON(map[string]any{"seq": 7, "type": "request", "command": "stackTrace", "arguments": map[string]any{"threadId": threadID}})
+	stResp2 := readUntil(func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "stackTrace" })
+	frameID2 := int(stResp2["body"].(map[string]any)["stackFrames"].([]any)[0].(map[string]any)["id"].(float64))
+	_ = frameID
+
+	_ = conn.WriteJSON(map[string]any{"seq": 8, "type": "request", "command": "evaluate", "arguments": map[string]any{"expression": "need", "frameId": frameID2}})
+	evalResp := readUntil(func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "evaluate" })
+	if got := evalResp["body"].(map[string]any)["result"]; got != "3" {
+		t.Fatalf("expected evaluate(need) == \"3\", got %#v", evalResp)
+	}
+
+	// 4. clear breakpoints -> continue -> program finishes cleanly -> disconnect
+	_ = conn.WriteJSON(map[string]any{
+		"seq": 9, "type": "request", "command": "setBreakpoints",
+		"arguments": map[string]any{"breakpoints": []map[string]any{}},
+	})
+	readUntil(func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "setBreakpoints" })
+
+	_ = conn.WriteJSON(map[string]any{"seq": 10, "type": "request", "command": "continue", "arguments": map[string]any{"threadId": threadID}})
+	readUntil(func(m map[string]any) bool { return m["type"] == "event" && m["event"] == "terminated" })
+	_ = conn.WriteJSON(map[string]any{"seq": 11, "type": "request", "command": "disconnect"})
 }
