@@ -32,6 +32,8 @@ function stepHasFx(step?: Step): boolean {
     (Array.isArray(v.cutEdges) && v.cutEdges.length > 0) ||
     (Array.isArray(v.animEdges) && v.animEdges.length > 0) ||
     (Array.isArray(v.ghostEdges) && v.ghostEdges.length > 0) ||
+    (Array.isArray(v.onEdges) && v.onEdges.length > 0) ||
+    Boolean(v.prevNodes) ||
     (Array.isArray(v.items) && v.items.some((x: unknown) => !!x && typeof x === "object" && "prev" in x)) ||
     (Array.isArray(v.rows) && v.rows.some((r: unknown[]) => Array.isArray(r) && r.some((x) => !!x && typeof x === "object" && "prev" in x)))
   );
@@ -145,7 +147,8 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
   useEffect(() => {
     if (!playing) return;
     const cur = steps[Math.min(idx, last)];
-    const delay = Math.round((stepHasFx(cur) ? 1450 : 1050) / speed);
+    const hasMorph = !!cur?.views?.some((v) => Boolean(v.prevNodes));
+    const delay = Math.round((hasMorph ? 1950 : stepHasFx(cur) ? 1450 : 1050) / speed);
     timer.current = setTimeout(() => {
       if (idx >= last) {
         setPlaying(false);
