@@ -51,18 +51,55 @@ assert s.merge([[4,7],[1,4]]) == [[1,7]]
       { t: "chips", label: "按起点排序后的区间", items: iv.map((x, j) => ({ v: f(x), cls: j === i ? "a" : j < i ? "d" : "" })) },
       { t: "chips", label: "结果", items: res.map((x, j) => ({ v: f(x), cls: touched && j === res.length - 1 ? "k" : "" })), empty: "还没有" },
     ];
-    snap("排序", "先按起点排序。之后能合并的区间一定是挨着的。", view(-1), { at: "sort" });
+    snap("排序", "先按起点从小到大排序。排序后，能合并的区间一定挨在一起。", view(-1), {
+      at: "sort",
+      facts: [["区间总数", iv.length], ["结果段数", 0]],
+    });
     iv.forEach(([s, e], i) => {
       const last = res[res.length - 1];
+      const curStr = f([s, e]);
+      const prevLen = res.length;
       if (last && s <= last[1]) {
-        const old = f(last); last[1] = Math.max(last[1], e);
-        snap("合并", `${f([s, e])} 的起点 ${s} 不超过上一段 ${old} 的终点，两段<b>重叠</b>。终点取较大的，上一段变成 ${f(last)}。`, view(i, true), { at: "merge" });
+        const old = f(last), oldEnd = last[1];
+        last[1] = Math.max(last[1], e);
+        const now = f(last);
+        snap(
+          "合并",
+          `${curStr} 的起点 ${s} ≤ 上一段 ${old} 的终点 ${oldEnd}，两段<b>重叠</b>。终点取 max(${oldEnd}, ${e}) = ${last[1]}，上一段变成 ${now}。`,
+          view(i, true),
+          {
+            at: "merge",
+            facts: [
+              ["当前区间", curStr],
+              ["最后一段", now, old],
+              ["结果段数", res.length],
+            ],
+          },
+        );
       } else {
+        const prevLast = last ? f(last) : "空";
         res.push([s, e]);
-        snap("另起一段", last ? `${f([s, e])} 的起点 ${s} 大于上一段的终点 ${last[1]}，不重叠，作为新的一段。` : `结果是空的，${f([s, e])} 直接放进去。`, view(i, true), { at: "new" });
+        snap(
+          "另起一段",
+          last ? `${curStr} 的起点 ${s} 大于上一段 ${prevLast} 的终点 ${last[1]}，不重叠，作为新的一段。` : `结果是空的，${curStr} 直接放进去。`,
+          view(i, true),
+          {
+            at: "new",
+            facts: [
+              ["当前区间", curStr],
+              ["最后一段", curStr, prevLast],
+              ["结果段数", res.length, prevLen],
+            ],
+          },
+        );
       }
     });
-    snap("完成", `合并后剩下 <b>${res.length}</b> 段。`, view(iv.length), { at: "done", kind: "ok", ans: res });
+    snap("完成", `合并后剩下 <b>${res.length}</b> 段。`, view(iv.length), {
+      at: "done",
+      kind: "ok",
+      ans: res.map((x) => x.slice()),
+      facts: [["结果段数", res.length]],
+    });
   },
   points: [
     { t: "终点要取 max", body: "不能直接用新区间的终点覆盖。新区间可能被完全包含，终点反而更小。" },

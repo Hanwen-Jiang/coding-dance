@@ -45,14 +45,39 @@ assert s.canJump([2,0,0]) is True
     { label: "示例 2", args: { nums: [3, 2, 1, 0, 4] }, note: "nums = [3,2,1,0,4]", expect: false },
   ],
   build(a, snap) {
-    const nums = a.nums, n = nums.length; let far = 0;
-    const view = (i, end) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: end === "ok" && k === n - 1 ? "c" : k === i ? (end === "bad" ? "w" : "a") : k <= far ? "e" : end === "bad" ? "w" : "" })), ptrs: { i: i >= 0 ? i : null, far: Math.min(far, n - 1) } }];
-    snap("开始", "一开始站在下标 0，能到的最远位置 far = 0。", view(-1), { at: "init", facts: [["far", far], ["终点", n - 1]] });
+    const nums = a.nums.slice(), n = nums.length;
+    let far = 0;
+    const view = (i, end, opts = {}) => [{
+      t: "array",
+      label: "nums",
+      items: nums.map((v, k) => ({
+        v,
+        cls: end === "ok" && k === n - 1 ? "c" : k === i ? (end === "bad" ? "w" : "a") : k <= far ? "e" : end === "bad" ? "w" : "",
+      })),
+      ptrs: { i: i >= 0 ? i : null, far: Math.min(far, n - 1) },
+      feeds: opts.feeds || [],
+    }];
+    const f = (prevFar) => ({ facts: [["最远可达 far", far, prevFar], ["终点", n - 1]] });
+    snap("开始", "一开始站在下标 0，能到的最远位置 far = 0。", view(-1, null), { at: "init", ...f() });
     for (let i = 0; i < n; i++) {
-      if (i > far) { snap("到不了", `下标 ${i} &gt; far = ${far}，连这里都到不了，终点更到不了。返回 <b>false</b>。`, view(i, "bad"), { at: "bad", kind: "warn", ans: false, facts: [["far", far], ["终点", n - 1]] }); return; }
-      const old = far; far = Math.max(far, i + nums[i]);
-      if (far >= n - 1) { snap("能到终点", `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，已经够到终点 ${n - 1}。返回 <b>true</b>。`, view(i, "ok"), { at: ["grow", "reach"], kind: "ok", ans: true, facts: [["far", far], ["终点", n - 1]] }); return; }
-      snap("更新 far", `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}。` + (far > old ? `far 从 ${old} 变成 <b>${far}</b>。` : `没有超过 far = ${far}。`), view(i), { at: "grow", facts: [["far", far], ["终点", n - 1]] });
+      if (i > far) {
+        snap("到不了", `下标 ${i} &gt; far = ${far}，连这里都到不了，终点更到不了。返回 <b>false</b>。`, view(i, "bad"), { at: "bad", kind: "warn", ans: false, ...f() });
+        return;
+      }
+      const old = far, reach = i + nums[i], improved = reach > old;
+      far = Math.max(far, reach);
+      const to = Math.min(n - 1, reach);
+      const feeds = to > i ? [{ from: i, to, win: improved, label: `+${nums[i]}` }] : [];
+      if (far >= n - 1) {
+        snap("能到终点", `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${reach}，已经够到终点 ${n - 1}。返回 <b>true</b>。`, view(i, "ok", { feeds }), { at: ["grow", "reach"], kind: "ok", ans: true, ...f(old) });
+        return;
+      }
+      snap(
+        "更新 far",
+        `站在 ${i}，最远能跳到 ${i} + ${nums[i]} = ${reach}。` + (improved ? `far 从 ${old} 变成 <b>${far}</b>。` : `没有超过 far = ${far}。`),
+        view(i, null, { feeds }),
+        { at: "grow", ...f(old) },
+      );
     }
   },
   alts: [{
@@ -61,18 +86,40 @@ assert s.canJump([2,0,0]) is True
     note: "和简洁写法一样：goal 是「只要能到这里，就一定能到终点」的最左位置。从右往左看，能跳到 goal 的位置就成为新的 goal，最后看 goal 是不是 0。",
     legend: [["a", "当前位置"], ["e", "从这里出发能到终点"], ["w", "到不了终点"], ["c", "起点能到终点"]],
     build(a, snap) {
-      const nums = a.nums, n = nums.length; let goal = n - 1;
-      const view = (i, end) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k >= goal ? (end === "ok" && k === 0 ? "c" : "e") : end === "bad" ? "w" : "" })), ptrs: { i: i >= 0 ? i : null, goal } }];
-      const f = () => ({ facts: [["goal", goal], ["终点", n - 1]] });
-      snap("开始", `goal 一开始就是终点 ${n - 1}：站在终点当然能到终点。从倒数第二格开始往左看。`, view(-1), { at: "init", ...f() });
+      const nums = a.nums.slice(), n = nums.length;
+      let goal = n - 1;
+      const view = (i, end, opts = {}) => [{
+        t: "array",
+        label: "nums",
+        items: nums.map((v, k) => ({
+          v,
+          cls: k === i ? "a" : k >= goal ? (end === "ok" && k === 0 ? "c" : "e") : end === "bad" ? "w" : "",
+        })),
+        ptrs: { i: i >= 0 ? i : null, goal },
+        feeds: opts.feeds || [],
+      }];
+      const f = (i, prevGoal) => ({
+        facts: [
+          ["当前下标 i", i >= 0 ? i : "—"],
+          ["目标 goal", goal, prevGoal],
+          ["终点", n - 1],
+        ],
+      });
+      snap("开始", `goal 一开始就是终点 ${n - 1}：站在终点当然能到终点。从倒数第二格开始往左看。`, view(-1, null), { at: "init", ...f(-1) });
       for (let i = n - 2; i >= 0; i--) {
-        if (i + nums[i] >= goal) {
-          const old = goal; goal = i;
-          snap("新的 goal", `站在 ${i} 最远能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，够得着 goal = ${old}。能到 ${i} 就能到终点，goal 移到 <b>${i}</b>。`, view(i), { at: "move", ...f() });
-        } else snap("够不着", `站在 ${i} 最远只能跳到 ${i} + ${nums[i]} = ${i + nums[i]}，够不着 goal = ${goal}。goal 不动。`, view(i), { at: "stay", ...f() });
+        const reach = i + nums[i], canReach = reach >= goal;
+        const to = Math.min(n - 1, reach);
+        const feeds = to > i ? [{ from: i, to, win: canReach, label: `+${nums[i]}` }] : [];
+        if (canReach) {
+          const old = goal;
+          goal = i;
+          snap("新的 goal", `站在 ${i} 最远能跳到 ${i} + ${nums[i]} = ${reach}，够得着 goal = ${old}。能到 ${i} 就能到终点，goal 移到 <b>${i}</b>。`, view(i, null, { feeds }), { at: "move", ...f(i, old) });
+        } else {
+          snap("够不着", `站在 ${i} 最远只能跳到 ${i} + ${nums[i]} = ${reach}，够不着 goal = ${goal}。goal 不动。`, view(i, null, { feeds }), { at: "stay", ...f(i) });
+        }
       }
-      if (goal === 0) snap("完成", "goal 推到了起点 0，从起点出发能到终点。返回 <b>true</b>。", view(-1, "ok"), { at: "done", kind: "ok", ans: true, ...f() });
-      else snap("完成", `goal 停在 ${goal}，没能推到起点。起点到不了终点，返回 <b>false</b>。`, view(-1, "bad"), { at: "done", kind: "warn", ans: false, ...f() });
+      if (goal === 0) snap("完成", "goal 推到了起点 0，从起点出发能到终点。返回 <b>true</b>。", view(-1, "ok"), { at: "done", kind: "ok", ans: true, ...f(-1) });
+      else snap("完成", `goal 停在 ${goal}，没能推到起点。起点到不了终点，返回 <b>false</b>。`, view(-1, "bad"), { at: "done", kind: "warn", ans: false, ...f(-1) });
     },
   }],
   points: [

@@ -54,26 +54,83 @@ assert f([1,5,8,4,7,6,5,3,1]) == [1,5,8,5,1,3,4,6,7]
   ],
   build(a, snap) {
     const nums = a.nums.slice(), n = nums.length;
-    const view = (cls, ptrs) => [{ t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: cls(k) })), ptrs: ptrs || {} }];
-    snap("开始", `要找比 [${nums.join(",")}] 大的排列里最小的那个。先从右往左找第一个比右边小的数。`, view(() => ""), { at: "init" });
+    const view = (opts = {}) => {
+      const cls = opts.cls || (() => "");
+      const prevMap = opts.prevMap || {};
+      return [{
+        t: "array",
+        label: "nums",
+        items: nums.map((v, k) => ({
+          v,
+          ...(prevMap[k] !== undefined ? { prev: prevMap[k] } : {}),
+          cls: cls(k),
+        })),
+        ptrs: opts.ptrs || {},
+        swaps: opts.swaps || [],
+      }];
+    };
     let i = n - 2;
+    snap("开始", `要找比 [${nums.join(",")}] 大的排列里最小的那个。先从右往左找第一个比右边小的数。`, view(), { at: "init", facts: [["i", i]] });
     while (i >= 0 && nums[i] >= nums[i + 1]) {
-      snap("找下降", `nums[${i}] = ${nums[i]} ≥ nums[${i + 1}] = ${nums[i + 1]}，还在降序段里，继续往左。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }), { at: "findi" });
+      snap("找下降", `nums[${i}] = ${nums[i]} ≥ nums[${i + 1}] = ${nums[i + 1]}，还在降序段里，继续往左。`, view({ cls: (k) => (k === i ? "a" : k > i ? "e" : ""), ptrs: { i } }), { at: "findi", facts: [["i", i], ["比较", `${nums[i]} ≥ ${nums[i + 1]}`]] });
       i--;
     }
     if (i >= 0) {
-      snap("找到 i", `nums[${i}] = ${nums[i]} &lt; nums[${i + 1}] = ${nums[i + 1]}。右边 [${nums.slice(i + 1).join(",")}] 是降序，已经最大了，要动的是第 <b>${i}</b> 位。`, view((k) => (k === i ? "a" : k > i ? "e" : ""), { i }), { at: "found" });
+      snap("找到 i", `nums[${i}] = ${nums[i]} &lt; nums[${i + 1}] = ${nums[i + 1]}。右边 [${nums.slice(i + 1).join(",")}] 是降序，已经最大了，要动的是第 <b>${i}</b> 位。`, view({ cls: (k) => (k === i ? "a" : k > i ? "e" : ""), ptrs: { i } }), { at: "found", facts: [["i", i], ["nums[i]", nums[i]]] });
       let j = n - 1;
-      while (nums[j] <= nums[i]) j--;
-      snap("找 j", `在右段里从右往左找，第一个比 ${nums[i]} 大的是 nums[${j}] = <b>${nums[j]}</b>，它是右段里比 ${nums[i]} 大的最小的数。`, view((k) => (k === i ? "a" : k === j ? "b" : k > i ? "e" : ""), { i, j }), { at: "findj" });
+      while (nums[j] <= nums[i]) {
+        snap("找 j", `nums[${j}] = ${nums[j]} ≤ nums[${i}] = ${nums[i]}，不能让第 ${i} 位变小或不变，j 继续往左找。`, view({ cls: (k) => (k === i ? "a" : k === j ? "b" : k > i ? "e" : ""), ptrs: { i, j } }), { at: "findj", facts: [["i", i], ["j", j], ["nums[j]", nums[j]]] });
+        j--;
+      }
+      snap("找到 j", `在右段里从右往左找，第一个比 ${nums[i]} 大的是 nums[${j}] = <b>${nums[j]}</b>，它是右段里比 ${nums[i]} 大的最小的数。`, view({ cls: (k) => (k === i ? "a" : k === j ? "b" : k > i ? "e" : ""), ptrs: { i, j } }), { at: "findj", facts: [["i", i], ["j", j], ["nums[j]", nums[j]]] });
+      const oldI = nums[i], oldJ = nums[j];
+      const diff = oldI !== oldJ;
       [nums[i], nums[j]] = [nums[j], nums[i]];
-      snap("交换", `交换后第 ${i} 位变成 ${nums[i]}，排列变大了。右段 [${nums.slice(i + 1).join(",")}] 仍然是降序。`, view((k) => (k === i ? "c" : k > i ? "e" : ""), { i }), { at: "swap" });
+      snap(
+        "交换 nums[i] 与 nums[j]",
+        `交换 nums[${i}]（${oldI}）和 nums[${j}]（${oldJ}），第 ${i} 位变成 ${nums[i]}，排列变大了。右段 [${nums.slice(i + 1).join(",")}] 仍然是降序。`,
+        view({
+          cls: (k) => (k === i ? "c" : k > i ? "e" : ""),
+          ptrs: { i, j },
+          swaps: diff ? [[i, j]] : [],
+          prevMap: diff ? { [i]: oldI, [j]: oldJ } : {},
+        }),
+        { at: "swap", facts: [["i", i], ["j", j], [`nums[${i}]`, nums[i], oldI]] },
+      );
     } else {
-      snap("整体降序", "一直找到最左边都没有下降的位置，说明已经是最大的排列。把整个数组反转，回到最小的排列。", view(() => "e"), { at: "found" });
+      snap("整体降序", "一直找到最左边都没有下降的位置，说明已经是最大的排列。把整个数组反转，回到最小的排列。", view({ cls: () => "e" }), { at: "found", facts: [["i", -1]] });
     }
     let l = i + 1, r = n - 1;
-    while (l < r) { [nums[l], nums[r]] = [nums[r], nums[l]]; l++; r--; }
-    snap("反转右段", `把第 ${i + 1} 位之后反转成升序，让右边尽量小。结果是 <b>[${nums.join(",")}]</b>。`, view((k) => (k > i ? "c" : "")), { at: "rev", kind: "ok", ans: nums.slice() });
+    if (l < r) {
+      snap("准备反转右段", `把第 ${l} 位到第 ${r} 位反转成升序，让右边尽量小。`, view({ cls: (k) => (k > i ? "e" : ""), ptrs: { l, r } }), { at: "rev", facts: [["l", l], ["r", r]] });
+      while (l < r) {
+        const oldL = nums[l], oldR = nums[r];
+        const diff = oldL !== oldR;
+        [nums[l], nums[r]] = [nums[r], nums[l]];
+        snap(
+          "反转交换",
+          diff ? `交换 nums[${l}]（${oldL}）与 nums[${r}]（${oldR}），右段逐步变成升序。` : `nums[${l}] 与 nums[${r}] 都是 ${oldL}，数值不变，双指针继续往中间靠。`,
+          view({
+            cls: (k) => (k === l || k === r ? "c" : k > i && k >= l && k <= r ? "e" : k > i ? "c" : ""),
+            ptrs: { l, r },
+            swaps: diff ? [[l, r]] : [],
+            prevMap: diff ? { [l]: oldL, [r]: oldR } : {},
+          }),
+          { at: "rev", facts: [["l", l], ["r", r]] },
+        );
+        const pl = l, pr = r;
+        l++; r--;
+        if (l < r) {
+          snap(
+            "收缩反转区间",
+            `l 前进到 ${l}，r 后退到 ${r}，准备交换下一对。`,
+            view({ cls: (k) => (k >= l && k <= r ? "e" : k > i ? "c" : ""), ptrs: { l, r } }),
+            { at: "rev", facts: [["l", l, pl], ["r", r, pr]] },
+          );
+        }
+      }
+    }
+    snap("反转右段", `把第 ${i + 1} 位之后反转成升序，让右边尽量小。结果是 <b>[${nums.join(",")}]</b>。`, view({ cls: (k) => (k > i ? "c" : "") }), { at: "rev", kind: "ok", ans: nums.slice(), facts: [["结果", `[${nums.join(",")}]`]] });
   },
   points: [
     { t: "比较要带等号", body: "找 i 用 <code>nums[i] &gt;= nums[i+1]</code> 继续走，找 j 用 <code>nums[j] &lt;= nums[i]</code> 继续走。有重复元素时少了等号会出错。" },

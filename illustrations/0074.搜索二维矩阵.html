@@ -340,18 +340,65 @@ const SPEC = { presets: [{"label":"示例 1","args":{"M":[[1,3,5,7],[10,11,16,20
     return { args: { M, target }, note: `matrix = ${R.fmt(M)}, target = ${target}`, py: `Solution().searchMatrix(${R.py(M)}, ${target})` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "标准解法", note: null, legend: [["e","还在搜索范围里"],["a","mid"],["d","已排除"],["c","找到"]], build(a, snap) {
-    const { M, target } = a, m = M.length, n = M[0].length;
+    const M = a.M.map((r) => r.slice()), target = a.target, m = M.length, n = M[0].length;
     let lo = 0, hi = m * n - 1;
-    const view = (mid, hit) => [{ t: "grid", label: "matrix（第 i 行第 j 列的一维下标是 i·n + j）", rows: M.map((r, i) => r.map((v, j) => { const k = i * n + j; return { v, cls: k === hit ? "c" : k === mid ? "a" : k < lo || k > hi ? "d" : "e" }; })) }];
-    const f = (mid) => ({ facts: [["lo", lo], ["hi", hi], ["mid", mid >= 0 ? `${mid} → (${(mid / n) | 0}, ${mid % n})` : "—"]] });
-    snap("开始", `把 ${m}×${n} 的矩阵看成长度 ${m * n} 的有序数组，下标 0 到 ${m * n - 1}。找 <b>${target}</b>。`, view(-1), { at: "init", ...f(-1) });
+    const view = (mid, hit) => [{
+      t: "grid",
+      label: "matrix（第 i 行第 j 列的一维下标是 i·n + j）",
+      rows: M.map((r, i) => r.map((v, j) => {
+        const k = i * n + j;
+        return { v, cls: k === hit ? "c" : k === mid ? "a" : k < lo || k > hi ? "d" : "e" };
+      })),
+    }];
+    snap(
+      "开始",
+      `把 ${m}×${n} 的矩阵看成长度 ${m * n} 的有序数组，下标 0 到 ${m * n - 1}，在 [0, ${m * n - 1}] 上二分找 <b>${target}</b>。`,
+      view(-1),
+      { at: "init", facts: [["target", target], ["区间", `[${lo}, ${hi}]`], ["lo", lo], ["hi", hi]] },
+    );
     while (lo <= hi) {
-      const mid = (lo + hi) >> 1, x = M[(mid / n) | 0][mid % n];
-      if (x === target) { snap("找到", `下标 ${mid} 对应第 ${(mid / n) | 0} 行第 ${mid % n} 列，值是 ${x}，找到了，返回 <b>true</b>。`, view(-1, mid), { at: ["loop", "found"], kind: "ok", ans: true, ...f(mid) }); return; }
-      snap(x < target ? "太小" : "太大", `mid = ${mid}，换成行列是 (${(mid / n) | 0}, ${mid % n})，值是 ${x}，比 ${target} ${x < target ? "小，去右半边" : "大，去左半边"}。`, view(mid), { at: ["loop", x < target ? "small" : "big"], ...f(mid) });
-      if (x < target) lo = mid + 1; else hi = mid - 1;
+      const mid = (lo + hi) >> 1, r = (mid / n) | 0, c = mid % n, x = M[r][c];
+      snap(
+        "计算 mid 并换算行列",
+        `mid = (${lo} + ${hi}) // 2 = ${mid}，换算成第 ${r} 行第 ${c} 列（${mid} // ${n} = ${r}，${mid} % ${n} = ${c}），值为 <b>${x}</b>。`,
+        view(mid),
+        { at: "loop", facts: [["target", target], ["mid", `${mid} → (${r}, ${c})`], ["矩阵值", x], ["lo", lo], ["hi", hi]] },
+      );
+      if (x === target) {
+        snap(
+          "找到目标",
+          `matrix[${r}][${c}] = ${x}，正好等于 ${target}，返回 <b>true</b>。`,
+          view(-1, mid),
+          { at: "found", kind: "ok", ans: true, facts: [["target", target], ["位置", `(${r}, ${c})`], ["结果", "true"]] },
+        );
+        return;
+      }
+      if (x < target) {
+        const prevLo = lo, prevRange = `[${lo}, ${hi}]`;
+        lo = mid + 1;
+        snap(
+          "太小，排除左半",
+          `${x} &lt; ${target}，下标 ${prevLo}..${mid} 的数全部太小，排除掉！lo 右移到 ${lo}。`,
+          view(-1),
+          { at: "small", facts: [["target", target], ["区间", `[${lo}, ${hi}]`, prevRange], ["lo", lo, prevLo], ["hi", hi]] },
+        );
+      } else {
+        const prevHi = hi, prevRange = `[${lo}, ${hi}]`;
+        hi = mid - 1;
+        snap(
+          "太大，排除右半",
+          `${x} &gt; ${target}，下标 ${mid}..${prevHi} 的数全部太大，排除掉！hi 左移到 ${hi}。`,
+          view(-1),
+          { at: "big", facts: [["target", target], ["区间", `[${lo}, ${hi}]`, prevRange], ["lo", lo], ["hi", hi, prevHi]] },
+        );
+      }
     }
-    snap("没找到", `lo = ${lo} &gt; hi = ${hi}，范围空了，矩阵里没有 ${target}，返回 <b>false</b>。`, view(-1), { at: "none", kind: "warn", ans: false, ...f(-1) });
+    snap(
+      "没找到",
+      `lo = ${lo} &gt; hi = ${hi}，区间空了，矩阵里没有 ${target}，返回 <b>false</b>。`,
+      view(-1),
+      { at: "none", kind: "warn", ans: false, facts: [["target", target], ["lo", lo], ["hi", hi], ["结果", "false"]] },
+    );
   } }
 ] };
 (function () {

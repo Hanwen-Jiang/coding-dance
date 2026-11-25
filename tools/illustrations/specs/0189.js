@@ -42,21 +42,56 @@ for a, k, e in [([1,2,3,4,5,6,7],3,[5,6,7,1,2,3,4]), ([-1,-100,3,99],2,[3,99,-1,
   ],
   build(a, snap) {
     const n = a.nums.slice(), len = n.length, k = a.k % len; let doneTo = -1;
-    const view = (lo, hi, i, j) => [{ t: "array", label: "nums", items: n.map((v, t) => ({ v, cls: t === i || t === j ? "a" : t >= lo && t <= hi ? "e" : t <= doneTo ? "c" : "" })), ptrs: i === undefined ? {} : { i, j } }];
-    snap("开始", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : "。") + `目标是把最后 ${k} 个数搬到最前面。`, view(-1, -1), { at: "init", facts: [["k % n", k]] });
+    const view = (opts = {}) => {
+      const lo = opts.lo ?? -1, hi = opts.hi ?? -1, i = opts.i, j = opts.j;
+      const prevMap = opts.prevMap || {};
+      return [{
+        t: "array",
+        label: "nums",
+        items: n.map((v, t) => ({
+          v,
+          ...(prevMap[t] !== undefined ? { prev: prevMap[t] } : {}),
+          cls: t === i || t === j ? "a" : t >= lo && t <= hi ? "e" : t <= doneTo ? "c" : "",
+        })),
+        ptrs: i === undefined ? {} : { i, j },
+        swaps: opts.swaps || [],
+      }];
+    };
+    snap("开始", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : "。") + `目标是把最后 ${k} 个数搬到最前面。`, view(), { at: "init", facts: [["k % n", k]] });
     const rev = (lo, hi, name, tag) => {
-      snap(name, `${name}：翻转下标 ${lo} 到 ${hi} 这一段。`, view(lo, hi), { at: tag, facts: [["k % n", k]] });
+      snap(name, `${name}：准备双指针翻转下标 ${lo} 到 ${hi} 这一段。`, view({ lo, hi, i: lo, j: hi }), { at: tag, facts: [["阶段", name], ["k % n", k], ["i", lo], ["j", hi]] });
       for (let i = lo, j = hi; i < j; i++, j--) {
+        const oldI = n[i], oldJ = n[j], diff = oldI !== oldJ;
         [n[i], n[j]] = [n[j], n[i]];
-        snap(name, `交换下标 ${i} 和 ${j}，两边往中间靠。`, view(lo, hi, i, j), { at: [tag, "swap"], facts: [["k % n", k]] });
+        snap(
+          `${name} · 交换`,
+          diff ? `交换 nums[${i}]（${oldI}）和 nums[${j}]（${oldJ}）。` : `nums[${i}] 和 nums[${j}] 都是 ${oldI}，数值不变。`,
+          view({
+            lo,
+            hi,
+            i,
+            j,
+            swaps: diff ? [[i, j]] : [],
+            prevMap: diff ? { [i]: oldI, [j]: oldJ } : {},
+          }),
+          { at: [tag, "swap"], facts: [["阶段", name], ["k % n", k], ["i", i], ["j", j]] },
+        );
+        if (i + 1 < j - 1) {
+          snap(
+            `${name} · 指针靠拢`,
+            `i 前进到 ${i + 1}，j 后退到 ${j - 1}，继续往中间翻转。`,
+            view({ lo, hi, i: i + 1, j: j - 1 }),
+            { at: tag, facts: [["阶段", name], ["k % n", k], ["i", i + 1, i], ["j", j - 1, j]] },
+          );
+        }
       }
     };
-    rev(0, len - 1, "整体翻转", "all");
+    if (len > 1) rev(0, len - 1, "整体翻转", "all");
     if (k > 1) rev(0, k - 1, "翻转前 k 个", "front");
     doneTo = k - 1;
     if (len - k > 1) rev(k, len - 1, "翻转剩下的", "back");
     doneTo = len - 1;
-    snap("完成", `三次翻转后得到 [${n.join(", ")}]。`, view(-1, -1), { at: [], kind: "ok", ans: n, facts: [["k % n", k]] });
+    snap("完成", `三次翻转后得到 [${n.join(", ")}]。`, view(), { at: [], kind: "ok", ans: n.slice(), facts: [["k % n", k], ["结果", `[${n.join(", ")}]`]] });
   },
   points: [
     { t: "先取余", body: "不取余的话，k 大于 n 时 <code>reverse(0, k - 1)</code> 会越界。" },

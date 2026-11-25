@@ -50,15 +50,71 @@ assert all(s.searchMatrix(M, v) for r in M for v in r)
   build(a, snap) {
     const M = [[1, 4, 7, 11, 15], [2, 5, 8, 12, 19], [3, 6, 9, 16, 22], [10, 13, 14, 17, 24], [18, 21, 23, 26, 30]], t = a.t;
     let i = 0, j = M[0].length - 1;
-    const view = (hit) => [{ t: "grid", label: "matrix", rows: M.map((r, x) => r.map((v, y) => ({ v, cls: x === i && y === j ? (hit ? "c" : "a") : x < i || y > j ? "d" : "" }))) }];
-    snap("开始", `要找 <b>${t}</b>。从右上角 ${M[i][j]} 出发：往左数变小，往下数变大。`, view(), { at: "init", facts: [["target", t]] });
+    const view = (hit) => [
+      {
+        t: "grid",
+        label: "matrix",
+        rows: M.map((r, x) => r.map((v, y) => ({
+          v,
+          cls: x === i && y === j ? (hit ? "c" : "a") : x < i || y > j ? "d" : "",
+        }))),
+      },
+    ];
+    snap(
+      "开始",
+      `要找 <b>${t}</b>。从右上角 (${i}, ${j}) = ${M[i][j]} 出发：往左数变小，往下数变大。`,
+      view(),
+      { at: "init", facts: [["target", t], ["行 i", i], ["列 j", j], ["当前值", M[i][j]]] },
+    );
     while (i < M.length && j >= 0) {
       const x = M[i][j];
-      if (x === t) { snap("找到", `当前是 ${x}，等于 target。返回 true。`, view(true), { at: ["cmp", "found"], kind: "ok", ans: true, facts: [["target", t]] }); return; }
-      if (x > t) { snap("往左", `当前是 ${x}，比 ${t} 大。它下面的数都更大，<b>这一列全部排除</b>，往左走。`, view(), { at: ["cmp", "left"], facts: [["target", t]] }); j--; }
-      else { snap("往下", `当前是 ${x}，比 ${t} 小。它左边的数都更小，<b>这一行全部排除</b>，往下走。`, view(), { at: ["cmp", "down"], facts: [["target", t]] }); i++; }
+      if (x === t) {
+        snap(
+          "找到",
+          `当前 (${i}, ${j}) 是 <b>${x}</b>，等于 target，返回 true！`,
+          view(true),
+          { at: ["cmp", "found"], kind: "ok", ans: true, facts: [["target", t], ["行 i", i], ["列 j", j], ["当前值", x]] },
+        );
+        return;
+      }
+      if (x > t) {
+        snap(
+          "比较：偏大",
+          `当前 (${i}, ${j}) 是 <b>${x}</b> &gt; ${t}。因为每列往下递增，第 ${j} 列剩下的数都大于 ${t}，整列不可能有答案。`,
+          view(),
+          { at: "cmp", facts: [["target", t], ["行 i", i], ["列 j", j], ["当前值", x]] },
+        );
+        const oldJ = j;
+        j--;
+        snap(
+          "排除一列，往左走",
+          `排除第 ${oldJ} 列，列指针 j 左移：${oldJ} → ${j}。${j >= 0 ? `来到 (${i}, ${j}) = ${M[i][j]}。` : "已走出左边界。"}`,
+          view(),
+          { at: "left", facts: [["target", t], ["行 i", i], ["列 j", j, oldJ], ["当前值", j >= 0 ? M[i][j] : "越界"]] },
+        );
+      } else {
+        snap(
+          "比较：偏小",
+          `当前 (${i}, ${j}) 是 <b>${x}</b> &lt; ${t}。因为每行往左递减，第 ${i} 行左边剩下的数都小于 ${t}，整行不可能有答案。`,
+          view(),
+          { at: "cmp", facts: [["target", t], ["行 i", i], ["列 j", j], ["当前值", x]] },
+        );
+        const oldI = i;
+        i++;
+        snap(
+          "排除一行，往下走",
+          `排除第 ${oldI} 行，行指针 i 下移：${oldI} → ${i}。${i < M.length ? `来到 (${i}, ${j}) = ${M[i][j]}。` : "已走出下边界。"}`,
+          view(),
+          { at: "down", facts: [["target", t], ["行 i", i, oldI], ["列 j", j], ["当前值", i < M.length ? M[i][j] : "越界"]] },
+        );
+      }
     }
-    snap("没找到", `走出了矩阵，所有行和列都被排除。${t} 不在矩阵里，返回 false。`, view(), { at: "none", kind: "warn", ans: false, facts: [["target", t]] });
+    snap(
+      "没找到",
+      `走出了矩阵，所有行和列都被排除。${t} 不在矩阵里，返回 false。`,
+      view(),
+      { at: "none", kind: "warn", ans: false, facts: [["target", t], ["行 i", i], ["列 j", j]] },
+    );
   },
   points: [
     { t: "起点只能是右上或左下", body: "这两个角上，两个移动方向一个变大一个变小。另外两个角做不到。" },

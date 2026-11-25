@@ -60,21 +60,49 @@ for a, e in [([[1,1,1],[1,0,1],[1,1,1]], [[1,0,1],[0,0,0],[1,0,1]]), ([[0,1,2,0]
   ],
   build(a, snap) {
     const M = a.m.map((r) => r.slice()), m = M.length, n = M[0].length, cls = M.map((r) => r.map(() => ""));
-    const view = (ci, cj) => [{ t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : cls[i][j] || (i === 0 || j === 0 ? "e" : "") }))) }];
+    const view = (ci, cj, prevMap = {}) => [{
+      t: "grid",
+      label: "matrix",
+      rows: M.map((r, i) => r.map((v, j) => ({
+        v,
+        ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+        cls: i === ci && j === cj ? "a" : cls[i][j] || (i === 0 || j === 0 ? "e" : ""),
+      }))),
+    }];
     const row0 = M[0].includes(0), col0 = M.some((r) => r[0] === 0);
-    const facts = () => [["row0", row0 ? "有 0" : "没有"], ["col0", col0 ? "有 0" : "没有"]];
+    let cleared = 0;
+    const facts = (prevCleared) => [
+      ["row0", row0 ? "有 0" : "没有"],
+      ["col0", col0 ? "有 0" : "没有"],
+      ["已清零格数", cleared, prevCleared],
+    ];
     snap("先记住第一行和第一列", `第一行和第一列马上要用来写记号，先看它们原来有没有 0：第一行${row0 ? "有" : "没有"}，第一列${col0 ? "有" : "没有"}。`, view(), { at: "first", facts: facts() });
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) if (M[i][j] === 0) {
+      const oldR = M[i][0], oldC = M[0][j], prevMark = {};
+      if (oldR !== 0) prevMark[`${i},0`] = oldR;
+      if (oldC !== 0) prevMark[`0,${j}`] = oldC;
       M[i][0] = 0; M[0][j] = 0; cls[i][0] = "w"; cls[0][j] = "w";
-      snap("做记号", `matrix[${i}][${j}] 是 0。在这一行的开头 matrix[${i}][0] 和这一列的开头 matrix[0][${j}] 各写一个 0 作为记号。`, view(i, j), { at: "mark", facts: facts() });
+      snap("做记号", `matrix[${i}][${j}] 是 0。在这一行的开头 matrix[${i}][0] 和这一列的开头 matrix[0][${j}] 各写一个 0 作为记号。`, view(i, j, prevMark), { at: "mark", facts: facts() });
     }
-    let changed = 0;
-    for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) if (M[i][0] === 0 || M[0][j] === 0) { if (M[i][j] !== 0) changed++; M[i][j] = 0; cls[i][j] = "c"; }
-    snap("按记号清零", `再扫一遍里面的格子：所在行的开头或所在列的开头是 0，就清零。`, view(), { at: "clear", facts: facts() });
-    if (row0) for (let j = 0; j < n; j++) { M[0][j] = 0; cls[0][j] = "c"; }
-    if (col0) for (let i = 0; i < m; i++) { M[i][0] = 0; cls[i][0] = "c"; }
-    snap("最后处理第一行和第一列", (row0 ? "第一行原来有 0，整行清零。" : "第一行原来没有 0，保持不动。") + (col0 ? "第一列原来有 0，整列清零。" : "第一列原来没有 0，保持不动。"), view(), { at: "edge", facts: facts() });
-    snap("完成", "所有该清零的行和列都处理完了。", view(), { at: [], kind: "ok", ans: M, facts: facts() });
+    for (let i = 1; i < m; i++) if (M[i][0] === 0) cls[i][0] = "w";
+    for (let j = 1; j < n; j++) if (M[0][j] === 0) cls[0][j] = "w";
+    const prevClear = {}, prevCleared1 = cleared;
+    for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) if (M[i][0] === 0 || M[0][j] === 0) {
+      if (M[i][j] !== 0) { prevClear[`${i},${j}`] = M[i][j]; cleared++; }
+      M[i][j] = 0; cls[i][j] = "c";
+    }
+    snap("按记号清零", `再扫一遍里面的格子：所在行的开头或所在列的开头是 0，就清零。`, view(-1, -1, prevClear), { at: "clear", facts: facts(prevCleared1) });
+    const prevEdge = {}, prevCleared2 = cleared;
+    if (row0) for (let j = 0; j < n; j++) {
+      if (M[0][j] !== 0) { prevEdge[`0,${j}`] = M[0][j]; cleared++; }
+      M[0][j] = 0; cls[0][j] = "c";
+    }
+    if (col0) for (let i = 0; i < m; i++) {
+      if (M[i][0] !== 0) { prevEdge[`${i},0`] = M[i][0]; cleared++; }
+      M[i][0] = 0; cls[i][0] = "c";
+    }
+    snap("最后处理第一行和第一列", (row0 ? "第一行原来有 0，整行清零。" : "第一行原来没有 0，保持不动。") + (col0 ? "第一列原来有 0，整列清零。" : "第一列原来没有 0，保持不动。"), view(-1, -1, prevEdge), { at: "edge", facts: facts(prevCleared2) });
+    snap("完成", "所有该清零的行和列都处理完了。", view(), { at: [], kind: "ok", ans: M.map((r) => r.slice()), facts: facts() });
   },
   alts: [{
     t: "记下行和列",
@@ -84,19 +112,38 @@ for a, e in [([[1,1,1],[1,0,1],[1,1,1]], [[1,0,1],[0,0,0],[1,0,1]]), ([[0,1,2,0]
     build(a, snap) {
       const M = a.m.map((r) => r.slice()), m = M.length, n = M[0].length, rows = new Set(), cols = new Set(), cls = M.map((r) => r.map(() => ""));
       const sorted = (s) => [...s].sort((p, q) => p - q);
-      const view = (ci, cj) => [
-        { t: "grid", label: "matrix", rows: M.map((r, i) => r.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : cls[i][j] || (rows.has(i) || cols.has(j) ? "e" : "") }))) },
+      let cleared = 0;
+      const facts = (prevRows, prevCols, prevCleared) => [
+        ["rows", sorted(rows).join(", ") || "空", prevRows],
+        ["cols", sorted(cols).join(", ") || "空", prevCols],
+        ["清零格数", cleared, prevCleared],
+      ];
+      const view = (ci, cj, prevMap = {}) => [
+        {
+          t: "grid",
+          label: "matrix",
+          rows: M.map((r, i) => r.map((v, j) => ({
+            v,
+            ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+            cls: i === ci && j === cj ? "a" : cls[i][j] || (rows.has(i) || cols.has(j) ? "e" : ""),
+          }))),
+        },
         { t: "chips", label: "rows：要清零的行", items: sorted(rows), empty: "空" },
         { t: "chips", label: "cols：要清零的列", items: sorted(cols), empty: "空" },
       ];
-      snap("开始", "先只看不改：找出所有 0，记下它们所在的行和列。", view(-1, -1), { at: [] });
+      snap("开始", "先只看不改：找出所有 0，记下它们所在的行和列。", view(-1, -1), { at: [], facts: facts() });
       for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (M[i][j] === 0) {
+        const prevRows = sorted(rows).join(", ") || "空", prevCols = sorted(cols).join(", ") || "空";
         rows.add(i); cols.add(j);
-        snap("记下", `matrix[${i}][${j}] 是 0，记下第 ${i} 行和第 ${j} 列。`, view(i, j), { at: "find" });
+        snap("记下", `matrix[${i}][${j}] 是 0，记下第 ${i} 行和第 ${j} 列。`, view(i, j), { at: "find", facts: facts(prevRows, prevCols) });
       }
-      for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (rows.has(i) || cols.has(j)) { M[i][j] = 0; cls[i][j] = "c"; }
-      snap("统一清零", `再扫一遍：行号在 rows 里，或者列号在 cols 里，就清零。`, view(-1, -1), { at: "clear" });
-      snap("完成", "所有该清零的行和列都处理完了。", view(-1, -1), { at: [], kind: "ok", ans: M });
+      const prevMap = {}, prevCleared = cleared;
+      for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (rows.has(i) || cols.has(j)) {
+        if (M[i][j] !== 0) { prevMap[`${i},${j}`] = M[i][j]; cleared++; }
+        M[i][j] = 0; cls[i][j] = "c";
+      }
+      snap("统一清零", `再扫一遍：行号在 rows 里，或者列号在 cols 里，就清零。`, view(-1, -1, prevMap), { at: "clear", facts: facts(undefined, undefined, prevCleared) });
+      snap("完成", "所有该清零的行和列都处理完了。", view(-1, -1), { at: [], kind: "ok", ans: M.map((r) => r.slice()), facts: facts() });
     },
   }],
   points: [

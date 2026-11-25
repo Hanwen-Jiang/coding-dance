@@ -38,17 +38,75 @@ assert s.maxSubArray([-3,-1,-2]) == -1
     { label: "全是负数", args: { nums: [-3, -1, -2] }, note: "nums = [-3,-1,-2]", expect: -1 },
   ],
   build(a, snap) {
-    const n = a.nums; let cur = n[0], best = n[0], s = 0, bs = 0, be = 0;
-    const view = (i, final) => [{ t: "array", label: "nums", items: n.map((v, j) => ({ v, cls: final ? (j >= bs && j <= be ? "c" : "") : j === i ? "a" : j >= s && j < i ? "e" : "" })), ptrs: final ? {} : { i } }];
-    const facts = () => [["cur", cur], ["best", best]];
-    snap("开始", `从第一个数开始，cur = best = ${n[0]}。`, view(0), { at: "init", facts: facts() });
+    const n = a.nums.slice();
+    const dp = new Array(n.length).fill(null);
+    dp[0] = n[0];
+    let cur = n[0], best = n[0], s = 0, bs = 0, be = 0;
+    const view = (i, final, opts = {}) => [
+      {
+        t: "array",
+        label: "nums",
+        items: n.map((v, j) => ({
+          v,
+          cls: final ? (j >= bs && j <= be ? "c" : "") : j === i ? "a" : j >= s && j <= i ? "e" : "",
+        })),
+        ptrs: final ? {} : { i: i >= 0 ? i : null },
+      },
+      {
+        t: "array",
+        label: "cur[i]（以位置 i 结尾的最大子数组和）",
+        items: dp.map((v, j) => ({
+          v,
+          cls: final ? (j >= bs && j <= be ? "c" : "") : j === i ? "a" : j >= s && j < i ? "e" : "",
+        })),
+        ptrs: {},
+        feeds: (opts.feeds || []).slice(),
+      },
+    ];
+    snap(
+      "开始",
+      `从第一个数开始，只能选 nums[0] = <b>${n[0]}</b>，所以 cur = ${cur}，best = ${best}。`,
+      view(0, false),
+      { at: "init", facts: [["cur", cur], ["best", best], ["当前段", "[0, 0]"]] },
+    );
     for (let i = 1; i < n.length; i++) {
-      const x = n[i], ext = cur + x;
-      if (ext >= x) { snap("接上", `前面这段的和是 ${cur}，接上 ${x} 得到 ${ext}，比单独的 ${x} 大，<b>接上</b>。`, view(i), { at: "step", facts: [["cur", ext], ["best", Math.max(best, ext)]] }); cur = ext; }
-      else { snap("重新开始", `前面这段的和是 ${cur}，是负担。接上只有 ${ext}，不如从 ${x} <b>重新开始</b>。`, view(i), { at: "step", kind: "warn", facts: [["cur", x], ["best", Math.max(best, x)]] }); cur = x; s = i; }
-      if (cur > best) { best = cur; bs = s; be = i; }
+      const x = n[i], prevCur = cur, prevBest = best, ext = prevCur + x;
+      const takePrev = ext >= x;
+      cur = takePrev ? ext : x;
+      if (!takePrev) s = i;
+      dp[i] = cur;
+      if (cur > best) {
+        best = cur; bs = s; be = i;
+      }
+      snap(
+        takePrev ? "接上" : "重新开始",
+        takePrev
+          ? `前面这段的和是 ${prevCur}，接上 ${x} 得到 ${ext}（≥ ${x}），<b>接上</b>！cur = ${cur}。`
+          : `前面这段的和是 ${prevCur}，是负担。接上只有 ${ext} &lt; ${x}，不如从 ${x} <b>重新开始</b>！`,
+        view(i, false, {
+          feeds: [
+            takePrev
+              ? { from: i - 1, to: i, win: true, label: `${x >= 0 ? "+" : ""}${x}` }
+              : { from: i - 1, to: i, win: false, label: `舍弃(${prevCur})` },
+          ],
+        }),
+        {
+          at: "step",
+          ...(takePrev ? {} : { kind: "warn" }),
+          facts: [
+            ["cur", cur, prevCur],
+            ["best", best, prevBest],
+            ["当前段", `[${s}, ${i}]`],
+          ],
+        },
+      );
     }
-    snap("完成", `最大子数组和是 <b>${best}</b>，对应 [${n.slice(bs, be + 1).join(", ")}]。`, view(-1, true), { at: "done", kind: "ok", ans: best, facts: facts() });
+    snap(
+      "完成",
+      `最大子数组和是 <b>${best}</b>，对应 [${n.slice(bs, be + 1).join(", ")}]（下标 ${bs}..${be}）。`,
+      view(-1, true),
+      { at: "done", kind: "ok", ans: best, facts: [["best", best], ["最优区间", `[${bs}, ${be}]`]] },
+    );
   },
   points: [
     { t: "初始值用 nums[0]", body: "不能用 0。数组全是负数时，答案是最大的那个负数，用 0 会出错。" },
