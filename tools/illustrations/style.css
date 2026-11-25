@@ -96,10 +96,15 @@ svg.g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; }
 svg.g2 .edge.on { stroke: var(--accent); stroke-width: 2.6; }
 svg.g2 .edge.warm { stroke: var(--warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
 svg.g2 .edge.cut { stroke: #d9383a; stroke-width: 1.8; stroke-dasharray: 5 4; opacity: 0.45; }
-svg.g2 text.lr { font-size: 9px; font-weight: 700; fill: var(--muted); }
+svg.g2 text.lr { font-size: 9px; font-weight: 700; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+svg.g2 text.cut-x { font-size: 13px; font-weight: 700; fill: #d9383a; paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+svg.g2 text.tprev { font-size: 10px; font-weight: 600; fill: var(--warm); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+svg.g2 text.edge-lbl { font-size: 10.5px; font-weight: 700; fill: var(--accent); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 .cell.changed { line-height: 1.05; }
 .cell .prev { display: block; font-size: 9px; font-weight: 500; opacity: 0.7; text-decoration: line-through; line-height: 1; }
 svg.g2 .ah { fill: var(--muted); }
+svg.g2 .ah-on { fill: var(--accent); }
+svg.g2 .ah-cut { fill: #d9383a; }
 svg.g2 rect.n, svg.g2 circle.n { fill: var(--surface); stroke: var(--line); stroke-width: 2; transition: fill .25s ease; }
 svg.g2 .n.a { fill: var(--accent); stroke: var(--accent); }
 svg.g2 .n.b { fill: var(--warm); stroke: var(--warm); }
@@ -112,7 +117,7 @@ svg.g2 .n.k { fill: var(--ok-soft); stroke: var(--ok); }
 svg.g2 text { font-family: var(--font-mono); font-size: 14px; font-weight: 600; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
 svg.g2 text.inv { fill: var(--surface); }
 svg.g2 text.dimt { fill: var(--dim-ink); }
-svg.g2 text.pt { font-size: 11px; fill: var(--accent); }
+svg.g2 text.pt { font-size: 11px; fill: var(--accent); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 svg.g2 text.nil { font-size: 12px; fill: var(--muted); font-weight: 400; }
 svg.g2 rect.bd { fill: var(--surface); stroke: var(--muted); stroke-width: 1.2; }
 svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }

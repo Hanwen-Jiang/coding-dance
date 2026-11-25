@@ -69,7 +69,7 @@ for _ in range(30):
           cls: k < lo ? "e" : k < i ? "g" : k > hi ? "w" : k === i ? "a" : "",
         })),
         ptrs: { lo, i: i <= hi ? i : null, hi },
-        ...(opts.swaps ? { swaps: opts.swaps } : {}),
+        swaps: opts.swaps || [],
       }];
     };
     snap("初始化", "lo 和 i 从 0 开始，hi 在末尾。一开始所有元素都在未处理区间 [i, hi] 内。", view(), { at: "init", facts: [["lo", lo], ["i", i], ["hi", hi]] });

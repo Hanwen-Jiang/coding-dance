@@ -85,11 +85,10 @@ assert s.minDistance("abc", "yabd") == 2
           const isCur = i === ci && j === cj;
           return {
             v: v === null ? "" : v,
-            ...(isCur ? { prev: "·" } : {}),
             cls: fin && i === m && j === n ? "c" : isCur ? "a" : edge ? (u ? "x e" : "x") : u ? "e" : "",
           };
         })),
-        ...(feeds.length ? { feeds } : {}),
+        feeds,
       },
     ];
     snap("边界", `dp 比两个单词各多开一行一列，这一圈是边界：<br>第 0 列 dp[i][0] = i：word2 取空串，把 word1 的前 i 个字符全删掉，要 i 步。<br>第 0 行 dp[0][j] = j：word1 取空串，插入 j 个字符，要 j 步。<br>注意边界不是 0：空串变成长度 j 的串一定要 j 步。如果不多开这一圈，算 dp[1][j] 时 dp[0][j−1] 的下标就越界了。`, view(-1, -1, []), { at: "init" });
@@ -143,7 +142,7 @@ assert s.minDistance("abc", "yabd") == 2
             ...(opts.prevMap && opts.prevMap[k] !== undefined ? { prev: opts.prevMap[k] } : {}),
             cls: k === j ? "a" : used.includes(k) ? (row === 0 || k === 0 ? "x e" : "e") : row === 0 || k === 0 ? "x" : k < j ? "k" : "g",
           })),
-          ...(opts.feeds ? { feeds: opts.feeds } : {}),
+          feeds: opts.feeds || [],
         },
         {
           t: "chips",
