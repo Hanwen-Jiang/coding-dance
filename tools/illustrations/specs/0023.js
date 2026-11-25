@@ -67,32 +67,99 @@ for _ in range(100):
   call: (a) => [a.ls],
   cases: [[[]], [[[]]], [[[], [1]]], [[[2], [1]]], [[[-2, 0, 3], [], [-2, -1], [5]]]],
   method: "小顶堆",
-  legend: [["a", "在堆里的头节点"], ["d", "已经接走"], ["c", "刚弹出的最小值"], ["k", "结果"]],
+  legend: [["a", "当前头节点"], ["d", "已经接走 / 哑节点"], ["e", "小顶堆堆顶"], ["c", "刚弹出 / 刚补入 / 刚接上"], ["k", "结果链表"]],
   presets: [
     { label: "示例 1", args: { ls: [[1, 4, 5], [1, 3, 4], [2, 6]] }, note: "lists = [[1,4,5],[1,3,4],[2,6]]", expect: [1, 1, 2, 3, 4, 4, 5, 6] },
     { label: "四个链表", args: { ls: [[3, 9], [1, 7, 8], [2], [4, 5, 6]] }, note: "lists = [[3,9],[1,7,8],[2],[4,5,6]]", expect: [1, 2, 3, 4, 5, 6, 7, 8, 9] },
   ],
   build(a, snap) {
-    const ls = a.ls, pos = ls.map(() => 0), out = []; let heap = [], popped = null;
+    const ls = a.ls, pos = ls.map(() => 0), out = [];
+    let heap = [], popped = null, curIdx = 0;
     const sortHeap = () => heap.sort((x, y) => x[0] - y[0] || x[1] - y[1]);
-    const view = () => [
-      ...ls.map((l, i) => ({ t: "chips", label: `链表 ${i}`, items: l.map((v, j) => ({ v, cls: j < pos[i] ? "d" : j === pos[i] ? (popped === i ? "c" : "a") : "" })) })),
-      { t: "chips", label: "小顶堆（按值排好，最左边是堆顶；写的是 值 @ 链表编号）", items: heap.map(([v, i], t) => ({ v: `${v} @${i}`, cls: t === 0 ? "e" : "" })) },
-      { t: "chips", label: "结果", items: out.map((v) => ({ v, cls: "k" })), empty: "还没有" },
+    const view = (opts = {}) => [
+      ...ls.map((l, i) => ({
+        t: "chips",
+        label: `链表 ${i}`,
+        items: l.map((v, j) => ({ v, cls: j < pos[i] ? "d" : j === pos[i] ? (popped === i ? "c" : "a") : "" })),
+        empty: "空",
+      })),
+      {
+        t: "chips",
+        label: "小顶堆（按值排好，最左边是堆顶；写的是 值 @ 链表编号）",
+        items: heap.map(([v, i], t) => ({
+          v: `${v} @${i}`,
+          cls: opts.pushed === i ? "c" : t === 0 ? "e" : "",
+        })),
+        empty: "空",
+      },
+      {
+        t: "list",
+        label: "结果链表（D 是哑节点，高亮箭头表示刚接上的节点）",
+        nodes: [
+          { v: "D", cls: "d", ...(opts.hot === 0 ? { ecls: "on" } : {}) },
+          ...out.map((v, idx) => ({
+            v,
+            cls: opts.newNode === idx + 1 ? "c" : "k",
+            ...(opts.newNode === idx + 1 ? { prev: "" } : {}),
+            ...(opts.hot === idx + 1 ? { ecls: "on" } : {}),
+          })),
+        ],
+        next: Array.from({ length: out.length + 1 }, (_, k) => (k + 1 <= out.length ? k + 1 : null)),
+        showNil: !!opts.done,
+        ptrs: { dummy: 0, cur: curIdx },
+        ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+      },
     ];
     ls.forEach((l, i) => { if (l.length) heap.push([l[0], i]); });
     sortHeap();
-    snap("建堆", `把 ${ls.length} 个链表的头节点都放进小顶堆。`, view(), { at: "build" });
+    snap(
+      "建堆",
+      `把 ${ls.length} 个链表里的非空头节点都放进小顶堆（共 ${heap.length} 个），并建好哑节点 D。`,
+      view(),
+      { at: "build", facts: [["堆大小", heap.length], ["已合并", 0]] },
+    );
     while (heap.length) {
+      const prevHeapLen = heap.length;
       const [v, i] = heap.shift();
       popped = i;
-      snap("弹出最小值", `堆顶是 ${v}，来自链表 ${i}。它是所有头节点里最小的，弹出来接到结果后面。`, view(), { at: "pop" });
-      out.push(v); pos[i]++; popped = null;
+      snap(
+        "弹出最小值",
+        `堆顶是 <b>${v}</b>（来自链表 ${i}），它是当前所有头节点里最小的，先从堆里弹出来。`,
+        view(),
+        { at: "pop", facts: [["堆大小", heap.length, prevHeapLen], ["弹出", `${v} (@${i})`], ["已合并", out.length]] },
+      );
+      const prevOutLen = out.length;
+      out.push(v);
+      pos[i]++;
+      popped = null;
+      snap(
+        "接到 cur.next",
+        `把弹出的 <b>${v}</b> 接到 cur.next 后面，并让 cur 前进到它。`,
+        view({ newNode: out.length, hot: curIdx, animEdges: [curIdx] }),
+        { at: "pop", facts: [["堆大小", heap.length], ["已合并", out.length, prevOutLen]] },
+      );
+      curIdx = out.length;
       const nx = ls[i][pos[i]];
-      if (nx !== undefined) { heap.push([nx, i]); sortHeap(); snap("补进下一个", `链表 ${i} 的下一个节点是 ${nx}，把它放进堆，作为这个链表新的头。`, view(), { at: "push" }); }
-      else snap("这个链表走完了", `链表 ${i} 后面没有节点了，不用补。堆里剩 ${heap.length} 个。`, view(), { at: "end", kind: "warn" });
+      if (nx !== undefined) {
+        const beforePush = heap.length;
+        heap.push([nx, i]);
+        sortHeap();
+        snap(
+          "补进下一个",
+          `链表 ${i} 后面还有节点 <b>${nx}</b>，把它放进小顶堆，作为链表 ${i} 新的头。`,
+          view({ pushed: i }),
+          { at: "push", facts: [["堆大小", heap.length, beforePush], ["补入堆", `${nx} (@${i})`], ["已合并", out.length]] },
+        );
+      } else {
+        snap(
+          "这个链表走完了",
+          `链表 ${i} 后面没有节点了，不用补进堆。堆里还剩 ${heap.length} 个。`,
+          view(),
+          { at: "end", kind: "warn", facts: [["堆大小", heap.length], ["已合并", out.length]] },
+        );
+      }
     }
-    snap("完成", `堆空了，所有节点都接好了：[${out.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: out });
+    snap("完成", `堆空了，所有节点都接好了：[${out.join(", ")}]。`, view({ done: true }), { at: "done", kind: "ok", ans: out.slice(), facts: [["堆大小", 0], ["已合并", out.length]] });
   },
   alts: [{
     t: "分治两两合并",
@@ -101,29 +168,75 @@ for _ in range(100):
     legend: [["a", "正在合并的两个"], ["d", "这一轮已经合并过"], ["c", "刚合并出来的"]],
     build(a, snap) {
       let ls = a.ls.map((l) => l.slice()), round = 0;
-      const merge2 = (p, q) => { const r = []; let i = 0, j = 0; while (i < p.length && j < q.length) r.push(p[i] <= q[j] ? p[i++] : q[j++]); return r.concat(p.slice(i), q.slice(j)); };
-      const view = (hl, nx) => [
-        ...ls.map((l, i) => ({ t: "chips", label: `${nx ? "这一轮 · " : ""}链表 ${i}`, items: l.map((v) => ({ v, cls: hl.includes(i) ? "a" : nx && i < Math.min(...hl) ? "d" : "" })), empty: "空" })),
-        ...(nx || []).map((l, t) => ({ t: "chips", label: `下一轮 · 链表 ${t}`, items: l.map((v) => ({ v, cls: t === nx.length - 1 ? "c" : "" })), empty: "空" })),
+      const merge2 = (p, q) => {
+        const r = [];
+        let i = 0, j = 0;
+        while (i < p.length && j < q.length) r.push(p[i] <= q[j] ? p[i++] : q[j++]);
+        return r.concat(p.slice(i), q.slice(j));
+      };
+      const view = (hl, doneBefore, nx, hiNew) => [
+        ...ls.map((l, i) => ({
+          t: "chips",
+          label: `${nx ? "这一轮 · " : ""}链表 ${i}`,
+          items: l.map((v) => ({ v, cls: hl.includes(i) ? "a" : nx && i < doneBefore ? "d" : "" })),
+          empty: "空",
+        })),
+        ...(nx || []).map((l, t) => ({
+          t: "chips",
+          label: `下一轮 · 链表 ${t}`,
+          items: l.map((v) => ({ v, cls: hiNew && t === nx.length - 1 ? "c" : "" })),
+          empty: "空",
+        })),
       ];
-      if (!ls.length) { snap("完成", "没有链表，返回空。", [{ t: "note", label: "lists", html: "空" }], { at: "empty", kind: "ok", ans: [] }); return; }
-      snap("开始", `一共 ${ls.length} 个链表。每一轮把相邻的两个合并成一个，个数减半。`, view([], null), { at: "round" });
+      if (!ls.length) {
+        snap("完成", "没有链表，直接返回空。", [{ t: "note", label: "lists", html: "空" }], { at: "empty", kind: "ok", ans: [], facts: [["链表数", 0]] });
+        return;
+      }
+      snap("开始", `一共 ${ls.length} 个链表。每一轮把相邻的两个合并成一个，个数减半。`, view([], 0, null, false), { at: "round", facts: [["轮次", 0], ["链表数", ls.length]] });
       while (ls.length > 1) {
         round++;
+        const prevCount = ls.length;
         const nx = [];
         for (let i = 0; i < ls.length; i += 2) {
           if (i + 1 < ls.length) {
-            nx.push(merge2(ls[i], ls[i + 1]));
-            snap(`第 ${round} 轮`, `合并链表 ${i} 和链表 ${i + 1}：两个头比大小，小的先接上，得到 [${nx[nx.length - 1].join(", ")}]。`, view([i, i + 1], nx), { at: "merge" });
+            snap(
+              `第 ${round} 轮 · 选中一对`,
+              `准备合并链表 ${i}（[${ls[i].join(", ")}]）和链表 ${i + 1}（[${ls[i + 1].join(", ")}]）。`,
+              view([i, i + 1], i, nx, false),
+              { at: "merge", facts: [["轮次", round], ["正在合并", `链表 ${i} + ${i + 1}`], ["下轮已生成", nx.length]] },
+            );
+            const merged = merge2(ls[i], ls[i + 1]);
+            nx.push(merged);
+            snap(
+              `第 ${round} 轮 · 合并完成`,
+              `两个头依次比大小，小的先接上，得到 [${merged.join(", ")}]。`,
+              view([], i + 2, nx, true),
+              { at: "merge", facts: [["轮次", round], ["下轮已生成", nx.length, nx.length - 1]] },
+            );
           } else {
-            nx.push(ls[i]);
-            snap(`第 ${round} 轮`, `链表 ${i} 落单了，和空链表合并等于它自己，原样进入下一轮。`, view([i], nx), { at: "single" });
+            nx.push(ls[i].slice());
+            snap(
+              `第 ${round} 轮 · 落单直通`,
+              `链表 ${i} 落单了，和空链表合并等于它自己，原样进入下一轮。`,
+              view([i], i, nx, true),
+              { at: "single", facts: [["轮次", round], ["下轮已生成", nx.length, nx.length - 1]] },
+            );
           }
         }
-        ls = nx;
-        snap(`第 ${round} 轮完`, ls.length > 1 ? `还剩 ${ls.length} 个链表，继续下一轮。` : "只剩一个链表了。", view([], null), { at: "round" });
+        ls = nx.map((l) => l.slice());
+        snap(
+          `第 ${round} 轮完`,
+          ls.length > 1 ? `还剩 ${ls.length} 个链表，继续下一轮。` : "只剩一个链表了。",
+          view([], 0, null, false),
+          { at: "round", facts: [["轮次", round], ["剩余链表数", ls.length, prevCount]] },
+        );
       }
-      snap("完成", `合并完成：[${ls[0].join(", ")}]。一共 ${round} 轮，每轮每个节点只被处理一次，所以是 O(n log k)。`, view([], null), { at: "done", kind: "ok", ans: ls[0] });
+      snap(
+        "完成",
+        `合并完成：[${ls[0].join(", ")}]。一共 ${round} 轮，每轮每个节点只被处理一次，所以是 O(n log k)。`,
+        view([], 0, null, false),
+        { at: "done", kind: "ok", ans: ls[0].slice(), facts: [["总轮次", round], ["最终长度", ls[0].length]] },
+      );
     },
   }],
   points: [

@@ -253,7 +253,7 @@ svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>正在比较的两个头</span><span><i class="sw d"></i>已经接走</span><span><i class="sw k"></i>结果链表</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>正在比较的两个头</span><span><i class="sw d"></i>已经接走 / 哑节点</span><span><i class="sw c"></i>刚接上的节点</span><span><i class="sw k"></i>结果链表</span></div>
       </div>
     </div>
   </section>
@@ -335,44 +335,165 @@ const SPEC = { presets: [{"label":"示例 1","args":{"x":[1,2,4],"y":[1,3,4]},"n
     const x = R.sorted(R.arr(R.int(0, 5), 1, 9)), y = R.sorted(R.arr(R.int(1, 5), 1, 9));
     return { args: { x, y }, note: `list1 = ${R.fmt(x)}, list2 = ${R.fmt(y)}`, py: `toL(Solution().mergeTwoLists(L(${R.py(x)}), L(${R.py(y)})))` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "迭代", note: null, legend: [["a","正在比较的两个头"],["d","已经接走"],["k","结果链表"]], build(a, snap) {
-    const { x, y } = a, out = []; let i = 0, j = 0;
-    const lv = (label, arr, p, name) => ({ t: "list", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? "d" : t === p ? "a" : "" })), ptrs: { [name]: p < arr.length ? p : null } });
-    const view = (done) => [lv("list1", x, i, "list1"), lv("list2", y, j, "list2"), { t: "list", label: "结果（接在 dummy 后面）", nodes: [{ v: "D", cls: "d" }, ...out.map((v) => ({ v, cls: "k" }))], showNil: !!done, ptrs: { cur: out.length } }];
-    snap("开始", "两个指针分别指着两个链表的头。结果链表先只有一个哑节点 D。", view(), { at: "init" });
+{ t: "迭代", note: null, legend: [["a","正在比较的两个头"],["d","已经接走 / 哑节点"],["c","刚接上的节点"],["k","结果链表"]], build(a, snap) {
+    const { x, y } = a, out = [];
+    let i = 0, j = 0, curIdx = 0;
+    const lv = (label, arr, p, name) => ({
+      t: "list",
+      label,
+      nodes: arr.length
+        ? arr.map((v, t) => ({ v, cls: t < p ? "d" : t === p ? "a" : "" }))
+        : [{ v: "∅", cls: "d", noNil: true }],
+      ptrs: { [name]: p < arr.length ? p : null },
+      showNil: arr.length > 0,
+    });
+    const view = (opts = {}) => [
+      lv("list1", x, i, "list1"),
+      lv("list2", y, j, "list2"),
+      {
+        t: "list",
+        label: "结果链表（D 是哑节点，高亮箭头表示刚接上的节点）",
+        nodes: [
+          { v: "D", cls: "d", ...(opts.hot === 0 ? { ecls: "on" } : {}) },
+          ...out.map((v, idx) => ({
+            v,
+            cls: opts.newFrom !== undefined && idx + 1 >= opts.newFrom ? "c" : "k",
+            ...(opts.newNode === idx + 1 ? { prev: "" } : {}),
+            ...(opts.hot === idx + 1 ? { ecls: "on" } : {}),
+          })),
+        ],
+        next: Array.from({ length: out.length + 1 }, (_, k) => (k + 1 <= out.length ? k + 1 : null)),
+        showNil: !!opts.done,
+        ptrs: { dummy: 0, cur: curIdx },
+        ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+      },
+    ];
+    snap(
+      "初始化",
+      "新建哑节点 D，cur 指向 D；list1 和 list2 分别指向两条有序链表的头节点。",
+      view(),
+      { at: "init", facts: [["已合并", 0]] },
+    );
     while (i < x.length && j < y.length) {
-      if (x[i] <= y[j]) { out.push(x[i]); snap("接上 list1 的头", `比较 ${x[i]} 和 ${y[j]}：${x[i]} ${x[i] === y[j] ? "不比它大" : "更小"}，把 list1 的 ${x[i]} 接到结果后面，list1 往前走。`, (i++, view()), { at: "take1" }); }
-      else { out.push(y[j]); snap("接上 list2 的头", `比较 ${x[i]} 和 ${y[j]}：${y[j]} 更小，把 list2 的 ${y[j]} 接到结果后面，list2 往前走。`, (j++, view()), { at: "take2" }); }
+      const aVal = x[i], bVal = y[j], take1 = aVal <= bVal;
+      const tag = take1 ? "take1" : "take2";
+      const pickVal = take1 ? aVal : bVal;
+      const oldLen = out.length;
+      snap(
+        "比较两个头",
+        `比较 list1（${aVal}）和 list2（${bVal}）：${aVal === bVal ? `一样大，优先选 list1 的 <b>${aVal}</b>` : `${take1 ? "list1" : "list2"} 的 <b>${pickVal}</b> 更小`}。`,
+        view(),
+        { at: tag, facts: [["比较", `${aVal} vs ${bVal}`], ["较小值", pickVal], ["已合并", oldLen]] },
+      );
+      out.push(pickVal);
+      if (take1) i++; else j++;
+      snap(
+        take1 ? "接上 list1 并推进" : "接上 list2 并推进",
+        `把 <b>${pickVal}</b> 接到 cur.next，同时让 ${take1 ? "list1" : "list2"} 往前走一格。`,
+        view({ newFrom: out.length, newNode: out.length, hot: curIdx, animEdges: [curIdx] }),
+        { at: tag, facts: [["选入", `${pickVal} (${take1 ? "list1" : "list2"})`], ["已合并", out.length, oldLen]] },
+      );
+      curIdx = out.length;
+      snap(
+        "cur = cur.next",
+        `cur 前移到刚接上的节点 <b>${pickVal}</b>，准备下一次比较。`,
+        view(),
+        { at: tag, facts: [["已合并", out.length]] },
+      );
     }
     const rest = i < x.length ? x.slice(i) : y.slice(j), which = i < x.length ? "list1" : "list2";
-    out.push(...rest); i = x.length; j = y.length;
-    snap("接上剩下的", rest.length ? `一个链表走完了。${which} 剩下的 [${rest.join(", ")}] 本来就有序，整段接上。` : "两个链表同时走完。", view(true), { at: "rest" });
-    snap("完成", `返回 dummy.next，也就是 [${out.join(", ")}]。`, view(true), { at: "done", kind: "ok", ans: out });
+    const prevLen = out.length;
+    out.push(...rest);
+    i = x.length;
+    j = y.length;
+    snap(
+      "接上剩下的",
+      rest.length
+        ? `另一条链表走完了。${which} 剩下的 [${rest.join(", ")}] 本来就有序，让 cur.next 直接整段接上。`
+        : "两条链表同时走完，没有剩余节点。",
+      view(rest.length ? { done: true, newFrom: prevLen + 1, hot: curIdx, animEdges: [curIdx] } : { done: true }),
+      {
+        at: "rest",
+        facts: rest.length
+          ? [["剩余整段", `[${rest.join(", ")}]`], ["已合并", out.length, prevLen]]
+          : [["已合并", out.length]],
+      },
+    );
+    curIdx = out.length;
+    snap("完成", `返回 dummy.next，合并结果是 [${out.join(", ")}]。`, view({ done: true }), { at: "done", kind: "ok", ans: out.slice(), facts: [["已合并", out.length]] });
   } },
-{ t: "递归", note: "和简洁写法一样：每一层选出两个头里较小的那个，它后面接什么要等下一层合并完剩下的部分。所以选是从前往后选，接是从后往前接。", legend: [["a","正在比较的两个头"],["d","已经被某一层选走"],["e","调用栈"],["k","已经接好的部分"]], build(a, snap) {
-      const { x, y } = a, calls = []; let i = 0, j = 0, tail = [];
-      const lv = (label, arr, p, name) => ({ t: "list", label, nodes: arr.map((v, t) => ({ v, cls: t < p ? "d" : t === p ? "a" : "" })), ptrs: { [name]: p < arr.length ? p : null } });
-      const view = () => [lv("list1", x, i, "list1"), lv("list2", y, j, "list2"),
-        { t: "chips", label: "递归调用栈（右边是最里层；写的是这一层选中的节点）", items: calls.map((v, t) => ({ v: `选了 ${v}`, cls: t === calls.length - 1 ? "a" : "e" })), empty: "空" },
-        { t: "chips", label: "已经接好的部分", items: tail.map((v) => ({ v, cls: "k" })), empty: "还没有" }];
-      snap("开始", "每一层只做一件事：两个头里挑小的，它的 next 等于「剩下部分的合并结果」。", view(), { at: [] });
+{ t: "递归", note: "和简洁写法一样：每一层选出两个头里较小的那个，它后面接什么要等下一层合并完剩下的部分。所以选是从前往后选，接是从后往前接。", legend: [["a","正在比较的两个头"],["d","已经被某一层选走"],["e","调用栈"],["c","刚接回的节点"],["k","已经接好的部分"]], build(a, snap) {
+      const { x, y } = a, calls = [];
+      let i = 0, j = 0, tail = [];
+      const lv = (label, arr, p, name) => ({
+        t: "list",
+        label,
+        nodes: arr.length
+          ? arr.map((v, t) => ({ v, cls: t < p ? "d" : t === p ? "a" : "" }))
+          : [{ v: "∅", cls: "d", noNil: true }],
+        ptrs: { [name]: p < arr.length ? p : null },
+        showNil: arr.length > 0,
+      });
+      const view = (opts = {}) => [
+        lv("list1", x, i, "list1"),
+        lv("list2", y, j, "list2"),
+        {
+          t: "chips",
+          label: "递归调用栈（右边是最里层；写的是这一层选中的节点）",
+          items: calls.map((v, t) => ({ v: `选了 ${v}`, cls: t === calls.length - 1 ? "a" : "e" })),
+          empty: "空",
+        },
+        {
+          t: "list",
+          label: "已经接好的部分（回溯时从后往前连起来）",
+          nodes: tail.length
+            ? tail.map((v, idx) => ({
+                v,
+                cls: opts.hotHead && idx === 0 ? "c" : "k",
+                ...(opts.hotHead && idx === 0 ? { prev: "", ecls: "on" } : {}),
+              }))
+            : [{ v: "∅", cls: "d", noNil: true }],
+          next: tail.length ? Array.from({ length: tail.length }, (_, idx) => (idx + 1 < tail.length ? idx + 1 : null)) : [null],
+          showNil: tail.length > 0,
+          ptrs: opts.hotHead && tail.length ? { list1: 0 } : {},
+          ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+        },
+      ];
+      snap("开始", "每一层只做一件事：两个头里挑小的，它的 next 等于「剩下部分的合并结果」。", view(), { at: [], facts: [["调用栈深度", 0]] });
       while (i < x.length && j < y.length) {
         const eq = x[i] === y[j], fromX = x[i] <= y[j], pick = fromX ? x[i] : y[j], cmp = `${x[i]} 和 ${y[j]}`;
+        const prevDepth = calls.length;
         calls.push(pick);
         if (fromX) i++; else j++;
-        snap("递归进入", `比较两个头 ${cmp}，` + (eq ? `一样大，取 list1 的 ${pick}` : `${fromX ? "list1" : "list2"} 的 ${pick} 更小`) + `。这一层返回 ${pick}，它后面接什么，交给下一层去合并。`, view(), { at: "pick" });
+        snap(
+          "递归进入",
+          `比较两个头 ${cmp}，` + (eq ? `一样大，取 list1 的 ${pick}` : `${fromX ? "list1" : "list2"} 的 ${pick} 更小`) + `。这一层记住 <b>${pick}</b>，它后面接什么交给下一层去合并。`,
+          view(),
+          { at: "pick", facts: [["选中", pick], ["调用栈深度", calls.length, prevDepth]] },
+        );
       }
       tail = i < x.length ? x.slice(i) : y.slice(j);
       const which = i < x.length ? "list2" : "list1";
-      i = x.length; j = y.length;
-      snap("到底", tail.length ? `${which} 已经空了，这一层直接返回另一个链表剩下的 [${tail.join(", ")}]。` : "两个链表都空了，返回空。", view(), { at: "base" });
+      i = x.length;
+      j = y.length;
+      snap(
+        "到底",
+        tail.length ? `${which} 已经空了，这一层直接返回另一条剩下的 [${tail.join(", ")}]。` : "两条链表都空了，返回空。",
+        view(),
+        { at: "base", facts: [["调用栈深度", calls.length], ["已接长度", tail.length]] },
+      );
       while (calls.length) {
         const v = calls[calls.length - 1], old = tail.slice();
         tail = [v, ...tail];
-        snap("返回", `回到选了 ${v} 的那一层：${v}.next 接上下一层返回的${old.length ? ` [${old.join(", ")}]` : "空链表"}，再把 ${v} 返回给上一层。`, view(), { at: "back" });
+        snap(
+          "回溯接上",
+          `回到选了 <b>${v}</b> 的这一层：让 ${v}.next 接上下一层返回的${old.length ? ` [${old.join(", ")}]` : "空链表"}，再把 ${v} 返回给上一层。`,
+          view({ hotHead: true, animEdges: old.length ? [0] : [] }),
+          { at: "back", facts: [["调用栈深度", calls.length], ["已接长度", tail.length, old.length]] },
+        );
         calls.pop();
       }
-      snap("完成", `递归全部返回，结果是 [${tail.join(", ")}]。`, view(), { at: "back", kind: "ok", ans: tail });
+      snap("完成", `递归全部返回，最终链表是 [${tail.join(", ")}]。`, view(), { at: "back", kind: "ok", ans: tail.slice(), facts: [["调用栈深度", 0], ["已接长度", tail.length]] });
     } }
 ] };
 (function () {
@@ -453,8 +574,10 @@ const SPEC = { presets: [{"label":"示例 1","args":{"x":[1,2,4],"y":[1,3,4]},"n
     nodes.forEach((nd, i) => {
       if (nd.hide) return;
       const c = (nd.cls || "").split(" ")[0];
+      const nodeHasPrev = nd.prev !== undefined && String(nd.prev) !== String(nd.v);
       s += `<rect class="n ${nd.cls || ""}" x="${cx(i) - BW / 2}" y="${Y - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
       s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx(i)}" y="${Y}">${show(nd.v)}</text>`;
+      if (nodeHasPrev) s += `<text class="tprev" x="${cx(i)}" y="${Y - BH / 2 - 7}">${show(nd.prev)}→</text>`;
       (pm[String(i)] || []).forEach((nm, k) => { s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`; });
     });
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;

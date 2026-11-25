@@ -50,33 +50,141 @@ assert s.isPalindrome(L([1,2,3,3,1])) is False
   sig: { fn: "isPalindrome", params: ["ListNode"], ret: "bool" },
   call: (a) => [a.v],
   cases: [[[1]], [[1, 2]], [[1, 1]], [[1, 0, 0]], [[9, 9, 9, 9, 9]]],
-  legend: [["a", "slow / left"], ["b", "fast / right"], ["k", "比较过，相等"], ["w", "不相等"]],
+  legend: [["a", "slow / left"], ["b", "fast / right"], ["e", "已反转的后半段"], ["k", "比较过，相等"], ["w", "不相等"]],
   presets: [
     { label: "示例 1", args: { v: [1, 2, 2, 1] }, note: "head = [1,2,2,1]", expect: true },
     { label: "奇数个", args: { v: [1, 2, 3, 2, 1] }, note: "head = [1,2,3,2,1]", expect: true },
     { label: "不是回文", args: { v: [1, 2, 3, 3, 1] }, note: "head = [1,2,3,3,1]", expect: false },
   ],
   build(a, snap) {
-    const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null)), st = v.map(() => "");
+    const v = a.v, n = v.length;
+    if (!n) {
+      snap("空链表", "链表为空，直接返回 true。", [{ t: "note", label: "链表", html: "空" }], { at: "done", kind: "ok", ans: true });
+      return;
+    }
+    const next = v.map((_, i) => (i + 1 < n ? i + 1 : null)), st = v.map(() => "");
     let slow = 0, fast = 0;
-    const view = (ptrs, ca, cb) => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === ca ? "a" : i === cb ? "b" : st[i] })), next: next.slice(), ptrs }];
-    snap("找中点", "slow 和 fast 都从头出发。slow 每次走一步，fast 每次走两步。", view({ slow, fast }, slow, fast), { at: "init" });
+    const view = (opts = {}) => [{
+      t: "list",
+      label: "链表（虚红线 × 表示断开的旧指针，高亮弧线表示新掉头的指针）",
+      nodes: v.map((x, i) => ({
+        v: x,
+        cls: i === opts.ca ? "a" : i === opts.cb ? "b" : st[i],
+        ...(opts.hot && opts.hot.includes(i) ? { ecls: "on" } : {}),
+      })),
+      next: next.slice(),
+      ptrs: opts.ptrs || {},
+      ...(opts.ghostEdges ? { ghostEdges: opts.ghostEdges.slice() } : {}),
+      ...(opts.animEdges ? { animEdges: opts.animEdges.slice() } : {}),
+    }];
+    snap("slow = fast = head", "第一步：slow 和 fast 都从头节点出发。slow 每次走 1 步，fast 每次走 2 步，寻找中点。", view({ ptrs: { slow, fast }, ca: slow, cb: fast }), {
+      at: "init",
+      facts: [["阶段", "1. 找中点"], ["slow 下标", 0]],
+    });
     while (fast !== null && fast + 1 < n) {
-      slow++; fast = fast + 2 < n ? fast + 2 : null;
-      snap("找中点", fast === null ? `slow 走到 ${v[slow]}，fast 走出了链表。` : `slow 走到 ${v[slow]}，fast 走到 ${v[fast]}。`, view({ slow, fast }, slow, fast), { at: "mid" });
+      const prevS = slow;
+      slow++;
+      fast = fast + 2 < n ? fast + 2 : null;
+      snap("快慢指针推进", fast === null ? `slow 走到 <b>${v[slow]}</b>（下标 ${slow}），fast 走出了链表。` : `slow 走到 <b>${v[slow]}</b>（下标 ${slow}），fast 走到 <b>${v[fast]}</b>（下标 ${fast}）。`, view({
+        ptrs: { slow, fast },
+        ca: slow,
+        cb: fast,
+        hot: [prevS],
+        animEdges: [prevS],
+      }), {
+        at: "mid",
+        facts: [["阶段", "1. 找中点"], ["slow 下标", slow, prevS]],
+      });
     }
     const mid = slow;
-    for (let i = mid; i < n; i++) next[i] = i === mid ? null : i - 1;
-    snap("反转后半段", `fast 到头了，slow 停在 ${v[mid]}，这里就是后半段的起点。把从它开始的后半段反转，箭头全部掉头。`, view({ slow: mid }, mid), { at: "rev" });
-    let l = 0, r = n - 1, ok = true;
-    while (r >= mid) {
+    let prev = null, cur = mid, revCount = 0;
+    snap("prev = None（准备反转后半段）", `fast 到头了，slow 停在 <b>${v[mid]}</b>（后半段起点）。设 prev = None，逐个把后半段箭头掉头。`, view({ ptrs: { prev, slow: cur }, ca: cur }), {
+      at: "rev",
+      facts: [["阶段", "2. 反转后半段", "1. 找中点"], ["已反转", 0]],
+    });
+    while (cur !== null) {
+      const nxt = cur + 1 < n ? cur + 1 : null;
+      snap("先存 nxt = slow.next", `准备改 ${v[cur]}.next，先用 nxt 记住它的下一个节点${nxt === null ? "（空）" : ` <b>${v[nxt]}</b>`}。`, view({
+        ptrs: { prev, slow: cur, nxt },
+        ca: cur,
+        cb: prev,
+      }), {
+        at: "rev",
+        facts: [["阶段", "2. 反转后半段"], ["已反转", revCount]],
+      });
+      next[cur] = prev;
+      st[cur] = "e";
+      const prevRev = revCount;
+      revCount += 1;
+      snap("断旧连新：slow.next = prev", `把 ${v[cur]}.next 改成指向 prev（<b>${prev === null ? "空" : v[prev]}</b>）${nxt !== null ? `，断开原本指往 ${v[nxt]} 的箭头` : ""}。`, view({
+        ptrs: { prev, slow: cur, nxt },
+        ca: cur,
+        cb: prev,
+        hot: [cur],
+        animEdges: [cur],
+        ...(nxt !== null ? { ghostEdges: [[cur, nxt]] } : {}),
+      }), {
+        at: "rev",
+        facts: [["阶段", "2. 反转后半段"], ["已反转", revCount, prevRev]],
+      });
+      prev = cur;
+      cur = nxt;
+      snap("推进 prev, slow", cur === null ? `prev 移到 ${v[prev]}，slow 走到空，后半段反转完成。` : `prev 移到 ${v[prev]}，slow 沿着 nxt 移到 <b>${v[cur]}</b>。`, view({
+        ptrs: { prev, slow: cur },
+        ca: cur,
+        cb: prev,
+      }), {
+        at: "rev",
+        facts: [["阶段", "2. 反转后半段"], ["已反转", revCount]],
+      });
+    }
+
+    let l = 0, r = prev, ok = true, cmpCount = 0;
+    snap("left, right = head, prev", `第三步：left 从头节点 <b>${v[l]}</b> 出发，right 从反转后的头 <b>${v[r]}</b> 出发，两头往中间比。`, view({ ptrs: { left: l, right: r }, ca: l, cb: r }), {
+      at: "cmp",
+      facts: [["阶段", "3. 两端比较", "2. 反转后半段"], ["已比较", 0]],
+    });
+    while (r !== null) {
       const same = v[l] === v[r];
       st[l] = st[r] = same ? "k" : "w";
-      snap(same ? "比较" : "不相等", `left 是 ${v[l]}，right 是 ${v[r]}，` + (same ? "相等，两边各往中间走一步。" : "<b>不相等</b>，不是回文。"), view({ left: l, right: r }), same ? { at: "cmp" } : { at: "bad", kind: "warn" });
-      if (!same) { ok = false; break; }
-      l++; r--;
+      if (!same) {
+        ok = false;
+        snap("不相等", `left 是 <b>${v[l]}</b>，right 是 <b>${v[r]}</b>，<b>不相等</b>！不是回文链表。`, view({ ptrs: { left: l, right: r } }), {
+          at: ["cmp", "bad"],
+          kind: "warn",
+          facts: [["阶段", "3. 两端比较"], ["已比较", cmpCount]],
+        });
+        break;
+      }
+      const prevCmp = cmpCount;
+      cmpCount += 1;
+      snap("比较相等", `left 是 ${v[l]}，right 是 ${v[r]}，相等！`, view({ ptrs: { left: l, right: r } }), {
+        at: "cmp",
+        facts: [["阶段", "3. 两端比较"], ["已比较", cmpCount, prevCmp]],
+      });
+      const oldL = l, oldR = r;
+      l = next[l];
+      r = next[r];
+      const hot = [];
+      if (l !== null && oldL !== oldR) hot.push(oldL);
+      if (r !== null) hot.push(oldR);
+      snap("left, right 各进一步", r === null ? "right 沿反转指针走到了空，所有节点都比完了。" : `left 移到 <b>${v[l]}</b>，right 沿着反转后的指针移到 <b>${v[r]}</b>。`, view({
+        ptrs: { left: l, right: r },
+        ca: l,
+        cb: r,
+        hot,
+        animEdges: hot,
+      }), {
+        at: "cmp",
+        facts: [["阶段", "3. 两端比较"], ["已比较", cmpCount]],
+      });
     }
-    snap("完成", ok ? "后半段走完了，每一对都相等。是回文链表，返回 true。" : "发现一对不相等的值，返回 false。", view({}), { at: ok ? "done" : "bad", kind: ok ? "ok" : "warn", ans: ok });
+    snap("完成", ok ? "后半段走完了，每一对都相等。是回文链表，返回 <b>true</b>。" : "发现一对不相等的值，返回 <b>false</b>。", view({}), {
+      at: ok ? "done" : "bad",
+      kind: ok ? "ok" : "warn",
+      ans: ok,
+      facts: [["阶段", "完成", "3. 两端比较"], ["结果", ok ? "true" : "false"]],
+    });
   },
   points: [
     { t: "奇数个节点", body: "中间那个节点会被算进后半段，和自己前面的节点比较完就结束，不影响结果。" },

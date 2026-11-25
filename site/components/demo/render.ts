@@ -85,22 +85,32 @@ function vBars(v: View) {
   return `<div class="dm-v">${lab(v)}<div class="${scrollCls}"><div class="dm-arr"${attrs}>${cols}</div></div></div>`;
 }
 
-/** 网格：rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号；支持 feeds 传递箭头与 prev 前后值 */
+/** 网格：rowLabels / colLabels 可以替代行列号（越界的那一行写 -1），ax: false 不画行列号；支持 feeds 传递箭头、swaps 二维交换弧线与 prev 前后值 */
 function vGrid(v: View) {
   const n = v.rows[0].length, ax = v.ax !== false;
   const rl = (i: number) => (v.rowLabels ? show(v.rowLabels[i]) : i), cl = (j: number) => (v.colLabels ? show(v.colLabels[j]) : j);
-  const hasFeedsProp = Array.isArray(v.feeds);
+  const hasFeedsProp = Array.isArray(v.feeds), hasSwapsProp = Array.isArray(v.swaps);
   const feeds = hasFeedsProp ? v.feeds : undefined;
+  const swaps = hasSwapsProp ? (v.swaps as [[number, number], [number, number]][]) : undefined;
+  const swMap = new Map<string, string>();
+  for (const [a, b] of swaps || []) {
+    if (a[0] !== b[0] || a[1] !== b[1]) {
+      swMap.set(`${a[0]},${a[1]}`, "dm-swap-a");
+      swMap.set(`${b[0]},${b[1]}`, "dm-swap-b");
+    }
+  }
   let h = ax ? `<span class="dm-ax"></span>` + v.rows[0].map((_: unknown, j: number) => `<span class="dm-ax">${cl(j)}</span>`).join("") : "";
   (v.rows as unknown[][]).forEach((r, i) => {
     h += (ax ? `<span class="dm-ax">${rl(i)}</span>` : "") + r.map(norm).map((it, j) => {
       const body = cellBody(it);
-      return `<div class="dm-cell ${roles(it.cls)}${body.changed ? " dm-changed" : ""}" data-rc="${i},${j}">${body.html}</div>`;
+      const sc = swMap.get(`${i},${j}`) || "";
+      return `<div class="dm-cell ${roles(it.cls)}${body.changed ? " dm-changed" : ""}${sc ? ` ${sc}` : ""}" data-rc="${i},${j}" data-val="${show(it.v)}">${body.html}</div>`;
     }).join("");
   });
   const cols = (ax ? "minmax(18px,auto) " : "") + `repeat(${n},${hasFeedsProp ? 44 : 40}px)`;
-  const attrs = feeds?.length ? ` data-feeds="${E(JSON.stringify(feeds))}"` : "";
-  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><div class="dm-grid${hasFeedsProp ? " dm-grid-feeds" : ""}" style="grid-template-columns:${cols}"${attrs}>${h}</div></div></div>`;
+  const attrs = `${feeds?.length ? ` data-feeds="${E(JSON.stringify(feeds))}"` : ""}${swaps?.length ? ` data-swaps="${E(JSON.stringify(swaps))}"` : ""}`;
+  const scrollCls = hasSwapsProp || hasFeedsProp ? "dm-scroll dm-pad-top" : "dm-scroll";
+  return `<div class="dm-v">${lab(v)}<div class="${scrollCls}"><div class="dm-grid${hasFeedsProp ? " dm-grid-feeds" : ""}" style="grid-template-columns:${cols}"${attrs}>${h}</div></div></div>`;
 }
 
 /**
@@ -211,9 +221,13 @@ function vList(v: View) {
     if (nd.hide) return;
     const c = first(nd.cls);
     const keyAttr = ` data-key="ln-${E(nd.key ?? i)}"`;
+    const nodeHasPrev = nd.prev !== undefined && String(nd.prev) !== String(nd.v);
     s += `<g class="dm-lnode"${keyAttr}>`;
     s += `<rect class="n ${roles(nd.cls)}" x="${cx(i) - BW / 2}" y="${Y - BH / 2}" width="${BW}" height="${BH}" rx="6"></rect>`;
     s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${cx(i)}" y="${Y}">${show(nd.v)}</text>`;
+    if (nodeHasPrev) {
+      s += `<text class="dm-tprev" x="${cx(i)}" y="${Y - BH / 2 - 7}">${show(nd.prev)}→</text>`;
+    }
     (pm[String(i)] || []).forEach((nm, k) => {
       s += `<text class="pt" x="${cx(i)}" y="${Y + BH / 2 + 12 + k * 13}">${E(nm)}</text>`;
     });
@@ -260,7 +274,7 @@ function vTree(v: View) {
   const { pos, parList } = layoutTree(v.nodes, v.root);
   const prevPos = v.prevNodes ? layoutTree(v.prevNodes, v.root).pos : null;
   const morphIds = prevPos
-    ? Object.keys(pos).filter((id) => prevPos[id] && (prevPos[id][0] !== pos[id][0] || prevPos[id][1] !== pos[id][1]))
+    ? Object.keys(pos).filter((id) => !prevPos[id] || prevPos[id][0] !== pos[id][0] || prevPos[id][1] !== pos[id][1])
     : [];
   const morphData = morphIds.length && prevPos
     ? { R, directed: !!v.directed, lrLabels: !!v.lrLabels, from: prevPos, to: pos }
@@ -394,7 +408,7 @@ function vTree(v: View) {
     const c = first(cls[id]);
     const swapCls = swapSet.has(id) ? " dm-tswap" : "";
     const nodeHasPrev = nd.prev !== undefined && String(nd.prev) !== String(nd.v);
-    s += `<g class="dm-tnode${swapCls}" data-key="tn-${E(id)}" style="transform:translate(${px}px,${py}px)">`;
+    s += `<g class="dm-tnode${swapCls}" data-key="tn-${E(id)}" transform="translate(${px},${py})">`;
     s += `<circle class="n ${roles(cls[id])}" cx="0" cy="0" r="${R}"></circle>`;
     s += `<text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="0" y="0">${show(nd.v)}</text>`;
     if (nodeHasPrev) {
@@ -423,7 +437,8 @@ function vTree(v: View) {
  * 不给时节点排成一圈。badges 是节点下方的小标签。要自由摆放、带弯曲箭头的图用上面的 graph。
  */
 function vNet(v: View) {
-  const nodes = (v.nodes as unknown[]).map(norm), n = nodes.length, RAD = 17, id = "dmnet" + uid++;
+  const nodes = (v.nodes as unknown[]).map(norm), n = nodes.length, RAD = 17, id = "dmnet" + uid++, idOn = "dmneton" + uid++, idCut = "dmnetcut" + uid++;
+  const hasPrev = nodes.some((nd) => !nd.hide && nd.prev !== undefined && String(nd.prev) !== String(nd.v));
   let pos: [number, number][];
   let W: number, H: number;
   if (v.pos) {
@@ -436,24 +451,33 @@ function vNet(v: View) {
     pos = nodes.map((_, i) => [C + R * Math.sin((2 * Math.PI * i) / n), C - R * Math.cos((2 * Math.PI * i) / n)]);
     W = H = 2 * C + (v.badges ? 22 : 0);
   }
-  let s = v.directed ? `<defs><marker id="${id}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>` : "";
+  let s = v.directed
+    ? `<defs><marker id="${id}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker><marker id="${idOn}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-on"></path></marker><marker id="${idCut}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-cut"></path></marker></defs>`
+    : "";
   for (const [a, b, cls] of (v.edges || []) as [number, number, string?][]) {
     if (!pos[a] || !pos[b]) continue;
     const [x1, y1] = pos[a], [x2, y2] = pos[b], d = Math.hypot(x2 - x1, y2 - y1) || 1;
     const ux = (x2 - x1) / d, uy = (y2 - y1) / d, end = v.directed ? RAD + 3 : RAD;
-    s += `<line class="edge ${cls || ""}"${v.directed ? ` marker-end="url(#${id})"` : ""} x1="${x1 + ux * RAD}" y1="${y1 + uy * RAD}" x2="${x2 - ux * end}" y2="${y2 - uy * end}"></line>`;
+    const isCut = !!cls?.includes("cut");
+    const mid = isCut ? idCut : cls?.includes("on") ? idOn : id;
+    const sx = x1 + ux * RAD, sy = y1 + uy * RAD, ex = x2 - ux * end, ey = y2 - uy * end;
+    s += `<line class="edge ${cls || ""}"${v.directed ? ` marker-end="url(#${mid})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
+    if (isCut) s += `<text class="dm-cut-x" x="${(sx + ex) / 2}" y="${(sy + ey) / 2}">×</text>`;
   }
   nodes.forEach((nd, i) => {
     if (nd.hide) return;
     const [px, py] = pos[i], c = first(nd.cls);
+    const nodeHasPrev = nd.prev !== undefined && String(nd.prev) !== String(nd.v);
     s += `<circle class="n ${roles(nd.cls)}" cx="${px}" cy="${py}" r="${RAD}"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(nd.v)}</text>`;
+    if (nodeHasPrev) s += `<text class="dm-tprev" x="${px}" y="${py - RAD - 8}">${show(nd.prev)}→</text>`;
     const b = v.badges && v.badges[i];
     if (b !== undefined && b !== null && b !== "") {
       const t = String(b), w = Math.max(26, t.length * 7 + 10);
       s += `<rect class="bd" x="${px - w / 2}" y="${py + 21}" width="${w}" height="16" rx="8"></rect><text class="bt" x="${px}" y="${py + 29}">${E(t)}</text>`;
     }
   });
-  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:100%"><g>${s}</g></svg></div></div>`;
+  const minY = hasPrev ? -16 : 0, vbH = H + (hasPrev ? 16 : 0);
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="0 ${minY} ${W} ${vbH}" style="width:${W}px;max-width:100%"><g>${s}</g></svg></div></div>`;
 }
 
 const R: Record<string, (v: View) => string> = {

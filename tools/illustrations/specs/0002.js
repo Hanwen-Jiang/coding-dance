@@ -51,24 +51,98 @@ assert toL(s.addTwoNumbers(L([9,9,9,9,9,9,9]), L([9,9,9,9]))) == [8,9,9,9,0,0,0,
   sig: { fn: "addTwoNumbers", params: ["ListNode", "ListNode"], ret: "ListNode" },
   call: (a) => [a.x, a.y],
   cases: [[[0], [0]], [[9, 9, 9, 9, 9, 9, 9], [9, 9, 9, 9]], [[5], [5]]],
-  legend: [["a", "正在相加的这一位"], ["d", "已经加过"], ["k", "结果"]],
+  legend: [["a", "正在相加的这一位"], ["d", "已经加过 / 哑节点"], ["c", "刚新建的节点"], ["k", "结果链表"]],
   presets: [
     { label: "示例 1", args: { x: [2, 4, 3], y: [5, 6, 4] }, note: "l1 = [2,4,3], l2 = [5,6,4]（342 + 465）", expect: [7, 0, 8] },
     { label: "长度不同 + 最后进位", args: { x: [9, 9, 9, 9], y: [9, 9] }, note: "l1 = [9,9,9,9], l2 = [9,9]（9999 + 99）", expect: [8, 9, 0, 0, 1] },
   ],
   build(a, snap) {
-    const { x, y } = a, out = []; let i = 0, carry = 0;
-    const lv = (label, arr) => ({ t: "list", label, nodes: arr.map((v, t) => ({ v, cls: t < i ? "d" : t === i ? "a" : "" })) });
-    const view = (done) => [lv("l1（头节点是个位）", x), lv("l2", y), { t: "list", label: "结果", nodes: out.length ? out.map((v) => ({ v, cls: "k" })) : [{ v: "", cls: "d" }], showNil: !!done }];
-    snap("开始", "两个指针都在个位，进位是 0。", view(), { at: "init", facts: [["进位", 0]] });
+    const { x, y } = a, out = [];
+    let i = 0, p1 = 0, p2 = 0, carry = 0, curIdx = 0;
+    const lv = (label, arr, ptr, name, activeIdx) => ({
+      t: "list",
+      label,
+      nodes: arr.length
+        ? arr.map((v, t) => ({ v, cls: t < ptr ? "d" : t === activeIdx ? "a" : "" }))
+        : [{ v: "∅", cls: "d", noNil: true }],
+      ptrs: { [name]: ptr < arr.length ? ptr : null },
+      showNil: arr.length > 0,
+    });
+    const view = (opts = {}) => [
+      lv("l1（头节点是个位）", x, p1, "l1", opts.active1),
+      lv("l2（头节点是个位）", y, p2, "l2", opts.active2),
+      {
+        t: "list",
+        label: "结果链表（D 是哑节点，高亮箭头表示刚接上的新节点）",
+        nodes: [
+          { v: "D", cls: "d", ...(opts.hot === 0 ? { ecls: "on" } : {}) },
+          ...out.map((v, idx) => ({
+            v,
+            cls: opts.newNode === idx + 1 ? "c" : "k",
+            ...(opts.newNode === idx + 1 ? { prev: "" } : {}),
+            ...(opts.hot === idx + 1 ? { ecls: "on" } : {}),
+          })),
+        ],
+        next: Array.from({ length: out.length + 1 }, (_, k) => (k + 1 <= out.length ? k + 1 : null)),
+        ptrs: { dummy: 0, cur: curIdx },
+        ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
+        showNil: !!opts.done,
+      },
+    ];
+    snap(
+      "初始化",
+      "新建哑节点 D，cur 指向 D；l1 和 l2 分别停在两个链表的个位（头节点），进位 carry = 0。",
+      view(),
+      { at: "init", facts: [["进位 carry", 0]] },
+    );
     while (i < x.length || i < y.length || carry) {
-      const p = i < x.length ? x[i] : 0, q = i < y.length ? y[i] : 0, total = p + q + carry, old = carry;
-      const parts = [i < x.length ? String(p) : "0（l1 已走完）", i < y.length ? String(q) : "0（l2 已走完）"];
-      carry = Math.floor(total / 10); out.push(total % 10);
-      snap(i >= x.length && i >= y.length ? "补上最后的进位" : "加这一位", `${parts[0]} + ${parts[1]} + 进位 ${old} = <b>${total}</b>。写下 ${total % 10}，进位 ${carry}。`, view(), { at: ["add", "digit"], facts: [["进位", carry], ["这一位的和", total]] });
+      const has1 = i < x.length, has2 = i < y.length;
+      const p = has1 ? x[i] : 0, q = has2 ? y[i] : 0;
+      const oldCarry = carry, total = p + q + oldCarry;
+      const tailOnly = !has1 && !has2;
+      const parts = [has1 ? String(p) : "0（l1 已空）", has2 ? String(q) : "0（l2 已空）"];
+      snap(
+        tailOnly ? "只剩最后进位" : "读取并相加",
+        tailOnly
+          ? `l1 和 l2 都走完了，只剩进位 ${oldCarry}，所以 total = <b>${total}</b>。`
+          : `取出当前位：${parts[0]} + ${parts[1]} + 进位 ${oldCarry} = <b>${total}</b>。`,
+        view({ active1: has1 ? i : -1, active2: has2 ? i : -1 }),
+        { at: "add", facts: [["进位 carry", oldCarry], ["当前和 total", total]] },
+      );
+      if (!tailOnly) {
+        if (has1) p1++;
+        if (has2) p2++;
+        snap(
+          "l1、l2 指针前移",
+          `这一位的数字已经加进 total（${total}），把 ${[has1 && "l1", has2 && "l2"].filter(Boolean).join(" 和 ")} 往后移一格。`,
+          view(),
+          { at: "add", facts: [["进位 carry", oldCarry], ["当前和 total", total]] },
+        );
+      }
+      carry = Math.floor(total / 10);
+      const digit = total % 10;
+      out.push(digit);
+      snap(
+        "新建节点并接上",
+        `${total} ÷ 10：写下个位 <b>${digit}</b>，新的进位是 <b>${carry}</b>。新建节点 ${digit}，让 cur.next 指向它。`,
+        view({ newNode: out.length, hot: curIdx, animEdges: [curIdx] }),
+        { at: "digit", facts: [["进位 carry", carry, oldCarry], ["当前位 digit", digit], ["当前和 total", total]] },
+      );
+      curIdx = out.length;
+      snap(
+        "cur = cur.next",
+        `cur 前移到刚接上的节点 <b>${digit}</b>，准备处理下一位。`,
+        view(),
+        { at: "digit", facts: [["进位 carry", carry]] },
+      );
       i++;
     }
-    snap("完成", `两个链表都走完，进位也是 0。结果是 [${out.join(", ")}]，也就是 ${out.slice().reverse().join("")}。`, view(true), { at: "done", kind: "ok", ans: out, facts: [["进位", 0]] });
+    snap(
+      "完成",
+      `两条链表都走完，进位也归 0。返回 dummy.next，结果是 [${out.join(", ")}]（表示 ${out.slice().reverse().join("")}）。`,
+      view({ done: true }),
+      { at: "done", kind: "ok", ans: out.slice(), facts: [["进位 carry", 0]] },
+    );
   },
   points: [
     { t: "循环条件带上 carry", body: "<code>while l1 or l2 or carry</code>：最后多出来的进位也能在循环里处理，不用在外面补。" },

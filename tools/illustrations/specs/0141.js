@@ -59,15 +59,63 @@ assert s.hasCycle(mk([], -1)) is False
   ],
   build(a, snap) {
     const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null));
-    let slow = 0, fast = 0;
-    const view = (met) => [{ t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: met && i === slow ? "c" : i === slow ? "a" : i === fast ? "b" : "" })), next, ptrs: { slow, fast } }];
-    snap("开始", "slow 和 fast 都从头节点出发。", view(false), { at: "init" });
-    while (fast !== null && next[fast] !== null) {
-      slow = next[slow]; fast = next[next[fast]];
-      if (slow === fast) { snap("相遇", `slow 走一步到 ${v[slow]}，fast 走两步也到了 ${v[fast]}。两个指针<b>相遇</b>，说明有环。`, view(true), { at: ["step", "meet"], kind: "ok", ans: true }); return; }
-      snap("各走一步", `slow 走一步到 ${v[slow]}，fast 走两步${fast === null ? "，走出了链表" : "到 " + v[fast]}。`, view(false), { at: "step" });
+    if (!n) {
+      snap("没有环", "链表是空的，没有环。", [{ t: "note", label: "链表", html: "空" }], { at: "none", kind: "warn", ans: false });
+      return;
     }
-    snap("没有环", "fast 或者它的下一个节点是空，说明链表有尽头，没有环。", view(false), { at: "none", kind: "warn", ans: false });
+    let slow = 0, fast = 0, round = 0;
+    const view = (opts = {}) => [{
+      t: "list",
+      label: "链表（高亮边表示本步走过的指针）",
+      nodes: v.map((x, i) => ({
+        v: x,
+        cls: opts.met && i === slow ? "c" : i === slow ? "a" : i === fast ? "b" : "",
+        ...(opts.hot && opts.hot.includes(i) ? { ecls: "on" } : {}),
+      })),
+      next: next.slice(),
+      ptrs: { slow, fast },
+      ...(opts.animEdges && opts.animEdges.length ? { animEdges: opts.animEdges.slice() } : {}),
+    }];
+    snap("开始", `slow 和 fast 都从头节点 <b>${v[0]}</b> 出发。`, view(), {
+      at: "init",
+      facts: [["轮数", 0], ["slow", v[0]], ["fast", v[0]]],
+    });
+    while (fast !== null && next[fast] !== null) {
+      const prevSlow = slow, prevRound = round;
+      slow = next[slow];
+      round += 1;
+      snap(
+        "slow 走一步",
+        `第 ${round} 轮：slow 从 ${v[prevSlow]} 走 1 步到 <b>${v[slow]}</b>。`,
+        view({ hot: [prevSlow], animEdges: [prevSlow] }),
+        { at: "step", facts: [["轮数", round, prevRound], ["slow", v[slow], v[prevSlow]], ["fast", v[fast]]] },
+      );
+      const prevFast = fast, mid = next[fast];
+      fast = next[mid];
+      snap(
+        "fast 走两步",
+        fast === null
+          ? `fast 从 ${v[prevFast]} 走两步，越过 ${v[mid]} 走到了<b>空</b>。`
+          : `fast 从 ${v[prevFast]} 连走 2 步（经过 ${v[mid]}）到 <b>${v[fast]}</b>。`,
+        view({ hot: [prevFast, mid], animEdges: [prevFast, mid] }),
+        { at: "step", facts: [["轮数", round], ["slow", v[slow]], ["fast", fast === null ? "空" : v[fast], v[prevFast]]] },
+      );
+      if (slow === fast) {
+        snap(
+          "相遇",
+          `slow 和 fast 都停在 <b>${v[slow]}</b>（下标 ${slow}），两个指针<b>相遇</b>，说明有环！`,
+          view({ met: true }),
+          { at: "meet", kind: "ok", ans: true, facts: [["轮数", round], ["slow", v[slow]], ["fast", v[fast]]] },
+        );
+        return;
+      }
+    }
+    snap(
+      "没有环",
+      `${fast === null ? "fast 已经是空" : `fast（${v[fast]}）的下一个是空`}，走不出两步，说明链表有尽头，没有环。`,
+      view(),
+      { at: "none", kind: "warn", ans: false, facts: [["轮数", round], ["slow", v[slow]], ["fast", fast === null ? "空" : v[fast]]] },
+    );
   },
   alts: [{
     t: "集合",
@@ -76,19 +124,71 @@ assert s.hasCycle(mk([], -1)) is False
     legend: [["a", "当前节点"], ["e", "已经在 seen 里"], ["c", "第二次走到的节点"]],
     build(a, snap) {
       const v = a.v, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : a.pos >= 0 ? a.pos : null)), seen = [];
-      let h = n ? 0 : null;
-      const view = (hit) => [
-        { t: "list", label: "链表", nodes: v.map((x, i) => ({ v: x, cls: i === hit ? "c" : i === h ? "a" : seen.includes(i) ? "e" : "" })), next, ptrs: { head: h } },
-        { t: "chips", label: "seen（存的是节点本身，这里写成 值#下标）", items: seen.map((i) => `${v[i]}#${i}`), empty: "空" },
-      ];
-      snap("开始", "从头节点出发，把走过的每个节点都放进集合 seen。", view(-1), { at: "init", facts: [["seen 大小", 0]] });
-      while (h !== null && !seen.includes(h)) {
-        seen.push(h);
-        const cur = h; h = next[h];
-        snap("记下", `${v[cur]}#${cur} 第一次走到，放进 seen，再走到${h === null ? "空" : ` ${v[h]}#${h}`}。`, view(-1), { at: "add", facts: [["seen 大小", seen.length]] });
+      if (!n) {
+        snap("没有环", "链表是空的，没有环。", [{ t: "note", label: "链表", html: "空" }], { at: "none", kind: "warn", ans: false, facts: [["seen 大小", 0]] });
+        return;
       }
-      if (h === null) snap("没有环", "走到了空，链表有尽头，没有环。", view(-1), { at: "none", kind: "warn", ans: false, facts: [["seen 大小", seen.length]] });
-      else snap("有环", `${v[h]}#${h} 已经在 seen 里了：同一个节点第二次走到，说明有环。`, view(h), { at: "found", kind: "ok", ans: true, facts: [["seen 大小", seen.length]] });
+      let h = 0;
+      const view = (opts = {}) => [
+        {
+          t: "list",
+          label: "链表",
+          nodes: v.map((x, i) => ({
+            v: x,
+            cls: i === opts.hit ? "c" : i === h ? "a" : seen.includes(i) ? "e" : "",
+            ...(opts.hot && opts.hot.includes(i) ? { ecls: "on" } : {}),
+          })),
+          next: next.slice(),
+          ptrs: { head: h },
+          ...(opts.animEdges && opts.animEdges.length ? { animEdges: opts.animEdges.slice() } : {}),
+        },
+        {
+          t: "chips",
+          label: "seen（存的是节点本身，这里写成 值#下标）",
+          items: seen.map((i, idx) => ({
+            v: `${v[i]}#${i}`,
+            cls: i === opts.hit ? "c" : idx === opts.addedIdx ? "a" : "e",
+          })),
+          empty: "空",
+        },
+      ];
+      snap("开始", `从头节点 <b>${v[0]}#0</b> 出发，把走过的每个节点都放进集合 seen。`, view(), {
+        at: "init",
+        facts: [["seen 大小", 0], ["head", `${v[0]}#0`]],
+      });
+      while (h !== null && !seen.includes(h)) {
+        const prevSize = seen.length;
+        seen.push(h);
+        snap(
+          "记进 seen",
+          `<b>${v[h]}#${h}</b> 不在 seen 里，是第一次走到，把它放进 seen。`,
+          view({ addedIdx: seen.length - 1 }),
+          { at: "add", facts: [["seen 大小", seen.length, prevSize], ["head", `${v[h]}#${h}`]] },
+        );
+        const cur = h;
+        h = next[h];
+        snap(
+          "head = head.next",
+          `head 往前走一步，从 ${v[cur]}#${cur} 走到${h === null ? "<b>空</b>" : ` <b>${v[h]}#${h}</b>`}。`,
+          view({ hot: [cur], animEdges: [cur] }),
+          { at: "add", facts: [["seen 大小", seen.length], ["head", h === null ? "空" : `${v[h]}#${h}`, `${v[cur]}#${cur}`]] },
+        );
+      }
+      if (h === null) {
+        snap("没有环", "head 走到了空，链表有尽头，没有环。", view(), {
+          at: "none",
+          kind: "warn",
+          ans: false,
+          facts: [["seen 大小", seen.length], ["head", "空"]],
+        });
+      } else {
+        snap("有环", `<b>${v[h]}#${h}</b> 已经在 seen 里了：同一个节点第二次走到，说明有环！`, view({ hit: h }), {
+          at: "found",
+          kind: "ok",
+          ans: true,
+          facts: [["seen 大小", seen.length], ["head", `${v[h]}#${h}`]],
+        });
+      }
     },
   }],
   points: [

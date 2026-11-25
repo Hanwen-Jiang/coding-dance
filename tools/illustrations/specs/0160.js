@@ -72,25 +72,106 @@ for xa, xb, cm in [([4,1],[5,6,1],[8,4,5]), ([1,9,1],[3],[2,4]), ([2,6,4],[1,5],
   build(a, snap) {
     const { xa, xb, cm } = a, A = xa.length, B = xb.length, C = cm.length;
     // 位置编码：["A", i] A 独有部分；["B", i]；["C", i] 公共部分；null 表示空
-    let pa = A ? ["A", 0] : C ? ["C", 0] : null, pb = B ? ["B", 0] : C ? ["C", 0] : null, onB = false, onA = false, met = false;
     const headOf = (w) => (w === "A" ? (A ? ["A", 0] : C ? ["C", 0] : null) : B ? ["B", 0] : C ? ["C", 0] : null);
-    const step = (p) => { const [w, i] = p; const len = w === "A" ? A : w === "B" ? B : C; if (i + 1 < len) return [w, i + 1]; return w === "C" ? null : C ? ["C", 0] : null; };
+    const step = (p) => {
+      const [w, i] = p;
+      const len = w === "A" ? A : w === "B" ? B : C;
+      if (i + 1 < len) return [w, i + 1];
+      return w === "C" ? null : C ? ["C", 0] : null;
+    };
     const at = (p, w) => (p && p[0] === w ? p[1] : null);
+    let pa = headOf("A"), pb = headOf("B"), onB = false, onA = false, met = false;
+    let stepsA = 0, stepsB = 0;
     const same = () => (pa === null && pb === null) || (pa && pb && pa[0] === pb[0] && pa[1] === pb[1]);
-    const row = (label, arr, w) => ({ t: "list", label, nodes: arr.length ? arr.map((v, i) => ({ v, cls: met && at(pa, w) === i ? "c" : at(pa, w) === i ? "a" : at(pb, w) === i ? "b" : w === "C" ? "g" : "" })) : [{ v: "无", cls: "d" }], showNil: w === "C" || !C, ptrs: { pa: at(pa, w), pb: at(pb, w) } });
-    const view = () => [row("A 独有的部分（后面接公共部分）", xa, "A"), row("B 独有的部分（后面接公共部分）", xb, "B"), row("公共部分", cm, "C")];
-    const facts = () => [["pa 走在", onB ? "B 的路上" : "A 的路上"], ["pb 走在", onA ? "A 的路上" : "B 的路上"]];
-    snap("开始", "pa 从 A 的头出发，pb 从 B 的头出发，每次各走一步。", view(), { at: "init", facts: facts() });
+    const row = (label, arr, w, hotIdx) => ({
+      t: "list",
+      label,
+      nodes: arr.length
+        ? arr.map((v, i) => ({
+          v,
+          cls: met && at(pa, w) === i ? "c" : at(pa, w) === i ? "a" : at(pb, w) === i ? "b" : w === "C" ? "g" : "",
+          ...(hotIdx && hotIdx.includes(i) ? { ecls: "on" } : {}),
+        }))
+        : [{ v: "无", cls: "d" }],
+      next: arr.length ? arr.map((_, i) => (i + 1 < arr.length ? i + 1 : null)) : [null],
+      showNil: w === "C" || !C,
+      ptrs: { pa: at(pa, w), pb: at(pb, w) },
+      ...(hotIdx && hotIdx.length ? { animEdges: hotIdx.slice() } : {}),
+    });
+    const view = (hotByRow = {}) => [
+      row("A 独有的部分（后面接公共部分）", xa, "A", hotByRow.A),
+      row("B 独有的部分（后面接公共部分）", xb, "B", hotByRow.B),
+      row("公共部分", cm, "C", hotByRow.C),
+    ];
+    const roadA = () => (onB ? "B 的路" : "A 的路");
+    const roadB = () => (onA ? "A 的路" : "B 的路");
+    snap("pa, pb = headA, headB", "pa 从 A 的头出发，pb 从 B 的头出发，每次各走一步。", view(), {
+      at: "init",
+      facts: [["pa 走在", roadA()], ["pb 走在", roadB()], ["pa 步数", 0], ["pb 步数", 0]],
+    });
     let guard = 0;
     while (!same() && guard++ < 100) {
+      const prevA = pa, prevB = pb;
+      const prevRoadA = roadA(), prevRoadB = roadB();
+      const prevSA = stepsA, prevSB = stepsB;
+      const hotByRow = { A: [], B: [], C: [] };
       let msg = "";
-      if (pa === null) { pa = headOf("B"); onB = true; msg += "pa 走完了 A，换到 <b>B 的头</b>继续走。"; } else { pa = step(pa); msg += pa === null ? "pa 走到了空。" : "pa 往前一步。"; }
-      if (pb === null) { pb = headOf("A"); onA = true; msg += "pb 走完了 B，换到 <b>A 的头</b>继续走。"; } else { pb = step(pb); msg += pb === null ? "pb 走到了空。" : "pb 往前一步。"; }
-      if (!same()) snap("各走一步", msg, view(), { at: "step", facts: facts() });
+      if (pa === null) {
+        pa = headOf("B");
+        onB = true;
+        msg += "pa 走完了 A（到达空），换到 <b>B 的头</b>继续走。";
+      } else {
+        const len = prevA[0] === "A" ? A : prevA[0] === "B" ? B : C;
+        if (prevA[1] + 1 < len) hotByRow[prevA[0]].push(prevA[1]);
+        pa = step(pa);
+        msg += pa === null ? "pa 走到了空。" : "pa 往前走一步。";
+      }
+      stepsA += 1;
+      if (pb === null) {
+        pb = headOf("A");
+        onA = true;
+        msg += "pb 走完了 B（到达空），换到 <b>A 的头</b>继续走。";
+      } else {
+        const len = prevB[0] === "A" ? A : prevB[0] === "B" ? B : C;
+        if (prevB[1] + 1 < len) hotByRow[prevB[0]].push(prevB[1]);
+        pb = step(pb);
+        msg += pb === null ? "pb 走到了空。" : "pb 往前走一步。";
+      }
+      stepsB += 1;
+      const facts = [
+        ["pa 走在", roadA(), prevRoadA],
+        ["pb 走在", roadB(), prevRoadB],
+        ["pa 步数", stepsA, prevSA],
+        ["pb 步数", stepsB, prevSB],
+      ];
+      if (!same()) snap("各走一步", msg, view(hotByRow), { at: "step", facts });
+      else {
+        met = true;
+        if (pa === null) {
+          snap("没有交点", "两个指针同时走到了空。它们走过的总长度相同，却一直没碰到同一个节点，说明两个链表不相交。", view(hotByRow), {
+            at: ["step", "done"],
+            kind: "warn",
+            ans: null,
+            facts,
+          });
+        } else {
+          snap("相遇！找到交点", `pa 和 pb 同时到了 <b>${cm[pa[1]]}</b>。两个指针都走了「A 独有 + B 独有 + 若干公共」这么长，这里就是交点。`, view(hotByRow), {
+            at: ["step", "done"],
+            kind: "ok",
+            ans: cm[pa[1]],
+            facts,
+          });
+        }
+        return;
+      }
     }
     met = true;
-    if (pa === null) snap("没有交点", "两个指针同时走到了空。它们走过的总长度相同，却一直没碰到同一个节点，说明两个链表不相交。", view(), { at: ["step", "done"], kind: "warn", ans: null, facts: facts() });
-    else snap("相遇", `pa 和 pb 同时到了 <b>${cm[pa[1]]}</b>。两个指针都走了「A 独有 + B 独有 + 若干公共」这么长，这里就是交点。`, view(), { at: ["step", "done"], kind: "ok", ans: cm[pa[1]], facts: facts() });
+    const finalFacts = [["pa 走在", roadA()], ["pb 走在", roadB()], ["pa 步数", stepsA], ["pb 步数", stepsB]];
+    if (pa === null) {
+      snap("没有交点", "两个指针一开始就都是空，不相交，返回空。", view(), { at: "done", kind: "warn", ans: null, facts: finalFacts });
+    } else {
+      snap("相遇！找到交点", `pa 和 pb 一开始就在同一个公共节点 <b>${cm[pa[1]]}</b>，这里就是交点。`, view(), { at: "done", kind: "ok", ans: cm[pa[1]], facts: finalFacts });
+    }
   },
   alts: [{
     t: "集合",
@@ -99,29 +180,86 @@ for xa, xb, cm in [([4,1],[5,6,1],[8,4,5]), ([1,9,1],[3],[2,4]), ([2,6,4],[1,5],
     legend: [["a", "当前节点"], ["e", "在集合里（A 上的节点）"], ["c", "交点"]],
     build(a, snap) {
       const { xa, xb, cm } = a, seenA = new Set(), seenC = new Set();
-      let cur = null, name = "headA", hit = null;
-      const row = (label, arr, w) => ({ t: "list", label, nodes: arr.length ? arr.map((v, i) => ({ v, cls: hit !== null && w === "C" && i === hit ? "c" : cur && cur[0] === w && cur[1] === i ? "a" : (w === "A" && seenA.has(i)) || (w === "C" && seenC.has(i)) ? "e" : "" })) : [{ v: "无", cls: "d" }], showNil: w === "C" || !cm.length, ptrs: { [name]: cur && cur[0] === w ? cur[1] : null } });
-      const view = () => [row("A 独有的部分（后面接公共部分）", xa, "A"), row("B 独有的部分（后面接公共部分）", xb, "B"), row("公共部分", cm, "C")];
-      const f = () => ({ facts: [["集合大小", seenA.size + seenC.size]] });
-      snap("开始", "第一步：从 A 的头走到尾，把每个节点都放进集合。比较的是节点本身，不是值。", view(), { at: "init", ...f() });
       const pathA = [...xa.map((_, i) => ["A", i]), ...cm.map((_, i) => ["C", i])];
-      for (const p of pathA) {
-        cur = p; (p[0] === "A" ? seenA : seenC).add(p[1]);
-        snap("放进集合", `A 上的节点 ${p[0] === "A" ? xa[p[1]] : cm[p[1]]} 放进集合。`, view(), { at: "addA", ...f() });
+      let cur = pathA.length ? pathA[0] : null, name = "headA", hit = null;
+      const row = (label, arr, w, hotIdx) => ({
+        t: "list",
+        label,
+        nodes: arr.length
+          ? arr.map((v, i) => ({
+            v,
+            cls: hit !== null && w === "C" && i === hit ? "c" : cur && cur[0] === w && cur[1] === i ? "a" : (w === "A" && seenA.has(i)) || (w === "C" && seenC.has(i)) ? "e" : "",
+            ...(hotIdx && hotIdx.includes(i) ? { ecls: "on" } : {}),
+          }))
+          : [{ v: "无", cls: "d" }],
+        next: arr.length ? arr.map((_, i) => (i + 1 < arr.length ? i + 1 : null)) : [null],
+        showNil: w === "C" || !cm.length,
+        ptrs: { [name]: cur && cur[0] === w ? cur[1] : null },
+        ...(hotIdx && hotIdx.length ? { animEdges: hotIdx.slice() } : {}),
+      });
+      const view = (hotByRow = {}) => [
+        row("A 独有的部分（后面接公共部分）", xa, "A", hotByRow.A),
+        row("B 独有的部分（后面接公共部分）", xb, "B", hotByRow.B),
+        row("公共部分", cm, "C", hotByRow.C),
+      ];
+      const sz = () => seenA.size + seenC.size;
+      snap("seen = set()", "第一步：从 A 的头走到尾，把每个节点都放进集合。比较的是节点本身，不是值。", view(), { at: "init", facts: [["集合大小", 0]] });
+      for (let idx = 0; idx < pathA.length; idx++) {
+        const p = pathA[idx];
+        const prevSz = sz();
+        (p[0] === "A" ? seenA : seenC).add(p[1]);
+        const val = p[0] === "A" ? xa[p[1]] : cm[p[1]];
+        snap("seen.add(headA)", `把 A 上的节点 <b>${val}</b> 放进集合 seen。`, view(), {
+          at: "addA",
+          facts: [["集合大小", sz(), prevSz]],
+        });
+        const nxt = idx + 1 < pathA.length ? pathA[idx + 1] : null;
+        const hotByRow = { A: [], B: [], C: [] };
+        if (nxt && nxt[0] === p[0]) hotByRow[p[0]].push(p[1]);
+        cur = nxt;
+        snap("headA = headA.next", cur === null ? "headA 走到了链表 A 的尽头（空）。" : `headA 往前移动到 <b>${cur[0] === "A" ? xa[cur[1]] : cm[cur[1]]}</b>。`, view(hotByRow), {
+          at: "addA",
+          facts: [["集合大小", sz()]],
+        });
       }
-      cur = null; name = "headB";
-      snap("换到 B", "A 走完了。第二步：从 B 的头往后走，看每个节点在不在集合里。", view(), { at: "walkB", ...f() });
+      name = "headB";
+      cur = xb.length ? ["B", 0] : cm.length ? ["C", 0] : null;
+      snap("从 B 的头出发", "A 走完了。第二步：headB 从 B 的头往后走，检查每个节点在不在集合里。", view(), {
+        at: "walkB",
+        facts: [["集合大小", sz()]],
+      });
       for (let i = 0; i < xb.length; i++) {
         cur = ["B", i];
-        snap("不在集合里", `B 上的节点 ${xb[i]} 不在集合里，不是 A 上的节点，继续往后走。`, view(), { at: "walkB", ...f() });
+        snap("检查 headB", `B 上的节点 ${xb[i]} 不在集合里，不是 A 上的节点。`, view(), {
+          at: "walkB",
+          facts: [["集合大小", sz()]],
+        });
+        const nxt = i + 1 < xb.length ? ["B", i + 1] : cm.length ? ["C", 0] : null;
+        const hotByRow = i + 1 < xb.length ? { B: [i] } : {};
+        cur = nxt;
+        snap("headB = headB.next", cur === null ? "headB 走到了链表 B 的尽头（空）。" : `headB 往前移动到 <b>${cur[0] === "B" ? xb[cur[1]] : cm[cur[1]]}</b>。`, view(hotByRow), {
+          at: "walkB",
+          facts: [["集合大小", sz()]],
+        });
       }
       if (!cm.length) {
         cur = null;
-        snap("没有交点", "B 走到了空，一直没碰到 A 上的节点，两个链表不相交。", view(), { at: "none", kind: "warn", ans: null, ...f() });
+        snap("没有交点", "B 走到了空，一直没碰到 A 上的节点，两个链表不相交。", view(), {
+          at: "none",
+          kind: "warn",
+          ans: null,
+          facts: [["集合大小", sz()]],
+        });
         return;
       }
-      cur = ["C", 0]; hit = 0;
-      snap("找到交点", `节点 <b>${cm[0]}</b> 已经在集合里了：它同时在 A 和 B 上，是 B 碰到的第一个这样的节点，就是交点。`, view(), { at: "found", kind: "ok", ans: cm[0], ...f() });
+      cur = ["C", 0];
+      hit = 0;
+      snap("找到交点", `节点 <b>${cm[0]}</b> 已经在集合里了！它是 B 碰到的第一个同时也在 A 上的节点，就是交点。`, view(), {
+        at: "found",
+        kind: "ok",
+        ans: cm[0],
+        facts: [["集合大小", sz()], ["交点值", cm[0]]],
+      });
     },
   }],
   points: [
