@@ -195,7 +195,7 @@ for _ in range(30):
         cls: cls(j),
       })),
       ptrs: pv === null ? { lo, hi } : { lt, i: i <= gt ? i : null, gt },
-      ...(opts.swaps ? { swaps: opts.swaps } : {}),
+      swaps: opts.swaps || [],
     }];
     const f = (prevRange) => ({ facts: [["目标下标", target], ["范围", `[${lo}, ${hi}]`, prevRange], ["pivot", pv === null ? "—" : pv]] });
     snap("开始", `第 ${k} 大，就是升序排好后下标 ${n} − ${k} = <b>${target}</b> 的数。只关心这一个位置放的是谁。`, view(), { at: "init", ...f() });

@@ -67,6 +67,7 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
     a.t.forEach((v, i) => {
       if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null };
     });
+    const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
     const done = new Set();
     const view = (cur, pre, opts = {}) => {
       const cls = {};
@@ -77,7 +78,7 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
       return [{
         t: "tree",
         label: "二叉树（带 L/R 方向与指针改接动画）",
-        nodes: N,
+        nodes: snapNodes(),
         root: N[0] ? 0 : null,
         cls,
         directed: true,
@@ -147,7 +148,7 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
           view(cur, pre, {
             leftSub,
             ...(oldRight !== null ? { cutEdges: [[cur, oldRight]] } : {}),
-            extra: [{ from: cur, to: oldLeft, cls: "on", anim: "draw", bend: -0.32, label: "new right" }],
+            extra: [{ from: cur, to: oldLeft, cls: "on", anim: "draw", bend: -0.38, label: "new right" }],
           }),
           { at: "move" },
         );
@@ -197,6 +198,7 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
         return;
       }
       const stack = [], done = new Set(), link = {};
+      const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
       let prev = null;
       const chain = () => { const out = []; for (let p = prev; p !== null; p = link[p]) out.push(N[p].v); return out; };
       const view = (cur, opts = {}) => {
@@ -210,7 +212,7 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
           {
             t: "tree",
             label: "递归遍历与指针重连（虚线箭头是新串好的 right 指向）",
-            nodes: N,
+            nodes: snapNodes(),
             root: 0,
             cls,
             directed: true,

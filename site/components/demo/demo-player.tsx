@@ -320,45 +320,36 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
           )}
           <div ref={viewsRef} className="dm-views" />
           <div className="flex flex-col gap-3 border-t border-separator pt-4">
-            {/* 一行放下：手机上和桌面窄的演示栏里，「自动播放」带字会被挤到第二行，所以只留图标（读屏和悬停提示里有文字） */}
-            <div className="flex flex-wrap items-center gap-2">
-              <Button size="sm" variant="ghost" onPress={() => { setPlaying(false); go(0); }}>
+            {/* 手机窄屏与桌面临界宽度下始终保持单行不换行，辅助按钮在窄容器中仅显示图标，倍速按钮放在进度条右侧 */}
+            <div className="flex flex-nowrap items-center gap-1.5 @md:gap-2">
+              <Button className="shrink-0 px-2 text-xs @md:px-3 @md:text-sm" size="sm" variant="ghost" onPress={() => { setPlaying(false); go(0); }}>
                 重置
               </Button>
-              <Button isDisabled={idx === 0} size="sm" variant="secondary" onPress={() => { setPlaying(false); go(idx - 1); }}>
+              <Button isDisabled={idx === 0} className="shrink-0 gap-1 px-2.5 text-xs @md:px-3 @md:text-sm" size="sm" variant="secondary" onPress={() => { setPlaying(false); go(idx - 1); }}>
                 <ChevronLeft />
                 上一步
               </Button>
-              <Button isDisabled={idx >= last} size="sm" onPress={() => { setPlaying(false); go(idx + 1); }}>
+              <Button isDisabled={idx >= last} className="shrink-0 gap-1 px-2.5 text-xs @md:px-3 @md:text-sm" size="sm" onPress={() => { setPlaying(false); go(idx + 1); }}>
                 下一步
                 <ChevronRight />
               </Button>
-              <Button
-                aria-label="重播本步过渡动画 (R)"
-                className="shrink-0"
-                size="sm"
-                variant={stepHasFx(s) ? "secondary" : "ghost"}
-                onPress={replayStep}
-              >
-                <HistoryIcon />
-                <span className="hidden sm:inline">重播本步</span>
-              </Button>
               <div className="ms-auto flex shrink-0 items-center gap-1.5">
                 <Button
-                  aria-label={`切换自动播放速度，当前 ${speed} 倍`}
-                  className="font-mono text-[11px] tabular-nums"
+                  aria-label="重播本步过渡动画 (R)"
+                  className="shrink-0 px-2 @lg:px-3"
                   size="sm"
-                  variant="ghost"
-                  onPress={() => setSpeedIdx((i) => (i + 1) % SPEEDS.length)}
+                  variant={stepHasFx(s) ? "secondary" : "ghost"}
+                  onPress={replayStep}
                 >
-                  {speed}×
+                  <HistoryIcon />
+                  <span className="hidden @lg:inline">重播本步</span>
                 </Button>
                 <Button isIconOnly aria-label={playing ? "暂停" : "自动播放"} className="shrink-0" size="sm" variant="outline" onPress={togglePlay}>
                   {playing ? <PauseIcon /> : <PlayIcon />}
                 </Button>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <input
                 aria-label="步骤"
                 className="dm-range min-w-0 flex-1"
@@ -368,7 +359,16 @@ export function DemoPlayer({ demo, codes = [], codeRevealed = true, onRevealCode
                 value={idx}
                 onChange={(e) => { setPlaying(false); go(Number(e.target.value)); }}
               />
-              <span className="font-pixel w-16 text-right text-[11px] text-muted tabular-nums">
+              <Button
+                aria-label={`切换自动播放速度，当前 ${speed} 倍`}
+                className="h-6 min-w-0 shrink-0 px-1.5 font-mono text-[11px] text-muted tabular-nums"
+                size="sm"
+                variant="ghost"
+                onPress={() => setSpeedIdx((i) => (i + 1) % SPEEDS.length)}
+              >
+                {speed}×
+              </Button>
+              <span className="font-pixel w-12 shrink-0 text-right text-[11px] text-muted tabular-nums">
                 {idx}/{last}
               </span>
             </div>

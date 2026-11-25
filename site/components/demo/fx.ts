@@ -30,11 +30,12 @@ function addMarker(svg: SVGSVGElement, id: string, cls: string) {
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
   const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
   marker.setAttribute("id", id);
+  marker.setAttribute("markerUnits", "userSpaceOnUse");
   marker.setAttribute("viewBox", "0 0 8 8");
-  marker.setAttribute("refX", "7");
+  marker.setAttribute("refX", "6");
   marker.setAttribute("refY", "4");
-  marker.setAttribute("markerWidth", "6");
-  marker.setAttribute("markerHeight", "6");
+  marker.setAttribute("markerWidth", "7");
+  marker.setAttribute("markerHeight", "7");
   marker.setAttribute("orient", "auto-start-reverse");
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path.setAttribute("d", "M0 0L8 4L0 8z");
@@ -73,11 +74,15 @@ function runSwaps(scroll: HTMLElement, arr: HTMLElement, swaps: [number, number]
 
     const ca = centerIn(aEl, scroll);
     const cb = centerIn(bEl, scroll);
+    const aAnchor = aEl.querySelector<HTMLElement>(".dm-bar") || aEl;
+    const bAnchor = bEl.querySelector<HTMLElement>(".dm-bar") || bEl;
+    const ac = centerIn(aAnchor, scroll);
+    const bc = centerIn(bAnchor, scroll);
     const dist = Math.abs(cb.x - ca.x);
-    const lift = Math.min(34, 14 + dist * 0.14);
+    const lift = Math.min(28, 12 + dist * 0.08);
 
-    // 双向弯弧线：上方从 a -> b，下方从 b -> a
-    const topY = Math.min(ca.y - ca.h / 2, cb.y - cb.h / 2) + 2;
+    // 弧线从格子/柱槽顶部上方 4px 起跳，贴合预留的 36px 顶部轨道，绝不压住数字与边框
+    const topY = Math.max(18, Math.min(ca.y - ca.h / 2, cb.y - cb.h / 2) - 4);
     const ctrlTopY = Math.max(4, topY - lift);
     const p1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
     p1.setAttribute("class", "dm-fx-swap-arc");
@@ -89,23 +94,25 @@ function runSwaps(scroll: HTMLElement, arr: HTMLElement, swaps: [number, number]
       // 飞跃标签：显示换过去的值和换过来的值
       const valNowAtI = aEl.getAttribute("data-val") ?? aEl.textContent ?? "";
       const valNowAtJ = bEl.getAttribute("data-val") ?? bEl.textContent ?? "";
+      const startY = aEl === aAnchor ? ca.y : ac.y;
+      const peakUp = Math.min(lift, Math.max(14, startY - 12));
       // 当前数组已经交换完毕，所以原来在 i 的值现在在 j，原来在 j 的值现在在 i
-      const pairs: [string, number, number, number][] = [
-        [valNowAtJ, ca.x, cb.x, -lift],
-        [valNowAtI, cb.x, ca.x, lift * 0.65],
+      const pairs: [string, number, number, number, number][] = [
+        [valNowAtJ, ca.x, cb.x, -peakUp, ac.y],
+        [valNowAtI, cb.x, ca.x, Math.min(22, lift * 0.6), bc.y],
       ];
-      for (const [txt, x0, x1, dy] of pairs) {
+      for (const [txt, x0, x1, dy, sy0] of pairs) {
         if (!txt) continue;
         const chip = document.createElement("span");
         chip.className = "dm-fly-chip";
         chip.textContent = txt;
         chip.style.left = `${x0}px`;
-        chip.style.top = `${ca.y}px`;
+        chip.style.top = `${sy0}px`;
         scroll.appendChild(chip);
         const anim = chip.animate(
           [
             { transform: "translate(-50%, -50%) scale(0.9)", opacity: 0.95 },
-            { transform: `translate(calc(-50% + ${(x1 - x0) / 2}px), calc(-50% + ${dy}px)) scale(1.06)`, opacity: 1, offset: 0.5 },
+            { transform: `translate(calc(-50% + ${(x1 - x0) / 2}px), calc(-50% + ${dy}px)) scale(1.05)`, opacity: 1, offset: 0.5 },
             { transform: `translate(calc(-50% + ${x1 - x0}px), -50%) scale(0.92)`, opacity: 0 },
           ],
           { duration: 640, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "forwards" },
@@ -130,6 +137,7 @@ function runFeeds(scroll: HTMLElement, root: HTMLElement, feeds: FeedItem[], red
   addMarker(svg, winId, "dm-fx-ah-win");
   addMarker(svg, candId, "dm-fx-ah-cand");
 
+  const isArr = root.classList.contains("dm-arr");
   const findCell = (pos: [number, number] | number) =>
     Array.isArray(pos)
       ? root.querySelector<HTMLElement>(`[data-rc="${pos[0]},${pos[1]}"]`)
@@ -142,31 +150,56 @@ function runFeeds(scroll: HTMLElement, root: HTMLElement, feeds: FeedItem[], red
 
     const a = centerIn(fromEl, scroll);
     const b = centerIn(toEl, scroll);
+
+    if (isArr) {
+      // 1D 数组：沿预留顶部轨道画平滑弧线，避免穿过格内数字
+      const sx = a.x, sy = Math.max(16, a.y - a.h / 2 - 4);
+      const ex = b.x, ey = Math.max(16, b.y - b.h / 2 - 4);
+      const ctrlY = Math.max(5, Math.min(sy, ey) - 22);
+      const cx = (sx + ex) / 2;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("class", `dm-fx-feed ${f.win ? "win" : "cand"}${reduce ? " no-anim" : ""}`);
+      path.setAttribute("marker-end", `url(#${f.win ? winId : candId})`);
+      path.setAttribute("d", `M${sx} ${sy} Q${cx} ${ctrlY} ${ex} ${ey}`);
+      svg.appendChild(path);
+      if (f.label && (f.win || feeds.length === 1)) {
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("class", `dm-fx-tag ${f.win ? "win" : "cand"}`);
+        text.setAttribute("x", String(cx));
+        text.setAttribute("y", String(ctrlY + 3));
+        text.textContent = f.label;
+        svg.appendChild(text);
+      }
+      continue;
+    }
+
+    // 2D 网格：起止精确落在格子外边缘（严格走格子之间的 16px 缝隙，不压格内数字）
     const dx = b.x - a.x;
     const dy = b.y - a.y;
     const len = Math.hypot(dx, dy) || 1;
     const ux = dx / len;
     const uy = dy / len;
-    const sx = a.x + ux * Math.min(12, a.w * 0.28);
-    const sy = a.y + uy * Math.min(12, a.h * 0.28);
-    const ex = b.x - ux * Math.min(16, b.w * 0.34);
-    const ey = b.y - uy * Math.min(16, b.h * 0.34);
-
-    // 同一行且跨多列时稍微往上拱一点，避免压住中间格子文字
-    const isLongRow = Math.abs(dy) < 4 && Math.abs(dx) > 54;
-    const bend = isLongRow ? -Math.min(26, Math.abs(dx) * 0.2) : 0;
-    const cx = (sx + ex) / 2;
-    const cy = (sy + ey) / 2 + bend;
+    const tA = Math.min(Math.abs(ux) > 1e-4 ? (a.w / 2) / Math.abs(ux) : Infinity, Math.abs(uy) > 1e-4 ? (a.h / 2) / Math.abs(uy) : Infinity);
+    const tB = Math.min(Math.abs(ux) > 1e-4 ? (b.w / 2) / Math.abs(ux) : Infinity, Math.abs(uy) > 1e-4 ? (b.h / 2) / Math.abs(uy) : Infinity);
+    const sx = a.x + ux * (tA + 1.5);
+    const sy = a.y + uy * (tA + 1.5);
+    const ex = b.x - ux * (tB + 2);
+    const ey = b.y - uy * (tB + 2);
 
     const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
     path.setAttribute("class", `dm-fx-feed ${f.win ? "win" : "cand"}${reduce ? " no-anim" : ""}`);
     path.setAttribute("marker-end", `url(#${f.win ? winId : candId})`);
-    path.setAttribute("d", bend ? `M${sx} ${sy} Q${cx} ${cy} ${ex} ${ey}` : `M${sx} ${sy} L${ex} ${ey}`);
+    path.setAttribute("d", `M${sx} ${sy} L${ex} ${ey}`);
     svg.appendChild(path);
 
-    if (f.label) {
-      const lx = cx;
-      const ly = bend ? cy + bend * 0.15 : cy - (Math.abs(dx) < 6 ? 0 : 8);
+    // 只在胜出路径（或唯一路径）上标注简洁标签，防止 3 个候选文字挤在同一条缝隙里互遮
+    if (f.label && (f.win || feeds.length === 1)) {
+      const mx = (sx + ex) / 2;
+      const my = (sy + ey) / 2;
+      const isVert = Math.abs(dx) < 6;
+      const isDiag = Math.abs(dx) >= 6 && Math.abs(dy) >= 6;
+      const lx = mx + (isVert ? 14 : 0);
+      const ly = my + (isVert || isDiag ? 0 : -11);
       const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
       text.setAttribute("class", `dm-fx-tag ${f.win ? "win" : "cand"}`);
       text.setAttribute("x", String(lx));

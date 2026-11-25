@@ -52,6 +52,7 @@ html {
 .demo .dm-v { display: flex; flex-direction: column; gap: 6px; min-width: 0; animation: dm-fade 0.25s ease both; }
 .demo .dm-vl { font-size: 12px; color: var(--muted); }
 .demo .dm-scroll { position: relative; overflow-x: auto; padding: 8px 4px; }
+.demo .dm-scroll.dm-pad-top { padding-top: 36px; padding-bottom: 10px; }
 .demo .dm-arr { display: flex; gap: 4px; width: max-content; min-width: 100%; }
 .demo .dm-cc { flex: 1 1 0; min-width: 30px; max-width: 58px; display: flex; flex-direction: column; align-items: stretch; gap: 3px; }
 .demo .dm-cell { position: relative; height: 38px; border: 1px solid var(--dm-line); border-radius: 6px; display: grid; place-items: center; font-family: var(--font-mono); font-weight: 600; font-size: 14px; font-variant-numeric: tabular-nums; background: var(--surface); transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, transform 0.25s ease; }
@@ -71,6 +72,8 @@ html {
 .demo .dm-bv { text-align: center; font-family: var(--font-mono); font-weight: 600; font-size: 12px; line-height: 1.3; }
 .demo .dm-grid { display: grid; gap: 4px; width: max-content; }
 .demo .dm-grid .dm-cell { width: 40px; height: 40px; }
+.demo .dm-grid.dm-grid-feeds { gap: 16px; }
+.demo .dm-grid.dm-grid-feeds .dm-cell { width: 44px; height: 44px; }
 .demo .dm-ax { display: grid; place-items: center; font-family: var(--font-mono); font-size: 10px; color: var(--muted); }
 .demo .dm-chips { display: flex; flex-wrap: wrap; gap: 6px; min-height: 30px; align-items: center; }
 .demo .dm-chip { font-family: var(--font-mono); font-size: 13px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--dm-line); background: var(--surface); transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
@@ -86,11 +89,13 @@ html {
 .demo .dm-fx-run svg.dm-g2 .edge.cut { animation: dm-cut 0.7s ease forwards; }
 .demo svg.dm-g2 .ah { fill: var(--muted); }
 .demo svg.dm-g2 .ah-on { fill: var(--dm-accent); }
+.demo svg.dm-g2 .ah-cut { fill: var(--danger, oklch(0.62 0.21 25)); }
 .demo svg.dm-g2 .dm-tnode { transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1); }
 .demo .dm-fx-run svg.dm-g2 .dm-tnode.dm-tswap circle.n { animation: dm-node-pop 0.5s ease both; }
-.demo svg.dm-g2 text.dm-lr { font-size: 9px; font-weight: 700; fill: var(--muted); }
-.demo svg.dm-g2 text.dm-cut-x { font-size: 13px; font-weight: 700; fill: var(--danger, oklch(0.62 0.21 25)); }
-.demo svg.dm-g2 text.dm-tprev { font-size: 10px; font-weight: 600; fill: var(--dm-warm); }
+.demo svg.dm-g2 text.dm-lr { font-size: 9px; font-weight: 700; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+.demo svg.dm-g2 text.dm-cut-x { font-size: 13px; font-weight: 700; fill: var(--danger, oklch(0.62 0.21 25)); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+.demo svg.dm-g2 text.dm-tprev { font-size: 10px; font-weight: 600; fill: var(--dm-warm); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+.demo svg.dm-g2 text.dm-edge-lbl { font-size: 10.5px; font-weight: 700; fill: var(--dm-accent); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 .demo svg.dm-g2 rect.n, .demo svg.dm-g2 circle.n { fill: var(--surface); stroke: var(--dm-line); stroke-width: 2; transition: fill 0.25s ease, stroke 0.25s ease; }
 .demo svg.dm-g2 text { transition: fill 0.25s ease; }
 .demo svg.dm-g2 .n.r-a { fill: var(--dm-accent); stroke: var(--dm-accent); }
@@ -104,7 +109,7 @@ html {
 .demo svg.dm-g2 text { font-family: var(--font-mono); font-size: 14px; font-weight: 600; fill: var(--foreground); text-anchor: middle; dominant-baseline: central; }
 .demo svg.dm-g2 text.inv { fill: var(--dm-on); }
 .demo svg.dm-g2 text.dimt { fill: var(--dm-dim-ink); }
-.demo svg.dm-g2 text.pt { font-size: 11px; fill: var(--dm-accent); }
+.demo svg.dm-g2 text.pt { font-size: 11px; fill: var(--dm-accent); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 .demo svg.dm-g2 text.nil { font-size: 12px; fill: var(--muted); font-weight: 400; }
 .demo svg.dm-g2 rect.bd { fill: var(--surface); stroke: var(--muted); stroke-width: 1.2; }
 .demo svg.dm-g2 text.bt { font-size: 10.5px; fill: var(--foreground); }

@@ -103,10 +103,15 @@ svg.g2 .edge { stroke: var(--muted); stroke-width: 1.8; fill: none; }
 svg.g2 .edge.on { stroke: var(--accent); stroke-width: 2.6; }
 svg.g2 .edge.warm { stroke: var(--warm); stroke-width: 2.2; stroke-dasharray: 4 3; }
 svg.g2 .edge.cut { stroke: #d9383a; stroke-width: 1.8; stroke-dasharray: 5 4; opacity: 0.45; }
-svg.g2 text.lr { font-size: 9px; font-weight: 700; fill: var(--muted); }
+svg.g2 text.lr { font-size: 9px; font-weight: 700; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+svg.g2 text.cut-x { font-size: 13px; font-weight: 700; fill: #d9383a; paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+svg.g2 text.tprev { font-size: 10px; font-weight: 600; fill: var(--warm); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+svg.g2 text.edge-lbl { font-size: 10.5px; font-weight: 700; fill: var(--accent); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 .cell.changed { line-height: 1.05; }
 .cell .prev { display: block; font-size: 9px; font-weight: 500; opacity: 0.7; text-decoration: line-through; line-height: 1; }
 svg.g2 .ah { fill: var(--muted); }
+svg.g2 .ah-on { fill: var(--accent); }
+svg.g2 .ah-cut { fill: #d9383a; }
 svg.g2 rect.n, svg.g2 circle.n { fill: var(--surface); stroke: var(--line); stroke-width: 2; transition: fill .25s ease; }
 svg.g2 .n.a { fill: var(--accent); stroke: var(--accent); }
 svg.g2 .n.b { fill: var(--warm); stroke: var(--warm); }
@@ -119,7 +124,7 @@ svg.g2 .n.k { fill: var(--ok-soft); stroke: var(--ok); }
 svg.g2 text { font-family: var(--font-mono); font-size: 14px; font-weight: 600; fill: var(--ink); text-anchor: middle; dominant-baseline: central; }
 svg.g2 text.inv { fill: var(--surface); }
 svg.g2 text.dimt { fill: var(--dim-ink); }
-svg.g2 text.pt { font-size: 11px; fill: var(--accent); }
+svg.g2 text.pt { font-size: 11px; fill: var(--accent); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 svg.g2 text.nil { font-size: 12px; fill: var(--muted); font-weight: 400; }
 svg.g2 rect.bd { fill: var(--surface); stroke: var(--muted); stroke-width: 1.2; }
 svg.g2 text.bt { font-size: 10.5px; fill: var(--ink); }
@@ -448,10 +453,10 @@ const SPEC = { presets: [{"label":"示例 1","args":{"cap":2,"ops":[["put",1,1],
   }
   let uid = 0;
   function vList(v) {
-    const nodes = v.nodes.map(norm), n = nodes.length, GAP = 62, BW = 40, BH = 32, X0 = 30, Y = 46;
-    const W = X0 * 2 + n * GAP, H = 108, id = "ah" + uid++;
+    const nodes = v.nodes.map(norm), n = nodes.length, GAP = 66, BW = 40, BH = 32, X0 = 30, Y = 46;
+    const W = X0 * 2 + n * GAP, H = 108, id = "ah" + uid++, idOn = "ahon" + uid++, idCut = "ahcut" + uid++;
     const cx = (i) => X0 + i * GAP + BW / 2;
-    let s = `<defs><marker id="${id}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
+    let s = `<defs><marker id="${id}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker><marker id="${idOn}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-on"></path></marker><marker id="${idCut}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-cut"></path></marker></defs>`;
     const next = v.next || nodes.map((_, i) => (i + 1 < n ? i + 1 : null));
     const edge = (i, j, cls, lift, arc) => {
       if (j === null || j === undefined) return;
@@ -461,11 +466,12 @@ const SPEC = { presets: [{"label":"示例 1","args":{"cap":2,"ops":[["put",1,1],
         else s += `<line class="edge ${cls}" x1="${cx(i)}" y1="${Y - BH / 2}" x2="${cx(i)}" y2="${Y - BH / 2 - 9}"></line><text class="nil" x="${cx(i)}" y="${Y - BH / 2 - 17}">∅</text>`;
         return;
       }
-      if (j === i + 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
-      else if (j === i - 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${id})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
-      else if (j === i) s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i) - 8} ${Y - BH / 2} C${cx(i) - 18} ${Y - 40} ${cx(i) + 18} ${Y - 40} ${cx(i) + 8} ${Y - BH / 2 - 2}"></path>`;
+      const mid = (cls || "").includes("cut") ? idCut : (cls || "").includes("on") ? idOn : id;
+      if (j === i + 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${mid})" x1="${cx(i) + BW / 2}" y1="${Y - 4}" x2="${cx(j) - BW / 2 - 2}" y2="${Y - 4}"></line>`;
+      else if (j === i - 1 && !arc) s += `<line class="edge ${cls}" marker-end="url(#${mid})" x1="${cx(i) - BW / 2}" y1="${Y + 6}" x2="${cx(j) + BW / 2 + 2}" y2="${Y + 6}"></line>`;
+      else if (j === i) s += `<path class="edge ${cls}" marker-end="url(#${mid})" d="M${cx(i) - 8} ${Y - BH / 2} C${cx(i) - 18} ${Y - 40} ${cx(i) + 18} ${Y - 40} ${cx(i) + 8} ${Y - BH / 2 - 2}"></path>`;
       else { const up = lift ? -1 : j > i ? -1 : 1, y0 = Y + up * (BH / 2), h = Math.min(30, 16 + Math.abs(j - i) * 4);
-        s += `<path class="edge ${cls}" marker-end="url(#${id})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`; }
+        s += `<path class="edge ${cls}" marker-end="url(#${mid})" d="M${cx(i)} ${y0} Q${(cx(i) + cx(j)) / 2} ${y0 + up * h * 1.6} ${cx(j) + (j > i ? -6 : 6)} ${y0 + up * 2}"></path>`; }
     };
     (v.ghostEdges || []).forEach(([i, j]) => edge(i, j, "cut", false));
     next.forEach((j, i) => { if (!nodes[i].hide) edge(i, j === null && v.showNil !== false && !nodes[i].noNil ? -1 : j, nodes[i].ecls || "", false); });
@@ -481,36 +487,74 @@ const SPEC = { presets: [{"label":"示例 1","args":{"cap":2,"ops":[["put",1,1],
     return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W}px;max-width:none"><g>${s}</g></svg></div></div>`;
   }
   function vTree(v) {
-    const pos = {}, parList = [], PAD = v.badges || v.ptrs ? 46 : 32, GAPX = v.badges || v.ptrs ? 54 : 46, TOP = v.ptrs ? 42 : 28, R = 17;
-    const visited = new Set(); let x = 0, depth = 0;
+    const pos = {}, parList = [], pm = ptrMap(v.ptrs);
+    const maxPtrLines = Math.max(0, ...Object.values(pm).map((a) => a.length));
+    const hasPrev = Object.values(v.nodes || {}).some((nd) => nd && nd.prev !== undefined && String(nd.prev) !== String(nd.v));
+    const PAD = v.badges || v.ptrs ? 46 : 32, GAPX = v.badges || v.ptrs ? 54 : 46;
+    const ptrHead = maxPtrLines ? 12 + maxPtrLines * 13 : 0, prevHead = hasPrev ? 14 : 0;
+    const TOP = 26 + Math.max(ptrHead, prevHead) + (ptrHead && prevHead ? 10 : 0), R = 17;
+    const visited = new Set(); let x = 0;
     const walk = (id, d) => { if (id === null || id === undefined) return; const sid = String(id); if (!v.nodes[id] || visited.has(sid)) return; visited.add(sid);
-      const nd = v.nodes[id]; walk(nd.l, d + 1); pos[sid] = [PAD + x * GAPX, TOP + d * 66]; x++; depth = Math.max(depth, d); walk(nd.r, d + 1);
+      const nd = v.nodes[id]; walk(nd.l, d + 1); pos[sid] = [PAD + x * GAPX, TOP + d * 66]; x++; walk(nd.r, d + 1);
       if (nd.l !== null && nd.l !== undefined && v.nodes[nd.l]) parList.push([sid, String(nd.l), "L"]);
       if (nd.r !== null && nd.r !== undefined && v.nodes[nd.r]) parList.push([sid, String(nd.r), "R"]); };
     walk(v.root, 0);
-    const pm = ptrMap(v.ptrs), maxPtrLines = Math.max(0, ...Object.values(pm).map((a) => a.length));
-    const W = Math.max(PAD * 2 + Math.max(0, x - 1) * GAPX, 140), H = TOP + 28 + depth * 66 + Math.max(v.badges ? 24 : 0, maxPtrLines ? 14 + maxPtrLines * 12 : 0);
-    const cls = v.cls || {}, on = new Set((v.on || []).map(String)), id0 = "tr" + uid++;
-    let s = `<defs><marker id="${id0}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker></defs>`;
-    for (const [f, t, side] of parList) { const p1 = pos[f], p2 = pos[t]; if (!p1 || !p2) continue;
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const cover = (x0, y0, x1, y1) => { minX = Math.min(minX, x0); minY = Math.min(minY, y0); maxX = Math.max(maxX, x1); maxY = Math.max(maxY, y1); };
+    for (const id of Object.keys(pos)) {
+      const [px, py] = pos[id], nd = v.nodes[id], nPtrs = (pm[id] || []).length;
+      const nPrev = nd && nd.prev !== undefined && String(nd.prev) !== String(nd.v) ? 1 : 0;
+      const hasB = v.badges && v.badges[id] !== undefined && v.badges[id] !== null;
+      cover(px - R - 14, py - (R + 6 + (nPrev ? 14 : 0) + (nPtrs ? 8 + nPtrs * 13 : 0)), px + R + 14, py + R + (hasB ? 24 : 10));
+    }
+    if (!Number.isFinite(minX)) cover(0, 0, 140, 80);
+    const cls = v.cls || {}, on = new Set((v.on || []).map(String)), id0 = "tr" + uid++, idOn = "tron" + uid++, idCut = "trcut" + uid++;
+    const cutEdges = v.cutEdges || [], cutSet = new Set(cutEdges.map(([a, b]) => `${a}->${b}`));
+    let s = `<defs><marker id="${id0}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker><marker id="${idOn}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-on"></path></marker><marker id="${idCut}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-cut"></path></marker></defs>`;
+    for (const [f, t, side] of parList) {
+      if (cutSet.has(`${f}->${t}`)) continue;
+      const p1 = pos[f], p2 = pos[t]; if (!p1 || !p2) continue;
       const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
       const sx = p1[0] + ux * R, sy = p1[1] + uy * R, ex = p2[0] - ux * (v.directed ? R + 3 : R), ey = p2[1] - uy * (v.directed ? R + 3 : R);
-      s += `<line class="edge ${on.has(f) && on.has(t) ? "on" : ""}"${v.directed ? ` marker-end="url(#${id0})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
-      if (v.lrLabels) s += `<text class="lr" x="${(sx + ex) / 2 + (side === "L" ? -8 : 8)}" y="${(sy + ey) / 2 - 2}">${side}</text>`; }
-    for (const [a, b] of (v.cutEdges || [])) { const p1 = pos[String(a)], p2 = pos[String(b)]; if (!p1 || !p2) continue;
-      s += `<line class="edge cut" x1="${p1[0]}" y1="${p1[1]}" x2="${p2[0]}" y2="${p2[1]}"></line>`; }
+      const isOn = on.has(f) && on.has(t);
+      s += `<line class="edge ${isOn ? "on" : ""}"${v.directed ? ` marker-end="url(#${isOn ? idOn : id0})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
+      if (v.lrLabels) {
+        const sgn = side === "L" ? 1 : -1, mx = (sx + ex) / 2 - uy * sgn * 10, my = (sy + ey) / 2 + ux * sgn * 10;
+        s += `<text class="lr" x="${mx}" y="${my}">${side}</text>`;
+        cover(mx - 10, my - 10, mx + 10, my + 10);
+      }
+    }
+    for (const [a, b] of cutEdges) {
+      const p1 = pos[String(a)], p2 = pos[String(b)]; if (!p1 || !p2) continue;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+      const sx = p1[0] + ux * R, sy = p1[1] + uy * R, ex = p2[0] - ux * (v.directed ? R + 3 : R), ey = p2[1] - uy * (v.directed ? R + 3 : R);
+      s += `<line class="edge cut"${v.directed ? ` marker-end="url(#${idCut})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
+      s += `<text class="cut-x" x="${(sx + ex) / 2}" y="${(sy + ey) / 2}">×</text>`;
+    }
     for (const ex of (v.extra || [])) { const p1 = pos[String(ex.from)], p2 = pos[String(ex.to)]; if (!p1 || !p2) continue;
       const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
       const sx = p1[0] + ux * R, sy = p1[1] + uy * R, exX = p2[0] - ux * (R + 3), exY = p2[1] - uy * (R + 3), bend = ex.bend ?? 0.35;
-      s += `<path class="edge ${ex.cls || "on"}" marker-end="url(#${id0})" d="M${sx} ${sy} Q${(sx + exX) / 2 - uy * bend * 64} ${(sy + exY) / 2 + ux * bend * 64} ${exX} ${exY}"></path>`; }
-    for (const id of Object.keys(pos)) { const [px, py] = pos[id], c = (cls[id] || "").split(" ")[0];
-      s += `<circle class="n ${cls[id] || ""}" cx="${px}" cy="${py}" r="${R}"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(v.nodes[id].v)}</text>`;
+      const cx = (sx + exX) / 2 - uy * bend * 64, cy = (sy + exY) / 2 + ux * bend * 64, eCls = ex.cls || "on";
+      s += `<path class="edge ${eCls}" marker-end="url(#${eCls.includes("on") ? idOn : id0})" d="M${sx} ${sy} Q${cx} ${cy} ${exX} ${exY}"></path>`;
+      const mx = (sx + 2 * cx + exX) / 4, my = (sy + 2 * cy + exY) / 4;
+      cover(mx - 18, my - 14, mx + 18, my + 14);
+      if (ex.label) {
+        const sign = bend >= 0 ? 1 : -1, lx = mx - uy * sign * 12, ly = my + ux * sign * 12;
+        s += `<text class="edge-lbl" x="${lx}" y="${ly}">${E(ex.label)}</text>`;
+        cover(lx - ex.label.length * 4 - 8, ly - 10, lx + ex.label.length * 4 + 8, ly + 10);
+      }
+    }
+    for (const id of Object.keys(pos)) { const [px, py] = pos[id], nd = v.nodes[id], c = (cls[id] || "").split(" ")[0];
+      const nodeHasPrev = nd && nd.prev !== undefined && String(nd.prev) !== String(nd.v);
+      s += `<circle class="n ${cls[id] || ""}" cx="${px}" cy="${py}" r="${R}"></circle><text class="${INV.has(c) ? "inv" : c === "d" ? "dimt" : ""}" x="${px}" y="${py}">${show(nd.v)}</text>`;
+      if (nodeHasPrev) s += `<text class="tprev" x="${px}" y="${py - (R + 8)}">${show(nd.prev)}→</text>`;
       const b = v.badges && v.badges[id];
       if (b !== undefined && b !== null) { const t = String(b), w = Math.max(26, t.length * 7 + 10);
         s += `<rect class="bd" x="${px - w / 2}" y="${py + 21}" width="${w}" height="16" rx="8"></rect><text class="bt" x="${px}" y="${py + 29}">${E(t)}</text>`; }
-      (pm[id] || []).forEach((nm, k) => { s += `<text class="pt" x="${px}" y="${py + (b != null ? 47 : 28) + k * 12}">${E(nm)}</text>`; });
+      (pm[id] || []).forEach((nm, k) => { s += `<text class="pt" x="${px}" y="${py - (R + 10 + (nodeHasPrev ? 13 : 0) + k * 13)}">${E(nm)}</text>`; });
     }
-    return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="0 0 ${W} ${H}" style="width:${W * 1.15}px;max-width:100%"><g>${s}</g></svg></div></div>`;
+    const vbW = Math.max(140, Math.round(maxX - minX)), vbH = Math.max(80, Math.round(maxY - minY));
+    return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="${Math.round(minX)} ${Math.round(minY)} ${vbW} ${vbH}" style="width:${Math.round(vbW * 1.12)}px;max-width:100%"><g>${s}</g></svg></div></div>`;
   }
   const R = { array: vArray, bars: vBars, grid: vGrid, chips: vChips, list: vList, tree: vTree, note: (v) => `<div class="v">${lab(v)}<div>${v.html}</div></div>` };
 
