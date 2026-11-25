@@ -106,7 +106,8 @@ svg.g2 .edge.cut { stroke: #d9383a; stroke-width: 1.8; stroke-dasharray: 5 4; op
 svg.g2 text.lr { font-size: 9px; font-weight: 700; fill: var(--muted); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 svg.g2 text.cut-x { font-size: 13px; font-weight: 700; fill: #d9383a; paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
 svg.g2 text.tprev { font-size: 10px; font-weight: 600; fill: var(--warm); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
-svg.g2 text.edge-lbl { font-size: 10.5px; font-weight: 700; fill: var(--accent); paint-order: stroke; stroke: var(--surface); stroke-width: 3.5px; stroke-linejoin: round; }
+svg.g2 rect.edge-bg { fill: var(--surface); stroke: var(--accent); stroke-opacity: 0.45; stroke-width: 1.2; }
+svg.g2 text.edge-lbl { font-size: 10.5px; font-weight: 700; fill: var(--accent); }
 .cell.changed { line-height: 1.05; }
 .cell .prev { display: block; font-size: 9px; font-weight: 500; opacity: 0.7; text-decoration: line-through; line-height: 1; }
 svg.g2 .ah { fill: var(--muted); }
@@ -559,14 +560,16 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5]},"note":"he
     }
     if (!Number.isFinite(minX)) cover(0, 0, 140, 80);
     const cls = v.cls || {}, on = new Set((v.on || []).map(String)), id0 = "tr" + uid++, idOn = "tron" + uid++, idCut = "trcut" + uid++;
+    const onEdgeSet = new Set((v.onEdges || []).map(([a, b]) => `${a}->${b}`));
     const cutEdges = v.cutEdges || [], cutSet = new Set(cutEdges.map(([a, b]) => `${a}->${b}`));
     let s = `<defs><marker id="${id0}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker><marker id="${idOn}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-on"></path></marker><marker id="${idCut}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-cut"></path></marker></defs>`;
+    let lblSvg = "";
     for (const [f, t, side] of parList) {
       if (cutSet.has(`${f}->${t}`)) continue;
       const p1 = pos[f], p2 = pos[t]; if (!p1 || !p2) continue;
       const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
       const sx = p1[0] + ux * R, sy = p1[1] + uy * R, ex = p2[0] - ux * (v.directed ? R + 3 : R), ey = p2[1] - uy * (v.directed ? R + 3 : R);
-      const isOn = on.has(f) && on.has(t);
+      const isOn = (on.has(f) && on.has(t)) || onEdgeSet.has(`${f}->${t}`);
       s += `<line class="edge ${isOn ? "on" : ""}"${v.directed ? ` marker-end="url(#${isOn ? idOn : id0})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
       if (v.lrLabels) {
         const sgn = side === "L" ? 1 : -1, mx = (sx + ex) / 2 - uy * sgn * 10, my = (sy + ey) / 2 + ux * sgn * 10;
@@ -589,9 +592,14 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5]},"note":"he
       const mx = (sx + 2 * cx + exX) / 4, my = (sy + 2 * cy + exY) / 4;
       cover(mx - 18, my - 14, mx + 18, my + 14);
       if (ex.label) {
-        const sign = bend >= 0 ? 1 : -1, lx = mx - uy * sign * 12, ly = my + ux * sign * 12;
-        s += `<text class="edge-lbl" x="${lx}" y="${ly}">${E(ex.label)}</text>`;
-        cover(lx - ex.label.length * 4 - 8, ly - 10, lx + ex.label.length * 4 + 8, ly + 10);
+        const sign = bend >= 0 ? 1 : -1, nx = -uy * sign, ny = ux * sign;
+        const tw = [...ex.label].reduce((acc, ch) => acc + (/[\u4e00-\u9fff]/.test(ch) ? 11 : 6.5), 0);
+        const pw = Math.ceil(tw + 12), ph = 18;
+        const dist = Math.abs(nx) * (pw / 2 * 0.78) + Math.abs(ny) * (ph / 2 + 4) + 6;
+        const lx = mx + nx * dist, ly = my + ny * dist;
+        lblSvg += `<rect class="edge-bg" x="${lx - pw / 2}" y="${ly - ph / 2}" width="${pw}" height="${ph}" rx="6"></rect>`;
+        lblSvg += `<text class="edge-lbl" x="${lx}" y="${ly}">${E(ex.label)}</text>`;
+        cover(lx - pw / 2 - 4, ly - ph / 2 - 4, lx + pw / 2 + 4, ly + ph / 2 + 4);
       }
     }
     for (const id of Object.keys(pos)) { const [px, py] = pos[id], nd = v.nodes[id], c = (cls[id] || "").split(" ")[0];
@@ -604,7 +612,7 @@ const SPEC = { presets: [{"label":"示例 1","args":{"v":[1,2,3,4,5]},"note":"he
       (pm[id] || []).forEach((nm, k) => { s += `<text class="pt" x="${px}" y="${py - (R + 10 + (nodeHasPrev ? 13 : 0) + k * 13)}">${E(nm)}</text>`; });
     }
     const vbW = Math.max(140, Math.round(maxX - minX)), vbH = Math.max(80, Math.round(maxY - minY));
-    return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="${Math.round(minX)} ${Math.round(minY)} ${vbW} ${vbH}" style="width:${Math.round(vbW * 1.12)}px;max-width:100%"><g>${s}</g></svg></div></div>`;
+    return `<div class="v">${lab(v)}<div class="scroll"><svg class="g2" viewBox="${Math.round(minX)} ${Math.round(minY)} ${vbW} ${vbH}" style="width:${Math.round(vbW * 1.12)}px;max-width:100%"><g>${s}${lblSvg}</g></svg></div></div>`;
   }
   const R = { array: vArray, bars: vBars, grid: vGrid, chips: vChips, list: vList, tree: vTree, note: (v) => `<div class="v">${lab(v)}<div>${v.html}</div></div>` };
 

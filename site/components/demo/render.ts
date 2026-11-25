@@ -224,8 +224,6 @@ function vList(v: View) {
 }
 
 function vTree(v: View) {
-  const pos: Record<string, [number, number]> = {};
-  const parList: { from: string; to: string; side: "L" | "R" }[] = [];
   const pm = ptrMap(v.ptrs);
   const maxPtrLines = Math.max(0, ...Object.values(pm).map((arr) => arr.length));
   const hasPrev = Object.values(v.nodes || {}).some((nd: any) => nd && nd.prev !== undefined && String(nd.prev) !== String(nd.v));
@@ -236,23 +234,37 @@ function vTree(v: View) {
   const TOP = 26 + Math.max(ptrHead, prevHead) + (ptrHead && prevHead ? 10 : 0);
   const LEVEL_Y = 66;
   const R = 17;
-  const visited = new Set<string>();
-  let x = 0;
 
-  const walk = (id: any, d: number) => {
-    if (id === null || id === undefined) return;
-    const sid = String(id);
-    if (!v.nodes[id] || visited.has(sid)) return;
-    visited.add(sid);
-    const nd = v.nodes[id];
-    walk(nd.l, d + 1);
-    pos[sid] = [PAD + x * GAPX, TOP + d * LEVEL_Y];
-    x++;
-    walk(nd.r, d + 1);
-    if (nd.l !== null && nd.l !== undefined && v.nodes[nd.l]) parList.push({ from: sid, to: String(nd.l), side: "L" });
-    if (nd.r !== null && nd.r !== undefined && v.nodes[nd.r]) parList.push({ from: sid, to: String(nd.r), side: "R" });
+  const layoutTree = (nodesObj: Record<string, any>, rootId: any) => {
+    const pos: Record<string, [number, number]> = {};
+    const parList: { from: string; to: string; side: "L" | "R" }[] = [];
+    const visited = new Set<string>();
+    let x = 0;
+    const walk = (id: any, d: number) => {
+      if (id === null || id === undefined) return;
+      const sid = String(id);
+      if (!nodesObj?.[id] || visited.has(sid)) return;
+      visited.add(sid);
+      const nd = nodesObj[id];
+      walk(nd.l, d + 1);
+      pos[sid] = [PAD + x * GAPX, TOP + d * LEVEL_Y];
+      x++;
+      walk(nd.r, d + 1);
+      if (nd.l !== null && nd.l !== undefined && nodesObj[nd.l]) parList.push({ from: sid, to: String(nd.l), side: "L" });
+      if (nd.r !== null && nd.r !== undefined && nodesObj[nd.r]) parList.push({ from: sid, to: String(nd.r), side: "R" });
+    };
+    walk(rootId, 0);
+    return { pos, parList };
   };
-  walk(v.root, 0);
+
+  const { pos, parList } = layoutTree(v.nodes, v.root);
+  const prevPos = v.prevNodes ? layoutTree(v.prevNodes, v.root).pos : null;
+  const morphIds = prevPos
+    ? Object.keys(pos).filter((id) => prevPos[id] && (prevPos[id][0] !== pos[id][0] || prevPos[id][1] !== pos[id][1]))
+    : [];
+  const morphData = morphIds.length && prevPos
+    ? { R, directed: !!v.directed, lrLabels: !!v.lrLabels, from: prevPos, to: pos }
+    : null;
 
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   const cover = (x0: number, y0: number, x1: number, y1: number) => {
@@ -261,20 +273,25 @@ function vTree(v: View) {
     maxX = Math.max(maxX, x1);
     maxY = Math.max(maxY, y1);
   };
-  for (const id of Object.keys(pos)) {
-    const [px, py] = pos[id];
-    const nd = v.nodes[id];
-    const nPtrs = (pm[id] || []).length;
-    const nPrev = nd && nd.prev !== undefined && String(nd.prev) !== String(nd.v) ? 1 : 0;
-    const hasB = v.badges && v.badges[id] !== undefined && v.badges[id] !== null;
-    const topReach = R + 6 + (nPrev ? 14 : 0) + (nPtrs ? 8 + nPtrs * 13 : 0);
-    const botReach = R + (hasB ? 24 : 10);
-    cover(px - R - 14, py - topReach, px + R + 14, py + botReach);
-  }
+  const coverNodes = (pMap: Record<string, [number, number]>, nodesObj: Record<string, any>) => {
+    for (const id of Object.keys(pMap)) {
+      const [px, py] = pMap[id];
+      const nd = nodesObj?.[id];
+      const nPtrs = (pm[id] || []).length;
+      const nPrev = nd && nd.prev !== undefined && String(nd.prev) !== String(nd.v) ? 1 : 0;
+      const hasB = v.badges && v.badges[id] !== undefined && v.badges[id] !== null;
+      const topReach = R + 6 + (nPrev ? 14 : 0) + (nPtrs ? 8 + nPtrs * 13 : 0);
+      const botReach = R + (hasB ? 24 : 10);
+      cover(px - R - 14, py - topReach, px + R + 14, py + botReach);
+    }
+  };
+  coverNodes(pos, v.nodes);
+  if (morphData && prevPos) coverNodes(prevPos, v.prevNodes);
   if (!Number.isFinite(minX)) cover(0, 0, 140, 80);
 
   const cls = v.cls || {};
   const on = new Set((v.on || []).map(String));
+  const onEdgeSet = new Set(((v.onEdges || []) as [string | number, string | number][]).map(([a, b]) => `${a}->${b}`));
   const animEdges = new Set(((v.animEdges || []) as [string | number, string | number][]).map(([a, b]) => `${a}->${b}`));
   const cutEdges = (v.cutEdges || []) as [string | number, string | number][];
   const cutSet = new Set(cutEdges.map(([a, b]) => `${a}->${b}`));
@@ -285,19 +302,22 @@ function vTree(v: View) {
   let s = (v.directed || (v.extra && v.extra.length) || cutEdges.length)
     ? `<defs><marker id="${ahId}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah"></path></marker><marker id="${ahOnId}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-on"></path></marker><marker id="${ahCutId}" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L8 4L0 8z" class="ah-cut"></path></marker></defs>`
     : "";
+  let lblSvg = "";
 
-  const drawEdge = (x1: number, y1: number, x2: number, y2: number, eCls: string, arrow: boolean, side?: "L" | "R", cut?: boolean) => {
+  const drawEdge = (x1: number, y1: number, x2: number, y2: number, eCls: string, arrow: boolean, side?: "L" | "R", cut?: boolean, fromId?: string, toId?: string) => {
     const dx = x2 - x1, dy = y2 - y1, d = Math.hypot(dx, dy) || 1;
     const ux = dx / d, uy = dy / d;
     const sx = x1 + ux * R, sy = y1 + uy * R;
     const ex = x2 - ux * (arrow ? R + 3 : R), ey = y2 - uy * (arrow ? R + 3 : R);
     const mid = cut ? ahCutId : eCls.includes("on") ? ahOnId : ahId;
-    s += `<line class="edge ${eCls}"${arrow ? ` marker-end="url(#${mid})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
+    const endAttr = !cut && fromId !== undefined && toId !== undefined ? ` data-from="${E(fromId)}" data-to="${E(toId)}"` : "";
+    s += `<line class="edge ${eCls}"${endAttr}${arrow ? ` marker-end="url(#${mid})"` : ""} x1="${sx}" y1="${sy}" x2="${ex}" y2="${ey}"></line>`;
     if (side && v.lrLabels) {
       const nx = -uy, ny = ux, sgn = side === "L" ? 1 : -1;
       const mx = (sx + ex) / 2 + nx * sgn * 10;
       const my = (sy + ey) / 2 + ny * sgn * 10;
-      s += `<text class="dm-lr" x="${mx}" y="${my}">${side}</text>`;
+      const lblAttr = fromId !== undefined && toId !== undefined ? ` data-efrom="${E(fromId)}" data-eto="${E(toId)}" data-eside="${side}"` : "";
+      s += `<text class="dm-lr"${lblAttr} x="${mx}" y="${my}">${side}</text>`;
       cover(mx - 10, my - 10, mx + 10, my + 10);
     }
     if (cut) {
@@ -310,10 +330,11 @@ function vTree(v: View) {
     if (cutSet.has(`${e.from}->${e.to}`)) continue;
     const p1 = pos[e.from], p2 = pos[e.to];
     if (!p1 || !p2) continue;
-    const isOn = on.has(e.from) && on.has(e.to);
-    const isAnim = animEdges.has(`${e.from}->${e.to}`);
+    const key = `${e.from}->${e.to}`;
+    const isOn = (on.has(e.from) && on.has(e.to)) || onEdgeSet.has(key);
+    const isAnim = animEdges.has(key);
     const eCls = `${isOn ? "on" : ""}${isAnim ? " draw" : ""}`.trim();
-    drawEdge(p1[0], p1[1], p2[0], p2[1], eCls, !!v.directed, e.side);
+    drawEdge(p1[0], p1[1], p2[0], p2[1], eCls, !!v.directed, e.side, false, e.from, e.to);
   }
 
   for (const [a, b] of cutEdges) {
@@ -338,11 +359,16 @@ function vTree(v: View) {
     const mx = (sx + 2 * cx + exX) / 4, my = (sy + 2 * cy + exY) / 4;
     cover(mx - 18, my - 14, mx + 18, my + 14);
     if (ex.label) {
+      // 胶囊标牌放到最顶层并沿弯弧外侧法线推开半个胶囊宽高，彻底避免箭头/线条压住文字
       const sign = bend >= 0 ? 1 : -1;
-      const lx = mx - uy * sign * 12;
-      const ly = my + ux * sign * 12;
-      s += `<text class="dm-edge-lbl" x="${lx}" y="${ly}">${E(ex.label)}</text>`;
-      cover(lx - ex.label.length * 4 - 8, ly - 10, lx + ex.label.length * 4 + 8, ly + 10);
+      const nx = -uy * sign, ny = ux * sign;
+      const tw = [...ex.label].reduce((acc, ch) => acc + (/[\u4e00-\u9fff]/.test(ch) ? 11 : 6.5), 0);
+      const pw = Math.ceil(tw + 12), ph = 18;
+      const dist = Math.abs(nx) * (pw / 2 * 0.78) + Math.abs(ny) * (ph / 2 + 4) + 6;
+      const lx = mx + nx * dist, ly = my + ny * dist;
+      lblSvg += `<rect class="dm-edge-bg" x="${lx - pw / 2}" y="${ly - ph / 2}" width="${pw}" height="${ph}" rx="6"></rect>`;
+      lblSvg += `<text class="dm-edge-lbl" x="${lx}" y="${ly}">${E(ex.label)}</text>`;
+      cover(lx - pw / 2 - 4, ly - ph / 2 - 4, lx + pw / 2 + 4, ly + ph / 2 + 4);
     }
   }
 
@@ -387,7 +413,8 @@ function vTree(v: View) {
   }
   const vbW = Math.max(140, Math.round(maxX - minX));
   const vbH = Math.max(80, Math.round(maxY - minY));
-  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2" viewBox="${Math.round(minX)} ${Math.round(minY)} ${vbW} ${vbH}" style="width:${Math.round(vbW * 1.12)}px;max-width:100%"><g>${s}</g></svg></div></div>`;
+  const morphAttr = morphData ? ` data-morph="${E(JSON.stringify(morphData))}"` : "";
+  return `<div class="dm-v">${lab(v)}<div class="dm-scroll"><svg class="dm-g2"${morphAttr} viewBox="${Math.round(minX)} ${Math.round(minY)} ${vbW} ${vbH}" style="width:${Math.round(vbW * 1.12)}px;max-width:100%"><g>${s}${lblSvg}</g></svg></div></div>`;
 }
 
 /**

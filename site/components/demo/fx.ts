@@ -10,7 +10,16 @@ type FeedItem = {
   win?: boolean;
 };
 
+type TreeMorphData = {
+  R: number;
+  directed: boolean;
+  lrLabels: boolean;
+  from: Record<string, [number, number]>;
+  to: Record<string, [number, number]>;
+};
+
 let fxUid = 0;
+const activeRafs = new WeakMap<HTMLElement, number[]>();
 
 function reducedMotion(): boolean {
   return typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -212,10 +221,97 @@ function runFeeds(scroll: HTMLElement, root: HTMLElement, feeds: FeedItem[], red
   if (svg.childNodes.length > 2) scroll.appendChild(svg);
 }
 
+function runTreeMorph(container: HTMLElement, svg: SVGSVGElement, data: TreeMorphData, reduce: boolean) {
+  if (reduce) return;
+  const { R, directed, from, to } = data;
+  const nodes = new Map<string, HTMLElement>();
+  svg.querySelectorAll<HTMLElement>(".dm-tnode[data-key]").forEach((el) => {
+    const k = el.getAttribute("data-key") || "";
+    if (k.startsWith("tn-")) {
+      el.style.transition = "none";
+      nodes.set(k.slice(3), el);
+    }
+  });
+  const lines = Array.from(svg.querySelectorAll<SVGLineElement>("line[data-from][data-to]"));
+  const lrTexts = Array.from(svg.querySelectorAll<SVGTextElement>("text.dm-lr[data-efrom][data-eto]"));
+
+  const ids = Object.keys(to);
+  const lerpPos = (t: number) => {
+    const cur: Record<string, [number, number]> = {};
+    for (const id of ids) {
+      const a = from[id] || to[id];
+      const b = to[id];
+      cur[id] = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+    }
+    return cur;
+  };
+
+  const applyFrame = (pMap: Record<string, [number, number]>) => {
+    for (const id of ids) {
+      const el = nodes.get(id);
+      const p = pMap[id];
+      if (el && p) el.style.transform = `translate(${p[0]}px,${p[1]}px)`;
+    }
+    for (const line of lines) {
+      const fid = line.getAttribute("data-from") || "";
+      const tid = line.getAttribute("data-to") || "";
+      const p1 = pMap[fid], p2 = pMap[tid];
+      if (!p1 || !p2) continue;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1;
+      const ux = dx / d, uy = dy / d;
+      line.setAttribute("x1", String(p1[0] + ux * R));
+      line.setAttribute("y1", String(p1[1] + uy * R));
+      line.setAttribute("x2", String(p2[0] - ux * (directed ? R + 3 : R)));
+      line.setAttribute("y2", String(p2[1] - uy * (directed ? R + 3 : R)));
+    }
+    for (const lbl of lrTexts) {
+      const fid = lbl.getAttribute("data-efrom") || "";
+      const tid = lbl.getAttribute("data-eto") || "";
+      const side = lbl.getAttribute("data-eside") || "L";
+      const p1 = pMap[fid], p2 = pMap[tid];
+      if (!p1 || !p2) continue;
+      const dx = p2[0] - p1[0], dy = p2[1] - p1[1], d = Math.hypot(dx, dy) || 1;
+      const ux = dx / d, uy = dy / d;
+      const sx = p1[0] + ux * R, sy = p1[1] + uy * R;
+      const ex = p2[0] - ux * (directed ? R + 3 : R), ey = p2[1] - uy * (directed ? R + 3 : R);
+      const sgn = side === "L" ? 1 : -1;
+      lbl.setAttribute("x", String((sx + ex) / 2 - uy * sgn * 10));
+      lbl.setAttribute("y", String((sy + ey) / 2 + ux * sgn * 10));
+    }
+  };
+
+  // 先在原位停顿 120ms 看清变形前位置，再 800ms 平滑展开，节点和边同步移动
+  applyFrame(lerpPos(0));
+  const HOLD = 120;
+  const DUR = 800;
+  const t0 = performance.now();
+  const list = activeRafs.get(container) || [];
+  const step = (now: number) => {
+    const elapsed = now - t0;
+    if (elapsed < HOLD) {
+      list.push(requestAnimationFrame(step));
+      return;
+    }
+    const raw = Math.min(1, (elapsed - HOLD) / DUR);
+    const eased = raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
+    applyFrame(lerpPos(eased));
+    if (raw < 1) {
+      list.push(requestAnimationFrame(step));
+    } else {
+      applyFrame(to);
+      nodes.forEach((el) => { el.style.transition = ""; });
+    }
+  };
+  list.push(requestAnimationFrame(step));
+  activeRafs.set(container, list);
+}
+
 /** 在 morphInto 之后执行当前步骤的动态动画；也可由「重播本步」重复触发 */
 export function playDemoFx(container: HTMLElement | null) {
   if (!container) return;
 
+  for (const id of activeRafs.get(container) || []) cancelAnimationFrame(id);
+  activeRafs.delete(container);
   container.querySelectorAll(".dm-fx-overlay, .dm-fly-chip").forEach((el) => el.remove());
 
   const reduce = reducedMotion();
@@ -225,6 +321,13 @@ export function playDemoFx(container: HTMLElement | null) {
     void container.offsetWidth;
     container.classList.add("dm-fx-run");
   }
+
+  container.querySelectorAll<SVGSVGElement>("svg[data-morph]").forEach((svg) => {
+    try {
+      const data = JSON.parse(svg.getAttribute("data-morph") || "{}") as TreeMorphData;
+      if (data?.from && data?.to) runTreeMorph(container, svg, data, reduce);
+    } catch { /* 忽略格式异常 */ }
+  });
 
   container.querySelectorAll<HTMLElement>("[data-swaps]").forEach((el) => {
     const scroll = el.closest<HTMLElement>(".dm-scroll");

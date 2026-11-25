@@ -84,6 +84,8 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
         directed: true,
         lrLabels: true,
         ptrs: { cur: cur >= 0 ? cur : null, pre: pre >= 0 ? pre : null },
+        ...(opts.prevNodes ? { prevNodes: opts.prevNodes } : {}),
+        ...(opts.onEdges ? { onEdges: opts.onEdges } : {}),
         ...(opts.extra ? { extra: opts.extra } : {}),
         ...(opts.cutEdges ? { cutEdges: opts.cutEdges } : {}),
         ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),
@@ -144,24 +146,29 @@ r = T([1,2,3,4,5,6,7]); s.flatten(r); assert chain(r) == [1,2,4,5,3,6,7]
 
         snap(
           "cur.right = cur.left",
-          `现在让 ${nd.v}.right 改指向左孩子 <b>${N[oldLeft].v}</b>${oldRight !== null ? `（断开 ${nd.v} 原先指往 ${N[oldRight].v} 的右指针）` : ""}。`,
+          `现在让 ${nd.v}.right 改指向左孩子 <b>${N[oldLeft].v}</b>${oldRight !== null ? `（断开 ${nd.v} 原先指往 ${N[oldRight].v} 的右指针，${N[pre].v}.right 已接好 ${N[oldRight].v}）` : ""}。`,
           view(cur, pre, {
             leftSub,
             ...(oldRight !== null ? { cutEdges: [[cur, oldRight]] } : {}),
-            extra: [{ from: cur, to: oldLeft, cls: "on", anim: "draw", bend: -0.38, label: "new right" }],
+            extra: [
+              ...(oldRight !== null ? [{ from: pre, to: oldRight, cls: "on", bend: 0.36, label: "right" }] : []),
+              { from: cur, to: oldLeft, cls: "on", anim: "draw", bend: -0.38, label: "新 right" },
+            ],
           }),
           { at: "move" },
         );
 
-        // 真正改指针并触发同 key 节点平滑移动（glide）
+        // 先记下改指针前的树结构，改完后用 prevNodes 做整棵树的平滑展开过渡（可重播）
+        const beforeNodes = snapNodes();
         N[pre].r = oldRight;
         nd.r = oldLeft;
         nd.l = null;
         snap(
           "cur.left = None",
-          `把 ${nd.v}.left 置空。左子树已经顺畅接到了 ${nd.v} 的右边，${N[pre].v} 后面连着原来的右子树。`,
+          `把 ${nd.v}.left 置空：整棵左子树（以 <b>${N[oldLeft].v}</b> 为根）顺着新 right 指针整体移到 ${nd.v} 右侧${oldRight !== null ? `，原来的右子树（以 <b>${N[oldRight].v}</b> 为根）顺势挂在 ${N[pre].v} 右边` : ""}。可点「重播本步」反复看挪动过程。`,
           view(cur, pre, {
-            animEdges: [[cur, oldLeft], ...(oldRight !== null ? [[pre, oldRight]] : [])],
+            prevNodes: beforeNodes,
+            onEdges: [[cur, oldLeft], ...(oldRight !== null ? [[pre, oldRight]] : [])],
           }),
           { at: "clear" },
         );
