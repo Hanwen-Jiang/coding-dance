@@ -43,21 +43,57 @@ assert s.rob([2,1,1,2]) == 4
   build(a, snap) {
     const nums = a.nums, n = nums.length, dp = Array(n + 1).fill(null);
     dp[0] = 0; dp[1] = nums[0];
-    const view = (i, fin) => [
+    const view = (i, fin, opts = {}) => [
       { t: "array", label: "nums（第 1 间到第 n 间）", idxFrom: 1, items: nums.map((v, k) => ({ v, cls: k === i - 1 ? "b" : "" })), ptrs: {} },
       // dp[0]、dp[1] 是边界（虚线）：直接给定，公式从 dp[2] 开始才用
-      { t: "array", label: "dp[i]：前 i 间最多偷多少", items: dp.map((v, k) => {
-        const used = i >= 0 && (k === i - 1 || k === i - 2);
-        return { v, cls: fin && k === n ? "c" : k === i ? "a" : k < 2 ? (used ? "x e" : "x") : used ? "e" : "" };
-      }), ptrs: { i: i >= 0 ? i : null } },
+      {
+        t: "array",
+        label: "dp[i]：前 i 间最多偷多少",
+        items: dp.map((v, k) => {
+          const used = i >= 0 && (k === i - 1 || k === i - 2);
+          return { v, cls: fin && k === n ? "c" : k === i ? "a" : k < 2 ? (used ? "x e" : "x") : used ? "e" : "" };
+        }),
+        ptrs: { i: i >= 0 ? i : null },
+        feeds: (opts.feeds || []).slice(),
+      },
     ];
-    snap("边界", `dp[0] = 0：一间房都没有，偷不到钱。dp[1] = ${nums[0]}：只有第 1 间，偷了最多。<br>dp 多开一位（dp[0]），算 dp[2] 时用到的 dp[i − 2] 才不会越界。`, view(-1), { at: "init" });
+    let bestSoFar = dp[1];
+    snap(
+      "边界",
+      `dp[0] = 0：一间房都没有，偷不到钱。dp[1] = ${nums[0]}：只有第 1 间，偷了最多。<br>dp 多开一位（dp[0]），算 dp[2] 时用到的 dp[i − 2] 才不会越界。`,
+      view(-1, false),
+      { at: "init", facts: [["dp[0]", 0], ["dp[1]", dp[1]], ["目前最多", bestSoFar]] },
+    );
     for (let i = 2; i <= n; i++) {
       const no = dp[i - 1], yes = dp[i - 2] + nums[i - 1];
+      const prevBest = bestSoFar;
       dp[i] = Math.max(no, yes);
-      snap(`第 ${i} 间`, `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? "，偷" : "，不偷"}。`, view(i), { at: "step", facts: [["不偷", no], ["偷", yes]] });
+      bestSoFar = dp[i];
+      snap(
+        `第 ${i} 间`,
+        `不偷第 ${i} 间：dp[${i - 1}] = ${no}。偷第 ${i} 间：dp[${i - 2}] + ${nums[i - 1]} = ${yes}。取大的，dp[${i}] = <b>${dp[i]}</b>${yes > no ? "，偷" : "，不偷"}。`,
+        view(i, false, {
+          feeds: [
+            { from: i - 1, to: i, win: no >= yes, label: "不偷" },
+            { from: i - 2, to: i, win: yes > no, label: `+${nums[i - 1]}` },
+          ],
+        }),
+        {
+          at: "step",
+          facts: [
+            ["不偷", no],
+            ["偷", yes],
+            bestSoFar !== prevBest ? ["目前最多", bestSoFar, prevBest] : ["目前最多", bestSoFar],
+          ],
+        },
+      );
     }
-    snap("完成", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), { at: "done", kind: "ok", ans: dp[n] });
+    snap("完成", `${n} 间房最多能偷 <b>${dp[n]}</b>。`, view(-1, true), {
+      at: "done",
+      kind: "ok",
+      ans: dp[n],
+      facts: [["最多能偷", dp[n]]],
+    });
   },
   alts: [{
     t: "两个变量滚动（空间压缩）",
@@ -67,7 +103,7 @@ assert s.rob([2,1,1,2]) == 4
     build(a, snap) {
       const nums = a.nums, n = nums.length, vals = [0, 0];   // vals[p + 1] 是 dp[p]，dp[-1] 也当成 0
       let k = 0;                                              // 下一间要处理的房子（下标）；cur 是 dp[k]，prev 是 dp[k - 1]
-      const view = (fin) => [
+      const view = (fin, opts = {}) => [
         { t: "array", label: "nums（第 1 间到第 n 间）", idxFrom: 1, items: nums.map((v, t) => ({ v, cls: t === k - 1 && !fin ? "b" : t < k - 1 ? "d" : "" })) },
         {
           t: "array", label: "dp（灰色是已经丢掉的，代码里只存 prev、cur 两个数；-1 是越界）", labels: Array.from({ length: n + 2 }, (_, t) => t - 1),
@@ -76,16 +112,45 @@ assert s.rob([2,1,1,2]) == 4
             return { v: t < vals.length ? vals[t] : "", cls: fin && p === n ? "c" : p === k ? "a" : p === k - 1 ? (p <= 0 ? "x e" : "e") : p < k - 1 ? (p <= 0 ? "x d" : "d") : p <= 0 ? "x" : "" };
           }),
           ptrs: { prev: k, cur: k + 1 },
+          feeds: (opts.feeds || []).slice(),
         },
         { t: "chips", label: "代码里只有这两个变量", items: [{ v: `prev = ${vals[k]}（dp[${k - 1}]）`, cls: "e" }, { v: `cur = ${vals[k + 1]}（dp[${k}]）`, cls: "a" }] },
       ];
-      snap("开始", "prev、cur 一开始都是 0：cur 是 dp[0]（没有房子），prev 是 dp[−1]，越界了，也当成 0（前 −1 间房当然也偷不到钱）。", view(false), { at: "init" });
+      snap("开始", "prev、cur 一开始都是 0：cur 是 dp[0]（没有房子），prev 是 dp[−1]，越界了，也当成 0（前 −1 间房当然也偷不到钱）。", view(false), {
+        at: "init",
+        facts: [["prev", 0], ["cur", 0]],
+      });
       for (const x of nums) {
-        const no = vals[k + 1], yes = vals[k] + x;
-        vals.push(Math.max(no, yes)); k++;
-        snap(`第 ${k} 间`, `不偷第 ${k} 间：cur = ${no}；偷：prev + ${x} = ${yes}。新的 cur = <b>${Math.max(no, yes)}</b>（dp[${k}]），prev 变成原来的 cur（dp[${k - 1}]）。`, view(false), { at: "step" });
+        const oldPrev = vals[k], oldCur = vals[k + 1];
+        const no = oldCur, yes = oldPrev + x;
+        const nextVal = Math.max(no, yes);
+        vals.push(nextVal); k++;
+        snap(
+          `第 ${k} 间`,
+          `不偷第 ${k} 间：cur = ${no}；偷：prev + ${x} = ${yes}。新的 cur = <b>${nextVal}</b>（dp[${k}]），prev 变成原来的 cur（dp[${k - 1}]）。`,
+          view(false, {
+            feeds: [
+              { from: k, to: k + 1, win: no >= yes, label: "不偷" },
+              { from: k - 1, to: k + 1, win: yes > no, label: `+${x}` },
+            ],
+          }),
+          {
+            at: "step",
+            facts: [
+              ["不偷", no],
+              ["偷", yes],
+              ["prev", vals[k], oldPrev],
+              ["cur", vals[k + 1], oldCur],
+            ],
+          },
+        );
       }
-      snap("完成", `cur = dp[${n}] = <b>${vals[n + 1]}</b>。只用了两个变量，空间 O(1)。`, view(true), { at: "done", kind: "ok", ans: vals[n + 1] });
+      snap("完成", `cur = dp[${n}] = <b>${vals[n + 1]}</b>。只用了两个变量，空间 O(1)。`, view(true), {
+        at: "done",
+        kind: "ok",
+        ans: vals[n + 1],
+        facts: [["prev", vals[n]], ["cur", vals[n + 1]]],
+      });
     },
   }],
   points: [

@@ -60,20 +60,60 @@ assert [s.numSquares(i) for i in range(1, 30)] == [1,2,3,1,2,3,4,2,1,2,3,3,2,3,4
     { label: "n = 13", args: { n: 13 }, note: "n = 13", expect: 2 },
   ],
   build(a, snap) {
-    const n = a.n, dp = Array(n + 1).fill(null); dp[0] = 0;
+    const n = a.n, dp = [0, ...Array(n).fill(Infinity)];
+    const show = (v) => (v === Infinity ? "∞" : v);
     // dp[0] 是边界（虚线）：直接给定。j² ≤ i 保证了 i − j² 不会是负数，不会越界
-    const view = (i, cands, best, fin) => [{ t: "array", label: "dp[i]：和为 i 最少几个平方数（虚线 dp[0] 是边界）", items: dp.map((v, k) => {
-      const c = fin && k === n ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? "e" : "";
-      return { v, cls: k === 0 ? (c ? "x " + c : "x") : c };
-    }), ptrs: { i: i >= 0 ? i : null } }];
-    snap("边界", "dp[0] = 0：和为 0 不需要任何数，这是边界。i 本身是平方数时，最后一个数取 i 自己，剩下 dp[0] = 0，答案是 1。<br>循环条件 j² ≤ i 保证 i − j² 不会是负数，不会越界。", view(-1, [], -1), { at: "init" });
+    const view = (i, cands, best, fin, opts = {}) => [{
+      t: "array",
+      label: "dp[i]：和为 i 最少几个平方数（虚线 dp[0] 是边界）",
+      items: dp.map((v, k) => {
+        const c = fin && k === n ? "c" : k === i ? "a" : k === best ? "c" : cands.includes(k) ? "e" : "";
+        return {
+          v: show(v),
+          ...(opts.prevMap && opts.prevMap[k] !== undefined ? { prev: opts.prevMap[k] } : {}),
+          cls: k === 0 ? (c ? "x " + c : "x") : c,
+        };
+      }),
+      ptrs: { i: i >= 0 ? i : null },
+      feeds: (opts.feeds || []).slice(),
+    }];
+    snap("边界", "dp[0] = 0：和为 0 不需要任何数，其他位置先初始化成 ∞。i 本身是平方数时，最后一个数取 i 自己，剩下 dp[0] = 0，答案是 1。<br>循环条件 j² ≤ i 保证 i − j² 不会是负数，不会越界。", view(-1, [], -1, false), {
+      at: "init",
+      facts: [["dp[0]", 0], ["目标 n", n]],
+    });
     for (let i = 1; i <= n; i++) {
-      const cs = []; let best = Infinity, bk = -1, parts = [];
-      for (let j = 1; j * j <= i; j++) { const k = i - j * j; cs.push(k); parts.push(`${j * j}：dp[${k}] + 1 = ${dp[k] + 1}`); if (dp[k] + 1 < best) { best = dp[k] + 1; bk = k; } }
+      const cs = [], parts = [], old = dp[i];
+      let best = Infinity, bk = -1;
+      for (let j = 1; j * j <= i; j++) {
+        const k = i - j * j;
+        cs.push(k);
+        parts.push(`${j * j}：dp[${k}] + 1 = ${dp[k] + 1}`);
+        if (dp[k] + 1 < best) { best = dp[k] + 1; bk = k; }
+      }
       dp[i] = best;
-      snap(`dp[${i}]`, `最后一个数可以是 ${parts.join("；")}。最小的是 <b>${best}</b>。`, view(i, cs, bk), { at: "each", facts: [["dp[" + i + "]", best]] });
+      snap(
+        `dp[${i}]`,
+        `最后一个数可以是 ${parts.join("；")}。最小的是 <b>${best}</b>。`,
+        view(i, cs, bk, false, {
+          prevMap: best < old ? { [i]: show(old) } : undefined,
+          feeds: cs.map((k) => ({ from: k, to: i, win: k === bk, label: `+1(${i - k})` })),
+        }),
+        {
+          at: "each",
+          facts: [
+            ["候选个数", cs.length],
+            ["选中平方数", i - bk],
+            ["dp[" + i + "]", best, show(old)],
+          ],
+        },
+      );
     }
-    snap("完成", `和为 ${n} 最少需要 <b>${dp[n]}</b> 个完全平方数。`, view(-1, [], -1, true), { at: "done", kind: "ok", ans: dp[n] });
+    snap("完成", `和为 ${n} 最少需要 <b>${dp[n]}</b> 个完全平方数。`, view(-1, [], -1, true), {
+      at: "done",
+      kind: "ok",
+      ans: dp[n],
+      facts: [["dp[" + n + "]", dp[n]]],
+    });
   },
   points: [
     { t: "初始化成无穷大", body: "dp[1..n] 初始化成 inf，取 min 才有意义。dp[0] = 0 是唯一的起点。" },

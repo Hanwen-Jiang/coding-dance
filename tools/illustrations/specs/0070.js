@@ -43,16 +43,43 @@ assert s.climbStairs(45) == 1836311903
     const n = a.n, dp = Array(n + 1).fill(null);
     dp[0] = 1; dp[1] = 1;
     // dp[0]、dp[1] 是边界（虚线）：直接给定，公式从 dp[2] 开始才用
-    const view = (i, fin) => [{ t: "array", label: "dp[i]：爬到第 i 阶的方法数", items: dp.map((v, k) => {
-      const used = i >= 0 && (k === i - 1 || k === i - 2);
-      return { v, cls: fin && k === n ? "c" : k === i ? "a" : k < 2 ? (used ? "x e" : "x") : used ? "e" : "" };
-    }), ptrs: { i: i >= 0 ? i : null } }];
-    snap("边界", "dp[0]、dp[1] 是边界，直接给定：dp[1] = 1（只能跨 1 步）；dp[0] = 1 是「站在地面不动算一种」。<br>dp[0] 取 1 是为了让公式在 i = 2 也成立：dp[2] = dp[1] + dp[0] = 2。如果没有 dp[0]，算 dp[2] 时 dp[i − 2] 就越界了。", view(-1), { at: "init" });
+    const view = (i, fin, opts = {}) => [{
+      t: "array",
+      label: "dp[i]：爬到第 i 阶的方法数",
+      items: dp.map((v, k) => {
+        const used = i >= 0 && (k === i - 1 || k === i - 2);
+        return { v, cls: fin && k === n ? "c" : k === i ? "a" : k < 2 ? (used ? "x e" : "x") : used ? "e" : "" };
+      }),
+      ptrs: { i: i >= 0 ? i : null },
+      feeds: (opts.feeds || []).slice(),
+    }];
+    snap("边界", "dp[0]、dp[1] 是边界，直接给定：dp[1] = 1（只能跨 1 步）；dp[0] = 1 是「站在地面不动算一种」。<br>dp[0] 取 1 是为了让公式在 i = 2 也成立：dp[2] = dp[1] + dp[0] = 2。如果没有 dp[0]，算 dp[2] 时 dp[i − 2] 就越界了。", view(-1, false), {
+      at: "init",
+      facts: [["dp[0]", 1], ["dp[1]", 1]],
+    });
     for (let i = 2; i <= n; i++) {
       dp[i] = dp[i - 1] + dp[i - 2];
-      snap(`第 ${i} 阶`, `最后一步从第 ${i - 1} 阶跨 1 步（${dp[i - 1]} 种），或从第 ${i - 2} 阶跨 2 步（${dp[i - 2]} 种）。dp[${i}] = ${dp[i - 1]} + ${dp[i - 2]} = <b>${dp[i]}</b>。`, view(i), { at: "step", facts: [["dp[" + i + "]", dp[i]]] });
+      snap(
+        `第 ${i} 阶`,
+        `最后一步从第 ${i - 1} 阶跨 1 步（${dp[i - 1]} 种），或从第 ${i - 2} 阶跨 2 步（${dp[i - 2]} 种）。dp[${i}] = ${dp[i - 1]} + ${dp[i - 2]} = <b>${dp[i]}</b>。`,
+        view(i, false, {
+          feeds: [
+            { from: i - 2, to: i, win: true },
+            { from: i - 1, to: i, win: true, label: `${dp[i - 2]}+${dp[i - 1]}` },
+          ],
+        }),
+        {
+          at: "step",
+          facts: [["跨1步 dp[" + (i - 1) + "]", dp[i - 1]], ["跨2步 dp[" + (i - 2) + "]", dp[i - 2]], ["dp[" + i + "]", dp[i]]],
+        },
+      );
     }
-    snap("完成", `爬到第 ${n} 阶一共有 <b>${dp[n]}</b> 种方法。`, view(-1, true), { at: "done", kind: "ok", ans: dp[n] });
+    snap("完成", `爬到第 ${n} 阶一共有 <b>${dp[n]}</b> 种方法。`, view(-1, true), {
+      at: "done",
+      kind: "ok",
+      ans: dp[n],
+      facts: [["答案 dp[" + n + "]", dp[n]]],
+    });
   },
   alts: [{
     t: "两个变量滚动（空间压缩）",
@@ -62,17 +89,52 @@ assert s.climbStairs(45) == 1836311903
     build(a, snap) {
       const n = a.n, vals = [1, 1];
       let i = 1;
-      const view = (fin) => [
-        { t: "array", label: "dp（灰色是已经丢掉的，代码里只存 a、b 两个数）", items: Array.from({ length: n + 1 }, (_, k) => ({ v: k < vals.length ? vals[k] : "", cls: fin && k === n ? "c" : k === i ? "a" : k === i - 1 ? (k < 2 ? "x e" : "e") : k < i - 1 ? "d" : "" })), ptrs: { a: i - 1, b: i } },
-        { t: "chips", label: "代码里只有这两个变量", items: [{ v: `a = ${vals[i - 1]}（dp[${i - 1}]）`, cls: "e" }, { v: `b = ${vals[i]}（dp[${i}]）`, cls: "a" }] },
+      const view = (fin, opts = {}) => [
+        {
+          t: "array",
+          label: "dp（灰色是已经丢掉的，代码里只存 a、b 两个数）",
+          items: Array.from({ length: n + 1 }, (_, k) => ({
+            v: k < vals.length ? vals[k] : "",
+            cls: fin && k === n ? "c" : k === i ? "a" : k === i - 1 ? (k < 2 ? "x e" : "e") : k < i - 1 ? "d" : "",
+          })),
+          ptrs: { a: i - 1, b: i },
+          feeds: (opts.feeds || []).slice(),
+        },
+        {
+          t: "chips",
+          label: "代码里只有这两个变量",
+          items: [{ v: `a = ${vals[i - 1]}（dp[${i - 1}]）`, cls: "e" }, { v: `b = ${vals[i]}（dp[${i}]）`, cls: "a" }],
+        },
       ];
-      snap("开始", "a、b 先是 dp[0]、dp[1]，都是 1（边界）。", view(false), { at: "init" });
+      snap("开始", "a、b 先是 dp[0]、dp[1]，都是 1（边界）。", view(false), {
+        at: "init",
+        facts: [["a (dp[0])", 1], ["b (dp[1])", 1]],
+      });
       while (i < n) {
-        const na = vals[i], nb = vals[i - 1] + vals[i];
+        const prevA = vals[i - 1], prevB = vals[i];
+        const na = prevB, nb = prevA + prevB;
         vals.push(nb); i++;
-        snap(`第 ${i} 阶`, `a, b = b, a + b：新的 b = ${vals[i - 2]} + ${na} = <b>${nb}</b>，就是 dp[${i}]；a 变成原来的 b（dp[${i - 1}] = ${na}）。dp[${i - 2}] 再也用不到，丢掉。`, view(false), { at: "step" });
+        snap(
+          `第 ${i} 阶`,
+          `a, b = b, a + b：新的 b = ${prevA} + ${na} = <b>${nb}</b>，就是 dp[${i}]；a 变成原来的 b（dp[${i - 1}] = ${na}）。dp[${i - 2}] 再也用不到，丢掉。`,
+          view(false, {
+            feeds: [
+              { from: i - 2, to: i, win: true },
+              { from: i - 1, to: i, win: true, label: `${prevA}+${na}` },
+            ],
+          }),
+          {
+            at: "step",
+            facts: [["a (dp[" + (i - 1) + "])", na, prevA], ["b (dp[" + i + "])", nb, prevB]],
+          },
+        );
       }
-      snap("完成", `b = dp[${n}] = <b>${vals[n]}</b>。整个过程只用了两个变量，空间 O(1)。`, view(true), { at: "done", kind: "ok", ans: vals[n] });
+      snap("完成", `b = dp[${n}] = <b>${vals[n]}</b>。整个过程只用了两个变量，空间 O(1)。`, view(true), {
+        at: "done",
+        kind: "ok",
+        ans: vals[n],
+        facts: [["答案 b", vals[n]]],
+      });
     },
   }],
   points: [

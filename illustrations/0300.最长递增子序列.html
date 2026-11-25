@@ -336,44 +336,118 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[10,9,2,5,3,7,101,18
     return { args: { nums }, note: `nums = ${R.fmt(nums)}`, py: `Solution().lengthOfLIS(${R.py(nums)})` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "动态规划 O(n²)", note: null, legend: [["a","正在算的 nums[i]"],["e","比它小、可以接的"],["c","接上后最长的那个"]], build(a, snap) {
-    const nums = a.nums, n = nums.length, dp = Array(n).fill(null);
-    const view = (i, cand, from) => [
+    const nums = a.nums, n = nums.length, dp = Array(n).fill(1);
+    const view = (i, cand, from, opts = {}) => [
       { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : k === from ? "c" : cand.includes(k) ? "e" : "" })), ptrs: { i: i >= 0 ? i : null } },
-      { t: "array", label: "dp[i]：以 nums[i] 结尾的 LIS 长度", items: dp.map((v, k) => ({ v: v === null ? "" : v, cls: k === i ? "a" : k === from ? "c" : "" })), ptrs: {} },
+      {
+        t: "array",
+        label: "dp[i]：以 nums[i] 结尾的 LIS 长度",
+        items: dp.map((v, k) => ({
+          v,
+          ...(opts.prevMap && opts.prevMap[k] !== undefined ? { prev: opts.prevMap[k] } : {}),
+          cls: k === i ? (opts.improved ? "c" : "a") : k === from ? "c" : cand.includes(k) ? "e" : "",
+        })),
+        ptrs: {},
+        feeds: (opts.feeds || []).slice(),
+      },
     ];
-    snap("开始", "从左往右，算出以每个数结尾的最长递增子序列。", view(-1, [], -1), { at: "init" });
+    let maxLen = 1;
+    snap("开始", "每个数自己都能当长度为 1 的递增子序列，所以 dp 全部初始化为 1；然后从左往右看能不能接在前面更小的数后面。", view(-1, [], -1), {
+      at: "init",
+      facts: [["初始 dp", "全 1"], ["目前最长", maxLen]],
+    });
     for (let i = 0; i < n; i++) {
-      const cand = []; let best = 1, from = -1;
-      for (let j = 0; j < i; j++) if (nums[j] < nums[i]) { cand.push(j); if (dp[j] + 1 > best) { best = dp[j] + 1; from = j; } }
+      const cand = [], old = dp[i];
+      let best = 1, from = -1;
+      for (let j = 0; j < i; j++) {
+        if (nums[j] < nums[i]) {
+          cand.push(j);
+          if (dp[j] + 1 > best) { best = dp[j] + 1; from = j; }
+        }
+      }
       dp[i] = best;
-      snap(`dp[${i}]`, cand.length ? `前面比 ${nums[i]} 小的有 ${cand.map((j) => nums[j]).join("、")}。接在 ${nums[from]} 后面最长（dp[${from}] = ${dp[from]}），dp[${i}] = <b>${best}</b>。` : `前面没有比 ${nums[i]} 小的数，它只能自己开头，dp[${i}] = <b>1</b>。`, view(i, cand, from), { at: "each", facts: [["目前最长", Math.max(...dp.filter((v) => v !== null))]] });
+      const prevMax = maxLen;
+      maxLen = Math.max(maxLen, dp[i]);
+      const improved = best > old;
+      snap(
+        `dp[${i}]`,
+        cand.length
+          ? `前面比 ${nums[i]} 小的有 ${cand.map((j) => nums[j]).join("、")}。接在 ${nums[from]} 后面最长（dp[${from}] = ${dp[from]}），dp[${i}] = <b>${best}</b>。`
+          : `前面没有比 ${nums[i]} 小的数，它只能自己开头，dp[${i}] = <b>1</b>。`,
+        view(i, cand, from, {
+          improved,
+          prevMap: improved ? { [i]: old } : undefined,
+          feeds: cand.map((j) => ({ from: j, to: i, win: j === from, label: "+1" })),
+        }),
+        {
+          at: "each",
+          facts: [
+            ["nums[i]", nums[i]],
+            improved ? ["dp[" + i + "]", best, old] : ["dp[" + i + "]", best],
+            maxLen > prevMax ? ["目前最长", maxLen, prevMax] : ["目前最长", maxLen],
+          ],
+        },
+      );
     }
     const ans = Math.max(...dp);
-    snap("完成", `答案是 dp 里的最大值 <b>${ans}</b>，不一定是最后一个。`, view(-1, [], -1), { at: "done", kind: "ok", ans, facts: [["目前最长", ans]] });
+    snap("完成", `答案是 dp 里的最大值 <b>${ans}</b>，不一定是最后一个。`, view(-1, [], -1), {
+      at: "done",
+      kind: "ok",
+      ans,
+      facts: [["目前最长", ans]],
+    });
   } },
 { t: "贪心 + 二分", note: "和简洁写法一样：tails[k] 记「长度为 k+1 的递增子序列，结尾最小可以是多少」。新数比所有结尾都大就接在最后；否则用二分找到第一个 ≥ 它的结尾，换成它。", legend: [["a","当前的数"],["c","接在最后，长度 +1"],["w","换成更小的结尾"]], build(a, snap) {
       const nums = a.nums, n = nums.length, tails = [];
-      const view = (i, k, mode) => [
+      const view = (i, k, mode, opts = {}) => [
         { t: "array", label: "nums", items: nums.map((v, t) => ({ v, cls: t === i ? "a" : t < i ? "d" : "" })), ptrs: { i: i >= 0 && i < n ? i : null } },
         tails.length
-          ? { t: "array", label: "tails[k]：长度为 k+1 的递增子序列的最小结尾", items: tails.map((v, t) => ({ v, cls: t === k ? (mode === "add" ? "c" : "w") : "" })) }
+          ? {
+              t: "array",
+              label: "tails[k]：长度为 k+1 的递增子序列的最小结尾",
+              items: tails.map((v, t) => ({
+                v,
+                ...(opts.prevMap && opts.prevMap[t] !== undefined ? { prev: opts.prevMap[t] } : {}),
+                cls: t === k ? (mode === "add" ? "c" : "w") : "",
+              })),
+            }
           : { t: "note", label: "tails", html: "空" },
       ];
-      const f = () => ({ facts: [["最长", tails.length]] });
-      snap("开始", "tails 一开始是空的。它始终是递增的，所以可以二分。", view(-1, -1), { at: "init", ...f() });
+      snap("开始", "tails 一开始是空的。它始终是递增的，所以可以二分。", view(-1, -1), { at: "init", facts: [["最长", 0]] });
       for (let i = 0; i < n; i++) {
         const x = nums[i];
         let lo = 0, hi = tails.length;
         while (lo < hi) { const mid = (lo + hi) >> 1; if (tails[mid] < x) lo = mid + 1; else hi = mid; }
         if (lo === tails.length) {
+          const prevLen = tails.length;
           tails.push(x);
-          snap("接到最后", `${x} 比 tails 里所有结尾都大，接在最长的那个后面。现在最长是 <b>${tails.length}</b>。`, view(i, lo, "add"), { at: "add", ...f() });
+          snap("接到最后", `${x} 比 tails 里所有结尾都大，接在最长的那个后面。现在最长是 <b>${tails.length}</b>。`, view(i, lo, "add"), {
+            at: "add",
+            facts: [["动作", `追加 ${x}`], ["最长", tails.length, prevLen]],
+          });
         } else {
           const old = tails[lo]; tails[lo] = x;
-          snap("替换", `二分找到第一个 ≥ ${x} 的位置 k = ${lo}（原来是 ${old}）。长度为 ${lo + 1} 的递增子序列，结尾可以从 ${old} 换成更小的 ${x}，后面更容易接上新数。`, view(i, lo, "rep"), { at: "rep", ...f() });
+          snap(
+            "替换",
+            `二分找到第一个 ≥ ${x} 的位置 k = ${lo}（原来是 ${old}）。长度为 ${lo + 1} 的递增子序列，结尾可以从 ${old} 换成更小的 ${x}，后面更容易接上新数。`,
+            view(i, lo, "rep", old !== x ? { prevMap: { [lo]: old } } : undefined),
+            {
+              at: "rep",
+              facts: [
+                ["动作", `替换 tails[${lo}]`],
+                old !== x ? [`tails[${lo}]`, x, old] : [`tails[${lo}]`, x],
+                ["最长", tails.length],
+              ],
+            },
+          );
         }
       }
-      snap("完成", `答案是 tails 的长度 <b>${tails.length}</b>。注意 tails 本身不一定是一个真正的递增子序列，只有长度是对的。`, view(n, -1), { at: "done", kind: "ok", ans: tails.length, ...f() });
+      snap("完成", `答案是 tails 的长度 <b>${tails.length}</b>。注意 tails 本身不一定是一个真正的递增子序列，只有长度是对的。`, view(n, -1), {
+        at: "done",
+        kind: "ok",
+        ans: tails.length,
+        facts: [["最长", tails.length]],
+      });
     } }
 ] };
 (function () {

@@ -49,22 +49,46 @@ assert s.longestCommonSubsequence("oxcpqrsvwf", "shmtulqrypy") == 2
   build(a, snap) {
     const A = a.t1, B = a.t2, m = A.length, n = B.length;
     const dp = Array.from({ length: m + 1 }, (_, i) => Array.from({ length: n + 1 }, (_, j) => (i === 0 || j === 0 ? 0 : null)));
-    const view = (ci, cj, used, fin) => [
+    const view = (ci, cj, used, fin, feeds = []) => [
       { t: "array", label: "text1（行 i 对应前 i 个字符）", idxFrom: 1, items: A.split("").map((c, k) => ({ v: c, cls: k === ci - 1 ? "a" : "" })), ptrs: {} },
       { t: "array", label: "text2（列 j 对应前 j 个字符）", idxFrom: 1, items: B.split("").map((c, k) => ({ v: c, cls: k === cj - 1 ? "a" : "" })), ptrs: {} },
       // 第 0 行、第 0 列是边界（虚线）：多开这一行一列，dp[i-1][j-1] 在 i = 1 或 j = 1 时才不会越界
-      { t: "grid", label: "dp[i][j]（虚线是边界：取前 0 个字符，也就是空串）", rows: dp.map((r, i) => r.map((v, j) => {
-        const u = used.some(([x, y]) => x === i && y === j), edge = i === 0 || j === 0;
-        return { v: v === null ? "" : v, cls: fin && i === m && j === n ? "c" : i === ci && j === cj ? "a" : edge ? (u ? "x e" : "x") : u ? "e" : "" };
-      })) },
+      {
+        t: "grid",
+        label: "dp[i][j]（虚线是边界：取前 0 个字符，也就是空串）",
+        rows: dp.map((r, i) => r.map((v, j) => {
+          const u = used.some(([x, y]) => x === i && y === j), edge = i === 0 || j === 0;
+          return { v: v === null ? "" : v, cls: fin && i === m && j === n ? "c" : i === ci && j === cj ? "a" : edge ? (u ? "x e" : "x") : u ? "e" : "" };
+        })),
+        feeds: feeds.slice(),
+      },
     ];
-    snap("边界", "dp 比两个字符串各多开一行一列。第 0 行是 text1 取空串、第 0 列是 text2 取空串：空串和谁的公共子序列都是 <b>0</b>。<br>为什么要这一圈：算 dp[1][j] 要用 dp[0][j−1]、dp[0][j]，如果不多开，下标就是 -1，越界了。多开一圈、填上 0，转移公式在边上也能直接用。", view(-1, -1, []), { at: "init" });
+    snap("边界", "dp 比两个字符串各多开一行一列。第 0 行是 text1 取空串、第 0 列是 text2 取空串：空串和谁的公共子序列都是 <b>0</b>。<br>为什么要这一圈：算 dp[1][j] 要用 dp[0][j−1]、dp[0][j]，如果不多开，下标就是 -1，越界了。多开一圈、填上 0，转移公式在边上也能直接用。", view(-1, -1, [], false, []), { at: "init", facts: [["text1", A], ["text2", B]] });
     for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
       const edge = i === 1 || j === 1 ? `（用到了边界上的格子：空串，值是 0）` : "";
-      if (A[i - 1] === B[j - 1]) { dp[i][j] = dp[i - 1][j - 1] + 1; snap(`(${i}, ${j})`, `最后一个字符都是 '${A[i - 1]}'，一起算进去：dp[${i - 1}][${j - 1}] + 1 = <b>${dp[i][j]}</b>。` + (i === 1 || j === 1 ? edge : ""), view(i, j, [[i - 1, j - 1]]), { at: "same" }); }
-      else { dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]); snap(`(${i}, ${j})`, `'${A[i - 1]}' ≠ '${B[j - 1]}'，扔掉一边：上面 ${dp[i - 1][j]}，左边 ${dp[i][j - 1]}，取大的 <b>${dp[i][j]}</b>。` + (i === 1 || j === 1 ? edge : ""), view(i, j, [[i - 1, j], [i, j - 1]]), { at: "diff" }); }
+      if (A[i - 1] === B[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+        snap(
+          `(${i}, ${j})`,
+          `最后一个字符都是 '${A[i - 1]}'，一起算进去：dp[${i - 1}][${j - 1}] + 1 = <b>${dp[i][j]}</b>。` + edge,
+          view(i, j, [[i - 1, j - 1]], false, [{ from: [i - 1, j - 1], to: [i, j], win: true, label: "↖+1" }]),
+          { at: "same", facts: [["字符比较", `'${A[i - 1]}' = '${B[j - 1]}'`], ["来源", `↖ ${dp[i - 1][j - 1]} + 1`], ["dp[i][j]", dp[i][j]]] },
+        );
+      } else {
+        const up = dp[i - 1][j], left = dp[i][j - 1], winUp = up >= left;
+        dp[i][j] = Math.max(up, left);
+        snap(
+          `(${i}, ${j})`,
+          `'${A[i - 1]}' ≠ '${B[j - 1]}'，扔掉一边：上面 ${up}，左边 ${left}，取大的 <b>${dp[i][j]}</b>。` + edge,
+          view(i, j, [[i - 1, j], [i, j - 1]], false, [
+            { from: [i - 1, j], to: [i, j], win: winUp, ...(winUp ? { label: "取上" } : {}) },
+            { from: [i, j - 1], to: [i, j], win: !winUp, ...(!winUp ? { label: "取左" } : {}) },
+          ]),
+          { at: "diff", facts: [["字符比较", `'${A[i - 1]}' ≠ '${B[j - 1]}'`], ["最优来源", winUp ? `↑ ${up}` : `← ${left}`], ["dp[i][j]", dp[i][j]]] },
+        );
+      }
     }
-    snap("完成", `最长公共子序列的长度是 <b>${dp[m][n]}</b>。`, view(-1, -1, [], true), { at: "done", kind: "ok", ans: dp[m][n] });
+    snap("完成", `最长公共子序列的长度是 <b>${dp[m][n]}</b>。`, view(-1, -1, [], true, []), { at: "done", kind: "ok", ans: dp[m][n], facts: [["LCS 长度", dp[m][n]]] });
   },
   alts: [{
     t: "两行滚动（空间压缩）",
@@ -74,29 +98,66 @@ assert s.longestCommonSubsequence("oxcpqrsvwf", "shmtulqrypy") == 2
     build(a, snap) {
       const A = a.t1, B = a.t2, m = A.length, n = B.length;
       let prev = Array(n + 1).fill(0), cur = null, row = 0;
-      const view = (i, j, used) => [
+      const view = (i, j, used, opts = {}) => [
         { t: "array", label: "text1", idxFrom: 1, items: [...A].map((c, k) => ({ v: c, cls: k === i - 1 ? "a" : "" })) },
         { t: "array", label: "text2", idxFrom: 1, items: [...B].map((c, k) => ({ v: c, cls: k === j ? "a" : "" })) },
-        { t: "array", label: `prev：第 ${row} 行` + (row === 0 ? "（text1 取空串，全是 0）" : ""), items: prev.map((v, k) => ({ v, cls: used.some(([w, y]) => w === "p" && y === k) ? (row === 0 || k === 0 ? "x e" : "e") : row === 0 || k === 0 ? "x" : "g" })) },
-        cur ? { t: "array", label: `cur：第 ${row + 1} 行（算到哪填到哪）`, items: Array.from({ length: n + 1 }, (_, k) => ({ v: k < cur.length ? cur[k] : "", cls: k === j + 1 ? "a" : used.some(([w, y]) => w === "c" && y === k) ? (k === 0 ? "x e" : "e") : k === 0 ? "x" : k < cur.length ? "k" : "" })) } : { t: "note", label: "cur", html: "还没开始" },
+        {
+          t: "array",
+          label: `prev：第 ${row} 行` + (row === 0 ? "（text1 取空串，全是 0）" : ""),
+          items: prev.map((v, k) => ({
+            v,
+            ...(opts.prevMap && opts.prevMap[k] !== undefined ? { prev: opts.prevMap[k] } : {}),
+            cls: used.some(([w, y]) => w === "p" && y === k) ? (row === 0 || k === 0 ? "x e" : "e") : row === 0 || k === 0 ? "x" : "g",
+          })),
+        },
+        cur ? {
+          t: "array",
+          label: `cur：第 ${row + 1} 行（算到哪填到哪）`,
+          items: Array.from({ length: n + 1 }, (_, k) => ({
+            v: k < cur.length ? cur[k] : "",
+            cls: k === j + 1 ? "a" : used.some(([w, y]) => w === "c" && y === k) ? (k === 0 ? "x e" : "e") : k === 0 ? "x" : k < cur.length ? "k" : "",
+          })),
+          feeds: (opts.curFeeds || []).slice(),
+        } : { t: "note", label: "cur", html: "还没开始" },
       ];
-      snap("开始", "只留两行。prev 一开始是第 0 行：text1 取空串，和谁的公共子序列都是 0（边界，虚线）。", view(-1, -2, []), { at: "init" });
+      snap("开始", "只留两行。prev 一开始是第 0 行：text1 取空串，和谁的公共子序列都是 0（边界，虚线）。", view(-1, -2, []), { at: "init", facts: [["当前行", 0], ["text1", A], ["text2", B]] });
       for (let i = 1; i <= m; i++) {
         cur = [0];
-        snap(`第 ${i} 行`, `开始算第 ${i} 行（text1 的第 ${i} 个字符 '${A[i - 1]}'）。cur 先放一个 0：第 0 列是 text2 取空串，边界。`, view(i, -2, []), { at: "row" });
+        snap(`第 ${i} 行`, `开始算第 ${i} 行（text1 的第 ${i} 个字符 '${A[i - 1]}'）。cur 先放一个 0：第 0 列是 text2 取空串，边界。`, view(i, -2, []), { at: "row", facts: [["当前行", i, i - 1], ["text1[i-1]", `'${A[i - 1]}'`], ["cur[0]", 0]] });
         for (let j = 0; j < n; j++) {
           if (A[i - 1] === B[j]) {
             cur.push(prev[j] + 1);
-            snap(`(${i}, ${j + 1})`, `'${A[i - 1]}' = '${B[j]}'：取左上 prev[${j}] = ${prev[j]}，加 1，cur[${j + 1}] = <b>${cur[j + 1]}</b>。`, view(i, j, [["p", j]]), { at: "same" });
+            snap(
+              `(${i}, ${j + 1})`,
+              `'${A[i - 1]}' = '${B[j]}'：取左上 prev[${j}] = ${prev[j]}，加 1，cur[${j + 1}] = <b>${cur[j + 1]}</b>。`,
+              view(i, j, [["p", j]]),
+              { at: "same", facts: [["字符比较", `'${A[i - 1]}' = '${B[j]}'`], ["来源", `prev[${j}] + 1`], [`cur[${j + 1}]`, cur[j + 1]]] },
+            );
           } else {
-            cur.push(Math.max(prev[j + 1], cur[j]));
-            snap(`(${i}, ${j + 1})`, `'${A[i - 1]}' ≠ '${B[j]}'：上面 prev[${j + 1}] = ${prev[j + 1]}，左边 cur[${j}] = ${cur[j]}，取大的，cur[${j + 1}] = <b>${cur[j + 1]}</b>。`, view(i, j, [["p", j + 1], ["c", j]]), { at: "diff" });
+            const up = prev[j + 1], left = cur[j], winUp = up >= left;
+            cur.push(Math.max(up, left));
+            snap(
+              `(${i}, ${j + 1})`,
+              `'${A[i - 1]}' ≠ '${B[j]}'：上面 prev[${j + 1}] = ${up}，左边 cur[${j}] = ${left}，取大的，cur[${j + 1}] = <b>${cur[j + 1]}</b>。`,
+              view(i, j, [["p", j + 1], ["c", j]], {
+                curFeeds: [{ from: j, to: j + 1, win: !winUp, ...(!winUp ? { label: "取左" } : {}) }],
+              }),
+              { at: "diff", facts: [["字符比较", `'${A[i - 1]}' ≠ '${B[j]}'`], ["最优来源", winUp ? `↑ prev[${j + 1}]=${up}` : `← cur[${j}]=${left}`], [`cur[${j + 1}]`, cur[j + 1]]] },
+            );
           }
         }
-        prev = cur; cur = null; row = i;
-        snap("换行", `第 ${i} 行算完了。prev = cur：它成了下一行的「上一行」，更早的行不用再留着。`, view(-1, -2, []), { at: "next" });
+        const oldPrev = prev.slice();
+        const prevMap = {};
+        for (let k = 0; k <= n; k++) if (cur[k] !== oldPrev[k]) prevMap[k] = oldPrev[k];
+        prev = cur.slice(); cur = null; row = i;
+        snap(
+          "换行",
+          `第 ${i} 行算完了。prev = cur：它成了下一行的「上一行」，更早的行不用再留着。`,
+          view(-1, -2, [], { prevMap }),
+          { at: "next", facts: [["已完成行", i, i - 1], ["prev[-1]", prev[n], oldPrev[n]]] },
+        );
       }
-      snap("完成", `prev 的最后一个数就是答案：<b>${prev[n]}</b>。整个过程只留了两行，空间 O(n)。`, view(-1, -2, []), { at: "done", kind: "ok", ans: prev[n] });
+      snap("完成", `prev 的最后一个数就是答案：<b>${prev[n]}</b>。整个过程只留了两行，空间 O(n)。`, view(-1, -2, []), { at: "done", kind: "ok", ans: prev[n], facts: [["LCS 长度", prev[n]], ["空间", `O(${n + 1})`]] });
     },
   }],
   points: [
