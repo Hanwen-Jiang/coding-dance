@@ -55,27 +55,104 @@ assert s.levelOrder(T([1,2,3,4,None,None,5])) == [[1],[2,3],[4,5]]
     { label: "三层都满", args: { t: [1, 2, 3, 4, 5, 6, 7] }, note: "root = [1,2,3,4,5,6,7]", expect: [[1], [2, 3], [4, 5, 6, 7]] },
   ],
   build(a, snap) {
-    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-    const q = [0], res = [], done = new Set(); let level = [];
-    const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : q.includes(+id) ? "e" : done.has(+id) ? "c" : ""; return [
-      { t: "tree", nodes: N, root: 0, cls },
-      { t: "chips", label: "队列（左边先出）", items: q.map((id) => N[id].v) },
-      { t: "chips", label: "这一层", items: level.slice(), empty: "空" },
-      { t: "chips", label: "结果", items: res.map((l) => `[${l.join(", ")}]`), empty: "还没有" },
-    ]; };
-    snap("开始", "先把根节点放进队列。", view(-1), { at: "init" });
-    while (q.length) {
-      const n = q.length; level = [];
-      snap(`第 ${res.length + 1} 层开始`, `队列里现在有 ${n} 个节点，它们就是第 ${res.length + 1} 层。接下来正好取 ${n} 次。`, view(-1), { at: "level", facts: [["这一层的节点数", n]] });
-      for (let t = 0; t < n; t++) {
-        const id = q.shift(), nd = N[id], kids = [nd.l, nd.r].filter((c) => c !== null);
-        level.push(nd.v); kids.forEach((c) => q.push(c)); done.add(id);
-        snap("出队", `取出 ${nd.v}，记进这一层。` + (kids.length ? `把它的孩子 ${kids.map((c) => N[c].v).join("、")} 放到队尾。` : "它没有孩子。"), view(id), { at: kids.length ? ["pop", "push"] : "pop", facts: [["这一层的节点数", n], ["已取", t + 1]] });
-      }
-      res.push(level); level = [];
-      snap("这一层结束", `取够了 ${n} 个，这一层是 [${res[res.length - 1].join(", ")}]。` + (q.length ? "队列里剩下的全是下一层的节点。" : "队列空了。"), view(-1), { at: "end" });
+    const N = {};
+    a.t.forEach((v, i) => {
+      if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null };
+    });
+    const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+    if (!N[0]) {
+      snap("完成", "树是空的，直接返回 []。", [{ t: "note", label: "二叉树", html: "空" }], { at: "done", kind: "ok", ans: [], facts: [["总层数", 0]] });
+      return;
     }
-    snap("完成", `一共 ${res.length} 层。`, view(-1), { at: "done", kind: "ok", ans: res });
+    const q = [0], res = [], done = new Set(), layerOf = { 0: "第 1 层" };
+    let level = [];
+    const view = (cur, opts = {}) => {
+      const cls = {};
+      for (const id in N) cls[id] = +id === cur ? "a" : q.includes(+id) ? "e" : done.has(+id) ? "c" : "";
+      return [
+        {
+          t: "tree",
+          label: "二叉树层序遍历（BFS 按层推进）",
+          nodes: snapNodes(),
+          root: 0,
+          cls,
+          directed: true,
+          lrLabels: true,
+          ptrs: { node: cur >= 0 ? cur : null },
+          badges: { ...layerOf },
+          ...(opts.onEdges && opts.onEdges.length ? { onEdges: opts.onEdges } : {}),
+        },
+        {
+          t: "chips",
+          label: "队列（左边先出）",
+          items: q.map((id) => ({ v: N[id].v, cls: opts.pushed && opts.pushed.includes(id) ? "a" : "e" })),
+          empty: "空",
+        },
+        {
+          t: "chips",
+          label: "这一层（level）",
+          items: level.map((v, i) => ({ v, cls: opts.justPopped && i === level.length - 1 ? "a" : "c" })),
+          empty: "空",
+        },
+        {
+          t: "chips",
+          label: "结果（res）",
+          items: res.map((l, i) => ({ v: `[${l.join(", ")}]`, cls: opts.newLayer && i === res.length - 1 ? "a" : "c" })),
+          empty: "还没有",
+        },
+      ];
+    };
+    snap("开始", `先把根节点 <b>${N[0].v}</b> 放进队列。`, view(-1), {
+      at: "init",
+      facts: [["当前层", "—"], ["队列长度", 1]],
+    });
+    while (q.length) {
+      const n = q.length;
+      const layerNo = res.length + 1;
+      level = [];
+      snap(`第 ${layerNo} 层开始`, `队列里现在有 <b>${n}</b> 个节点，它们就是第 ${layerNo} 层。先记下长度 n = ${n}，接下来正好取 ${n} 次。`, view(-1), {
+        at: "level",
+        facts: [["当前层", `第 ${layerNo} 层`], ["本层节点数", n], ["已出队", 0], ["队列长度", q.length]],
+      });
+      for (let t = 0; t < n; t++) {
+        const prevQLen = q.length;
+        const id = q.shift(), nd = N[id], kids = [nd.l, nd.r].filter((c) => c !== null);
+        level.push(nd.v);
+        kids.forEach((c) => {
+          q.push(c);
+          layerOf[c] = `第 ${layerNo + 1} 层`;
+        });
+        done.add(id);
+        const qFact = q.length !== prevQLen ? ["队列长度", q.length, prevQLen] : ["队列长度", q.length];
+        snap(
+          "出队",
+          `取出 <b>${nd.v}</b>，记进这一层。` + (kids.length ? `把它的孩子 ${kids.map((c) => `<b>${N[c].v}</b>`).join("、")} 放到队尾。` : "它没有孩子。"),
+          view(id, { justPopped: true, pushed: kids, onEdges: kids.map((c) => [id, c]) }),
+          {
+            at: kids.length ? ["pop", "push"] : "pop",
+            facts: [["当前层", `第 ${layerNo} 层`], ["本层已出队", `${t + 1}/${n}`, `${t}/${n}`], qFact],
+          },
+        );
+      }
+      const prevResLen = res.length;
+      res.push(level);
+      level = [];
+      snap(
+        "这一层结束",
+        `取够了 ${n} 个，这一层是 [${res[res.length - 1].join(", ")}]。` + (q.length ? "队列里剩下的全是下一层的节点。" : "队列空了。"),
+        view(-1, { newLayer: true }),
+        {
+          at: "end",
+          facts: [["已完成层数", res.length, prevResLen], ["队列长度", q.length]],
+        },
+      );
+    }
+    snap("完成", `一共 ${res.length} 层，层序遍历结束。`, view(-1), {
+      at: "done",
+      kind: "ok",
+      ans: res,
+      facts: [["总层数", res.length]],
+    });
   },
   points: [
     { t: "先固定这一层的长度", body: "<code>for _ in range(len(q))</code> 里的长度只算一次。循环中队列在变长，但不影响这一层的次数。" },

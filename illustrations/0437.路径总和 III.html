@@ -342,34 +342,102 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[10,5,-3,3,2,null,11,3,
     return { args: { t: t.heap, target }, note: `root = ${R.fmt(t.lc)}, targetSum = ${target}`, py: `Solution().pathSum(T(${R.py(t.lc)}), ${target})` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "前缀和 + 哈希表", note: null, legend: [["e","当前路径上的节点"],["a","当前节点"],["c","以它结尾有满足条件的路径"]], build(a, snap) {
-    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-    const T = a.target, cnt = { 0: 1 }, path = [], badges = {}, hitSet = new Set(); let total = 0;
-    const view = (cur) => { const cls = {}; for (const id in N) cls[id] = +id === cur ? "a" : hitSet.has(+id) ? "c" : path.includes(+id) ? "e" : ""; return [{ t: "tree", nodes: N, root: 0, cls, on: path.slice(), badges: { ...badges } }, { t: "chips", label: "当前路径上的前缀和（前缀和 × 次数）", items: Object.entries(cnt).filter(([, c]) => c > 0).map(([k, c]) => `${k} × ${c}`) }]; };
-    const f = (at) => ({ at, facts: [["targetSum", T], ["找到", total]] });
-    snap("开始", `节点下面标的是从根到它的前缀和。哈希表里先放一个前缀和 0，表示路径可以从根开始。`, view(-1), f("init"));
+    const N = {};
+    a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+    const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+    const T = a.target, cnt = { 0: 1 }, path = [], pathSums = [0], badges = {}, hitSet = new Set(), winEdgeMap = new Map();
+    let total = 0;
+    const pathEdges = (arr) => {
+      const edges = [];
+      for (let i = 0; i + 1 < arr.length; i++) edges.push([arr[i], arr[i + 1]]);
+      return edges;
+    };
+    const view = (cur, opts = {}) => {
+      const cls = {};
+      for (const id in N) cls[id] = +id === cur ? "a" : hitSet.has(+id) ? "c" : path.includes(+id) ? "e" : "";
+      return [
+        {
+          t: "tree",
+          nodes: snapNodes(),
+          root: N[0] ? 0 : null,
+          cls,
+          directed: true,
+          lrLabels: true,
+          on: path.slice(),
+          onEdges: opts.onEdges !== undefined ? opts.onEdges : pathEdges(path),
+          ptrs: { cur: cur >= 0 ? cur : null },
+          badges: { ...badges },
+        },
+        { t: "chips", label: "当前路径上的前缀和（前缀和 × 次数）", items: Object.entries(cnt).filter(([, c]) => c > 0).map(([k, c]) => `${k} × ${c}`), empty: "空" },
+      ];
+    };
+    const f = (at, extra = []) => ({ at, facts: [["targetSum", T], ...extra] });
+    if (!N[0]) {
+      snap("完成", "树是空的，没有路径。", [{ t: "note", label: "树", html: "空" }], { kind: "ok", ans: 0, ...f("done", [["找到", 0]]) });
+      return;
+    }
+    snap("开始", `节点下面标的是从根到它的前缀和。哈希表里先放一个前缀和 0，表示路径可以从根开始。`, view(-1), f("init", [["找到", 0]]));
     const dfs = (id, cur) => {
       if (id === null || !N[id]) return;
-      cur += N[id].v; path.push(id); badges[id] = "和 " + cur;
-      const c = cnt[cur - T] || 0; total += c; if (c) hitSet.add(id);
-      snap(`节点 ${N[id].v}`, `前缀和是 ${cur}。要找前缀和 ${cur} − ${T} = ${cur - T}，路径上有 <b>${c}</b> 个` + (c ? `，说明有 ${c} 条以 ${N[id].v} 结尾的路径和为 ${T}。` : "。"), view(id), f("visit"));
+      cur += N[id].v; path.push(id); pathSums.push(cur); badges[id] = "和 " + cur;
+      const c = cnt[cur - T] || 0, prevTotal = total;
+      total += c;
+      if (c) {
+        hitSet.add(id);
+        for (let j = 0; j < path.length; j++) {
+          if (pathSums[j] === cur - T) {
+            for (let m = j; m + 1 < path.length; m++) {
+              winEdgeMap.set(`${path[m]}->${path[m + 1]}`, [path[m], path[m + 1]]);
+            }
+          }
+        }
+      }
+      snap(
+        `节点 ${N[id].v}`,
+        `前缀和是 ${cur}。要找前缀和 ${cur} − ${T} = ${cur - T}，路径上有 <b>${c}</b> 个` + (c ? `，说明有 ${c} 条以 ${N[id].v} 结尾的路径和为 ${T}。` : "。"),
+        view(id),
+        { ...(c ? { kind: "ok" } : {}), ...f("visit", [["当前前缀和", cur], ["需要找", cur - T], ["找到", total, prevTotal]]) },
+      );
       cnt[cur] = (cnt[cur] || 0) + 1;
       dfs(N[id].l, cur); dfs(N[id].r, cur);
-      cnt[cur]--; path.pop();
+      cnt[cur]--; path.pop(); pathSums.pop();
     };
     dfs(0, 0);
-    snap("完成", `一共有 <b>${total}</b> 条路径的和等于 ${T}。`, view(-1), { kind: "ok", ans: total, ...f("done") });
+    snap("完成", `一共有 <b>${total}</b> 条路径的和等于 ${T}。`, view(-1, { onEdges: [...winEdgeMap.values()] }), { kind: "ok", ans: total, ...f("done", [["找到", total]]) });
   } },
 { t: "双重递归", note: "和简洁写法一样：外层按前序把每个节点都当一次起点，内层从起点往下走，数和为 targetSum 的路径。每个起点都要把下面的子树走一遍，时间 O(n²)。", legend: [["b","起点（下面写的是从它出发找到几条）"],["e","从起点走过来的路径"],["a","当前节点"],["c","路径和正好等于 targetSum"]], build(a, snap) {
-      const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-      const T = a.target, badges = {}, starts = []; let total = 0;
-      const view = (start, path, cur, hit) => {
+      const N = {};
+      a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+      const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+      const T = a.target, badges = {}, starts = [], winEdgeMap = new Map();
+      let total = 0;
+      const pathEdges = (arr) => {
+        const edges = [];
+        for (let i = 0; i + 1 < arr.length; i++) edges.push([arr[i], arr[i + 1]]);
+        return edges;
+      };
+      const view = (start, path, cur, hit, opts = {}) => {
         const cls = {};
         for (const id in N) { const i = +id; cls[id] = i === cur ? (hit ? "c" : "a") : i === start ? "b" : path.includes(i) ? "e" : ""; }
-        return [{ t: "tree", nodes: N, root: 0, cls, on: path.slice(), badges: { ...badges } }];
+        const ptrs = {};
+        if (start >= 0) ptrs.start = start;
+        if (cur >= 0) ptrs.cur = cur;
+        return [{
+          t: "tree",
+          nodes: snapNodes(),
+          root: N[0] ? 0 : null,
+          cls,
+          directed: true,
+          lrLabels: true,
+          on: path.slice(),
+          onEdges: opts.onEdges !== undefined ? opts.onEdges : pathEdges(path),
+          ptrs,
+          badges: { ...badges },
+        }];
       };
-      const f = (at) => ({ at, facts: [["targetSum", T], ["找到", total]] });
-      if (!N[0]) { snap("完成", "树是空的，没有路径。", [{ t: "note", label: "树", html: "空" }], { kind: "ok", ans: 0, ...f("empty") }); return; }
-      snap("开始", "外层递归按前序（根 → 左 → 右）把每个节点都当一次起点；内层从起点往下走，看路径和是不是 targetSum。", view(-1, [], -1, false), f("start"));
+      const f = (at, extra = []) => ({ at, facts: [["targetSum", T], ...extra] });
+      if (!N[0]) { snap("完成", "树是空的，没有路径。", [{ t: "note", label: "树", html: "空" }], { kind: "ok", ans: 0, ...f("empty", [["找到", 0]]) }); return; }
+      snap("开始", "外层递归按前序（根 → 左 → 右）把每个节点都当一次起点；内层从起点往下走，看路径和是不是 targetSum。", view(-1, [], -1, false), f("start", [["找到", 0]]));
       const pre = (id) => { if (id === null || !N[id]) return; starts.push(id); pre(N[id].l); pre(N[id].r); };
       pre(0);
       for (const s of starts) {
@@ -378,15 +446,23 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[10,5,-3,3,2,null,11,3,
         const down = (id, sum) => {
           if (id === null || !N[id]) return;
           path.push(id); sum += N[id].v;
-          const hit = sum === T;
-          if (hit) { cnt++; total++; badges[s] = `${cnt} 条`; }
-          snap(`起点 ${N[s].v}`, (id === s ? `以 ${N[s].v} 为起点，路径和是 ${sum}。` : `从 ${N[s].v} 往下走到 ${N[id].v}，路径和是 ${sum}。`) + (hit ? `等于 ${T}，找到一条。` : ""), view(s, path, id, hit), { ...(hit ? { kind: "ok" } : {}), ...f(id === s ? ["start", "down"] : "down") });
+          const hit = sum === T, prevTotal = total;
+          if (hit) {
+            cnt++; total++; badges[s] = `${cnt} 条`;
+            for (const e of pathEdges(path)) winEdgeMap.set(`${e[0]}->${e[1]}`, e);
+          }
+          snap(
+            `起点 ${N[s].v}`,
+            (id === s ? `以 ${N[s].v} 为起点，路径和是 ${sum}。` : `从 ${N[s].v} 往下走到 ${N[id].v}，路径和是 ${sum}。`) + (hit ? `等于 ${T}，找到一条。` : ""),
+            view(s, path, id, hit),
+            { ...(hit ? { kind: "ok" } : {}), ...f(id === s ? ["start", "down"] : "down", [["当前路径和", sum], ["找到", total, prevTotal]]) },
+          );
           down(N[id].l, sum); down(N[id].r, sum);
           path.pop();
         };
         down(s, 0);
       }
-      snap("完成", `每个节点都当过一次起点，一共有 <b>${total}</b> 条路径的和等于 ${T}。`, view(-1, [], -1, false), { kind: "ok", ans: total, ...f("done") });
+      snap("完成", `每个节点都当过一次起点，一共有 <b>${total}</b> 条路径的和等于 ${T}。`, view(-1, [], -1, false, { onEdges: [...winEdgeMap.values()] }), { kind: "ok", ans: total, ...f("done", [["找到", total]]) });
     } }
 ] };
 (function () {

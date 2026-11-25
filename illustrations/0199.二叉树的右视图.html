@@ -340,46 +340,161 @@ const SPEC = { presets: [{"label":"示例 1","args":{"t":[1,2,3,null,5,null,4]},
     return { args: { t: t.heap }, note: `root = ${R.fmt(t.lc)}`, py: `Solution().rightSideView(T(${R.py(t.lc)}))` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "BFS 按层", note: null, legend: [["e","当前这一层"],["c","被看到的节点"]], build(a, snap) {
-    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-    const res = [], seen = new Set(); let level = [0];
-    const view = (cur) => { const cls = {}; for (const id in N) cls[id] = seen.has(+id) ? "c" : cur.includes(+id) ? "e" : ""; return [{ t: "tree", nodes: N, root: 0, cls }, { t: "chips", label: "右视图", items: res.slice(), empty: "还没有" }]; };
-    snap("开始", "从根节点这一层开始，一层一层往下。", view([]), { at: "init" });
-    let d = 0;
-    while (level.length) {
-      const last = level[level.length - 1];
-      snap(`第 ${d} 层`, `这一层有 ${level.map((i) => N[i].v).join("、")}，从右边看过来，最先看到的是最右边的 <b>${N[last].v}</b>。下一层的节点依次入队。`, view(level), { at: "level" });
-      res.push(N[last].v); seen.add(last);
-      const nx = [];
-      for (const i of level) { if (N[i].l !== null) nx.push(N[i].l); if (N[i].r !== null) nx.push(N[i].r); }
-      level = nx; d++;
+    const N = {};
+    a.t.forEach((v, i) => {
+      if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null };
+    });
+    const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+    if (!N[0]) {
+      snap("完成", "树是空的，右视图为空数组 []。", [{ t: "note", label: "二叉树", html: "空" }], { at: "done", kind: "ok", ans: [], facts: [["右视图 res", "[]"]] });
+      return;
     }
-    snap("完成", `右视图是 [${res.join(", ")}]。`, view([]), { at: "done", kind: "ok", ans: res.slice() });
+    const res = [], seen = new Set(), badges = {}, parentOf = {};
+    let level = [0];
+    const view = (cur, opts = {}) => {
+      const cls = {};
+      for (const id in N) cls[id] = seen.has(+id) ? "c" : cur.includes(+id) ? "e" : "";
+      return [
+        {
+          t: "tree",
+          label: "二叉树（按层 BFS，每层取最右节点）",
+          nodes: snapNodes(),
+          root: 0,
+          cls,
+          directed: true,
+          lrLabels: true,
+          ptrs: opts.ptrs || {},
+          onEdges: opts.onEdges || [],
+          badges: { ...badges },
+        },
+        { t: "chips", label: "右视图 res", items: res.slice(), empty: "还没有" },
+      ];
+    };
+    snap("开始", "从根节点这一层开始，一层一层往下，每层记录最右边的节点。", view([], { ptrs: { 最右: 0 } }), {
+      at: "init",
+      facts: [["当前层", "准备开始"], ["右视图 res", "[]"]],
+    });
+    let d = 0, prevLayer, prevResStr = "[]";
+    while (level.length) {
+      for (const i of level) badges[i] = `d=${d}`;
+      const last = level[level.length - 1];
+      const names = level.map((i) => N[i].v).join("、");
+      const nx = [], onEdges = [];
+      for (const i of level) {
+        if (parentOf[i] !== undefined) onEdges.push([parentOf[i], i]);
+        if (N[i].l !== null) { parentOf[N[i].l] = i; nx.push(N[i].l); }
+        if (N[i].r !== null) { parentOf[N[i].r] = i; nx.push(N[i].r); }
+      }
+      res.push(N[last].v);
+      seen.add(last);
+      const curLayer = `第 ${d} 层`, curResStr = `[${res.join(", ")}]`;
+      const facts = [
+        prevLayer ? ["当前层", curLayer, prevLayer] : ["当前层", curLayer],
+        ["本层节点", names],
+        ["右视图 res", curResStr, prevResStr],
+      ];
+      prevLayer = curLayer;
+      prevResStr = curResStr;
+      snap(
+        `第 ${d} 层`,
+        `这一层有 ${names}，从右边看过来，最先看到的是最右边的 <b>${N[last].v}</b>，记入 res。${nx.length ? "同时把下一层节点依次入队。" : "没有下一层了。"}`,
+        view(level, { ptrs: { 最右: last }, onEdges }),
+        { at: "level", facts },
+      );
+      level = nx;
+      d++;
+    }
+    snap("完成", `右视图是 [${res.join(", ")}]。`, view([]), {
+      at: "done",
+      kind: "ok",
+      ans: res.slice(),
+      facts: [["右视图 res", prevResStr]],
+    });
   } },
 { t: "先右后左 DFS", note: "和简洁写法一样：递归时先走右孩子再走左孩子，每一层第一个被访问到的就是最右边的节点。depth 等于 len(res) 时，说明这一层还没人记过。", legend: [["e","在调用栈上"],["a","当前节点"],["c","被看到的节点"],["d","这一层已经有人了"]], build(a, snap) {
-      const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
+      const N = {};
+      a.t.forEach((v, i) => {
+        if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null };
+      });
+      const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+      if (!N[0]) {
+        snap("完成", "树是空的，右视图为空数组 []。", [{ t: "note", label: "二叉树", html: "空" }], { at: "done", kind: "ok", ans: [], facts: [["len(res)", 0]] });
+        return;
+      }
       const res = [], stack = [], seen = new Set(), passed = new Set(), badges = {};
+      const stackEdges = () => {
+        const edges = [];
+        for (let i = 0; i + 1 < stack.length; i++) edges.push([stack[i], stack[i + 1]]);
+        return edges;
+      };
       const view = (cur) => {
         const cls = {};
         for (const id in N) cls[id] = +id === cur ? "a" : seen.has(+id) ? "c" : stack.includes(+id) ? "e" : passed.has(+id) ? "d" : "";
-        return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges: { ...badges } }, { t: "chips", label: "右视图 res", items: res.slice(), empty: "还没有" }];
+        return [
+          {
+            t: "tree",
+            label: "二叉树（先右后左 DFS，节点下方标出深度）",
+            nodes: snapNodes(),
+            root: 0,
+            cls,
+            directed: true,
+            lrLabels: true,
+            on: stack.slice(),
+            onEdges: stackEdges(),
+            ptrs: cur >= 0 ? { node: cur } : {},
+            badges: { ...badges },
+          },
+          { t: "chips", label: "右视图 res", items: res.slice(), empty: "还没有" },
+        ];
       };
-      snap("开始", "从根出发，depth = 0。每个节点下面标的是它的深度。", view(-1), { at: "init", facts: [["len(res)", 0]] });
+      let prevD, prevLen = 0, prevResStr = "[]";
+      snap("开始", "从根出发，depth = 0。每个节点下面标的是它的深度。", view(-1), {
+        at: "init",
+        facts: [["len(res)", 0], ["右视图 res", "[]"]],
+      });
       const dfs = (id, d) => {
         if (id === null) return;
-        stack.push(id); badges[id] = "d=" + d;
+        stack.push(id);
+        badges[id] = "d=" + d;
+        const depthFact = prevD !== undefined && prevD !== d ? ["depth", d, prevD] : ["depth", d];
+        prevD = d;
         if (d === res.length) {
-          res.push(N[id].v); seen.add(id);
-          snap("第一次到这一层", `${N[id].v} 的深度是 ${d}，正好等于 len(res)：第 ${d} 层还没人记过。先右后左走，第一个到的就是最右边的，记下 <b>${N[id].v}</b>。`, view(id), { at: "first", facts: [["len(res)", res.length]] });
+          res.push(N[id].v);
+          seen.add(id);
+          const curResStr = `[${res.join(", ")}]`;
+          const facts = [
+            depthFact,
+            ["len(res)", res.length, prevLen],
+            ["右视图 res", curResStr, prevResStr],
+          ];
+          prevLen = res.length;
+          prevResStr = curResStr;
+          snap(
+            "第一次到这一层",
+            `${N[id].v} 的深度是 ${d}，正好等于之前的 len(res)：第 ${d} 层还没人记过。先右后左走，第一个到的就是最右边的，记下 <b>${N[id].v}</b>。`,
+            view(id),
+            { at: "first", facts },
+          );
         } else {
           passed.add(id);
-          snap("这一层有人了", `${N[id].v} 的深度是 ${d}，len(res) = ${res.length}，第 ${d} 层已经记过更靠右的节点，${N[id].v} 被挡住了。`, view(id), { at: "pass", facts: [["len(res)", res.length]] });
+          snap(
+            "这一层有人了",
+            `${N[id].v} 的深度是 ${d}，len(res) = ${res.length}，第 ${d} 层已经记过更靠右的节点，${N[id].v} 被挡住了。`,
+            view(id),
+            { at: "pass", facts: [depthFact, ["len(res)", res.length], ["右视图 res", prevResStr]] },
+          );
         }
         dfs(N[id].r, d + 1);
         dfs(N[id].l, d + 1);
         stack.pop();
       };
-      dfs(N[0] ? 0 : null, 0);
-      snap("完成", `右视图是 [${res.join(", ")}]。`, view(-1), { at: "done", kind: "ok", ans: res.slice(), facts: [["len(res)", res.length]] });
+      dfs(0, 0);
+      snap("完成", `右视图是 [${res.join(", ")}]。`, view(-1), {
+        at: "done",
+        kind: "ok",
+        ans: res.slice(),
+        facts: [["len(res)", res.length], ["右视图 res", prevResStr]],
+      });
     } }
 ] };
 (function () {

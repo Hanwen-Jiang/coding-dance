@@ -55,16 +55,73 @@ assert s.kthSmallest(T([1]), 1) == 1
     { label: "示例 2", args: { t: [5, 3, 6, 2, 4, null, null, 1], k: 3 }, note: "root = [5,3,6,2,4,null,null,1], k = 3", expect: 3 },
   ],
   build(a, snap) {
-    const N = {}; a.t.forEach((v, i) => { if (v != null) N[i] = { v, l: a.t[2 * i + 1] != null ? 2 * i + 1 : null, r: a.t[2 * i + 2] != null ? 2 * i + 2 : null }; });
-    const stack = [], done = [], badges = {}; let k = a.k, cur = 0;
-    const view = (now, ans) => { const cls = {}; for (const id in N) cls[id] = +id === ans ? "k" : +id === now ? "a" : done.includes(+id) ? "c" : stack.includes(+id) ? "e" : ""; return [{ t: "tree", nodes: N, root: 0, cls, on: stack.slice(), badges }, { t: "chips", label: "栈（右边是栈顶）", items: stack.map((i) => N[i].v), empty: "空" }]; };
-    snap("开始", `中序遍历是从小到大的顺序，数到第 ${k} 个就是答案。`, view(-1), { at: "init", facts: [["还要数", k]] });
+    const N = {}, parent = { 0: null };
+    a.t.forEach((v, i) => {
+      if (v != null) {
+        const l = a.t[2 * i + 1] != null ? 2 * i + 1 : null;
+        const r = a.t[2 * i + 2] != null ? 2 * i + 2 : null;
+        N[i] = { v, l, r };
+        if (l !== null) parent[l] = i;
+        if (r !== null) parent[r] = i;
+      }
+    });
+    const snapNodes = () => Object.fromEntries(Object.entries(N).map(([k, v]) => [k, { ...v }]));
+    const pathEdges = (id) => {
+      const edges = [];
+      let x = id;
+      while (x !== null && x !== undefined && parent[x] !== null && parent[x] !== undefined) {
+        edges.push([parent[x], x]);
+        x = parent[x];
+      }
+      return edges.reverse();
+    };
+    const stack = [], done = [], badges = {}; let k = a.k, cur = N[0] ? 0 : null;
+    const view = (now, ans = -1, opts = {}) => {
+      const cls = {};
+      for (const id in N) cls[id] = +id === ans ? "k" : +id === now ? "a" : done.includes(+id) ? "c" : stack.includes(+id) ? "e" : "";
+      const activeId = now >= 0 ? now : ans >= 0 ? ans : null;
+      return [
+        {
+          t: "tree",
+          nodes: snapNodes(),
+          root: N[0] ? 0 : null,
+          cls,
+          directed: true,
+          lrLabels: true,
+          on: stack.slice(),
+          onEdges: opts.onEdges !== undefined ? opts.onEdges : (activeId !== null ? pathEdges(activeId) : []),
+          ptrs: { cur: activeId },
+          badges: { ...badges },
+        },
+        { t: "chips", label: "栈（右边是栈顶）", items: stack.map((i) => N[i].v), empty: "空" },
+      ];
+    };
+    if (!N[0]) {
+      snap("完成", "树是空的。", [{ t: "note", label: "树", html: "空" }], { at: "init", kind: "ok", ans: null, facts: [["还要数", k], ["已数", 0]] });
+      return;
+    }
+    snap("开始", `BST 的中序遍历（左 → 根 → 右）是从小到大的顺序，数到第 ${k} 个就是答案。`, view(0, -1, { onEdges: [] }), { at: "init", facts: [["还要数", k], ["已数", 0]] });
     while (true) {
-      while (cur !== null && cur !== undefined && N[cur]) { stack.push(cur); snap("向左走", `把 ${N[cur].v} 压栈，继续往左走。`, view(cur), { at: "left", facts: [["还要数", k]] }); cur = N[cur].l; }
+      while (cur !== null && cur !== undefined && N[cur]) {
+        stack.push(cur);
+        snap("向左走", `把 <b>${N[cur].v}</b> 压栈，继续往左走（找更小的节点）。`, view(cur), { at: "left", facts: [["还要数", k], ["已数", done.length]] });
+        cur = N[cur].l;
+      }
+      const prevK = k, prevDone = done.length;
       cur = stack.pop(); k--; done.push(cur); badges[cur] = "第 " + done.length;
-      if (k === 0) { snap("找到", `弹出 ${N[cur].v}，这是中序遍历的第 ${a.k} 个，答案是 <b>${N[cur].v}</b>。后面的节点不用再看了。`, view(-1, cur), { at: ["pop", "found"], kind: "ok", ans: N[cur].v, facts: [["还要数", 0]] }); return; }
-      snap("数一个", `左边走到头了，弹出 ${N[cur].v}，它是第 ${done.length} 小的。还要再数 ${k} 个，转向它的右子树。`, view(cur), { at: ["pop", "right"], facts: [["还要数", k]] });
-      cur = N[cur].r;
+      if (k === 0) {
+        snap("找到", `弹出 <b>${N[cur].v}</b>，这是中序遍历的第 ${a.k} 个，答案是 <b>${N[cur].v}</b>。后面的节点不用再看了。`, view(-1, cur), { at: ["pop", "found"], kind: "ok", ans: N[cur].v, facts: [["还要数", 0, prevK], ["已数", done.length, prevDone]] });
+        return;
+      }
+      snap("弹出计数", `左边走到头了，弹出 <b>${N[cur].v}</b>，它是第 ${done.length} 小的。还要再数 ${k} 个。`, view(cur), { at: "pop", facts: [["还要数", k, prevK], ["已数", done.length, prevDone]] });
+      const nxt = N[cur].r;
+      snap(
+        "转向右子树",
+        nxt !== null ? `转向 <b>${N[cur].v}</b> 的右孩子 <b>${N[nxt].v}</b>，继续找它的最小节点。` : `<b>${N[cur].v}</b> 没有右子树，cur 变空，下一轮直接从栈顶弹出下一个。`,
+        view(nxt !== null ? nxt : -1, -1, { onEdges: nxt !== null ? pathEdges(nxt) : [] }),
+        { at: "right", facts: [["还要数", k], ["已数", done.length]] },
+      );
+      cur = nxt;
     }
   },
   points: [
