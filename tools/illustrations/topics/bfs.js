@@ -49,25 +49,65 @@ class Solution:
         const dist = orig.map((r) => r.map(() => null)), q = [[si, sj]];
         dist[si][sj] = 0;
         let cur = null, found = null;
+        const DIR = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
         const edge = (i, j) => i === 0 || j === 0 || i === m - 1 || j === n - 1;
-        const view = () => [
-          { t: "grid", label: "迷宫（格子里是走到它的步数）", rows: orig.map((r, i) => r.map((c, j) => ({ v: c === "+" ? "" : dist[i][j] ?? "", cls: found && found[0] === i && found[1] === j ? "c" : cur && cur[0] === i && cur[1] === j ? "a" : c === "+" ? "d" : q.some(([x, y]) => x === i && y === j) ? "e" : dist[i][j] !== null ? "k" : edge(i, j) ? "w" : "" }))) },
-          { t: "chips", label: "队列（左边先出）", items: q.map(([x, y]) => `(${x}, ${y}) ${dist[x][y]} 步`), empty: "空" },
-        ];
-        snap("开始", `入口 (${si}, ${sj}) 放进队列，步数 0。把它标记成走过（入口本身不算出口）。`, view(), { at: "init" });
+        const view = (opts = {}) => {
+          const prevMap = opts.prevMap || {};
+          return [
+            {
+              t: "grid",
+              label: "迷宫（. 是空格，数字是走到它的步数）",
+              rows: orig.map((r, i) => r.map((c, j) => ({
+                v: c === "+" ? "" : dist[i][j] ?? ".",
+                ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+                cls: found && found[0] === i && found[1] === j ? "c" : cur && cur[0] === i && cur[1] === j ? "a" : c === "+" ? "d" : q.some(([x, y]) => x === i && y === j) ? "e" : dist[i][j] !== null ? "k" : edge(i, j) ? "w" : "",
+              }))),
+              feeds: (opts.feeds || []).slice(),
+            },
+            { t: "chips", label: "队列（左边先出）", items: q.map(([x, y]) => ({ v: `(${x}, ${y}) ${dist[x][y]}步`, cls: "e" })), empty: "空" },
+          ];
+        };
+        snap("开始", `入口 (${si}, ${sj}) 放进队列，步数 0。把它标记成走过（入口本身不算出口）。`, view({ prevMap: { [`${si},${sj}`]: "." } }), {
+          at: "init",
+          facts: [["当前位置", `(${si}, ${sj})`], ["当前步数", 0], ["队列长度", 1, 0]],
+        });
+        let prevPos = `(${si}, ${sj})`, prevD = 0;
         while (q.length) {
+          const prevQ = q.length;
           cur = q.shift();
-          const [i, j] = cur, d = dist[i][j], add = [];
-          for (const [x, y] of [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]]) {
+          const [i, j] = cur, d = dist[i][j], add = [], prevMap = {}, feeds = [];
+          const posStr = `(${i}, ${j})`;
+          for (const [di, dj, dn] of DIR) {
+            const x = i + di, y = j + dj;
             if (x < 0 || x >= m || y < 0 || y >= n || orig[x][y] === "+" || dist[x][y] !== null) continue;
             dist[x][y] = d + 1;
-            if (edge(x, y)) { found = [x, y]; snap("找到出口", `取出 (${i}, ${j})，${d} 步。它的邻居 (${x}, ${y}) 是边上的空格，就是出口。BFS 第一次碰到出口，${d + 1} 步就是最少的。`, view(), { at: ["pop", "next", "exit"], kind: "ok", ans: d + 1 }); return; }
+            prevMap[`${x},${y}`] = ".";
+            feeds.push({ from: [i, j], to: [x, y], win: true, label: dn });
+            if (edge(x, y)) {
+              found = [x, y];
+              snap("找到出口", `取出 (${i}, ${j})，${d} 步。它的邻居 (${x}, ${y}) 是边上的空格，就是出口。BFS 第一次碰到出口，${d + 1} 步就是最少的。`, view({ prevMap, feeds }), {
+                at: ["pop", "next", "exit"],
+                kind: "ok",
+                ans: d + 1,
+                facts: [["当前位置", posStr, prevPos], ["出口步数", d + 1, prevD], ["队列长度", q.length, prevQ]],
+              });
+              return;
+            }
             q.push([x, y]); add.push(`(${x}, ${y})`);
           }
-          snap("出队", `取出 (${i}, ${j})，${d} 步。` + (add.length ? `它旁边没走过的空格 ${add.join("、")} 标记成走过，步数 ${d + 1}，放到队尾。` : "它旁边没有能走的新格子。"), view(), { at: add.length ? ["pop", "next", "push"] : ["pop", "next"] });
+          snap("出队", `取出 (${i}, ${j})，${d} 步。` + (add.length ? `它旁边没走过的空格 ${add.join("、")} 标记成走过，步数 ${d + 1}，放到队尾。` : "它旁边没有能走的新格子。"), view({ prevMap, feeds }), {
+            at: add.length ? ["pop", "next", "push"] : ["pop", "next"],
+            facts: [["当前位置", posStr, prevPos], ["当前步数", d, prevD], ["队列长度", q.length, prevQ]],
+          });
+          prevPos = posStr; prevD = d;
         }
         cur = null;
-        snap("走不出去", "队列空了，能走到的格子都走过了，没有碰到出口，返回 -1。", view(), { at: "done", kind: "ok", ans: -1 });
+        snap("走不出去", "队列空了，能走到的格子都走过了，没有碰到出口，返回 -1。", view(), {
+          at: "done",
+          kind: "ok",
+          ans: -1,
+          facts: [["当前位置", "—", prevPos], ["队列长度", 0], ["结果", -1]],
+        });
       },
     },
   }, {
@@ -109,27 +149,76 @@ class Solution:
       return { args: { mat }, note: `mat = ${R.fmt(mat)}` };
     },
     demo: {
-      legend: [["c", "0：起点"], ["a", "这一圈刚算出距离的格子"], ["k", "已经算好"]],
+      legend: [["c", "0：起点"], ["e", "本轮扩散源"], ["a", "这一圈刚算出距离的格子"], ["k", "已经算好"]],
       presets: [{ label: "示例 2", args: { mat: [[0, 0, 0], [0, 1, 0], [1, 1, 1]] }, note: "mat = [[0,0,0],[0,1,0],[1,1,1]]", expect: [[0, 0, 0], [0, 1, 0], [1, 2, 1]] }, { label: "一个 0", args: { mat: [[1, 1, 1, 1], [1, 1, 1, 1], [1, 0, 1, 1], [1, 1, 1, 1]] }, note: "mat = [[1,1,1,1],[1,1,1,1],[1,0,1,1],[1,1,1,1]]", expect: [[3, 2, 3, 4], [2, 1, 2, 3], [1, 0, 1, 2], [2, 1, 2, 3]] }],
       build(a, snap) {
         const mat = a.mat, m = mat.length, n = mat[0].length, dist = mat.map((r) => r.map(() => -1));
-        let q = [], fresh = [];
-        const view = () => [{ t: "grid", label: "dist（空白是还没走到）", rows: dist.map((r, i) => r.map((d, j) => ({ v: d < 0 ? "" : d, cls: fresh.some(([x, y]) => x === i && y === j) ? "a" : d === 0 ? "c" : d > 0 ? "k" : "" }))) }];
-        snap("开始", "dist 全部是 -1（还没走到）。", view(), { at: "init" });
-        for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (mat[i][j] === 0) { dist[i][j] = 0; q.push([i, j]); }
-        snap("所有的 0 入队", `一共 ${q.length} 个 0，距离都是 0，同时放进队列。`, view(), { at: "seed" });
+        const total = m * n;
+        const DIR = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
+        let q = [], fresh = [], sources = [], rem = total;
+        const hasPos = (arr, i, j) => arr.some(([x, y]) => x === i && y === j);
+        const view = (opts = {}) => {
+          const prevMap = opts.prevMap || {};
+          return [{
+            t: "grid",
+            label: "dist（-1 表示还没走到）",
+            rows: dist.map((r, i) => r.map((d, j) => ({
+              v: d,
+              ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+              cls: hasPos(fresh, i, j) ? "a" : hasPos(sources, i, j) ? "e" : d === 0 ? "c" : d > 0 ? "k" : "d",
+            }))),
+            feeds: (opts.feeds || []).slice(),
+          }];
+        };
+        snap("开始", "dist 全部是 -1（还没走到）。", view(), {
+          at: "init",
+          facts: [["当前层距离", "—"], ["待扩展队列", 0], ["未算格子", rem]],
+        });
+        const seedPrev = {};
+        for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) if (mat[i][j] === 0) {
+          dist[i][j] = 0; q.push([i, j]); seedPrev[`${i},${j}`] = -1; rem--;
+        }
+        snap("所有的 0 入队", `一共 ${q.length} 个 0，距离都是 0，同时放进队列。`, view({ prevMap: seedPrev }), {
+          at: "seed",
+          facts: [["当前层距离", 0], ["待扩展队列", q.length, 0], ["未算格子", rem, total]],
+        });
+        let prevD = 0, maxDist = 0;
         for (let d = 1; q.length; d++) {
-          const next = [];
-          for (const [i, j] of q) for (const [x, y] of [[i - 1, j], [i + 1, j], [i, j - 1], [i, j + 1]]) {
-            if (x >= 0 && x < m && y >= 0 && y < n && dist[x][y] === -1) { dist[x][y] = d; next.push([x, y]); }
+          const next = [], prevMap = {}, feeds = [], prevRem = rem;
+          sources = q.slice();
+          for (const [i, j] of q) for (const [di, dj, dn] of DIR) {
+            const x = i + di, y = j + dj;
+            if (x >= 0 && x < m && y >= 0 && y < n && dist[x][y] === -1) {
+              dist[x][y] = d;
+              next.push([x, y]);
+              prevMap[`${x},${y}`] = -1;
+              feeds.push({ from: [i, j], to: [x, y], win: true, label: dn });
+              rem--;
+            }
           }
           fresh = next;
-          if (!next.length) { snap("扩不动了", `上一圈的格子周围都已经有距离了，队列取空。`, view(), { at: ["pop", "next"] }); break; }
-          snap(`第 ${d} 圈`, `上一圈的 ${q.length} 个格子依次出队，把周围还没走到的 ${next.length} 个格子的距离设成 ${d}，放进队列。`, view(), { at: ["pop", "next"] });
+          if (!next.length) {
+            snap("扩不动了", `上一圈的格子周围都已经有距离了，队列取空。`, view(), {
+              at: ["pop", "next"],
+              facts: [["当前层距离", prevD], ["待扩展队列", 0, q.length], ["未算格子", rem]],
+            });
+            break;
+          }
+          maxDist = d;
+          snap(`第 ${d} 圈`, `上一圈的 ${q.length} 个格子依次出队，把周围还没走到的 ${next.length} 个格子的距离设成 ${d}，放进队列。`, view({ prevMap, feeds }), {
+            at: ["pop", "next"],
+            facts: [["当前层距离", d, prevD], ["待扩展队列", next.length, q.length], ["未算格子", rem, prevRem]],
+          });
+          prevD = d;
           q = next;
         }
-        fresh = [];
-        snap("完成", "每个格子第一次被走到时，就是离它最近的 0 先扩到的。", view(), { at: "done", kind: "ok", ans: dist.map((r) => r.slice()) });
+        fresh = []; sources = [];
+        snap("完成", "每个格子第一次被走到时，就是离它最近的 0 先扩到的。", view(), {
+          at: "done",
+          kind: "ok",
+          ans: dist.map((r) => r.slice()),
+          facts: [["最大距离", maxDist], ["待扩展队列", 0], ["未算格子", 0]],
+        });
       },
     },
   }],

@@ -21,7 +21,7 @@ class Solution:
                 if piece == piece[::-1]:        # 这一段是回文才切 #@try,cut
                     path.append(piece)          #@cut
                     dfs(end)                    #@cut
-                    path.pop()
+                    path.pop()                  #@back
 
         dfs(0)                                  #@init
         return res                              #@done
@@ -44,36 +44,99 @@ assert len(s.partition("aaaa")) == 8
   sig: { fn: "partition", params: ["string"], ret: "List<List<string>>", cmp: "unordered" },
   call: (a) => [a.s],
   cases: [["a"], ["ab"], ["aaaa"], ["abcba"], ["efe"]],
-  legend: [["k", "已经切好的段（颜色交替）"], ["a", "正在试的一段"], ["w", "不是回文"], ["c", "切完了"]],
+  legend: [["k", "已切好的段（颜色交替）"], ["a", "正在切的一段"], ["w", "不是回文（剪枝）"], ["d", "刚撤销回溯"], ["c", "切完收集"]],
   presets: [
     { label: "示例 1", args: { s: "aab" }, note: "s = \"aab\"", expect: [["a", "a", "b"], ["aa", "b"]] },
     { label: "abba", args: { s: "abba" }, note: "s = \"abba\"", expect: [["a", "b", "b", "a"], ["a", "bb", "a"], ["abba"]] },
   ],
   build(a, snap) {
     const s = a.s, res = [], path = [];
-    const view = (start, end, cls, done) => {
-      const own = []; let p = 0;
-      path.forEach((seg, k) => { for (let t = 0; t < seg.length; t++) own[p + t] = done ? "c" : k % 2 ? "g" : "k"; p += seg.length; });
+    const pathStr = () => (path.length ? path.join(" | ") : "空");
+    const remStr = (idx) => (idx < s.length ? s.slice(idx) : "空");
+    const view = (start, end, cls, opts = {}) => {
+      const own = [], committed = opts.activeNew ? path.slice(0, -1) : path;
+      let p = 0;
+      committed.forEach((seg, k) => {
+        for (let t = 0; t < seg.length; t++) own[p + t] = opts.done ? "c" : k % 2 ? "g" : "k";
+        p += seg.length;
+      });
       return [
-        { t: "array", label: "s", items: s.split("").map((ch, i) => ({ v: ch, cls: own[i] || (i >= start && i < end ? cls : "") })), ptrs: { start: start < s.length ? start : null } },
-        { t: "chips", label: "path", items: path.slice(), empty: "空" },
-        { t: "chips", label: "已收集的方案", items: res.map((r) => r.join(" | ")), empty: "还没有" },
+        {
+          t: "array",
+          label: "s",
+          items: s.split("").map((ch, i) => ({
+            v: ch,
+            cls: own[i] || (i >= start && i < end ? cls : ""),
+          })),
+          ptrs: { start: start < s.length ? start : null },
+        },
+        {
+          t: "chips",
+          label: "path（当前切分）",
+          items: path.map((seg, k) => ({
+            v: seg,
+            cls: opts.done ? "c" : opts.activeNew && k === path.length - 1 ? "a" : k % 2 ? "g" : "k",
+          })),
+          empty: "空",
+        },
+        {
+          t: "chips",
+          label: "已收集的方案",
+          items: res.map((r, idx) => ({
+            v: r.join(" | "),
+            cls: opts.justCollected && idx === res.length - 1 ? "c" : "",
+          })),
+          empty: "还没有",
+        },
       ];
     };
-    snap("开始", `把 "${s}" 切成若干段，每段都是回文。先决定第一段切多长。`, view(0, 0, ""), { at: "init" });
+    snap("开始", `把 "${s}" 切成若干段，每段都是回文。先决定第一段切多长。`, view(0, 0, ""), {
+      at: "init",
+      facts: [["path", "空"], ["已找到", 0], ["剩余", remStr(0)]],
+    });
     const dfs = (start) => {
-      if (start === s.length) { res.push(path.slice()); snap("切完了", `切到了末尾，得到一种方案：<b>${path.join(" | ")}</b>。`, view(s.length, s.length, "", true), { at: "collect", kind: "ok", facts: [["方案数", res.length]] }); return; }
+      if (start === s.length) {
+        const prevCount = res.length;
+        res.push(path.slice());
+        snap("收集方案", `切到了末尾，收集一种方案：<b>${path.join(" | ")}</b>。`, view(s.length, s.length, "", { done: true, justCollected: true }), {
+          at: "collect",
+          kind: "ok",
+          facts: [["path", pathStr()], ["已找到", res.length, prevCount], ["剩余", "空"]],
+        });
+        return;
+      }
       for (let end = start + 1; end <= s.length; end++) {
-        const piece = s.slice(start, end), ok = piece === piece.split("").reverse().join("");
-        if (!ok) { snap("跳过", `"${piece}" 倒过来是 "${piece.split("").reverse().join("")}"，不是回文，不能这样切。`, view(start, end, "w"), { at: "try", kind: "warn", facts: [["方案数", res.length]] }); continue; }
-        snap("切一刀", `"${piece}" 是回文，切下来放进 path，接着从下标 ${end} 开始切剩下的${end < s.length ? ` "${s.slice(end)}"` : ""}。`, view(start, end, "a"), { at: "cut", facts: [["方案数", res.length]] });
+        const piece = s.slice(start, end), rev = piece.split("").reverse().join("");
+        if (piece !== rev) {
+          snap("剪枝跳过", `"${piece}" 倒过来是 "${rev}"，不是回文，剪枝跳过。`, view(start, end, "w"), {
+            at: "try",
+            kind: "warn",
+            facts: [["path", pathStr()], ["已找到", res.length], ["剩余", remStr(start)]],
+          });
+          continue;
+        }
+        const prevPath = pathStr(), prevRem = remStr(start);
         path.push(piece);
+        snap("做选择（切一刀）", `"${piece}" 是回文，切下来放进 path，继续从下标 ${end} 切剩下的${end < s.length ? ` "${s.slice(end)}"` : "（已到末尾）"}。`, view(start, end, "a", { activeNew: true }), {
+          at: "cut",
+          facts: [["path", pathStr(), prevPath], ["已找到", res.length], ["剩余", remStr(end), prevRem]],
+        });
         dfs(end);
+        const beforePopPath = pathStr(), beforePopRem = remStr(end);
         path.pop();
+        snap("撤销选择（回溯）", `从下标 ${end} 返回，把 "${piece}" 从 path 弹出，退回下标 ${start} 尝试更长的切法。`, view(start, end, "d"), {
+          at: "back",
+          facts: [["path", pathStr(), beforePopPath], ["已找到", res.length], ["剩余", remStr(start), beforePopRem]],
+        });
       }
     };
     dfs(0);
-    snap("完成", `所有切法都试过了，一共 <b>${res.length}</b> 种方案。`, view(s.length, s.length, ""), { at: "done", kind: "ok", ans: res.map((r) => r.slice()), facts: [["方案数", res.length]] });
+    snap("完成", `所有切法都试过了，一共 <b>${res.length}</b> 种方案。`, view(s.length, s.length, ""), {
+      at: "done",
+      kind: "ok",
+      ans: res.map((r) => r.slice()),
+      facts: [["path", "空"], ["已找到", res.length], ["剩余", "空"]],
+    });
   },
   points: [
     { t: "end 取到 len(s)", body: "切片右端是开的，<code>range(start + 1, len(s) + 1)</code> 才能让最后一段包含最后一个字符。" },

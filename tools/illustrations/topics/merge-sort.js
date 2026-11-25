@@ -53,37 +53,96 @@ class Solution:
       presets: [{ label: "示例", args: { nums: [6, 3, 8, 5, 2, 7, 4, 1] }, note: "nums = [6,3,8,5,2,7,4,1]", expect: [1, 2, 3, 4, 5, 6, 7, 8] }],
       build(a, snap) {
         const nums = a.nums.slice(), n = nums.length, tmp = new Array(n).fill(null);
-        let L = -1, M = -1, Rr = -2, I = null, J = null;
-        const view = () => [
-          { t: "bars", label: "nums", items: nums.map((v, x) => ({ v, cls: x === I || x === J ? "a" : x >= L && x <= M ? "e" : x > M && x <= Rr ? "g" : "" })), ptrs: { ...(I !== null && I <= M ? { i: I } : {}), ...(J !== null && J <= Rr ? { j: J } : {}) } },
-          { t: "array", label: "tmp", items: tmp.map((v, x) => ({ v: v === null ? "" : v, cls: v !== null && x >= L && x <= Rr ? "c" : "" })) },
-        ];
-        snap("开始", `对整个数组 [0, ${n - 1}] 做归并排序：先分，再合。`, view(), { at: "start" });
+        let L = -1, M = -1, Rr = -2, I = null, J = null, K = null, copied = false;
+        const view = (opts = {}) => {
+          const prevNums = opts.prevNums || {};
+          return [
+            {
+              t: "bars",
+              label: "nums",
+              items: nums.map((v, x) => ({
+                v,
+                ...(prevNums[x] !== undefined ? { prev: prevNums[x] } : {}),
+                cls: copied && x >= L && x <= Rr ? "c" : x === I || x === J ? "a" : x >= L && x <= M ? "e" : x > M && x <= Rr ? "g" : "",
+              })),
+              ptrs: { ...(I !== null && I <= M ? { i: I } : {}), ...(J !== null && J <= Rr ? { j: J } : {}) },
+            },
+            {
+              t: "array",
+              label: "tmp",
+              items: tmp.map((v, x) => ({
+                v: v === null ? "" : v,
+                cls: v !== null && x >= L && x <= Rr ? "c" : "",
+              })),
+              ptrs: K !== null ? { k: K } : {},
+              feeds: opts.feeds || [],
+            },
+          ];
+        };
+        snap("开始", `对整个数组 [0, ${n - 1}] 做归并排序：先分，再合。`, view(), {
+          at: "start",
+          facts: [["当前合并", "—"], ["指针 i / j", "—"], ["写入 tmp", "—"]],
+        });
         const ms = (l, r) => {
           if (l >= r) return;
           const mid = (l + r) >> 1;
           ms(l, mid); ms(mid + 1, r);
-          L = l; M = mid; Rr = r; tmp.fill(null);
+          const oldRange = L >= 0 ? `[${L}, ${Rr}]` : "—";
+          L = l; M = mid; Rr = r; tmp.fill(null); copied = false;
           let i = l, j = mid + 1, k = l;
-          I = i; J = j;
-          snap("合并", `[${l}, ${mid}] 和 [${mid + 1}, ${r}] 两半都已经排好，现在合并。`, view(), { at: ["split", "merge"] });
+          I = i; J = j; K = k;
+          snap("合并", `[${l}, ${mid}] 和 [${mid + 1}, ${r}] 两半都已经排好，现在合并。`, view(), {
+            at: ["split", "merge"],
+            facts: [["当前合并", `[${l}, ${mid}] + [${mid + 1}, ${r}]`, oldRange], ["指针 i / j", `${i} / ${j}`], ["写入位置 k", k]],
+          });
           while (i <= mid && j <= r) {
             const left = nums[i] <= nums[j];
+            const vi = nums[i], vj = nums[j], picked = left ? vi : vj, oldK = k;
             tmp[k++] = left ? nums[i++] : nums[j++];
-            I = i; J = j;
-            snap("拿小的", left ? `${tmp[k - 1]} &lt;= ${nums[j]}，拿左边的 ${tmp[k - 1]}。` : `${nums[i]} &gt; ${tmp[k - 1]}，拿右边的 ${tmp[k - 1]}。`, view(), { at: "take" });
+            I = i <= mid ? i : null;
+            J = j <= r ? j : null;
+            K = oldK;
+            snap("拿小的", left ? `${vi} &lt;= ${vj}，拿左边的 ${picked} 放进 tmp[${oldK}]。` : `${vi} &gt; ${vj}，拿右边的 ${picked} 放进 tmp[${oldK}]。`, view(), {
+              at: "take",
+              facts: [
+                ["当前合并", `[${l}, ${mid}] + [${mid + 1}, ${r}]`],
+                ["比较", `${vi} vs ${vj} → 取 ${picked}`],
+                ["写入 tmp", `tmp[${oldK}] = ${picked}`],
+                ["下一位置 k", k, oldK],
+              ],
+            });
           }
           const rest = [];
+          const prevK = k;
           while (i <= mid) { rest.push(nums[i]); tmp[k++] = nums[i++]; }
           while (j <= r) { rest.push(nums[j]); tmp[k++] = nums[j++]; }
           I = J = null;
-          if (rest.length) snap("接上剩下的", `一边用完了，另一边剩下的 ${rest.join("、")} 直接接到后面。`, view(), { at: "rest" });
-          for (let x = l; x <= r; x++) nums[x] = tmp[x];
-          snap("拷回", `把 tmp 的 [${l}, ${r}] 拷回 nums，这一段排好了。`, view(), { at: "copy" });
+          K = rest.length ? k - 1 : null;
+          if (rest.length) {
+            snap("接上剩下的", `一边用完了，另一边剩下的 ${rest.join("、")} 直接接到后面。`, view(), {
+              at: "rest",
+              facts: [["当前合并", `[${l}, ${mid}] + [${mid + 1}, ${r}]`], ["接上剩余", rest.join(", ")], ["写入位置 k", k - 1, prevK]],
+            });
+          }
+          const prevNums = {};
+          for (let x = l; x <= r; x++) {
+            if (nums[x] !== tmp[x]) prevNums[x] = nums[x];
+            nums[x] = tmp[x];
+          }
+          copied = true; K = null;
+          snap("拷回", `把 tmp 的 [${l}, ${r}] 拷回 nums，这一段排好了。`, view({ prevNums }), {
+            at: "copy",
+            facts: [["当前合并", `[${l}, ${mid}] + [${mid + 1}, ${r}]`], ["拷回范围", `[${l}, ${r}]`], ["本段结果", `[${nums.slice(l, r + 1).join(", ")}]`]],
+          });
         };
         ms(0, n - 1);
-        L = M = -1; Rr = -2; tmp.fill(null);
-        snap("完成", `排好了：[${nums.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: nums.slice() });
+        L = M = -1; Rr = -2; tmp.fill(null); copied = false;
+        snap("完成", `排好了：[${nums.join(", ")}]。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: nums.slice(),
+          facts: [["当前合并", "全部完成"], ["结果", `[${nums.join(", ")}]`]],
+        });
       },
     },
   }, {
@@ -136,39 +195,103 @@ class Solution:
       presets: [{ label: "示例 1", args: { nums: [9, 7, 5, 4, 6] }, note: "record = [9,7,5,4,6]", expect: 8 }],
       build(a, snap) {
         const nums = a.nums.slice(), n = nums.length, tmp = new Array(n).fill(null);
-        let L = -1, M = -1, Rr = -2, I = null, J = null, hot = [], total = 0;
-        const view = () => [
-          { t: "array", label: "record", items: nums.map((v, x) => ({ v, cls: hot.includes(x) ? "w" : x === I || x === J ? "a" : x >= L && x <= M ? "e" : x > M && x <= Rr ? "g" : "" })), ptrs: { ...(I !== null && I <= M ? { i: I } : {}), ...(J !== null && J <= Rr ? { j: J } : {}) } },
-          { t: "array", label: "tmp", items: tmp.map((v) => (v === null ? "" : v)) },
-        ];
-        if (n < 2) { snap("完成", "不到两个数，没有逆序对。", view(), { at: ["base", "done"], kind: "ok", ans: 0, facts: [["逆序对", 0]] }); return; }
+        let L = -1, M = -1, Rr = -2, I = null, J = null, K = null, hot = [], total = 0, copied = false;
+        const view = (opts = {}) => {
+          const prevNums = opts.prevNums || {};
+          return [
+            {
+              t: "array",
+              label: "record",
+              items: nums.map((v, x) => ({
+                v,
+                ...(prevNums[x] !== undefined ? { prev: prevNums[x] } : {}),
+                cls: hot.includes(x) ? "w" : copied && x >= L && x <= Rr ? "c" : x === I || x === J ? "a" : x >= L && x <= M ? "e" : x > M && x <= Rr ? "g" : "",
+              })),
+              ptrs: { ...(I !== null && I <= M ? { i: I } : {}), ...(J !== null && J <= Rr ? { j: J } : {}) },
+              feeds: opts.feeds || [],
+            },
+            {
+              t: "array",
+              label: "tmp",
+              items: tmp.map((v, x) => ({ v: v === null ? "" : v, cls: v !== null && x >= L && x <= Rr ? "c" : "" })),
+              ptrs: K !== null ? { k: K } : {},
+              feeds: [],
+            },
+          ];
+        };
+        if (n < 2) {
+          snap("完成", "不到两个数，没有逆序对。", view(), {
+            at: ["base", "done"],
+            kind: "ok",
+            ans: 0,
+            facts: [["逆序对", 0]],
+          });
+          return;
+        }
         const sort = (l, r) => {
           if (l >= r) return;
           const mid = (l + r) >> 1;
           sort(l, mid); sort(mid + 1, r);
-          L = l; M = mid; Rr = r; tmp.fill(null); hot = [];
+          const oldRange = L >= 0 ? `[${L}, ${Rr}]` : "—";
+          L = l; M = mid; Rr = r; tmp.fill(null); hot = []; copied = false;
           let i = l, j = mid + 1, k = l;
-          I = i; J = j;
-          snap("合并", `[${l}, ${mid}] 和 [${mid + 1}, ${r}] 各自排好了，里面的逆序对也数过了。合并时数跨过中间的。`, view(), { at: ["split", "merge"], facts: [["逆序对", total]] });
+          I = i; J = j; K = k;
+          snap("合并", `[${l}, ${mid}] 和 [${mid + 1}, ${r}] 各自排好了，里面的逆序对也数过了。合并时数跨过中间的。`, view(), {
+            at: ["split", "merge"],
+            facts: [["当前合并", `[${l}, ${mid}] + [${mid + 1}, ${r}]`, oldRange], ["逆序对", total]],
+          });
           while (i <= mid && j <= r) {
-            if (nums[i] <= nums[j]) { tmp[k++] = nums[i++]; I = i; hot = []; snap("拿左边", `${tmp[k - 1]} &lt;= ${nums[j]}，拿左边的，不产生逆序对。`, view(), { at: "take", facts: [["逆序对", total]] }); }
-            else {
-              const c = mid - i + 1;
+            if (nums[i] <= nums[j]) {
+              const vi = nums[i], vj = nums[j], oldK = k;
+              tmp[k++] = nums[i++];
+              I = i <= mid ? i : null;
+              K = oldK;
+              hot = [];
+              snap("拿左边", `${vi} &lt;= ${vj}，拿左边的，不产生逆序对。`, view(), {
+                at: "take",
+                facts: [["当前合并", `[${l}, ${mid}] + [${mid + 1}, ${r}]`], ["写入 tmp", `tmp[${oldK}] = ${vi}`], ["逆序对", total]],
+              });
+            } else {
+              const c = mid - i + 1, oldTotal = total, oldJ = j;
               hot = Array.from({ length: c }, (_, x) => i + x);
               total += c;
-              snap("跨过中间的逆序对", `右边的 ${nums[j]} 比左边的 ${nums[i]} 小，左边剩下的 ${c} 个数（${hot.map((x) => nums[x]).join("、")}）都比它大：多了 ${c} 对。`, view(), { at: "cross", facts: [["逆序对", total]] });
-              tmp[k++] = nums[j++]; J = j; hot = [];
+              const feeds = hot.map((x, idx) => ({
+                from: x,
+                to: oldJ,
+                win: idx === 0,
+                ...(idx === 0 ? { label: `+${c}对` } : {}),
+              }));
+              snap("跨过中间的逆序对", `右边的 ${nums[oldJ]} 比左边的 ${nums[i]} 小，左边剩下的 ${c} 个数（${hot.map((x) => nums[x]).join("、")}）都比它大：多了 ${c} 对。`, view({ feeds }), {
+                at: "cross",
+                facts: [["当前合并", `[${l}, ${mid}] + [${mid + 1}, ${r}]`], ["本次新增", `+${c} 对`], ["逆序对", total, oldTotal]],
+              });
+              K = k;
+              tmp[k++] = nums[j++];
+              J = j <= r ? j : null;
+              hot = [];
             }
           }
           while (i <= mid) tmp[k++] = nums[i++];
           while (j <= r) tmp[k++] = nums[j++];
-          for (let x = l; x <= r; x++) nums[x] = tmp[x];
-          I = J = null;
-          snap("拷回", `剩下的接上，拷回 record，[${l}, ${r}] 排好了。`, view(), { at: ["rest", "copy"], facts: [["逆序对", total]] });
+          const prevNums = {};
+          for (let x = l; x <= r; x++) {
+            if (nums[x] !== tmp[x]) prevNums[x] = nums[x];
+            nums[x] = tmp[x];
+          }
+          I = J = K = null; copied = true;
+          snap("拷回", `剩下的接上，拷回 record，[${l}, ${r}] 排好了。`, view({ prevNums }), {
+            at: ["rest", "copy"],
+            facts: [["当前合并", `[${l}, ${mid}] + [${mid + 1}, ${r}]`], ["拷回范围", `[${l}, ${r}]`], ["逆序对", total]],
+          });
         };
         sort(0, n - 1);
-        L = M = -1; Rr = -2; tmp.fill(null);
-        snap("完成", `一共 ${total} 个逆序对。`, view(), { at: "done", kind: "ok", ans: total, facts: [["逆序对", total]] });
+        L = M = -1; Rr = -2; tmp.fill(null); copied = false;
+        snap("完成", `一共 ${total} 个逆序对。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: total,
+          facts: [["当前合并", "全部完成"], ["逆序对", total]],
+        });
       },
     },
   }],

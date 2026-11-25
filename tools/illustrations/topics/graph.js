@@ -54,29 +54,89 @@ class Solution:
       ],
       build(a, snap) {
         const n = a.n, g = Array.from({ length: n }, () => []), seen = new Array(n).fill(false), st = [];
-        let built = 0, cur = -1, hotEdge = -1;
+        const edgeKey = (u, v) => (u < v ? `${u},${v}` : `${v},${u}`);
+        const treeEdges = new Set();
+        let built = 0, cur = -1, hotEdge = -1, activeEdges = new Set(), freshChips = new Set(), seenCount = 0;
         const view = () => [
-          { t: "net", label: "图", nodes: Array.from({ length: n }, (_, i) => ({ v: i, cls: i === cur ? "a" : st.includes(i) ? "e" : seen[i] ? "c" : i === a.destination ? "w" : "" })), edges: a.edges.map(([u, v], k) => [u, v, k === hotEdge ? "on" : k < built ? "" : "dim"]) },
-          { t: "chips", label: "邻接表 graph", items: g.map((nb, i) => ({ v: `${i}: [${nb.join(", ")}]`, cls: i === cur ? "a" : "" })) },
-          { t: "chips", label: "栈（右边是栈顶）", items: st.slice(), empty: "空" },
+          {
+            t: "net",
+            label: "图",
+            nodes: Array.from({ length: n }, (_, i) => ({
+              v: i,
+              cls: i === cur ? "a" : st.includes(i) ? "e" : seen[i] ? "c" : i === a.destination ? "w" : "",
+            })),
+            edges: a.edges.map(([u, v], k) => {
+              const key = edgeKey(u, v);
+              const cls = hotEdge >= 0
+                ? (k === hotEdge ? "on draw" : k < built ? "" : "dim")
+                : (activeEdges.has(key) ? "on draw" : treeEdges.has(key) ? "on" : "");
+              return [u, v, cls];
+            }),
+          },
+          {
+            t: "chips",
+            label: "邻接表 graph",
+            items: g.map((nb, i) => ({ v: `${i}: [${nb.join(", ")}]`, cls: i === cur || freshChips.has(i) ? "a" : "" })),
+          },
+          {
+            t: "chips",
+            label: "栈（右边是栈顶）",
+            items: st.map((x) => ({ v: x, cls: freshChips.has(x) ? "a" : "e" })),
+            empty: "空",
+          },
         ];
-        snap("开始", `${n} 个点，邻接表里每个点先放一个空列表。`, view(), { at: "init" });
+        snap("开始", `${n} 个点，邻接表里每个点先放一个空列表。`, view(), {
+          at: "init",
+          facts: [["阶段", "建邻接表"], ["已建边", `0 / ${a.edges.length}`], ["已访问", 0]],
+        });
         a.edges.forEach(([u, v], k) => {
           g[u].push(v); g[v].push(u); built = k + 1; hotEdge = k;
-          snap("加边", `边 (${u}, ${v})：把 ${v} 加进 graph[${u}]，把 ${u} 加进 graph[${v}]。`, view(), { at: "edge" });
+          freshChips = new Set([u, v]);
+          snap("加边", `边 (${u}, ${v})：把 ${v} 加进 graph[${u}]，把 ${u} 加进 graph[${v}]。`, view(), {
+            at: "edge",
+            facts: [["当前边", `(${u}, ${v})`], ["已建边", `${built} / ${a.edges.length}`, `${built - 1} / ${a.edges.length}`], ["已访问", 0]],
+          });
         });
-        hotEdge = -1;
-        seen[a.source] = true; st.push(a.source);
-        snap("出发", `从 ${a.source} 出发：标记走过，放进栈。要找的是 ${a.destination}。`, view(), { at: "start" });
+        hotEdge = -1; freshChips = new Set();
+        seen[a.source] = true; seenCount = 1; st.push(a.source);
+        snap("出发", `从 ${a.source} 出发：标记走过，放进栈。要找的是 ${a.destination}。`, view(), {
+          at: "start",
+          facts: [["当前点", a.source], ["已访问", 1, 0], ["栈大小", st.length, 0]],
+        });
+        let prevCur = a.source;
         while (st.length) {
+          const prevSeen = seenCount, prevStLen = st.length;
           cur = st.pop();
-          if (cur === a.destination) { snap("到了", `弹出 ${cur}，就是终点，返回 true。`, view(), { at: ["pop", "found"], kind: "ok", ans: true }); return; }
+          activeEdges = new Set();
+          freshChips = new Set();
+          if (cur === a.destination) {
+            snap("到了", `弹出 ${cur}，就是终点，返回 true。`, view(), {
+              at: ["pop", "found"],
+              kind: "ok",
+              ans: true,
+              facts: [["当前点", cur, prevCur], ["已访问", seenCount], ["栈大小", st.length, prevStLen]],
+            });
+            return;
+          }
           const add = g[cur].filter((v) => !seen[v]);
-          add.forEach((v) => { seen[v] = true; st.push(v); });
-          snap("弹出", `弹出 ${cur}，不是终点。它的邻居是 [${g[cur].join(", ")}]，` + (add.length ? `其中 ${add.join("、")} 没走过，标记后压栈。` : "都走过了。"), view(), { at: ["pop", "found", "next"] });
+          add.forEach((v) => {
+            seen[v] = true; seenCount++; st.push(v);
+            const k = edgeKey(cur, v);
+            activeEdges.add(k); treeEdges.add(k); freshChips.add(v);
+          });
+          snap("弹出", `弹出 ${cur}，不是终点。它的邻居是 [${g[cur].join(", ")}]，` + (add.length ? `其中 ${add.join("、")} 没走过，标记后压栈。` : "都走过了。"), view(), {
+            at: ["pop", "found", "next"],
+            facts: [["当前点", cur, prevCur], ["已访问", seenCount, prevSeen], ["栈大小", st.length, prevStLen]],
+          });
+          prevCur = cur;
         }
-        cur = -1;
-        snap("走不到", `栈空了，从 ${a.source} 能走到的点都走过了，没有 ${a.destination}，返回 false。`, view(), { at: "done", kind: "ok", ans: false });
+        cur = -1; activeEdges = new Set(); freshChips = new Set();
+        snap("走不到", `栈空了，从 ${a.source} 能走到的点都走过了，没有 ${a.destination}，返回 false。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: false,
+          facts: [["当前点", "—", prevCur], ["已访问", seenCount], ["结果", "false"]],
+        });
       },
     },
   }, {
@@ -122,22 +182,51 @@ class Solution:
       legend: [["a", "正在看的陆地"], ["w", "它挨着水或边缘的方向"], ["e", "陆地"], ["c", "数过了"]],
       presets: [{ label: "示例 1", args: { grid: [[0, 1, 0, 0], [1, 1, 1, 0], [0, 1, 0, 0], [1, 1, 0, 0]] }, note: "grid = [[0,1,0,0],[1,1,1,0],[0,1,0,0],[1,1,0,0]]", expect: 16 }],
       build(a, snap) {
-        const g = a.grid, m = g.length, n = g[0].length, done = new Set();
+        const g = a.grid, m = g.length, n = g[0].length, done = new Set(), contrib = {};
         let ans = 0, ci = -1, cj = -1, open = [];
-        const view = () => [{ t: "grid", rows: g.map((row, i) => row.map((v, j) => ({ v: v ? "" : "", cls: i === ci && j === cj ? "a" : open.some(([x, y]) => x === i && y === j) ? "w" : v ? (done.has(i * n + j) ? "c" : "e") : "" }))) }];
-        snap("开始", "四个方向：上、下、左、右。周长先是 0。", view(), { at: "init", facts: [["周长", 0]] });
+        const view = (opts = {}) => {
+          const prevMap = opts.prevMap || {};
+          return [{
+            t: "grid",
+            label: "网格（1 是陆地，0 是水；数完会显示这块贡献的边数）",
+            rows: g.map((row, i) => row.map((v, j) => ({
+              v: v ? (contrib[`${i},${j}`] !== undefined ? `+${contrib[`${i},${j}`]}` : 1) : 0,
+              ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+              cls: i === ci && j === cj ? "a" : open.some(([x, y]) => x === i && y === j) ? "w" : v ? (done.has(i * n + j) ? "c" : "e") : "",
+            }))),
+            feeds: (opts.feeds || []).slice(),
+          }];
+        };
+        snap("开始", "四个方向：上、下、左、右。周长先是 0。", view(), {
+          at: "init",
+          facts: [["当前格子", "—"], ["本块贡献", 0], ["周长", 0]],
+        });
         const D = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
+        let prevCell = "—", prevSides = 0;
         for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
           if (!g[i][j]) continue;
           ci = i; cj = j;
           const sides = D.filter(([di, dj]) => { const x = i + di, y = j + dj; return !(x >= 0 && x < m && y >= 0 && y < n) || !g[x][y]; });
           open = sides.map(([di, dj]) => [i + di, j + dj]).filter(([x, y]) => x >= 0 && x < m && y >= 0 && y < n);
+          const feeds = open.map(([x, y]) => ({ from: [i, j], to: [x, y], win: true, label: "+1" }));
+          const prevAns = ans;
+          contrib[`${i},${j}`] = sides.length;
           ans += sides.length;
-          snap("看一块陆地", `(${i}, ${j}) 是陆地。看四个方向：${sides.length ? sides.map((d) => d[2]).join("、") + " 挨着水或边缘" : "四面都是陆地"}，周长加 ${sides.length}。`, view(), { at: ["cell", "dir", "edge"], facts: [["周长", ans]] });
+          const curCell = `(${i}, ${j})`;
+          snap("看一块陆地", `(${i}, ${j}) 是陆地。看四个方向：${sides.length ? sides.map((d) => d[2]).join("、") + " 挨着水或边缘" : "四面都是陆地"}，周长加 ${sides.length}。`, view({ prevMap: { [`${i},${j}`]: 1 }, feeds }), {
+            at: ["cell", "dir", "edge"],
+            facts: [["当前格子", curCell, prevCell], ["本块贡献", `+${sides.length}`, prevSides], ["周长", ans, prevAns]],
+          });
+          prevCell = curCell; prevSides = `+${sides.length}`;
           done.add(i * n + j);
         }
         ci = cj = -1; open = [];
-        snap("完成", `周长是 ${ans}。`, view(), { at: "done", kind: "ok", ans, facts: [["周长", ans]] });
+        snap("完成", `周长是 ${ans}。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans,
+          facts: [["当前格子", "完成", prevCell], ["总周长", ans], ["结果", ans]],
+        });
       },
     },
   }],

@@ -60,7 +60,7 @@ assert s.orangesRotting([[0,2]]) == 0
 assert s.orangesRotting([[0]]) == 0
 assert s.orangesRotting([[2,1,1],[1,1,1],[0,1,2]]) == 2
 `,
-  legend: [["b", "烂橘子 2"], ["w", "这一分钟刚烂的"], ["k", "新鲜橘子 1"], ["d", "空格 0"]],
+  legend: [["b", "烂橘子 2"], ["a", "本轮扩散源"], ["w", "这一分钟刚烂的"], ["k", "新鲜橘子 1"], ["d", "空格 0"]],
   presets: [
     { label: "示例 1", args: { grid: [[2, 1, 1], [1, 1, 0], [0, 1, 1]] }, note: "grid = [[2,1,1],[1,1,0],[0,1,1]]", expect: 4 },
     { label: "烂不完", args: { grid: [[2, 1, 1], [0, 1, 1], [1, 0, 1]] }, note: "grid = [[2,1,1],[0,1,1],[1,0,1]]", expect: -1 },
@@ -69,22 +69,86 @@ assert s.orangesRotting([[2,1,1],[1,1,1],[0,1,2]]) == 2
   build(a, snap) {
     const g = a.grid.map((r) => r.slice()), m = g.length, n = g[0].length;
     let q = [], fresh = 0, minutes = 0, fresh2 = [];
-    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) { if (g[i][j] === 2) q.push([i, j]); if (g[i][j] === 1) fresh++; }
+    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
+      if (g[i][j] === 2) q.push([i, j]);
+      if (g[i][j] === 1) fresh++;
+    }
     const sym = ["", 1, 2];
-    const view = () => [{ t: "grid", label: "grid", rows: g.map((r, i) => r.map((v, j) => ({ v: sym[v], cls: v === 0 ? "d" : v === 1 ? "k" : fresh2.some(([x, y]) => x === i && y === j) ? "w" : "b" }))) }];
-    const f = () => ({ facts: [["分钟", minutes], ["新鲜", fresh]] });
-    snap("开始", `一开始有 ${q.length} 个烂橘子、${fresh} 个新鲜橘子。所有烂橘子一起放进队列。`, view(), { at: "init", ...f() });
+    const DIR = [[1, 0, "下"], [-1, 0, "上"], [0, 1, "右"], [0, -1, "左"]];
+    const hasPos = (arr, i, j) => arr.some(([x, y]) => x === i && y === j);
+    const view = (opts = {}) => {
+      const prevMap = opts.prevMap || {}, sources = opts.sources || [];
+      return [
+        {
+          t: "grid",
+          label: "grid（2 为烂橘子，1 为新鲜橘子，空格为 0）",
+          rows: g.map((r, i) => r.map((v, j) => ({
+            v: sym[v],
+            ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+            cls: v === 0 ? "d" : v === 1 ? "k" : hasPos(fresh2, i, j) ? "w" : hasPos(sources, i, j) ? "a" : "b",
+          }))),
+          feeds: (opts.feeds || []).slice(),
+        },
+        {
+          t: "chips",
+          label: "队列（下一分钟将向四周扩散的烂橘子）",
+          items: q.map(([x, y]) => ({ v: `(${x},${y})`, cls: hasPos(fresh2, x, y) ? "w" : "b" })),
+          empty: "空",
+        },
+      ];
+    };
+    snap("开始", `一开始有 ${q.length} 个烂橘子、${fresh} 个新鲜橘子。所有烂橘子一起放进队列作为第 0 层。`, view(), {
+      at: "init",
+      facts: [["分钟数", 0], ["新鲜橘子", fresh], ["队列长度", q.length]],
+    });
     while (q.length && fresh) {
-      minutes++; const nq = []; fresh2 = [];
-      for (const [i, j] of q) for (const [x, y] of [[i + 1, j], [i - 1, j], [i, j + 1], [i, j - 1]]) {
-        if (x >= 0 && y >= 0 && x < m && y < n && g[x][y] === 1) { g[x][y] = 2; fresh--; nq.push([x, y]); fresh2.push([x, y]); }
+      const prevMin = minutes, prevFresh = fresh;
+      minutes++;
+      const sources = q.slice(), nq = [], prevMap = {}, feeds = [];
+      fresh2 = [];
+      for (const [i, j] of q) {
+        for (const [di, dj, dn] of DIR) {
+          const x = i + di, y = j + dj;
+          if (x >= 0 && y >= 0 && x < m && y < n && g[x][y] === 1) {
+            g[x][y] = 2;
+            fresh--;
+            nq.push([x, y]);
+            fresh2.push([x, y]);
+            prevMap[`${x},${y}`] = 1;
+            feeds.push({ from: [i, j], to: [x, y], win: true, label: dn });
+          }
+        }
       }
       q = nq;
-      snap(`第 ${minutes} 分钟`, nq.length ? `上一分钟的烂橘子同时向四周扩散，又烂了 <b>${nq.length}</b> 个。还剩 ${fresh} 个新鲜的。` : "没有新的橘子变烂。", view(), { at: "minute", ...f() });
+      snap(
+        `第 ${minutes} 分钟`,
+        nq.length
+          ? `上一分钟的烂橘子同时向四周扩散，又烂了 <b>${nq.length}</b> 个。还剩 ${fresh} 个新鲜的。`
+          : "这一分钟没有任何新的橘子变烂，扩散停止。",
+        view({ prevMap, feeds, sources }),
+        {
+          at: "minute",
+          facts: [
+            ["分钟数", minutes, prevMin],
+            ["新鲜橘子", fresh, prevFresh],
+            ["本轮新烂", nq.length],
+          ],
+        },
+      );
     }
     const ans = fresh ? -1 : minutes;
     fresh2 = [];
-    snap("完成", fresh ? `队列空了，还有 ${fresh} 个新鲜橘子被空格隔开，永远烂不了，返回 <b>-1</b>。` : `所有橘子都烂了，用了 <b>${minutes}</b> 分钟。`, view(), { at: "done", kind: fresh ? "warn" : "ok", ans, ...f() });
+    snap(
+      "完成",
+      fresh ? `队列空了，还有 ${fresh} 个新鲜橘子被空格隔开，永远烂不了，返回 <b>-1</b>。` : `所有橘子都烂了，用了 <b>${minutes}</b> 分钟。`,
+      view(),
+      {
+        at: "done",
+        kind: fresh ? "warn" : "ok",
+        ans,
+        facts: [["分钟数", minutes], ["新鲜橘子", fresh], ["结果", ans]],
+      },
+    );
   },
   points: [
     { t: "循环条件带上 fresh", body: "<code>while q and fresh</code>：新鲜橘子已经没了就停，否则最后一层还会多算一分钟。" },

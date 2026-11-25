@@ -252,7 +252,7 @@ svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>当前字符</span><span><i class="sw d"></i>已经处理</span><span><i class="sw e"></i>栈里等待配对的左括号</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>当前字符 / 新入栈</span><span><i class="sw e"></i>栈里等待配对的左括号</span><span><i class="sw c"></i>配对成功</span><span><i class="sw b"></i>不匹配</span><span><i class="sw d"></i>已经处理</span></div>
       </div>
     </div>
   </section>
@@ -340,45 +340,137 @@ const SPEC = { presets: [{"label":"嵌套","args":{"s":"{[()]}"},"note":"s = \"{
     const s = R.chance(0.5) ? valid(R.int(1, 4)) : R.word(R.int(2, 8), "()[]{}");
     return { args: { s }, note: `s = "${s}"`, py: `Solution().isValid("${s}")` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "栈", note: null, legend: [["a","当前字符"],["d","已经处理"],["e","栈里等待配对的左括号"]], build(a, snap) {
+{ t: "栈", note: null, legend: [["a","当前字符 / 新入栈"],["e","栈里等待配对的左括号"],["c","配对成功"],["b","不匹配"],["d","已经处理"]], build(a, snap) {
     const s = a.s, pairs = { ")": "(", "]": "[", "}": "{" }, stack = [];
-    const view = (i, bad) => [
-      { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: t === i ? (bad ? "b" : "a") : t < i ? "d" : "" })), ptrs: { i: i >= 0 && i < s.length ? i : null } },
-      { t: "chips", label: "栈（右边是栈顶）", items: stack.map((v, t) => ({ v, cls: t === stack.length - 1 ? "e" : "" })) },
+    const view = (i, opts = {}) => [
+      {
+        t: "array",
+        label: "s",
+        items: [...s].map((v, t) => ({
+          v,
+          cls: t === i || t === opts.matchIdx ? (opts.bad ? "b" : opts.matched ? "c" : "a") : t < i ? "d" : "",
+        })),
+        ptrs: { i: i >= 0 && i < s.length ? i : null },
+      },
+      {
+        t: "chips",
+        label: "栈（右边是栈顶）",
+        items: stack.map((it, t) => ({
+          v: it.ch,
+          cls: opts.justPushed && t === stack.length - 1 ? "a" : "e",
+        })),
+        empty: "空",
+      },
     ];
-    snap("开始", "从左往右看每个字符，栈一开始是空的。", view(-1), { at: "init" });
+    let prevCh = "—";
+    snap("开始", "从左往右看每个字符，栈一开始是空的。", view(-1), {
+      at: "init",
+      facts: [["当前字符", "—"], ["栈顶", "空"], ["栈大小", 0]],
+    });
     for (let i = 0; i < s.length; i++) {
       const ch = s[i];
-      if (!(ch in pairs)) { stack.push(ch); snap("压栈", `'${ch}' 是左括号，压进栈里，等它的右括号。`, view(i), { at: "push" }); continue; }
-      if (!stack.length) { snap("无效", `'${ch}' 是右括号，但栈是空的，前面没有左括号能和它配。返回 false。`, view(i, true), { at: ["match", "bad"], kind: "warn", ans: false }); return; }
-      const top = stack.pop();
-      if (top !== pairs[ch]) { snap("无效", `'${ch}' 是右括号，栈顶是 '${top}'，不是同一种括号。返回 false。`, view(i, true), { at: ["match", "bad"], kind: "warn", ans: false }); return; }
-      snap("配对", `'${ch}' 是右括号，栈顶正好是 '${top}'，配上了，弹出栈顶。`, view(i), { at: "match" });
+      const oldTop = stack.length ? stack[stack.length - 1].ch : "空";
+      const oldLen = stack.length;
+      if (!(ch in pairs)) {
+        stack.push({ ch, idx: i });
+        snap("压栈", `'${ch}' 是左括号，压进栈里，等它的右括号。`, view(i, { justPushed: true }), {
+          at: "push",
+          facts: [["当前字符", ch, prevCh], ["栈顶", ch, oldTop], ["栈大小", stack.length, oldLen]],
+        });
+        prevCh = ch;
+        continue;
+      }
+      if (!stack.length) {
+        snap("无效", `'${ch}' 是右括号，但栈是空的，前面没有左括号能和它配。返回 false。`, view(i, { bad: true }), {
+          at: ["match", "bad"],
+          kind: "warn",
+          ans: false,
+          facts: [["当前字符", ch, prevCh], ["栈顶", "空"], ["栈大小", 0]],
+        });
+        return;
+      }
+      const popped = stack.pop();
+      if (popped.ch !== pairs[ch]) {
+        snap("无效", `'${ch}' 是右括号，栈顶是 '${popped.ch}'，不是同一种括号。返回 false。`, view(i, { matchIdx: popped.idx, bad: true }), {
+          at: ["match", "bad"],
+          kind: "warn",
+          ans: false,
+          facts: [["当前字符", ch, prevCh], ["栈顶", popped.ch], ["栈大小", oldLen]],
+        });
+        return;
+      }
+      const newTop = stack.length ? stack[stack.length - 1].ch : "空";
+      snap("配对", `'${ch}' 是右括号，栈顶正好是 '${popped.ch}'，配上了，弹出栈顶。`, view(i, { matchIdx: popped.idx, matched: true }), {
+        at: "match",
+        kind: "ok",
+        facts: [["当前字符", ch, prevCh], ["栈顶", newTop, popped.ch], ["栈大小", stack.length, oldLen]],
+      });
+      prevCh = ch;
     }
-    if (stack.length) snap("无效", `字符串走完了，但栈里还剩 ${stack.length} 个左括号没关上。返回 false。`, view(s.length), { at: "done", kind: "warn", ans: false });
-    else snap("完成", "字符串走完，栈也空了，每个括号都配上了。返回 true。", view(s.length), { at: "done", kind: "ok", ans: true });
+    const finalTop = stack.length ? stack[stack.length - 1].ch : "空";
+    if (stack.length) {
+      snap("无效", `字符串走完了，但栈里还剩 ${stack.length} 个左括号没关上。返回 false。`, view(s.length), {
+        at: "done",
+        kind: "warn",
+        ans: false,
+        facts: [["当前字符", "—", prevCh], ["栈顶", finalTop], ["栈大小", stack.length]],
+      });
+    } else {
+      snap("完成", "字符串走完，栈也空了，每个括号都配上了。返回 true。", view(s.length), {
+        at: "done",
+        kind: "ok",
+        ans: true,
+        facts: [["当前字符", "—", prevCh], ["栈顶", "空"], ["栈大小", 0]],
+      });
+    }
   } },
-{ t: "反复删一对", note: "和简洁写法一样：每一轮依次把所有 ()、[]、{} 删掉，删到删不动为止。合法的串最后一定删成空串。", legend: [["a","这一下要删掉的一对"]], build(a, snap) {
+{ t: "反复删一对", note: "和简洁写法一样：每一轮依次把所有 ()、[]、{} 删掉，删到删不动为止。合法的串最后一定删成空串。", legend: [["b","这一下要删掉的一对"]], build(a, snap) {
       let s = a.s, round = 0;
       const view = (hl) => [s.length
-        ? { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: hl.has(t) ? "a" : "" })) }
+        ? { t: "array", label: "s", items: [...s].map((v, t) => ({ v, cls: hl.has(t) ? "b" : "" })) }
         : { t: "note", label: "s", html: "空串" }];
-      const f = () => ({ facts: [["轮数", round], ["剩下", s.length]] });
       const has = () => ["()", "[]", "{}"].some((p) => s.includes(p));
-      snap("开始", "合法的串里一定有一对挨在一起的括号。把它们删掉，剩下的部分合法性不变。", view(new Set()), { at: "round", ...f() });
+      snap("开始", "合法的串里一定有一对挨在一起的括号。把它们删掉，剩下的部分合法性不变。", view(new Set()), {
+        at: "round",
+        facts: [["轮数", round], ["本轮删对数", 0], ["剩余长度", s.length]],
+      });
       while (has()) {
+        const prevRound = round;
         round++;
+        let roundDel = 0;
         for (const p of ["()", "[]", "{}"]) {
           const hl = new Set();
           for (let k = s.indexOf(p); k >= 0; k = s.indexOf(p, k + 2)) { hl.add(k); hl.add(k + 1); }
           if (!hl.size) continue;
-          snap(`第 ${round} 轮`, `找到 ${hl.size / 2} 对相邻的 <code>${p}</code>，全部删掉。`, view(hl), { at: "del", ...f() });
+          const cnt = hl.size / 2;
+          const oldLen = s.length;
+          snap(`第 ${round} 轮`, `找到 ${cnt} 对相邻的 <code>${p}</code>，全部删掉。`, view(hl), {
+            at: "del",
+            facts: [["轮数", round, prevRound], ["删掉对数", cnt, roundDel], ["剩余长度", oldLen]],
+          });
+          roundDel += cnt;
           s = s.split(p).join("");
         }
-        snap(`第 ${round} 轮完`, s.length ? (has() ? `删完变成 "${s}"，里面又出现了相邻的一对，再来一轮。` : `删完变成 "${s}"，已经没有相邻的一对了。`) : "删成空串了。", view(new Set()), { at: "round", ...f() });
+        snap(`第 ${round} 轮完`, s.length ? (has() ? `删完变成 "${s}"，里面又出现了相邻的一对，再来一轮。` : `删完变成 "${s}"，已经没有相邻的一对了。`) : "删成空串了。", view(new Set()), {
+          at: "round",
+          facts: [["轮数", round], ["本轮删对数", roundDel], ["剩余长度", s.length, s.length + roundDel * 2]],
+        });
       }
-      if (s.length) snap("无效", `删不动了，还剩 "${s}"，说明有括号配不上。返回 false。`, view(new Set()), { at: "done", kind: "warn", ans: false, ...f() });
-      else snap("完成", "整个串都删光了，每个括号都配上了。返回 true。", view(new Set()), { at: "done", kind: "ok", ans: true, ...f() });
+      if (s.length) {
+        snap("无效", `删不动了，还剩 "${s}"，说明有括号配不上。返回 false。`, view(new Set()), {
+          at: "done",
+          kind: "warn",
+          ans: false,
+          facts: [["轮数", round], ["本轮删对数", 0], ["剩余长度", s.length]],
+        });
+      } else {
+        snap("完成", "整个串都删光了，每个括号都配上了。返回 true。", view(new Set()), {
+          at: "done",
+          kind: "ok",
+          ans: true,
+          facts: [["轮数", round], ["本轮删对数", 0], ["剩余长度", 0]],
+        });
+      }
     } }
 ] };
 (function () {

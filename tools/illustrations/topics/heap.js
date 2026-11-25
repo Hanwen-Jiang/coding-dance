@@ -68,48 +68,118 @@ class MinHeap:
       presets: [{ label: "示例", args: { ops: [["push", 5], ["push", 8], ["push", 3], ["push", 9], ["push", 1], ["pop"], ["pop"], ["peek"]] }, note: "push(5) push(8) push(3) push(9) push(1) pop() pop() peek()", expect: [null, null, null, null, null, null, 1, 3, 5] }],
       build(a, snap) {
         const h = [], out = [null];
-        const view = (cur, cmp) => {
+        const view = (cur, cmp, opts = {}) => {
+          const prevMap = opts.prevMap || {};
           const N = {}, cls = {};
-          h.forEach((v, i) => { N[i] = { v, l: 2 * i + 1 < h.length ? 2 * i + 1 : null, r: 2 * i + 2 < h.length ? 2 * i + 2 : null }; cls[i] = i === cur ? "a" : i === cmp ? "b" : ""; });
+          h.forEach((v, i) => {
+            N[i] = {
+              v,
+              ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),
+              l: 2 * i + 1 < h.length ? 2 * i + 1 : null,
+              r: 2 * i + 2 < h.length ? 2 * i + 2 : null,
+            };
+            cls[i] = i === cur ? "a" : i === cmp ? "b" : "";
+          });
           return [
-            h.length ? { t: "tree", label: "堆（完全二叉树）", nodes: N, root: 0, cls } : { t: "note", label: "堆（完全二叉树）", html: "空" },
-            { t: "array", label: "存在数组里", items: h.map((v, i) => ({ v, cls: cls[i] })) },
+            h.length
+              ? { t: "tree", label: "堆（完全二叉树）", nodes: N, root: 0, cls, swaps: opts.swaps || [] }
+              : { t: "note", label: "堆（完全二叉树）", html: "空" },
+            {
+              t: "array",
+              label: "存在数组里",
+              items: h.map((v, i) => ({
+                v,
+                ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),
+                cls: cls[i],
+              })),
+              swaps: opts.swaps || [],
+            },
             { t: "chips", label: "返回值", items: out.map((x) => (x === null ? "null" : String(x))) },
           ];
         };
-        snap("开始", "空堆。", view(), { at: "init" });
+        snap("开始", "空堆。", view(), {
+          at: "init",
+          facts: [["操作", "init"], ["堆大小", 0], ["堆顶", "空"]],
+        });
         for (const [op, x] of a.ops) {
           if (op === "push") {
+            const oldSize = h.length, oldTop = h.length ? h[0] : "空";
             h.push(x); out.push(null);
             let i = h.length - 1;
-            snap(`push(${x})`, `${x} 先放到数组末尾，下标 ${i}。`, view(i), { at: "push" });
+            snap(`push(${x})`, `${x} 先放到数组末尾，下标 ${i}。`, view(i), {
+              at: "push",
+              facts: [["操作", `push(${x})`], ["堆大小", h.length, oldSize], ["堆顶", h[0], oldTop]],
+            });
             while (i > 0 && h[(i - 1) >> 1] > h[i]) {
               const p = (i - 1) >> 1;
+              const vp = h[p], vi = h[i], prevTop = h[0];
               [h[i], h[p]] = [h[p], h[i]];
-              snap("上浮", `${x} 比父节点 ${h[i]} 小，交换。`, view(p, i), { at: "up" });
+              snap("上浮", `${x} 比父节点 ${vp} 小，交换。`, view(p, i, { swaps: [[p, i]], prevMap: { [p]: vp, [i]: vi } }), {
+                at: "up",
+                facts: [["操作", `push(${x})`], ["堆大小", h.length], ["堆顶", h[0], prevTop], ["交换节点", `${i} ↔ ${p}`]],
+              });
               i = p;
             }
-            snap("上浮结束", i === 0 ? `${x} 到了堆顶。` : `${x} 不比父节点 ${h[(i - 1) >> 1]} 小，停下。`, view(i), { at: "up" });
+            snap("上浮结束", i === 0 ? `${x} 到了堆顶。` : `${x} 不比父节点 ${h[(i - 1) >> 1]} 小，停下。`, view(i), {
+              at: "up",
+              facts: [["操作", `push(${x})`], ["堆大小", h.length], ["堆顶", h[0]]],
+            });
           } else if (op === "pop") {
+            const oldSize = h.length, oldTop = h[0];
             const top = h[0], last = h.pop();
             out.push(top);
-            if (!h.length) { snap("pop()", `只有一个元素 ${top}，直接弹出。`, view(), { at: ["pop", "ret"] }); continue; }
+            if (!h.length) {
+              snap("pop()", `只有一个元素 ${top}，直接弹出。`, view(), {
+                at: ["pop", "ret"],
+                facts: [["操作", "pop()"], ["堆大小", 0, oldSize], ["堆顶", "空", oldTop], ["返回值", top]],
+              });
+              continue;
+            }
             h[0] = last;
-            snap("pop()", `弹出堆顶 ${top}。把最后一个元素 ${last} 挪到堆顶。`, view(0), { at: "pop" });
+            snap("pop()", `弹出堆顶 ${top}。把最后一个元素 ${last} 挪到堆顶。`, view(0, -1, { prevMap: { 0: oldTop } }), {
+              at: "pop",
+              facts: [["操作", "pop()"], ["堆大小", h.length, oldSize], ["堆顶", h[0], oldTop], ["弹出值", top]],
+            });
             let i = 0;
             for (;;) {
               let s = i; const l = 2 * i + 1, r = 2 * i + 2;
               if (l < h.length && h[l] < h[s]) s = l;
               if (r < h.length && h[r] < h[s]) s = r;
-              if (s === i) { snap("下沉结束", `${h[i]} 的孩子都不比它小（或者没有孩子），停下。返回 ${top}。`, view(i), { at: ["stop", "ret"] }); break; }
-              snap("下沉", `${h[i]} 的孩子里更小的是 ${h[s]}，比它小，交换。`, view(i, s), { at: "down" });
+              if (s === i) {
+                snap("下沉结束", `${h[i]} 的孩子都不比它小（或者没有孩子），停下。返回 ${top}。`, view(i), {
+                  at: ["stop", "ret"],
+                  facts: [["操作", "pop()"], ["堆大小", h.length], ["堆顶", h[0]], ["返回值", top]],
+                });
+                break;
+              }
+              const vi = h[i], vs = h[s], prevTop = h[0];
               [h[i], h[s]] = [h[s], h[i]];
+              snap("下沉", `${vi} 的孩子里更小的是 ${vs}，比它小，交换。`, view(s, i, { swaps: [[i, s]], prevMap: { [i]: vi, [s]: vs } }), {
+                at: "down",
+                facts: [["操作", "pop()"], ["堆大小", h.length], ["堆顶", h[0], prevTop], ["交换节点", `${i} ↔ ${s}`]],
+              });
               i = s;
             }
-          } else if (op === "peek") { out.push(h[0]); snap("peek()", `堆顶 ${h[0]} 就是最小值，O(1)。`, view(0), { at: "peek" }); }
-          else { out.push(h.length); snap("size()", `堆里有 ${h.length} 个元素。`, view(), { at: "size" }); }
+          } else if (op === "peek") {
+            out.push(h[0]);
+            snap("peek()", `堆顶 ${h[0]} 就是最小值，O(1)。`, view(0), {
+              at: "peek",
+              facts: [["操作", "peek()"], ["堆大小", h.length], ["堆顶", h[0]], ["返回值", h[0]]],
+            });
+          } else {
+            out.push(h.length);
+            snap("size()", `堆里有 ${h.length} 个元素。`, view(), {
+              at: "size",
+              facts: [["操作", "size()"], ["堆大小", h.length], ["堆顶", h.length ? h[0] : "空"], ["返回值", h.length]],
+            });
+          }
         }
-        snap("完成", "每次操作只沿一条从根到叶的路径走。", view(), { at: [], kind: "ok", ans: out });
+        snap("完成", "每次操作只沿一条从根到叶的路径走。", view(), {
+          at: [],
+          kind: "ok",
+          ans: out,
+          facts: [["堆大小", h.length], ["堆顶", h.length ? h[0] : "空"]],
+        });
       },
     },
   }, {
@@ -147,18 +217,43 @@ class Solution:
           { t: "chips", label: "最大堆里的石头（从重到轻排给你看）", items: heap.slice().sort((x, y) => y - x).map((v) => ({ v, cls: v === made ? "c" : "" })), empty: "空" },
           { t: "chips", label: "拿出来的两块", items: took.map((v) => ({ v, cls: "a" })), empty: "无" },
         ];
-        snap("建堆", `把 ${heap.length} 块石头放进最大堆。`, view(), { at: "init" });
+        const maxStone = () => (heap.length ? Math.max(...heap) : 0);
+        snap("建堆", `把 ${heap.length} 块石头放进最大堆。`, view(), {
+          at: "init",
+          facts: [["剩余石头", heap.length], ["最重", maxStone()], ["相撞结果", "—"]],
+        });
         while (heap.length > 1) {
+          const oldLen = heap.length, oldMax = maxStone();
           heap.sort((x, y) => y - x);
           const y = heap.shift(), x = heap.shift();
           took = [y, x]; made = null;
-          snap("取两块", `堆顶弹出两次：最重的 ${y}，第二重的 ${x}。`, view(), { at: ["loop", "pop"] });
-          if (x !== y) { made = y - x; heap.push(made); snap("相撞", `${y} ≠ ${x}，碎了还剩 ${y} - ${x} = ${made}，放回堆里。`, view(), { at: "push" }); }
-          else snap("相撞", `一样重，两块都碎了。`, view(), { at: "push" });
+          snap("取两块", `堆顶弹出两次：最重的 ${y}，第二重的 ${x}。`, view(), {
+            at: ["loop", "pop"],
+            facts: [["剩余石头", heap.length, oldLen], ["最重 / 次重", `${y} / ${x}`], ["当前堆顶", heap.length ? maxStone() : "空"]],
+          });
+          if (x !== y) {
+            const beforePush = heap.length;
+            made = y - x;
+            heap.push(made);
+            snap("相撞", `${y} ≠ ${x}，碎了还剩 ${y} - ${x} = ${made}，放回堆里。`, view(), {
+              at: "push",
+              facts: [["剩余石头", heap.length, beforePush], ["最重", maxStone(), oldMax], ["新碎片", made]],
+            });
+          } else {
+            snap("相撞", `一样重，两块都碎了。`, view(), {
+              at: "push",
+              facts: [["剩余石头", heap.length], ["最重", maxStone(), oldMax], ["新碎片", "0（全碎）"]],
+            });
+          }
           took = [];
         }
         const ans = heap.length ? heap[0] : 0;
-        snap("完成", heap.length ? `只剩一块，重 ${ans}。` : "石头都碎了，返回 0。", view(), { at: ["loop", "done"], kind: "ok", ans });
+        snap("完成", heap.length ? `只剩一块，重 ${ans}。` : "石头都碎了，返回 0。", view(), {
+          at: ["loop", "done"],
+          kind: "ok",
+          ans,
+          facts: [["剩余石头", heap.length], ["最后结果", ans]],
+        });
       },
     },
   }],

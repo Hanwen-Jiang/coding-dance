@@ -39,28 +39,92 @@ assert s.subarraySum([3,4,7,2,-3,1,4,2], 7) == 4
   sig: { fn: "subarraySum", params: ["int[]", "int"], ret: "int" },
   call: (a) => [a.nums, a.k],
   cases: [[[1, 1, 1], 2], [[1], 0], [[1, -1, 0], 0], [[0, 0, 0], 0]],
-  legend: [["a", "当前的数"], ["d", "已经加进前缀和"], ["k", "查到的前缀和"]],
+  legend: [["a", "当前的数 / 刚更新"], ["d", "已经加进前缀和"], ["k", "命中的目标前缀和 pre−k"], ["c", "刚算出的前缀和（有命中）"]],
   presets: [
     { label: "示例 2", args: { nums: [1, 2, 3], k: 3 }, note: "nums = [1,2,3], k = 3", expect: 2 },
     { label: "有负数", args: { nums: [3, 4, 7, 2, -3, 1, 4, 2], k: 7 }, note: "nums = [3,4,7,2,-3,1,4,2], k = 7", expect: 4 },
   ],
   build(a, snap) {
-    const { nums, k } = a, count = new Map([[0, 1]]); let pre = 0, res = 0;
-    const view = (i, hitKey) => [
-      { t: "array", label: "nums", items: nums.map((v, j) => ({ v, cls: j === i ? "a" : j < i ? "d" : "" })), ptrs: { i: i >= 0 && i < nums.length ? i : null } },
-      { t: "chips", label: "哈希表 count（前缀和 → 出现次数）", items: [...count].map(([s, c]) => ({ v: `${s} → ${c}`, cls: s === hitKey ? "k" : "" })) },
-    ];
-    const facts = () => [["k", k], ["前缀和", pre], ["答案", res]];
-    snap("开始", "哈希表里先放 0 → 1：一个数都不取时前缀和是 0，出现了 1 次。", view(-1), { at: "init", facts: facts() });
+    const { nums, k } = a, n = nums.length, count = new Map([[0, 1]]);
+    const preArr = Array(n + 1).fill(null);
+    preArr[0] = 0;
+    let pre = 0, res = 0;
+    const view = (i, opts = {}) => {
+      const hitKey = opts.hitKey;
+      const storedKey = opts.storedKey;
+      const curPreIdx = opts.curPreIdx ?? -1;
+      return [
+        {
+          t: "array",
+          label: "nums",
+          items: nums.map((v, j) => ({ v, cls: j === i ? "a" : j < i ? "d" : "" })),
+          ptrs: { i: i >= 0 && i < n ? i : null },
+        },
+        {
+          t: "array",
+          label: "前缀和 pre（pre[0] = 0 表示空前缀）",
+          items: preArr.map((v, j) => ({
+            v: v === null ? "" : v,
+            cls: j === curPreIdx ? (hitKey !== undefined ? "c" : "a")
+              : hitKey !== undefined && v === hitKey && j < curPreIdx ? "k"
+                : v !== null ? "d" : "",
+          })),
+          ptrs: curPreIdx >= 0 ? { pre: curPreIdx } : { pre: 0 },
+          feeds: (opts.feeds || []).slice(),
+        },
+        {
+          t: "chips",
+          label: "哈希表 count（前缀和 → 出现次数）",
+          items: [...count].map(([s, c]) => ({
+            v: `${s} → ${c}`,
+            cls: s === hitKey ? "k" : s === storedKey ? "a" : "",
+          })),
+        },
+      ];
+    };
+    snap("开始", "哈希表里先放 0 → 1：一个数都不取时前缀和是 0，出现了 1 次。", view(-1), {
+      at: "init",
+      facts: [["k", k], ["前缀和", 0], ["查找 pre−k", -k], ["答案", 0]],
+    });
     nums.forEach((x, i) => {
+      const oldPre = pre, oldRes = res;
       pre += x;
+      preArr[i + 1] = pre;
       const need = pre - k, c = count.get(need) || 0;
       res += c;
-      snap("先查", `加上 ${x}，前缀和变成 ${pre}。需要找之前等于 ${pre} − ${k} = <b>${need}</b> 的前缀和，` + (c ? `有 ${c} 个，说明有 ${c} 段以这里结尾的子数组和为 ${k}，答案加 ${c}。` : "没有。"), view(i, c ? need : undefined), { at: "query", kind: c ? "ok" : "", facts: facts() });
-      count.set(pre, (count.get(pre) || 0) + 1);
-      snap("再存", `把当前前缀和 ${pre} 的出现次数加 1。`, view(i), { at: "store", facts: facts() });
+      const delta = x >= 0 ? `+${x}` : `${x}`;
+      snap(
+        "先查",
+        `加上 ${x}，前缀和变成 ${pre}。需要找之前等于 ${pre} − ${k} = <b>${need}</b> 的前缀和，` + (c ? `有 ${c} 个，说明有 ${c} 段以这里结尾的子数组和为 ${k}，答案加 ${c}。` : "没有。"),
+        view(i, {
+          curPreIdx: i + 1,
+          hitKey: c ? need : undefined,
+          feeds: [{ from: i, to: i + 1, win: true, label: delta }],
+        }),
+        {
+          at: "query",
+          kind: c ? "ok" : "",
+          facts: [
+            ["k", k],
+            ["前缀和", pre, oldPre],
+            ["查找 pre−k", need],
+            c ? ["答案", res, oldRes] : ["答案", res],
+          ],
+        },
+      );
+      const oldCnt = count.get(pre) || 0;
+      count.set(pre, oldCnt + 1);
+      snap("再存", `把当前前缀和 ${pre} 的出现次数加 1（${oldCnt} → ${oldCnt + 1}）。`, view(i, { curPreIdx: i + 1, storedKey: pre }), {
+        at: "store",
+        facts: [["k", k], ["前缀和", pre], [`count[${pre}]`, oldCnt + 1, oldCnt], ["答案", res]],
+      });
     });
-    snap("完成", `一共有 <b>${res}</b> 段子数组的和等于 ${k}。`, view(nums.length), { at: "done", kind: "ok", ans: res, facts: facts() });
+    snap("完成", `一共有 <b>${res}</b> 段子数组的和等于 ${k}。`, view(n), {
+      at: "done",
+      kind: "ok",
+      ans: res,
+      facts: [["k", k], ["最终前缀和", pre], ["答案", res]],
+    });
   },
   points: [
     { t: "别忘了 count[0] = 1", body: "没有它，从下标 0 开始的子数组（前缀本身等于 k）会被漏掉。" },

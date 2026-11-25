@@ -13,7 +13,7 @@ public:
                 if (piece == string(piece.rbegin(), piece.rend())) {    // 这一段是回文才切 //@try,cut
                     path.push_back(piece);          //@cut
                     dfs(end);                       //@cut
-                    path.pop_back();
+                    path.pop_back();                //@back
                 }
             }
         };

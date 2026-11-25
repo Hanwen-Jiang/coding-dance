@@ -91,7 +91,7 @@ assert s.numIslands(g(["101","010","101"])) == 5
   demoTitle: "海图演示",
   method: "递归 sink",
   methodNote: "和标准解法一样：sink 淹掉当前格子，再按上、下、左、右的顺序递归。越界、是水或已经淹掉的方向，sink 一进去就返回，演示里直接跳过。",
-  legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在递归路径上，还没返回"], ["a", "正在执行的 sink"], ["c", "已经淹掉（颜色和数字区分不同的岛）"]],
+  legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在递归路径上，还没返回"], ["a", "正在执行的 sink"], ["c", "已经淹掉（改成 0，颜色区分不同岛）"]],
   presets: [
     { label: "示例 1", args: { grid: ["11110", "11010", "11000", "00000"] }, note: 'grid = ["11110","11010","11000","00000"]', expect: 1 },
     { label: "示例 2", args: { grid: ["11000", "11000", "00100", "00011"] }, note: 'grid = ["11000","11000","00100","00011"]', expect: 3 },
@@ -102,129 +102,208 @@ assert s.numIslands(g(["101","010","101"])) == 5
     const mark = g.map((r) => r.map(() => 0)); // 0 还没淹，k 表示属于第 k 座岛
     const COL = ["c", "g", "w"], DIR = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
     let count = 0;
-    const calls = []; // 递归调用栈：[i, j, 下一个要试的方向]
+    const calls = []; // 递归调用栈：[i, j]
     const onPath = (i, j) => calls.some(([x, y]) => x === i && y === j);
-    const view = () => {
+    const view = (opts = {}) => {
       const top = calls[calls.length - 1];
+      const prevMap = opts.prevMap || {};
       return [
-        { t: "grid", label: "grid（淹掉的格子写的是第几座岛）", rows: g.map((r, i) => r.map((v, j) => {
-          const k = mark[i][j];
-          const cls = top && top[0] === i && top[1] === j ? "a" : onPath(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
-          return { v: k || v, cls };
-        })) },
+        {
+          t: "grid",
+          label: "grid（发现陆地就淹成 0，颜色区分不同的岛）",
+          rows: g.map((r, i) => r.map((v, j) => {
+            const k = mark[i][j];
+            const cls = top && top[0] === i && top[1] === j ? "a" : onPath(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
+            return {
+              v: k ? "0" : v,
+              ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+              cls,
+            };
+          })),
+          feeds: (opts.feeds || []).slice(),
+        },
         { t: "chips", label: "递归调用栈（右边是正在执行的那一层）", items: calls.map(([x, y], t) => ({ v: `sink(${x},${y})`, cls: t === calls.length - 1 ? "a" : "e" })), empty: "空：回到外面的两层循环" },
       ];
     };
-    const f = (at) => ({ at, facts: [["岛屿数", count], ["递归深度", calls.length]] });
-    const sink = (i, j, dir) => {
+    const sink = (i, j, dir, parent) => {
+      const prevDepth = calls.length;
       mark[i][j] = count;
       calls.push([i, j]);
-      if (dir) snap("递归进入", `往${dir}走到 (${i},${j})：是陆地，淹掉它，再从它出发按上、下、左、右递归。`, view(), f("mark"));
-      else snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。调用 sink(${i},${j})：先淹掉它，再按上、下、左、右递归。`, view(), f(["found", "mark"]));
+      const prevMap = { [`${i},${j}`]: "1" };
+      if (dir) {
+        snap(
+          "递归进入",
+          `往${dir}走到 (${i},${j})：是陆地，淹成 0，再从它出发按上、下、左、右递归。`,
+          view({ prevMap, feeds: [{ from: parent, to: [i, j], win: true, label: dir }] }),
+          { at: "mark", facts: [["岛屿数", count], ["递归深度", calls.length, prevDepth], ["当前格子", `(${i},${j})`]] },
+        );
+      } else {
+        snap(
+          "发现新岛",
+          `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。调用 sink(${i},${j})：先淹成 0，再按上、下、左、右递归。`,
+          view({ prevMap }),
+          { at: ["found", "mark"], facts: [["岛屿数", count, count - 1], ["递归深度", calls.length, prevDepth], ["当前格子", `(${i},${j})`]] },
+        );
+      }
       for (const [di, dj, dn] of DIR) {
         const p = i + di, q = j + dj;
         if (p < 0 || q < 0 || p >= m || q >= n || g[p][q] !== "1" || mark[p][q]) continue;
-        sink(p, q, dn);
+        sink(p, q, dn, [i, j]);
         const rest = DIR.slice(DIR.findIndex((d) => d[2] === dn) + 1).map((d) => d[2]);
-        snap("返回", `sink(${p},${q}) 这一支淹完了，返回到 sink(${i},${j})。` + (rest.length ? `接着试它的「${rest.join("、")}」。` : "它四个方向都试过了。"), view(), f("spread"));
+        snap(
+          "返回",
+          `sink(${p},${q}) 这一支淹完了，返回到 sink(${i},${j})。` + (rest.length ? `接着试它的「${rest.join("、")}」。` : "它四个方向都试过了。"),
+          view(),
+          { at: "spread", facts: [["岛屿数", count], ["递归深度", calls.length, calls.length + 1], ["当前格子", `(${i},${j})`]] },
+        );
       }
       calls.pop();
     };
-    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再调用 sink 把整座岛淹掉。`, view(), f("init"));
+    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再调用 sink 把整座岛淹掉。`, view(), { at: "init", facts: [["岛屿数", 0], ["递归深度", 0], ["网格", `${m}×${n}`]] });
     for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
       if (g[i][j] !== "1" || mark[i][j]) continue;
       count++;
-      sink(i, j, null);
-      snap("淹完", `sink(${i},${j}) 返回了，调用栈空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f("scan"));
+      sink(i, j, null, null);
+      snap("淹完", `sink(${i},${j}) 返回了，调用栈空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), { at: "scan", facts: [["岛屿数", count], ["递归深度", 0, 1], ["状态", `第 ${count} 岛完成`]] });
     }
-    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
+    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, at: "done", facts: [["岛屿数", count], ["递归深度", 0], ["结果", count]] });
   },
   alts: [{
     t: "BFS 队列",
     code: "bfs",
     note: "从新岛的第一格出发，用队列一圈一圈往外扩：出队一个格子，把它四周没淹的陆地做上记号放进队尾。离起点近的格子总是先被淹。",
-    legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在队列里排队"], ["a", "刚出队，正在看四周"], ["c", "已经淹掉（颜色和数字区分不同的岛）"]],
+    legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在队列里排队"], ["a", "刚出队，正在看四周"], ["c", "已经淹掉（改成 0，颜色区分不同岛）"]],
     build(a, snap) {
       const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
       const mark = g.map((r) => r.map(() => 0)), ring = g.map((r) => r.map(() => 0));
-      const COL = ["c", "g", "w"];
+      const COL = ["c", "g", "w"], DIR = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
       let count = 0, q = [], cur = null;
       const inQ = (i, j) => q.some(([x, y]) => x === i && y === j);
-      const view = () => [
-        { t: "grid", label: "grid（淹掉的格子写的是第几座岛）", rows: g.map((r, i) => r.map((v, j) => {
-          const k = mark[i][j];
-          const cls = cur && cur[0] === i && cur[1] === j ? "a" : inQ(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
-          return { v: k || v, cls };
-        })) },
-        { t: "chips", label: "队列（左边是队头，先出队）", items: q.map(([x, y]) => `(${x},${y}) 第${ring[x][y]}圈`), empty: "空" },
-      ];
-      const f = (at) => ({ at, facts: [["岛屿数", count], ["队列长度", q.length]] });
-      snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再用队列把整座岛淹掉。`, view(), f("init"));
+      const view = (opts = {}) => {
+        const prevMap = opts.prevMap || {};
+        return [
+          {
+            t: "grid",
+            label: "grid（发现陆地就淹成 0，颜色区分不同的岛）",
+            rows: g.map((r, i) => r.map((v, j) => {
+              const k = mark[i][j];
+              const cls = cur && cur[0] === i && cur[1] === j ? "a" : inQ(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
+              return {
+                v: k ? "0" : v,
+                ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+                cls,
+              };
+            })),
+            feeds: (opts.feeds || []).slice(),
+          },
+          { t: "chips", label: "队列（左边是队头，先出队）", items: q.map(([x, y]) => `(${x},${y}) 第${ring[x][y]}圈`), empty: "空" },
+        ];
+      };
+      snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再用队列把整座岛淹掉。`, view(), { at: "init", facts: [["岛屿数", 0], ["队列长度", 0], ["网格", `${m}×${n}`]] });
       for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
         if (g[i][j] !== "1" || mark[i][j]) continue;
         count++;
         mark[i][j] = count;
         q = [[i, j]];
-        snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。做上记号放进队列，它是第 0 圈。`, view(), f("found"));
+        snap(
+          "发现新岛",
+          `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先淹成 0 放进队列，它是第 0 圈。`,
+          view({ prevMap: { [`${i},${j}`]: "1" } }),
+          { at: "found", facts: [["岛屿数", count, count - 1], ["队列长度", 1, 0], ["当前圈数", 0]] },
+        );
         while (q.length) {
+          const prevQ = q.length;
           cur = q.shift();
-          const [x, y] = cur, added = [];
-          for (const [p, s] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
+          const [x, y] = cur, added = [], prevMap = {}, feeds = [];
+          for (const [di, dj, dn] of DIR) {
+            const p = x + di, s = y + dj;
             if (p < 0 || s < 0 || p >= m || s >= n || g[p][s] !== "1" || mark[p][s]) continue;
             mark[p][s] = count;
             ring[p][s] = ring[x][y] + 1;
             q.push([p, s]);
             added.push(`(${p},${s})`);
+            prevMap[`${p},${s}`] = "1";
+            feeds.push({ from: [x, y], to: [p, s], win: true, label: dn });
           }
-          snap("出队扩散", `队头 (${x},${y}) 出队（第 ${ring[x][y]} 圈），看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号排到队尾，它们是第 ${ring[x][y] + 1} 圈。` : "四周没有新的陆地。"), view(), f(["pop", "expand"]));
+          snap(
+            "出队扩散",
+            `队头 (${x},${y}) 出队（第 ${ring[x][y]} 圈），看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，淹成 0 排到队尾，它们是第 ${ring[x][y] + 1} 圈。` : "四周没有新的陆地。"),
+            view({ prevMap, feeds }),
+            { at: ["pop", "expand"], facts: [["岛屿数", count], ["队列长度", q.length, prevQ], ["当前圈数", ring[x][y]]] },
+          );
         }
         cur = null;
-        snap("淹完", `队列空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), f("scan"));
+        snap("淹完", `队列空了，第 ${count} 座岛整个淹掉。接着往后扫，碰到淹过的格子直接跳过。`, view(), { at: "scan", facts: [["岛屿数", count], ["队列长度", 0], ["状态", `第 ${count} 岛完成`]] });
       }
-      snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
+      snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, at: "done", facts: [["岛屿数", count], ["队列长度", 0], ["结果", count]] });
     },
   }, {
     t: "栈模拟 DFS",
     code: "stack",
     note: "和 BFS 的写法一样，只是把队列换成栈：每次弹出最后放进去的格子，所以会先沿着一个方向钻到底。入栈时就做记号。",
-    legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在栈里等着扩散"], ["a", "刚弹出，正在看四周"], ["c", "已经淹掉（颜色和数字区分不同的岛）"]],
+    legend: [["d", "水 0"], ["", "还没淹的陆地 1"], ["e", "在栈里等着扩散"], ["a", "刚弹出，正在看四周"], ["c", "已经淹掉（改成 0，颜色区分不同岛）"]],
     build(a, snap) {
-    const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
-    const mark = g.map((r) => r.map(() => 0)); // 0 还没淹，k 表示属于第 k 座岛
-    const COL = ["c", "g", "w"];
-    let count = 0, stack = [], cur = null;
-    const inStack = (i, j) => stack.some(([x, y]) => x === i && y === j);
-    const view = () => [
-      { t: "grid", label: "grid（淹掉的格子写的是第几座岛）", rows: g.map((r, i) => r.map((v, j) => {
-        const k = mark[i][j];
-        const cls = cur && cur[0] === i && cur[1] === j ? "a" : inStack(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
-        return { v: k || v, cls };
-      })) },
-      { t: "chips", label: "栈（右边是栈顶）", items: stack.map(([x, y]) => `(${x},${y})`), empty: "空" },
-    ];
-    const f = (at) => ({ at, facts: [["岛屿数", count]] });
-    snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再把整座岛淹掉。`, view(), f("init"));
-    for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
-      if (g[i][j] !== "1" || mark[i][j]) continue;
-      count++;
-      mark[i][j] = count;
-      stack = [[i, j]];
-      snap("发现新岛", `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先给它做上记号放进栈里，从这里开始把整座岛淹掉。`, view(), f("found"));
-      while (stack.length) {
-        cur = stack.pop();
-        const [x, y] = cur, added = [];
-        for (const [p, q] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
-          if (p < 0 || q < 0 || p >= m || q >= n || g[p][q] !== "1" || mark[p][q]) continue;
-          mark[p][q] = count;
-          stack.push([p, q]);
-          added.push(`(${p},${q})`);
+      const g = a.grid.map((r) => r.split("")), m = g.length, n = g[0].length;
+      const mark = g.map((r) => r.map(() => 0)); // 0 还没淹，k 表示属于第 k 座岛
+      const COL = ["c", "g", "w"], DIR = [[-1, 0, "上"], [1, 0, "下"], [0, -1, "左"], [0, 1, "右"]];
+      let count = 0, stack = [], cur = null;
+      const inStack = (i, j) => stack.some(([x, y]) => x === i && y === j);
+      const view = (opts = {}) => {
+        const prevMap = opts.prevMap || {};
+        return [
+          {
+            t: "grid",
+            label: "grid（发现陆地就淹成 0，颜色区分不同的岛）",
+            rows: g.map((r, i) => r.map((v, j) => {
+              const k = mark[i][j];
+              const cls = cur && cur[0] === i && cur[1] === j ? "a" : inStack(i, j) ? "e" : k ? COL[(k - 1) % 3] : v === "0" ? "d" : "";
+              return {
+                v: k ? "0" : v,
+                ...(prevMap[`${i},${j}`] !== undefined ? { prev: prevMap[`${i},${j}`] } : {}),
+                cls,
+              };
+            })),
+            feeds: (opts.feeds || []).slice(),
+          },
+          { t: "chips", label: "栈（右边是栈顶）", items: stack.map(([x, y]) => `(${x},${y})`), empty: "空" },
+        ];
+      };
+      snap("开始", `从左上角开始一格一格扫。扫到没淹过的陆地，岛屿数就 +1，再把整座岛淹掉。`, view(), { at: "init", facts: [["岛屿数", 0], ["栈大小", 0], ["网格", `${m}×${n}`]] });
+      for (let i = 0; i < m; i++) for (let j = 0; j < n; j++) {
+        if (g[i][j] !== "1" || mark[i][j]) continue;
+        count++;
+        mark[i][j] = count;
+        stack = [[i, j]];
+        snap(
+          "发现新岛",
+          `(${i},${j}) 是还没淹过的陆地，岛屿数 +1，变成 <b>${count}</b>。先淹成 0 放进栈里，从这里开始把整座岛淹掉。`,
+          view({ prevMap: { [`${i},${j}`]: "1" } }),
+          { at: "found", facts: [["岛屿数", count, count - 1], ["栈大小", 1, 0], ["当前格子", `(${i},${j})`]] },
+        );
+        while (stack.length) {
+          const prevS = stack.length;
+          cur = stack.pop();
+          const [x, y] = cur, added = [], prevMap = {}, feeds = [];
+          for (const [di, dj, dn] of DIR) {
+            const p = x + di, q = y + dj;
+            if (p < 0 || q < 0 || p >= m || q >= n || g[p][q] !== "1" || mark[p][q]) continue;
+            mark[p][q] = count;
+            stack.push([p, q]);
+            added.push(`(${p},${q})`);
+            prevMap[`${p},${q}`] = "1";
+            feeds.push({ from: [x, y], to: [p, q], win: true, label: dn });
+          }
+          snap(
+            "扩散",
+            `弹出 (${x},${y})，看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，淹成 0 放进栈里。` : "四周没有新的陆地。"),
+            view({ prevMap, feeds }),
+            { at: ["pop", "expand"], facts: [["岛屿数", count], ["栈大小", stack.length, prevS], ["当前格子", `(${x},${y})`]] },
+          );
         }
-        snap("扩散", `弹出 (${x},${y})，看它上下左右。` + (added.length ? `${added.join("、")} 是陆地，做上记号放进栈里。` : "四周没有新的陆地。"), view(), f(["pop", "expand"]));
+        cur = null;
+        snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), { at: "scan", facts: [["岛屿数", count], ["栈大小", 0], ["状态", `第 ${count} 岛完成`]] });
       }
-      cur = null;
-      snap("淹完", `栈空了，第 ${count} 座岛整个淹掉了。接着往后扫，碰到做过记号的格子直接跳过。`, view(), f("scan"));
-    }
-    snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, ...f("done") });
+      snap("完成", `所有格子都扫完了，一共 <b>${count}</b> 座岛。`, view(), { kind: "ok", ans: count, at: "done", facts: [["岛屿数", count], ["栈大小", 0], ["结果", count]] });
     },
   }],
   points: [

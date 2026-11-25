@@ -41,24 +41,61 @@ class Solution:
       ],
       build(a, snap) {
         const s = [...a.s], cnt = new Map();
-        let at = -1, phase = 1;
+        let at = -1, phase = 1, found = -1;
         const view = () => [
-          { t: "array", label: "s", items: s.map((ch, i) => ({ v: ch, cls: i === at ? "a" : phase === 2 && i < at ? "d" : "" })) },
-          { t: "chips", label: "cnt（字符: 次数）", items: [...cnt].map(([k, v]) => ({ v: `${k}: ${v}`, cls: phase === 2 ? (v === 1 ? "c" : "d") : at >= 0 && k === s[at] ? "a" : "" })), empty: "空" },
+          {
+            t: "array",
+            label: "s",
+            items: s.map((ch, i) => ({ v: ch, cls: i === found ? "c" : i === at ? "a" : phase === 2 && i < at ? "d" : "" })),
+            ptrs: { i: at >= 0 && at < s.length ? at : null },
+          },
+          {
+            t: "chips",
+            label: "cnt（字符: 次数）",
+            items: [...cnt].map(([k, v]) => ({ v: `${k}: ${v}`, cls: phase === 2 ? (v === 1 ? "c" : "d") : at >= 0 && k === s[at] ? "a" : "" })),
+            empty: "空",
+          },
         ];
-        snap("开始", "cnt 是一个空的哈希表。", view(), { at: "init" });
-        for (let i = 0; i < s.length; i++) {
-          at = i; const had = cnt.get(s[i]) || 0; cnt.set(s[i], had + 1);
-          snap("计数", `s[${i}] = '${s[i]}'，${had ? `之前见过 ${had} 次` : "第一次见"}，次数变成 ${had + 1}。`, view(), { at: "count" });
-        }
-        phase = 2;
+        snap("开始", "cnt 是一个空的哈希表。", view(), {
+          at: "init",
+          facts: [["阶段", "第一遍：计数"], ["字符数", s.length], ["cnt 键数", 0]],
+        });
         for (let i = 0; i < s.length; i++) {
           at = i;
-          if (cnt.get(s[i]) === 1) { snap("找到了", `s[${i}] = '${s[i]}' 只出现了 1 次，返回 ${i}。`, view(), { at: ["find", "hit"], kind: "ok", ans: i }); return; }
-          snap("再扫一遍", `s[${i}] = '${s[i]}' 出现了 ${cnt.get(s[i])} 次，不是。`, view(), { at: "find" });
+          const had = cnt.get(s[i]) || 0, oldSize = cnt.size;
+          cnt.set(s[i], had + 1);
+          snap("计数", `s[${i}] = '${s[i]}'，${had ? `之前见过 ${had} 次` : "第一次见"}，次数变成 ${had + 1}。`, view(), {
+            at: "count",
+            facts: [["阶段", "第一遍：计数"], ["下标 i", i, i === 0 ? "—" : i - 1], ["字符", `'${s[i]}'`], [`cnt['${s[i]}']`, had + 1, had], ["cnt 键数", cnt.size, oldSize]],
+          });
+        }
+        phase = 2;
+        let prevStage = "第一遍：计数";
+        for (let i = 0; i < s.length; i++) {
+          at = i;
+          if (cnt.get(s[i]) === 1) {
+            found = i;
+            snap("找到了", `s[${i}] = '${s[i]}' 只出现了 1 次，返回 ${i}。`, view(), {
+              at: ["find", "hit"],
+              kind: "ok",
+              ans: i,
+              facts: [["阶段", "第二遍：找次数 1", prevStage], ["下标 i", i, i === 0 ? "—" : i - 1], ["唯一字符", `'${s[i]}'`], ["答案下标", i]],
+            });
+            return;
+          }
+          snap("再扫一遍", `s[${i}] = '${s[i]}' 出现了 ${cnt.get(s[i])} 次，不是。`, view(), {
+            at: "find",
+            facts: [["阶段", "第二遍：找次数 1", prevStage], ["下标 i", i, i === 0 ? "—" : i - 1], ["字符", `'${s[i]}'`], [`cnt['${s[i]}']`, cnt.get(s[i])]],
+          });
+          prevStage = "第二遍：找次数 1";
         }
         at = s.length;
-        snap("没有", "每个字符都出现了不止一次，返回 -1。", view(), { at: "miss", kind: "ok", ans: -1 });
+        snap("没有", "每个字符都出现了不止一次，返回 -1。", view(), {
+          at: "miss",
+          kind: "ok",
+          ans: -1,
+          facts: [["答案", -1]],
+        });
       },
     },
   }, {
@@ -97,24 +134,44 @@ class Solution:
         let at = -1;
         const view = () => [
           { t: "chips", label: "seen = set(nums1)", items: seen.map((x) => ({ v: x, cls: at >= 0 && a.nums2[at] === x ? "c" : "" })) },
-          { t: "array", label: "nums2", items: a.nums2.map((x, i) => ({ v: x, cls: i === at ? "a" : st[i] })) },
-          { t: "chips", label: "res（集合）", items: res.slice(), empty: "空" },
+          {
+            t: "array",
+            label: "nums2",
+            items: a.nums2.map((x, i) => ({ v: x, cls: i === at ? "a" : st[i] })),
+            ptrs: { i: at >= 0 && at < a.nums2.length ? at : null },
+          },
+          { t: "chips", label: "res（集合）", items: res.map((x) => ({ v: x, cls: at >= 0 && a.nums2[at] === x ? "c" : "" })), empty: "空" },
         ];
-        snap("开始", `把 nums1 放进集合：{${seen.join(", ")}}，重复的 ${a.nums1.length - seen.length ? "自动去掉了" : "没有"}。`, view(), { at: "init" });
+        snap("开始", `把 nums1 放进集合：{${seen.join(", ")}}，重复的 ${a.nums1.length - seen.length ? "自动去掉了" : "没有"}。`, view(), {
+          at: "init",
+          facts: [["seen 大小", seen.length], ["res 大小", 0]],
+        });
         a.nums2.forEach((x, i) => {
           at = i;
+          const oldResLen = res.length;
           if (seen.includes(x)) {
             const dup = res.includes(x);
             if (!dup) res.push(x);
             st[i] = "c";
-            snap("在", `${x} 在 seen 里，放进 res${dup ? "。res 里已经有了，集合不会重复存" : ""}。`, view(), { at: ["loop", "hit"] });
+            snap("在", `${x} 在 seen 里，放进 res${dup ? "。res 里已经有了，集合不会重复存" : ""}。`, view(), {
+              at: ["loop", "hit"],
+              facts: [["当前元素", x], ["是否在 seen", "是"], ["res 大小", res.length, oldResLen]],
+            });
           } else {
             st[i] = "d";
-            snap("不在", `${x} 不在 seen 里，跳过。`, view(), { at: ["loop", "hit"] });
+            snap("不在", `${x} 不在 seen 里，跳过。`, view(), {
+              at: ["loop", "hit"],
+              facts: [["当前元素", x], ["是否在 seen", "否"], ["res 大小", res.length]],
+            });
           }
         });
         at = -1;
-        snap("完成", `交集是 [${res.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: res.slice() });
+        snap("完成", `交集是 [${res.join(", ")}]。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: res.slice(),
+          facts: [["交集大小", res.length], ["交集结果", `[${res.join(", ")}]`]],
+        });
       },
     },
   }],

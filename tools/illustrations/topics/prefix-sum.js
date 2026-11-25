@@ -47,25 +47,69 @@ class NumArray:
         const nums = a.nums, n = nums.length, pre = new Array(n + 1).fill(null), out = [null];
         pre[0] = 0;
         let cur = -1, ql = -1, qr = -2, use = [];
-        const view = () => [
-          { t: "array", label: "nums", items: nums.map((v, i) => ({ v, cls: i === cur ? "a" : i >= ql && i <= qr ? "e" : "" })) },
-          { t: "array", label: "pre（pre[i] 是前 i 个数的和）", items: pre.map((v, i) => ({ v: v === null ? "" : v, cls: use.includes(i) ? "a" : v === null ? "" : "c" })) },
+        const view = (opts = {}) => [
+          {
+            t: "array",
+            label: "nums",
+            items: nums.map((v, i) => ({ v, cls: i === cur ? "a" : i >= ql && i <= qr ? "e" : "" })),
+            ptrs: { i: cur >= 0 ? cur : null },
+          },
+          {
+            t: "array",
+            label: "pre（pre[i] 是前 i 个数的和）",
+            items: pre.map((v, i) => ({ v: v === null ? "" : v, cls: use.includes(i) ? "a" : v === null ? "" : "c" })),
+            ptrs: opts.prePtrs || {},
+            feeds: opts.feeds || [],
+          },
           { t: "chips", label: "查询结果", items: out.slice(1), empty: "还没有查询" },
         ];
-        snap("开始", `pre 比 nums 多一格，pre[0] = 0：前 0 个数的和是 0。`, view(), { at: "init" });
+        snap("开始", `pre 比 nums 多一格，pre[0] = 0：前 0 个数的和是 0。`, view({ prePtrs: { "pre[0]": 0 } }), {
+          at: "init",
+          facts: [["阶段", "初始化"], ["pre[0]", 0], ["已查询", 0]],
+        });
         for (let i = 0; i < n; i++) {
-          pre[i + 1] = pre[i] + nums[i]; cur = i; use = [i, i + 1];
-          snap("算前缀和", `pre[${i + 1}] = pre[${i}] + nums[${i}] = ${pre[i]} + ${nums[i]} = ${pre[i + 1]}。`, view(), { at: "build" });
+          pre[i + 1] = pre[i] + nums[i];
+          cur = i;
+          use = [i, i + 1];
+          const delta = nums[i] >= 0 ? `+${nums[i]}` : `${nums[i]}`;
+          snap("算前缀和", `pre[${i + 1}] = pre[${i}] + nums[${i}] = ${pre[i]} + (${nums[i]}) = ${pre[i + 1]}。`, view({
+            prePtrs: { "pre[i]": i, "pre[i+1]": i + 1 },
+            feeds: [{ from: i, to: i + 1, win: true, label: delta }],
+          }), {
+            at: "build",
+            facts: [["阶段", i === 0 ? "构造前缀和" : "构造前缀和"], ["计算", `pre[${i + 1}] = ${pre[i]} + (${nums[i]})`], [`pre[${i + 1}]`, pre[i + 1]], ["已填进度", `${i + 1} / ${n}`, `${i} / ${n}`]],
+          });
         }
         cur = -1; use = [];
+        let prevQuery = "—", prevStage = "构造前缀和", prevAns = "—";
         for (const [l, r] of a.queries) {
           ql = l; qr = r; use = [r + 1, l];
           const s = pre[r + 1] - pre[l];
           out.push(s);
-          snap("查询", `sumRange(${l}, ${r}) = pre[${r + 1}] - pre[${l}] = ${pre[r + 1]} - ${pre[l]} = ${s}。不用再一个个加。`, view(), { at: "query" });
+          const qStr = `[${l}, ${r}]`;
+          snap("查询", `sumRange(${l}, ${r}) = pre[${r + 1}] - pre[${l}] = ${pre[r + 1]} - (${pre[l]}) = ${s}。不用再一个个加。`, view({
+            prePtrs: { "pre[l]": l, "pre[r+1]": r + 1 },
+            feeds: [{ from: l, to: r + 1, win: true, label: `差=${s}` }],
+          }), {
+            at: "query",
+            facts: [
+              ["阶段", "区间查询", prevStage],
+              ["查询区间", qStr, prevQuery],
+              ["公式", `pre[${r + 1}] − pre[${l}]`],
+              ["区间和", s, prevAns],
+            ],
+          });
+          prevQuery = qStr;
+          prevStage = "区间查询";
+          prevAns = s;
         }
         ql = -1; qr = -2; use = [];
-        snap("完成", `每次查询只做一次减法。`, view(), { at: [], kind: "ok", ans: out });
+        snap("完成", `每次查询只做一次减法。`, view(), {
+          at: [],
+          kind: "ok",
+          ans: out,
+          facts: [["查询次数", a.queries.length], ["全部结果", `[${out.slice(1).join(", ")}]`]],
+        });
       },
     },
   }, {
@@ -106,22 +150,85 @@ class Solution:
       build(a, snap) {
         const n = a.n, diff = new Array(n + 1).fill(0), ans = new Array(n).fill(null);
         let hot = [], lo = -1, hi = -2, cur = 0, at = -1;
-        const view = () => [
-          { t: "array", label: "diff", items: diff.map((v, i) => ({ v, cls: hot.includes(i) ? "a" : i >= lo && i <= hi ? "e" : "" })) },
-          { t: "array", label: "ans（航班 1 到 n）", items: ans.map((v, i) => ({ v: v === null ? "" : v, cls: i === at ? "a" : v === null ? "" : "c" })) },
-        ];
-        snap("开始", `差分数组 diff 开 n + 1 = ${n + 1} 格，全是 0。`, view(), { at: "init" });
+        const view = (opts = {}) => {
+          const prevMap = opts.diffPrev || {};
+          return [
+            {
+              t: "array",
+              label: "diff",
+              items: diff.map((v, i) => ({
+                v,
+                ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),
+                cls: hot.includes(i) ? "a" : i >= lo && i <= hi ? "e" : "",
+              })),
+              ptrs: opts.diffPtrs || {},
+            },
+            {
+              t: "array",
+              label: "ans（航班 1 到 n）",
+              items: ans.map((v, i) => ({ v: v === null ? "" : v, cls: i === at ? "a" : v === null ? "" : "c" })),
+              ptrs: at >= 0 ? { i: at } : {},
+              feeds: opts.feeds || [],
+            },
+          ];
+        };
+        snap("开始", `差分数组 diff 开 n + 1 = ${n + 1} 格，全是 0。`, view(), {
+          at: "init",
+          facts: [["阶段", "初始化差分数组"], ["diff 长度", n + 1]],
+        });
+        let prevBook = "—";
         for (const [f, l, s] of a.bookings) {
-          diff[f - 1] += s; diff[l] -= s; hot = [f - 1, l]; lo = f - 1; hi = l - 1;
-          snap("区间加", `航班 ${f} 到 ${l} 各加 ${s} 个座位：diff[${f - 1}] += ${s}，diff[${l}] -= ${s}。只改两格。`, view(), { at: "add" });
+          const oldF = diff[f - 1], oldL = diff[l];
+          diff[f - 1] += s;
+          diff[l] -= s;
+          hot = [f - 1, l];
+          lo = f - 1;
+          hi = l - 1;
+          const bookStr = `航班 ${f}..${l} (+${s})`;
+          snap("区间加", `航班 ${f} 到 ${l} 各加 ${s} 个座位：diff[${f - 1}] += ${s}，diff[${l}] -= ${s}。只改两格。`, view({
+            diffPrev: { [f - 1]: oldF, [l]: oldL },
+            diffPtrs: { "first-1": f - 1, last: l },
+          }), {
+            at: "add",
+            facts: [
+              ["阶段", "区间修改 diff"],
+              ["当前预订", bookStr, prevBook],
+              [`diff[${f - 1}]`, diff[f - 1], oldF],
+              [`diff[${l}]`, diff[l], oldL],
+            ],
+          });
+          prevBook = bookStr;
         }
         hot = []; lo = -1; hi = -2;
+        let prevStage = "区间修改 diff";
         for (let i = 0; i < n; i++) {
-          cur += diff[i]; ans[i] = cur; at = i; hot = [i];
-          snap("求前缀和", `cur += diff[${i}]，得到 ${cur}：航班 ${i + 1} 一共预订了 ${cur} 个座位。`, view(), { at: "sum", facts: [["cur", cur]] });
+          const prevCur = cur;
+          cur += diff[i];
+          ans[i] = cur;
+          at = i;
+          hot = [i];
+          const delta = diff[i] >= 0 ? `+${diff[i]}` : `${diff[i]}`;
+          snap("求前缀和", `cur += diff[${i}]（${prevCur} + (${diff[i]})），得到 ${cur}：航班 ${i + 1} 一共预订了 ${cur} 个座位。`, view({
+            diffPtrs: { i },
+            feeds: i > 0 ? [{ from: i - 1, to: i, win: true, label: delta }] : [],
+          }), {
+            at: "sum",
+            facts: [
+              ["阶段", "前缀和还原", prevStage],
+              ["下标 i", i, i === 0 ? "—" : i - 1],
+              ["cur", cur, prevCur],
+              [`ans[${i}]`, cur],
+            ],
+          });
+          prevStage = "前缀和还原";
         }
         at = -1; hot = [];
-        snap("完成", `答案是 [${ans.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: ans.slice() });
+        snap("完成", `答案是 [${ans.join(", ")}]。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: ans.slice(),
+          facts: [["最终结果", `[${ans.join(", ")}]`]],
+        });
       },
     },
   }],

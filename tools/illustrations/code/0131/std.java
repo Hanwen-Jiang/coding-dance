@@ -18,7 +18,7 @@ class Solution {
             if (isPal(start, end - 1)) {            // 这一段是回文才切 //@try,cut
                 path.add(s.substring(start, end));  //@cut
                 dfs(end);                           //@cut
-                path.remove(path.size() - 1);
+                path.remove(path.size() - 1);       //@back
             }
         }
     }

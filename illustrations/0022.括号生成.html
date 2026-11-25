@@ -265,7 +265,7 @@ svg.g2 .n.x { fill: transparent; stroke: var(--muted); stroke-dasharray: 4 3; }
         <div class="facts" id="facts"></div>
         <span class="phase" id="phase"></span>
         <p class="msg" id="msg"></p>
-        <div class="legend" id="legend"><span><i class="sw a"></i>刚放下的括号</span><span><i class="sw c"></i>收集到的组合</span></div>
+        <div class="legend" id="legend"><span><i class="sw a"></i>刚放下的括号</span><span><i class="sw e"></i>当前路径里的括号</span><span><i class="sw w"></i>撤销（回溯）</span><span><i class="sw c"></i>收集到的组合</span></div>
       </div>
     </div>
   </section>
@@ -347,25 +347,62 @@ const SPEC = { presets: [{"label":"n = 2","args":{"n":2},"note":"n = 2"},{"label
     const n = R.int(2, 3);
     return { args: { n }, note: `n = ${n}`, py: `Solution().generateParenthesis(${n})` };
   })(R); return { args: r.args, note: r.note }; }, methods: [
-{ t: "标准解法", note: null, legend: [["a","刚放下的括号"],["c","收集到的组合"]], build(a, snap) {
+{ t: "标准解法", note: null, legend: [["a","刚放下的括号"],["e","当前路径里的括号"],["w","撤销（回溯）"],["c","收集到的组合"]], build(a, snap) {
     const n = a.n, res = [], path = [];
-    const view = (hl) => [
-      path.length ? { t: "array", label: "当前路径", items: path.map((c, i) => ({ v: c, cls: i === path.length - 1 ? hl : "" })) } : { t: "note", label: "当前路径", html: "空" },
-      { t: "chips", label: "已收集的组合", items: res.map((s, i) => ({ v: s, cls: hl === "c" && i === res.length - 1 ? "c" : "" })), empty: "还没有" },
-    ];
-    const facts = (o, c) => ({ facts: [["左括号", `${o} / ${n}`], ["右括号", `${c} / ${n}`]] });
-    snap("开始", `要放 ${n} 对括号，一共 ${2 * n} 个字符。左括号不能超过 ${n} 个，右括号不能比左括号多。`, view(""), { at: "init", ...facts(0, 0) });
+    const pStr = () => (path.length ? path.join("") : "空");
+    let prevP = pStr(), prevF = 0, prevR = 2 * n;
+    const emit = (phase, msg, views, o = {}) => {
+      const curP = pStr(), curF = res.length, curR = 2 * n - path.length;
+      const facts = o.facts || [
+        ["path", curP, prevP],
+        ["已找到", curF, prevF],
+        ["剩余", curR, prevR],
+      ];
+      prevP = curP; prevF = curF; prevR = curR;
+      snap(phase, msg, views, { ...o, facts });
+    };
+    const view = (opts = {}) => {
+      const prevSlot = opts.prevSlot || {};
+      return [
+        {
+          t: "array",
+          label: `当前路径 path（左 ${opts.o ?? 0}/${n}，右 ${opts.c ?? 0}/${n}）`,
+          items: Array.from({ length: 2 * n }, (_, k) => ({
+            v: k < path.length ? path[k] : "",
+            ...(prevSlot[k] !== undefined ? { prev: prevSlot[k] } : {}),
+            cls: opts.undoIdx === k ? "w" : k < path.length ? (opts.fresh ? "c" : k === path.length - 1 && opts.pickIdx === k ? "a" : "e") : "",
+          })),
+          idx: true,
+        },
+        { t: "chips", label: "已收集的组合", items: res.map((s, i) => ({ v: s, cls: opts.fresh && i === res.length - 1 ? "c" : "" })), empty: "还没有" },
+      ];
+    };
+    emit("开始", `要放 ${n} 对括号，一共 ${2 * n} 个位置。任何时候左括号不超过 ${n} 个，右括号不比左括号多。`, view({ o: 0, c: 0 }), { at: "init", facts: [["path", "空"], ["已找到", 0], ["剩余", 2 * n]] });
     const dfs = (o, c) => {
       if (path.length === 2 * n) {
         res.push(path.join(""));
-        snap("收集", `放满 ${2 * n} 个了，得到 <b>${res[res.length - 1]}</b>。回到上一层，试另一种选择。`, view("c"), { at: "collect", ...facts(o, c) });
+        emit("收集", `放满 ${2 * n} 个字符了，得到合法组合 <b>${res[res.length - 1]}</b>。记进结果后回溯。`, view({ o, c, fresh: true }), { at: "collect", kind: "ok" });
         return;
       }
-      if (o < n) { path.push("("); snap("放 (", `左括号才用了 ${o} 个，还没到 ${n}，放一个 <b>(</b>。`, view("a"), { at: "open", ...facts(o + 1, c) }); dfs(o + 1, c); path.pop(); }
-      if (c < o) { path.push(")"); snap("放 )", `右括号 ${c} 个，比左括号 ${o} 个少，可以放一个 <b>)</b>。`, view("a"), { at: "close", ...facts(o, c + 1) }); dfs(o, c + 1); path.pop(); }
+      if (o < n) {
+        const slot = path.length;
+        path.push("(");
+        emit("放 (", `左括号已放 ${o} 个，还剩 ${n - o} 个可放：在位置 ${slot} 放入 <b>(</b>，继续递归。`, view({ o: o + 1, c, pickIdx: slot, prevSlot: { [slot]: "" } }), { at: "open" });
+        dfs(o + 1, c);
+        path.pop();
+        emit("撤销 (", `从位置 ${slot} 撤销 <b>(</b>（回到左 ${o}、右 ${c}），${c < o ? "接下来试试放 )" : "返回上一层"}。`, view({ o, c, undoIdx: slot, prevSlot: { [slot]: "(" } }), { at: "open", kind: "warn" });
+      }
+      if (c < o) {
+        const slot = path.length;
+        path.push(")");
+        emit("放 )", `右括号 ${c} 个 < 左括号 ${o} 个：在位置 ${slot} 放入 <b>)</b>，继续递归。`, view({ o, c: c + 1, pickIdx: slot, prevSlot: { [slot]: "" } }), { at: "close" });
+        dfs(o, c + 1);
+        path.pop();
+        emit("撤销 )", `从位置 ${slot} 撤销 <b>)</b>（回到左 ${o}、右 ${c}），这一层都试完了，返回上一层。`, view({ o, c, undoIdx: slot, prevSlot: { [slot]: ")" } }), { at: "close", kind: "warn" });
+      }
     };
     dfs(0, 0);
-    snap("完成", `所有分支都试完了，一共 <b>${res.length}</b> 种合法组合。`, view(""), { at: "done", kind: "ok", ans: res.slice(), facts: [["组合数", res.length]] });
+    snap("完成", `所有分支都试完了，一共 <b>${res.length}</b> 种合法组合。`, view({ o: 0, c: 0 }), { at: "done", kind: "ok", ans: res.slice(), facts: [["path", "空"], ["已找到", res.length], ["剩余", 2 * n]] });
   } }
 ] };
 (function () {

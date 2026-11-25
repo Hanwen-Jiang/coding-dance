@@ -47,31 +47,75 @@ class Solution:
       ],
       build(a, snap) {
         const nums = a.nums.slice(), n = nums.length, done = new Array(n).fill(false);
-        let L = -1, Rr = -2, I = null, J = null, pv = null;
-        const view = () => [{ t: "bars", label: pv === null ? "nums" : `nums（基准 pivot = ${pv}）`, items: nums.map((v, k) => ({ v, cls: k === I || k === J ? "a" : done[k] ? "c" : k >= L && k <= Rr ? (v === pv ? "b" : "e") : "" })), ptrs: { ...(I !== null && I >= 0 && I < n ? { i: I } : {}), ...(J !== null && J >= 0 && J < n ? { j: J } : {}) } }];
-        snap("开始", `对整个数组 [0, ${n - 1}] 做快速排序。`, view(), { at: "start" });
+        let L = -1, Rr = -2, I = null, J = null, pv = null, swapsCnt = 0;
+        const doneCnt = () => done.filter(Boolean).length;
+        const view = (opts = {}) => {
+          const prevMap = opts.prevMap || {};
+          return [{
+            t: "bars",
+            label: pv === null ? "nums" : `nums（基准 pivot = ${pv}）`,
+            items: nums.map((v, k) => ({
+              v,
+              ...(prevMap[k] !== undefined ? { prev: prevMap[k] } : {}),
+              cls: k === I || k === J ? "a" : done[k] ? "c" : k >= L && k <= Rr ? (v === pv ? "b" : "e") : "",
+            })),
+            ptrs: { ...(I !== null && I >= 0 && I < n ? { i: I } : {}), ...(J !== null && J >= 0 && J < n ? { j: J } : {}) },
+            swaps: opts.swaps || [],
+          }];
+        };
+        snap("开始", `对整个数组 [0, ${n - 1}] 做快速排序。`, view(), {
+          at: "start",
+          facts: [["当前区间", `[0, ${n - 1}]`], ["基准 pivot", "—"], ["已归位", `0 / ${n}`], ["交换次数", 0]],
+        });
         const quick = (l, r) => {
           if (l >= r) { if (l === r) done[l] = true; return; }
+          const oldRange = L >= 0 ? `[${L}, ${Rr}]` : `[0, ${n - 1}]`;
+          const oldPv = pv ?? "—";
           L = l; Rr = r; pv = nums[(l + r) >> 1]; I = null; J = null;
-          snap("选基准", `排 [${l}, ${r}]：取中间的数 nums[${(l + r) >> 1}] = ${pv} 当基准。i 从 ${l - 1}、j 从 ${r + 1} 开始。`, view(), { at: "pivot" });
+          snap("选基准", `排 [${l}, ${r}]：取中间的数 nums[${(l + r) >> 1}] = ${pv} 当基准。i 从 ${l - 1}、j 从 ${r + 1} 开始。`, view(), {
+            at: "pivot",
+            facts: [["当前区间", `[${l}, ${r}]`, oldRange], ["基准 pivot", pv, oldPv], ["已归位", `${doneCnt()} / ${n}`], ["交换次数", swapsCnt]],
+          });
           let i = l - 1, j = r + 1;
           while (i < j) {
             i++; while (nums[i] < pv) i++;
             j--; while (nums[j] > pv) j--;
             I = i; J = j;
             if (i < j) {
-              snap("找到一对", `i 停在 ${i}（${nums[i]} &gt;= ${pv}），j 停在 ${j}（${nums[j]} &lt;= ${pv}）。i &lt; j，它们站错了边。`, view(), { at: "scan" });
+              snap("找到一对", `i 停在 ${i}（${nums[i]} &gt;= ${pv}），j 停在 ${j}（${nums[j]} &lt;= ${pv}）。i &lt; j，它们站错了边。`, view(), {
+                at: "scan",
+                facts: [["当前区间", `[${l}, ${r}]`], ["基准 pivot", pv], ["i / j", `${i} (${nums[i]}) / ${j} (${nums[j]})`], ["交换次数", swapsCnt]],
+              });
+              const oldI = nums[i], oldJ = nums[j], oldSwaps = swapsCnt;
               [nums[i], nums[j]] = [nums[j], nums[i]];
-              snap("交换", `交换以后 nums[${i}] = ${nums[i]}，nums[${j}] = ${nums[j]}，两边都对了，接着找。`, view(), { at: "swap" });
-            } else snap("相遇", `i 停在 ${i}，j 停在 ${j}，i &gt;= j，分区结束。`, view(), { at: ["scan", "swap"] });
+              swapsCnt++;
+              snap("交换", `交换以后 nums[${i}] = ${nums[i]}，nums[${j}] = ${nums[j]}，两边都对了，接着找。`, view({ swaps: [[i, j]], prevMap: { [i]: oldI, [j]: oldJ } }), {
+                at: "swap",
+                facts: [["当前区间", `[${l}, ${r}]`], ["基准 pivot", pv], ["交换", `${i} ↔ ${j}`], ["交换次数", swapsCnt, oldSwaps]],
+              });
+            } else {
+              snap("相遇", `i 停在 ${i}，j 停在 ${j}，i &gt;= j，分区结束。`, view(), {
+                at: ["scan", "swap"],
+                facts: [["当前区间", `[${l}, ${r}]`], ["基准 pivot", pv], ["分界点 j", j], ["交换次数", swapsCnt]],
+              });
+            }
           }
           I = null; J = j;
-          snap("分成两段", `[${l}, ${j}] 里的数都 &lt;= ${pv}，[${j + 1}, ${r}] 里的都 &gt;= ${pv}。两段分别递归。`, view(), { at: "recur" });
+          snap("分成两段", `[${l}, ${j}] 里的数都 &lt;= ${pv}，[${j + 1}, ${r}] 里的都 &gt;= ${pv}。两段分别递归。`, view(), {
+            at: "recur",
+            facts: [["左段", `[${l}, ${j}]`], ["右段", `[${j + 1}, ${r}]`], ["已归位", `${doneCnt()} / ${n}`], ["交换次数", swapsCnt]],
+          });
           quick(l, j); quick(j + 1, r);
         };
         quick(0, n - 1);
+        const prevDone = `${doneCnt()} / ${n}`;
         L = -1; Rr = -2; I = J = pv = null; done.fill(true);
-        snap("完成", `排好了：[${nums.join(", ")}]。`, view(), { at: "done", kind: "ok", ans: nums.slice() });
+        snap("完成", `排好了：[${nums.join(", ")}]。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: nums.slice(),
+          facts: [["当前区间", "全部完成"], ["已归位", `${n} / ${n}`, prevDone], ["交换次数", swapsCnt]],
+        });
       },
     },
   }, {
@@ -116,27 +160,80 @@ class Solution:
       presets: [{ label: "示例 1", args: { nums: [3, 2, 1, 5, 6, 4], k: 2 }, note: "nums = [3,2,1,5,6,4], k = 2", expect: 5 }],
       build(a, snap) {
         const nums = a.nums.slice(), n = nums.length, t = n - a.k;
-        let l = 0, r = n - 1, I = null, J = null, pv = null, hit = -1;
-        const view = () => [{ t: "bars", label: pv === null ? "nums" : `nums（基准 pivot = ${pv}）`, items: nums.map((v, x) => ({ v, cls: x === hit ? "c" : x === I || x === J ? "a" : x >= l && x <= r ? (v === pv ? "b" : "e") : "" })), ptrs: { target: t, ...(I !== null && I < n ? { i: I } : {}), ...(J !== null && J >= 0 ? { j: J } : {}) } }];
-        snap("开始", `第 ${a.k} 大的数，就是排好后下标为 ${n} - ${a.k} = ${t} 的数。范围是整个数组。`, view(), { at: "init" });
+        let l = 0, r = n - 1, I = null, J = null, pv = null, hit = -1, swapsCnt = 0;
+        const view = (opts = {}) => {
+          const prevMap = opts.prevMap || {};
+          return [{
+            t: "bars",
+            label: pv === null ? "nums" : `nums（基准 pivot = ${pv}）`,
+            items: nums.map((v, x) => ({
+              v,
+              ...(prevMap[x] !== undefined ? { prev: prevMap[x] } : {}),
+              cls: x === hit ? "c" : x === I || x === J ? "a" : x >= l && x <= r ? (v === pv ? "b" : "e") : "",
+            })),
+            ptrs: { target: t, ...(I !== null && I < n ? { i: I } : {}), ...(J !== null && J >= 0 ? { j: J } : {}) },
+            swaps: opts.swaps || [],
+          }];
+        };
+        snap("开始", `第 ${a.k} 大的数，就是排好后下标为 ${n} - ${a.k} = ${t} 的数。范围是整个数组。`, view(), {
+          at: "init",
+          facts: [["目标下标", t], ["搜索范围", `[0, ${n - 1}]`], ["基准 pivot", "—"], ["交换次数", 0]],
+        });
         while (l < r) {
+          const oldPv = pv ?? "—";
           pv = nums[(l + r) >> 1]; I = J = null;
-          snap("选基准", `在 [${l}, ${r}] 里取中间的数 ${pv} 当基准，分区。`, view(), { at: "pivot" });
+          snap("选基准", `在 [${l}, ${r}] 里取中间的数 ${pv} 当基准，分区。`, view(), {
+            at: "pivot",
+            facts: [["目标下标", t], ["搜索范围", `[${l}, ${r}]`], ["基准 pivot", pv, oldPv], ["交换次数", swapsCnt]],
+          });
           let i = l - 1, j = r + 1;
           while (i < j) {
             i++; while (nums[i] < pv) i++;
             j--; while (nums[j] > pv) j--;
             I = i; J = j;
-            if (i < j) { [nums[i], nums[j]] = [nums[j], nums[i]]; snap("交换", `i 停在 ${i}、j 停在 ${j}，交换这两个数。`, view(), { at: ["scan", "swap"] }); }
-            else snap("相遇", `i = ${i}，j = ${j}，分区结束。`, view(), { at: ["scan", "swap"] });
+            if (i < j) {
+              snap("找到一对", `i 停在 ${i}（${nums[i]} &gt;= ${pv}），j 停在 ${j}（${nums[j]} &lt;= ${pv}），准备交换。`, view(), {
+                at: "scan",
+                facts: [["目标下标", t], ["搜索范围", `[${l}, ${r}]`], ["i / j", `${i} (${nums[i]}) / ${j} (${nums[j]})`], ["交换次数", swapsCnt]],
+              });
+              const oldI = nums[i], oldJ = nums[j], oldSwaps = swapsCnt;
+              [nums[i], nums[j]] = [nums[j], nums[i]];
+              swapsCnt++;
+              snap("交换", `交换以后 nums[${i}] = ${nums[i]}，nums[${j}] = ${nums[j]}。`, view({ swaps: [[i, j]], prevMap: { [i]: oldI, [j]: oldJ } }), {
+                at: "swap",
+                facts: [["目标下标", t], ["搜索范围", `[${l}, ${r}]`], ["交换", `${i} ↔ ${j}`], ["交换次数", swapsCnt, oldSwaps]],
+              });
+            } else {
+              snap("相遇", `i = ${i}，j = ${j}，分区结束。`, view(), {
+                at: ["scan", "swap"],
+                facts: [["目标下标", t], ["搜索范围", `[${l}, ${r}]`], ["分界点 j", j], ["交换次数", swapsCnt]],
+              });
+            }
           }
           I = null;
-          if (t <= j) { r = j; snap("去左边", `[${l}, ${j}] 都 &lt;= ${pv}。target = ${t} &lt;= ${j}，答案在左边一段，右边不用管了。`, view(), { at: "go" }); }
-          else { l = j + 1; snap("去右边", `[${j + 1}, ${r}] 都 &gt;= ${pv}。target = ${t} &gt; ${j}，答案在右边一段，左边不用管了。`, view(), { at: "go" }); }
+          const oldRange = `[${l}, ${r}]`;
+          if (t <= j) {
+            r = j;
+            snap("去左边", `[${l}, ${j}] 都 &lt;= ${pv}。target = ${t} &lt;= ${j}，答案在左边一段，右边不用管了。`, view(), {
+              at: "go",
+              facts: [["目标下标", t], ["搜索范围", `[${l}, ${r}]`, oldRange], ["基准 pivot", pv], ["交换次数", swapsCnt]],
+            });
+          } else {
+            l = j + 1;
+            snap("去右边", `[${j + 1}, ${r}] 都 &gt;= ${pv}。target = ${t} &gt; ${j}，答案在右边一段，左边不用管了。`, view(), {
+              at: "go",
+              facts: [["目标下标", t], ["搜索范围", `[${l}, ${r}]`, oldRange], ["基准 pivot", pv], ["交换次数", swapsCnt]],
+            });
+          }
           J = null;
         }
         pv = null; hit = l;
-        snap("完成", `范围缩到只剩下标 ${l}，nums[${l}] = ${nums[l]} 就是第 ${a.k} 大的数。`, view(), { at: "done", kind: "ok", ans: nums[l] });
+        snap("完成", `范围缩到只剩下标 ${l}，nums[${l}] = ${nums[l]} 就是第 ${a.k} 大的数。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: nums[l],
+          facts: [["目标下标", t], ["第 k 大", nums[l]], ["交换次数", swapsCnt]],
+        });
       },
     },
   }],

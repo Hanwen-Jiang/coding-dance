@@ -30,31 +30,72 @@ class Solution:
     cases: [[[0]], [[1, 2, 3]], [[5, 2, 7, 1]]],
     gen: (R) => { const nums = R.distinct(R.int(1, 4), 1, 9); return { args: { nums }, note: `nums = ${R.fmt(nums)}` }; },
     demo: {
-      legend: [["a", "刚选的数"], ["e", "path 里的数"], ["d", "这一层不能再选（在 i 前面）"]],
+      legend: [["a", "刚选的数"], ["e", "path / 可选范围"], ["d", "这一层不能再选（在 i 前面）"], ["w", "撤销放回"], ["c", "记进答案"]],
       presets: [{ label: "示例 1", args: { nums: [1, 2, 3] }, note: "nums = [1,2,3]", expect: [[], [1], [1, 2], [1, 2, 3], [1, 3], [2], [2, 3], [3]] }],
       build(a, snap) {
         const nums = a.nums, res = [], path = [], idx = [];
-        let from = 0, hot = -1;
-        const view = () => [
-          { t: "array", label: `nums（这一层从下标 ${from} 开始选）`, items: nums.map((v, k) => ({ v, cls: k === hot ? "a" : idx.includes(k) ? "e" : k < from ? "d" : "" })) },
-          { t: "chips", label: "path", items: path.slice(), empty: "空" },
-          { t: "chips", label: `res（${res.length} 个）`, items: res.map((p) => `[${p.join(",")}]`), empty: "空" },
+        let from = 0, hot = -1, undo = -1;
+        const pStr = () => (path.length ? `[${path.join(",")}]` : "空");
+        let prevP = pStr(), prevS = "—", prevC = 0;
+        const emit = (phase, msg, views, curStart, o = {}) => {
+          const curP = pStr(), curC = res.length;
+          const facts = o.facts || [
+            curP !== prevP ? ["path", curP, prevP] : ["path", curP],
+            curStart !== prevS ? ["起点 i", curStart, prevS] : ["起点 i", curStart],
+            curC !== prevC ? ["已收集", curC, prevC] : ["已收集", curC],
+          ];
+          prevP = curP; prevS = curStart; prevC = curC;
+          snap(phase, msg, views, { ...o, facts });
+        };
+        const view = (opts = {}) => [
+          {
+            t: "array",
+            label: `nums（这一层从下标 ${from} 开始选）`,
+            items: nums.map((v, k) => ({
+              v,
+              cls: k === undo ? "w" : k === hot ? "a" : idx.includes(k) ? "e" : k < from ? "d" : "",
+            })),
+            ptrs: {
+              i: from < nums.length ? from : null,
+              ...(hot >= 0 ? { j: hot } : undo >= 0 ? { j: undo } : {}),
+            },
+          },
+          {
+            t: "chips",
+            label: "path",
+            items: path.map((v, k) => ({ v, cls: opts.fresh ? "c" : hot >= 0 && k === path.length - 1 ? "a" : "e" })),
+            empty: "空",
+          },
+          {
+            t: "chips",
+            label: `res（${res.length} 个）`,
+            items: res.map((p, k) => ({ v: `[${p.join(",")}]`, cls: opts.fresh && k === res.length - 1 ? "c" : "" })),
+            empty: "空",
+          },
         ];
-        snap("开始", "从下标 0 开始，path 是空的。", view(), { at: "start" });
+        emit("开始", "从下标 0 开始，path 是空的。", view(), "—", {
+          at: "start",
+          facts: [["path", "空"], ["起点 i", "—"], ["已收集", 0]],
+        });
         const dfs = (i) => {
-          from = i; hot = -1; res.push(path.slice());
-          snap("记一个子集", `进入 dfs(${i})：当前 path = [${path.join(", ")}] 就是一个子集，记进答案。`, view(), { at: "record" });
+          from = i; hot = -1; undo = -1; res.push(path.slice());
+          emit("记一个子集", `进入 dfs(${i})：当前 path = [${path.join(", ")}] 就是一个子集，记进答案。`, view({ fresh: true }), i, { at: "record", kind: "ok" });
           for (let j = i; j < nums.length; j++) {
-            path.push(nums[j]); idx.push(j); hot = j; from = i;
-            snap("选", `选 nums[${j}] = ${nums[j]}，下一层只能从 ${j + 1} 开始选。`, view(), { at: "choose" });
+            path.push(nums[j]); idx.push(j); hot = j; undo = -1; from = i;
+            emit("选", `选 nums[${j}] = ${nums[j]}，下一层只能从 ${j + 1} 开始选。`, view(), i, { at: "choose" });
             dfs(j + 1);
-            path.pop(); idx.pop(); from = i; hot = -1;
-            snap("撤销", `从 dfs(${j + 1}) 回来，把 ${nums[j]} 拿出来，path = [${path.join(", ")}]，换下一个。`, view(), { at: "undo" });
+            path.pop(); idx.pop(); from = i; hot = -1; undo = j;
+            emit("撤销", `从 dfs(${j + 1}) 回来，把 ${nums[j]} 拿出来，path = [${path.join(", ")}]，换下一个。`, view(), i, { at: "undo", kind: "warn" });
           }
         };
         dfs(0);
-        from = 0;
-        snap("完成", `一共 ${res.length} 个子集。`, view(), { at: "done", kind: "ok", ans: res.map((p) => p.slice()) });
+        from = 0; hot = -1; undo = -1;
+        snap("完成", `一共 ${res.length} 个子集。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: res.map((p) => p.slice()),
+          facts: [["path", "空"], ["已收集", res.length]],
+        });
       },
     },
   }, {
@@ -91,30 +132,83 @@ class Solution:
     cases: [[[1]], [[0, 1]], [[1, 2, 3]], [[4, 1, 3, 2]]],
     gen: (R) => { const nums = R.distinct(R.int(1, 4), 1, 9); return { args: { nums }, note: `nums = ${R.fmt(nums)}` }; },
     demo: {
-      legend: [["a", "刚选的数"], ["e", "已经用过（在 path 里）"]],
+      legend: [["a", "刚选的数"], ["e", "已在 path 里"], ["d", "已用过 / 本位已试"], ["w", "撤销放回"], ["c", "放满收集"]],
       presets: [{ label: "示例 1", args: { nums: [1, 2, 3] }, note: "nums = [1,2,3]", expect: [[1, 2, 3], [1, 3, 2], [2, 1, 3], [2, 3, 1], [3, 1, 2], [3, 2, 1]] }],
       build(a, snap) {
         const nums = a.nums, n = nums.length, res = [], path = [], used = new Array(n).fill(false);
-        let hot = -1;
-        const view = () => [
-          { t: "array", label: "nums（蓝底的已经用过）", items: nums.map((v, k) => ({ v, cls: k === hot ? "a" : used[k] ? "e" : "" })) },
-          { t: "chips", label: "path", items: path.slice(), empty: "空" },
-          { t: "chips", label: `res（${res.length} 个）`, items: res.map((p) => `[${p.join(",")}]`), empty: "空" },
-        ];
-        snap("开始", "path 是空的，所有数都还没用过。", view(), { at: "start" });
+        const tried = Array.from({ length: n }, () => new Set());
+        const pStr = () => (path.length ? `[${path.join(",")}]` : "空");
+        let prevP = pStr(), prevF = 0, prevR = n;
+        const emit = (phase, msg, views, o = {}) => {
+          const curP = pStr(), curF = res.length, curR = n - path.length;
+          const facts = o.facts || [
+            curP !== prevP ? ["path", curP, prevP] : ["path", curP],
+            curF !== prevF ? ["已收集", curF, prevF] : ["已收集", curF],
+            curR !== prevR ? ["剩余空位", curR, prevR] : ["剩余空位", curR],
+          ];
+          prevP = curP; prevF = curF; prevR = curR;
+          snap(phase, msg, views, { ...o, facts });
+        };
+        const view = (opts = {}) => {
+          const depth = path.length;
+          return [
+            {
+              t: "array",
+              label: "nums（灰色的已用过或本位已试）",
+              items: nums.map((v, k) => ({
+                v,
+                cls: k === opts.undoNum ? "w" : k === opts.cur ? "a" : used[k] || (depth < n && tried[depth].has(k)) ? "d" : "",
+              })),
+              ptrs: { j: opts.cur >= 0 ? opts.cur : opts.undoNum >= 0 ? opts.undoNum : null },
+            },
+            {
+              t: "array",
+              label: "path（正在填的排列）",
+              items: Array.from({ length: n }, (_, k) => ({
+                v: k < path.length ? path[k] : "",
+                ...(opts.undoSlot === k && opts.undoVal !== undefined ? { prev: opts.undoVal } : {}),
+                cls: opts.undoSlot === k ? "w" : k < path.length ? (opts.fresh ? "c" : k === path.length - 1 && opts.cur >= 0 ? "a" : "e") : "",
+              })),
+              idx: true,
+              ptrs: { pos: depth < n ? depth : null },
+            },
+            {
+              t: "chips",
+              label: `res（${res.length} 个）`,
+              items: res.map((p, k) => ({ v: `[${p.join(",")}]`, cls: opts.fresh && k === res.length - 1 ? "c" : "" })),
+              empty: "空",
+            },
+          ];
+        };
+        emit("开始", "path 是空的，所有数都还没用过。", view(), {
+          at: "start",
+          facts: [["path", "空"], ["已收集", 0], ["剩余空位", n]],
+        });
         const dfs = () => {
-          if (path.length === n) { res.push(path.slice()); hot = -1; snap("放满了", `path = [${path.join(", ")}] 放满了 ${n} 个数，是一个排列，记进答案，返回。`, view(), { at: "full" }); return; }
+          if (path.length === n) {
+            res.push(path.slice());
+            emit("放满了", `path = [${path.join(", ")}] 放满了 ${n} 个数，是一个排列，记进答案，返回。`, view({ fresh: true }), { at: "full", kind: "ok" });
+            return;
+          }
+          const depth = path.length;
+          tried[depth].clear();
           for (let j = 0; j < n; j++) {
             if (used[j]) continue;
-            used[j] = true; path.push(nums[j]); hot = j;
-            snap("选", `第 ${path.length} 个位置放 ${nums[j]}（没用过的数里从左往右挑）。`, view(), { at: "choose" });
+            used[j] = true; path.push(nums[j]);
+            emit("选", `第 ${depth + 1} 个位置放 ${nums[j]}（没用过的数里从左往右挑）。`, view({ cur: j }), { at: "choose" });
             dfs();
-            path.pop(); used[j] = false; hot = -1;
-            snap("撤销", `回来，把 ${nums[j]} 拿出来、标回没用过，path = [${path.join(", ")}]。`, view(), { at: "undo" });
+            path.pop(); used[j] = false;
+            tried[depth].add(j);
+            emit("撤销", `回来，把 ${nums[j]} 拿出来、标回没用过，path = [${path.join(", ")}]。`, view({ undoNum: j, undoSlot: depth, undoVal: nums[j] }), { at: "undo", kind: "warn" });
           }
         };
         dfs();
-        snap("完成", `一共 ${res.length} 个排列。`, view(), { at: "done", kind: "ok", ans: res.map((p) => p.slice()) });
+        snap("完成", `一共 ${res.length} 个排列。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: res.map((p) => p.slice()),
+          facts: [["path", "空"], ["已收集", res.length], ["剩余空位", n]],
+        });
       },
     },
   }, {
@@ -148,30 +242,87 @@ class Solution:
     cases: [[1, 1], [4, 2], [5, 3], [4, 4]],
     gen: (R) => { const n = R.int(2, 5), k = R.int(1, n); return { args: { n, k }, note: `n = ${n}, k = ${k}` }; },
     demo: {
-      legend: [["a", "刚选的数"], ["e", "path 里的数"], ["d", "剪掉：后面的数不够选了"]],
+      legend: [["a", "刚选的数"], ["e", "path 里的数"], ["d", "剪掉：后面的数不够选了"], ["w", "撤销放回"], ["c", "选够收集"]],
       presets: [{ label: "n = 4, k = 2", args: { n: 4, k: 2 }, note: "n = 4, k = 2", expect: [[1, 2], [1, 3], [1, 4], [2, 3], [2, 4], [3, 4]] }, { label: "n = 4, k = 3", args: { n: 4, k: 3 }, note: "n = 4, k = 3", expect: [[1, 2, 3], [1, 2, 4], [1, 3, 4], [2, 3, 4]] }],
       build(a, snap) {
         const { n, k } = a, res = [], path = [];
-        let hot = -1, cut = -1, from = 1;
-        const view = () => [
-          { t: "array", label: "1 到 n", items: Array.from({ length: n }, (_, i) => ({ v: i + 1, cls: i + 1 === hot ? "a" : path.includes(i + 1) ? "e" : cut > 0 && i + 1 > cut ? "d" : i + 1 < from ? "" : "" })), idx: false },
-          { t: "chips", label: "path", items: path.slice(), empty: "空" },
-          { t: "chips", label: `res（${res.length} 个）`, items: res.map((p) => `[${p.join(",")}]`), empty: "空" },
+        let hot = -1, undo = -1, cut = -1, from = 1;
+        const pStr = () => (path.length ? `[${path.join(",")}]` : "空");
+        let prevP = pStr(), prevNeed = k, prevTop = n - k + 1, prevRes = 0;
+        const emit = (phase, msg, views, topVal, o = {}) => {
+          const curP = pStr(), curNeed = k - path.length, curRes = res.length;
+          const facts = o.facts || [
+            curP !== prevP ? ["path", curP, prevP] : ["path", curP],
+            curNeed !== prevNeed ? ["还需选 need", curNeed, prevNeed] : ["还需选 need", curNeed],
+            topVal !== prevTop ? ["上界 top", topVal, prevTop] : ["上界 top", topVal],
+            curRes !== prevRes ? ["已收集", curRes, prevRes] : ["已收集", curRes],
+          ];
+          prevP = curP; prevNeed = curNeed; prevTop = topVal; prevRes = curRes;
+          snap(phase, msg, views, { ...o, facts });
+        };
+        const view = (opts = {}) => [
+          {
+            t: "array",
+            label: "1 到 n",
+            items: Array.from({ length: n }, (_, i) => {
+              const val = i + 1;
+              return {
+                v: val,
+                cls: val === undo ? "w" : val === hot ? "a" : path.includes(val) ? "e" : cut > 0 && val > cut ? "d" : val < from ? "d" : "",
+              };
+            }),
+            idx: false,
+            ptrs: {
+              ...(from >= 1 && from <= n ? { start: from - 1 } : {}),
+              ...(hot >= 1 ? { x: hot - 1 } : undo >= 1 ? { x: undo - 1 } : {}),
+            },
+          },
+          {
+            t: "chips",
+            label: "path",
+            items: path.map((v, idx) => ({ v, cls: opts.fresh ? "c" : hot >= 1 && idx === path.length - 1 ? "a" : "e" })),
+            empty: "空",
+          },
+          {
+            t: "chips",
+            label: `res（${res.length} 个）`,
+            items: res.map((p, idx) => ({ v: `[${p.join(",")}]`, cls: opts.fresh && idx === res.length - 1 ? "c" : "" })),
+            empty: "空",
+          },
         ];
-        snap("开始", `从 1 到 ${n} 里选 ${k} 个数。`, view(), { at: "start" });
+        emit("开始", `从 1 到 ${n} 里选 ${k} 个数。`, view(), n - k + 1, {
+          at: "start",
+          facts: [["path", "空"], ["还需选 need", k], ["上界 top", n - k + 1], ["已收集", 0]],
+        });
         const dfs = (start) => {
-          if (path.length === k) { res.push(path.slice()); hot = -1; cut = -1; snap("选够了", `path = [${path.join(", ")}] 选够了 ${k} 个，记进答案。`, view(), { at: "full" }); return; }
+          if (path.length === k) {
+            res.push(path.slice());
+            hot = -1; undo = -1; cut = -1;
+            emit("选够了", `path = [${path.join(", ")}] 选够了 ${k} 个，记进答案。`, view({ fresh: true }), n, { at: "full", kind: "ok" });
+            return;
+          }
           const need = k - path.length, top = n - need + 1;
+          if (start > top && start <= n) {
+            from = start; cut = top; hot = -1; undo = -1;
+            emit("剪枝", `从 ${start} 开始最多只剩 ${n - start + 1} 个数，不够还需的 ${need} 个（上界 top = ${top}），直接剪枝返回。`, view(), top, { at: "choose", kind: "warn" });
+            return;
+          }
           for (let x = start; x <= top; x++) {
-            path.push(x); hot = x; cut = top; from = start;
-            snap("选", `还要选 ${need} 个，x 最多到 ${n} - ${need} + 1 = ${top}${top < n ? `（${top + 1} 以后剪掉了）` : ""}。选 ${x}，下一层从 ${x + 1} 开始。`, view(), { at: "choose" });
+            path.push(x); hot = x; undo = -1; cut = top; from = start;
+            emit("选", `还要选 ${need} 个，x 最多到 ${n} - ${need} + 1 = ${top}${top < n ? `（${top + 1} 以后剪掉了）` : ""}。选 ${x}，下一层从 ${x + 1} 开始。`, view(), top, { at: "choose" });
             dfs(x + 1);
-            path.pop(); hot = -1; cut = -1;
-            snap("撤销", `回来，把 ${x} 拿出来。`, view(), { at: "undo" });
+            path.pop(); hot = -1; undo = x; cut = top; from = start;
+            emit("撤销", `回来，把 ${x} 拿出来。`, view(), top, { at: "undo", kind: "warn" });
           }
         };
         dfs(1);
-        snap("完成", `一共 ${res.length} 个组合。`, view(), { at: "done", kind: "ok", ans: res.map((p) => p.slice()) });
+        from = 1; hot = -1; undo = -1; cut = -1;
+        snap("完成", `一共 ${res.length} 个组合。`, view(), {
+          at: "done",
+          kind: "ok",
+          ans: res.map((p) => p.slice()),
+          facts: [["path", "空"], ["已收集", res.length]],
+        });
       },
     },
   }],
