@@ -1,0 +1,435 @@
+package runner
+
+import (
+	"bufio"
+	"bytes"
+	"context"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/Hanwen-Jiang/coding-dance/internal/ws"
+)
+
+func TestSignFixedVectorAndVerify(t *testing.T) {
+	// Must match tools/runner/test/server.test.mjs & site/functions/_lib/test/runner.test.ts exact vector.
+	secret := strings.Repeat("k", 32)
+	got := Sign(secret, SignParts{
+		Method:   "post",
+		Path:     "/v1/run",
+		Time:     1700000000,
+		Nonce:    "abcdefabcdefabcdef",
+		User:     "octocat",
+		Node:     "lou1",
+		BodyHash: SHA256Hex([]byte(`{"a":1}`)),
+	})
+	const want = "b2b038630a930c64fc00723773ca316ad21faf9e8abc4e138d3e6e3c54b27b2b"
+	if got != want {
+		t.Fatalf("fixed signature mismatch:\n got: %s\nwant: %s", got, want)
+	}
+
+	testSecret := "test-secret-0123456789abcdef0123456789"
+	now := time.Now()
+	body := []byte(`{"x":1}`)
+	hdrMap := SignedHeaders(testSecret, "POST", "/v1/run", "lou1", "alice", body, now)
+	hdr := make(http.Header)
+	for k, v := range hdrMap {
+		hdr.Set(k, v)
+	}
+	nonces := NewNonceCache(0)
+	res := Verify(testSecret, VerifyInput{Method: "POST", Path: "/v1/run", Headers: hdr, Body: body, Node: "lou1", Now: now, Nonces: nonces})
+	if !res.OK || res.User != "alice" {
+		t.Fatalf("expected valid signature, got %+v", res)
+	}
+	// Replay rejected
+	replay := Verify(testSecret, VerifyInput{Method: "POST", Path: "/v1/run", Headers: hdr, Body: body, Node: "lou1", Now: now, Nonces: nonces})
+	if replay.OK || replay.Reason != "这个请求已经用过了" {
+		t.Fatalf("expected replay rejection, got %+v", replay)
+	}
+	// Wrong node rejected
+	wrongNode := Verify(testSecret, VerifyInput{Method: "POST", Path: "/v1/run", Headers: hdr, Body: body, Node: "lou2", Now: now})
+	if wrongNode.OK || !strings.Contains(wrongNode.Reason, "发给节点 lou1") {
+		t.Fatalf("expected wrong node rejection, got %+v", wrongNode)
+	}
+	// Skew rejected
+	expired := Verify(testSecret, VerifyInput{Method: "POST", Path: "/v1/run", Headers: hdr, Body: body, Node: "lou1", Now: now.Add(10 * time.Minute)})
+	if expired.OK || !strings.Contains(expired.Reason, "签名过期") {
+		t.Fatalf("expected skew rejection, got %+v", expired)
+	}
+}
+
+func TestValidateJobParity(t *testing.T) {
+	cases := []struct {
+		raw  string
+		want string
+	}{
+		{`{"lang":"cobol","mode":"acm","code":"x","cases":[{"stdin":""}]}`, "不支持的语言"},
+		{`{"lang":"rust","mode":"acm","code":"x","cases":[{"stdin":""}]}`, ""},
+		{`{"lang":"python","mode":"acm","code":"x","cases":[{"stdin":""}],"debug":true}`, "这门语言不能在云端调试"},
+		{`{"lang":"kotlin","mode":"acm","code":"x","cases":[{"stdin":""}],"debug":true}`, "这门语言不能在云端调试"},
+		{`{"lang":"java","mode":"leetcode","code":"x","cases":[{"input":[]},{"input":[]}],"debug":true}`, "调试一次只跑一组用例"},
+		{`{"lang":"java","mode":"leetcode","code":"x","cases":[{"input":[]}]}`, "力扣模式要有函数签名"},
+		{`{"lang":"go","mode":"acm","code":"x","cases":[{"stdin":"1"}]}`, ""},
+	}
+	for _, tc := range cases {
+		_, msg, _ := ParseAndValidateJob([]byte(tc.raw))
+		if msg != tc.want {
+			t.Errorf("validate(%s) = %q, want %q", tc.raw, msg, tc.want)
+		}
+	}
+}
+
+type fakeFCServer struct {
+	srv    *httptest.Server
+	token  string
+	maxVMs int
+	mu     sync.Mutex
+	envs   map[string]struct{}
+	logs   []string
+}
+
+func startFakeFC(token string, maxVMs int) *fakeFCServer {
+	f := &fakeFCServer{
+		token:  token,
+		maxVMs: maxVMs,
+		envs:   make(map[string]struct{}),
+	}
+	f.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" {
+			writeJSON(w, http.StatusOK, map[string]any{"ok": true}, nil)
+			return
+		}
+		if r.Header.Get("Authorization") != "Bearer "+f.token {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{"code": "unauthenticated", "message": "令牌不对"}, nil)
+			return
+		}
+		f.mu.Lock()
+		f.logs = append(f.logs, r.Method+" "+r.URL.Path)
+		f.mu.Unlock()
+
+		if r.Method == http.MethodPost && r.URL.Path == "/v1/envs" {
+			f.mu.Lock()
+			if len(f.envs) >= f.maxVMs {
+				f.mu.Unlock()
+				writeJSON(w, http.StatusServiceUnavailable, map[string]any{"code": "host_capacity", "message": "宿主容量满了"}, nil)
+				return
+			}
+			id := "env-" + randomHex(4)
+			f.envs[id] = struct{}{}
+			f.mu.Unlock()
+			writeJSON(w, http.StatusCreated, map[string]any{"env_id": id, "runtime": "lc-runner"}, nil)
+			return
+		}
+		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		if len(parts) >= 3 && parts[0] == "v1" && parts[1] == "envs" {
+			id := parts[2]
+			f.mu.Lock()
+			_, exists := f.envs[id]
+			f.mu.Unlock()
+			if !exists {
+				writeJSON(w, http.StatusNotFound, map[string]any{"code": "not_found"}, nil)
+				return
+			}
+			if r.Method == http.MethodDelete && len(parts) == 3 {
+				f.mu.Lock()
+				delete(f.envs, id)
+				f.mu.Unlock()
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/agent/v1/exec") {
+				var req struct {
+					Stdin     string `json:"stdin"`
+					TimeoutMs int64  `json:"timeout_ms"`
+				}
+				_ = json.NewDecoder(r.Body).Decode(&req)
+				stdinRaw, _ := base64.StdEncoding.DecodeString(req.Stdin)
+				if strings.Contains(string(stdinRaw), "SLEEP_SLOW") {
+					time.Sleep(250 * time.Millisecond)
+				}
+				if strings.Contains(string(stdinRaw), "INFINITE_LOOP") {
+					writeJSON(w, http.StatusOK, map[string]any{"exit_code": nil, "timed_out": true, "stdout": "", "stderr": ""}, nil)
+					return
+				}
+				outJSON := `{"ok":true,"compileMs":5,"runMs":3,"results":[{"index":0,"actual":null,"stdout":"42\n","duration":3}]}`
+				writeJSON(w, http.StatusOK, map[string]any{
+					"exit_code": 0,
+					"timed_out": false,
+					"stdout":    base64.StdEncoding.EncodeToString([]byte(outJSON)),
+					"stderr":    "",
+				}, nil)
+				return
+			}
+		}
+		writeJSON(w, http.StatusNotFound, map[string]any{"code": "not_found"}, nil)
+	}))
+	return f
+}
+
+func TestServerFirecrackerSecretStoreOTelAndRateLimit(t *testing.T) {
+	fcToken := strings.Repeat("t", 40)
+	fake := startFakeFC(fcToken, 1)
+	defer fake.srv.Close()
+
+	tmpDir := t.TempDir()
+	secretFile := filepath.Join(tmpDir, "fc-secrets.json")
+	secretJSON := fmt.Sprintf(`{"version":1,"scopes":{"_platform":{"secrets":{"sandbox/fc-manager-token":%q},"roles":[]}}}`, fcToken)
+	if err := os.WriteFile(secretFile, []byte(secretJSON), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	drv := NewFirecrackerDriver(FirecrackerConfig{
+		URL:       fake.srv.URL,
+		TokenFile: secretFile,
+	})
+	if err := drv.Init(context.Background()); err != nil {
+		t.Fatalf("driver init: %v", err)
+	}
+
+	secret := strings.Repeat("s", 40)
+	srv := NewServer(Config{
+		Node:      "lou1",
+		Secret:    secret,
+		PerMinute: 3,
+		Slots:     2,
+		Queue:     2,
+		CaseMs:    3000,
+		TotalMs:   20000,
+		JobMs:     60000,
+		Version:   "test-go",
+	}, drv, func(map[string]any) {})
+
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	doSigned := func(method, path, user, body string) (*http.Response, map[string]any) {
+		req, err := http.NewRequest(method, ts.URL+path, strings.NewReader(body))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if method == http.MethodGet {
+			req.Body = nil
+		}
+		for k, v := range SignedHeaders(secret, method, path, "lou1", user, []byte(body), time.Now()) {
+			req.Header.Set(k, v)
+		}
+		if method == http.MethodPost {
+			req.Header.Set("Content-Type", "application/json")
+		}
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+		var out map[string]any
+		_ = json.NewDecoder(resp.Body).Decode(&out)
+		return resp, out
+	}
+
+	// 1) Unauthenticated /healthz & /metrics
+	hResp, err := http.Get(ts.URL + "/healthz")
+	if err != nil || hResp.StatusCode != 200 {
+		t.Fatalf("healthz failed: %v", err)
+	}
+	_ = hResp.Body.Close()
+
+	// 2) Signed /v1/status includes dap-ws & ts-transform
+	stResp, stJSON := doSigned("GET", "/v1/status", "", "")
+	if stResp.StatusCode != 200 || stJSON["node"] != "lou1" {
+		t.Fatalf("status failed: %d %#v", stResp.StatusCode, stJSON)
+	}
+
+	// 3) Run via FirecrackerDriver + verify VM cleanup
+	jobBody := `{"lang":"python","mode":"acm","code":"print(42)","cases":[{"stdin":"20 22"}]}`
+	runResp, runJSON := doSigned("POST", "/v1/run", "alice", jobBody)
+	if runResp.StatusCode != 200 || runJSON["node"] != "lou1" {
+		t.Fatalf("run failed: %d %#v", runResp.StatusCode, runJSON)
+	}
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		fake.mu.Lock()
+		n := len(fake.envs)
+		fake.mu.Unlock()
+		if n == 0 {
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	fake.mu.Lock()
+	leftover := len(fake.envs)
+	fake.mu.Unlock()
+	if leftover != 0 {
+		t.Fatalf("expected 0 leftover microVMs, got %d", leftover)
+	}
+
+	// 4) Per-user rate limit (PerMinute=3)
+	for range 3 {
+		r, _ := doSigned("POST", "/v1/run", "bob", jobBody)
+		if r.StatusCode != 200 {
+			t.Fatalf("expected 200 for bob, got %d", r.StatusCode)
+		}
+	}
+	rlResp, _ := doSigned("POST", "/v1/run", "bob", jobBody)
+	if rlResp.StatusCode != 429 {
+		t.Fatalf("expected 429 on 4th call within a minute, got %d", rlResp.StatusCode)
+	}
+
+	// 5) VM capacity 503 -> Retry-After: 5
+	slowJob := `{"lang":"python","mode":"acm","code":"SLEEP_SLOW","cases":[{"stdin":""}]}`
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		r, _ := doSigned("POST", "/v1/run", "u1", slowJob)
+		if r.StatusCode != 200 {
+			t.Errorf("first slow job expected 200, got %d", r.StatusCode)
+		}
+	}()
+	time.Sleep(50 * time.Millisecond)
+	busyResp, _ := doSigned("POST", "/v1/run", "u2", jobBody)
+	if busyResp.StatusCode != 503 || busyResp.Header.Get("Retry-After") != "5" {
+		t.Fatalf("expected 503 with Retry-After=5 when microVMs full, got %d", busyResp.StatusCode)
+	}
+	wg.Wait()
+
+	// 6) #/admin telemetry snapshot & Prometheus exposition
+	telResp, telJSON := doSigned("GET", "/v1/admin/telemetry", "admin", "")
+	if telResp.StatusCode != 200 || telJSON["service"] != "cd-runner" {
+		t.Fatalf("telemetry failed: %d %#v", telResp.StatusCode, telJSON)
+	}
+	mResp, err := http.Get(ts.URL + "/metrics")
+	if err != nil || mResp.StatusCode != 200 {
+		t.Fatalf("metrics failed: %v", err)
+	}
+	mRaw, _ := io.ReadAll(mResp.Body)
+	_ = mResp.Body.Close()
+	if !bytes.Contains(mRaw, []byte("cd_runner_jobs_total")) {
+		t.Fatalf("prometheus metrics missing cd_runner_jobs_total:\n%s", string(mRaw))
+	}
+}
+
+type mockDAPAdapter struct {
+	inR  *io.PipeReader
+	inW  *io.PipeWriter
+	outR *bufio.Reader
+	outW *io.PipeWriter
+}
+
+func newMockDAPAdapter() *mockDAPAdapter {
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	m := &mockDAPAdapter{
+		inR:  inR,
+		inW:  inW,
+		outR: bufio.NewReader(outR),
+		outW: outW,
+	}
+	go func() {
+		br := bufio.NewReader(inR)
+		for {
+			frame, err := ReadDAPFrame(br)
+			if err != nil {
+				return
+			}
+			var req map[string]any
+			_ = json.Unmarshal(frame, &req)
+			cmd, _ := req["command"].(string)
+			resp, _ := json.Marshal(map[string]any{
+				"seq":         1,
+				"type":        "response",
+				"request_seq": req["seq"],
+				"success":     true,
+				"command":     cmd,
+			})
+			_ = WriteDAPFrame(outW, resp)
+			if cmd == "disconnect" {
+				return
+			}
+		}
+	}()
+	return m
+}
+
+func (m *mockDAPAdapter) Reader() *bufio.Reader  { return m.outR }
+func (m *mockDAPAdapter) Writer() io.Writer      { return m.inW }
+func (m *mockDAPAdapter) ExecutablePath() string { return "/workspace/prog" }
+func (m *mockDAPAdapter) SourcePath() string     { return "/workspace/main.go" }
+func (m *mockDAPAdapter) Close() error {
+	_ = m.inW.Close()
+	_ = m.outW.Close()
+	return nil
+}
+
+func TestWebSocketDAPRelayAndQuerySignature(t *testing.T) {
+	secret := strings.Repeat("d", 36)
+	srv := NewServer(Config{
+		Node:         "lou1",
+		Secret:       secret,
+		DAPIdleMs:    5000,
+		DAPMaxMs:     30000,
+		DAPMaxActive: 4,
+	}, &LocalDriver{}, func(map[string]any) {})
+	srv.DAP().Spawner = func(_ context.Context, _ DAPInitRequest) (DAPAdapterSession, error) {
+		return newMockDAPAdapter(), nil
+	}
+
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	now := time.Now()
+	hdrs := SignedHeaders(secret, "GET", "/v1/dap", "lou1", "debugger-user", nil, now)
+	q := url.Values{}
+	q.Set("time", hdrs["x-runner-time"])
+	q.Set("nonce", hdrs["x-runner-nonce"])
+	q.Set("user", hdrs["x-runner-user"])
+	q.Set("node", hdrs["x-runner-node"])
+	q.Set("sig", hdrs["x-runner-signature"])
+
+	wsURL := "ws" + strings.TrimPrefix(ts.URL, "http") + "/v1/dap?" + q.Encode()
+	conn, err := ws.Dial(context.Background(), wsURL, nil)
+	if err != nil {
+		t.Fatalf("ws dial /v1/dap failed: %v", err)
+	}
+	defer conn.Close()
+
+	if err := conn.WriteJSON(DAPInitRequest{
+		Type: "init",
+		Lang: "go",
+		Mode: "acm",
+		Code: "package main\nfunc main() {}\n",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	_, readyRaw, err := conn.ReadMessage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ready map[string]any
+	_ = json.Unmarshal(readyRaw, &ready)
+	if ready["type"] != "ready" || ready["lang"] != "go" {
+		t.Fatalf("unexpected ready message: %s", string(readyRaw))
+	}
+
+	if err := conn.WriteJSON(map[string]any{"seq": 1, "type": "request", "command": "initialize"}); err != nil {
+		t.Fatal(err)
+	}
+	_, dapRespRaw, err := conn.ReadMessage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var dapResp map[string]any
+	_ = json.Unmarshal(dapRespRaw, &dapResp)
+	if dapResp["command"] != "initialize" || dapResp["success"] != true {
+		t.Fatalf("unexpected DAP response: %s", string(dapRespRaw))
+	}
+}

@@ -1,16 +1,29 @@
+import { existsSync } from "node:fs";
 import { copyFile, mkdir, readFile, rm } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Phase 4: 当配置了 NEXT_PUBLIC_RUNTIME_BASE_URL（R2 / CDN 分发）或 CI 未安装本地 pyodide 大包时，
+// 构建直接按 site/public/practice-runtime/manifest.json 解析版本化远端地址，不再强依赖搬运 node_modules。
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const modules = resolve(root, "site/node_modules");
 const vendor = resolve(root, "site/public/practice-runtime/vendor");
-const version = async (name) => JSON.parse(await readFile(resolve(modules, name, "package.json"), "utf8")).version;
 
-// 路径里带版本号（site/public/_headers 给 vendor/ 一年的 immutable 缓存）。
-// 网站按同样的规则拼路径：版本号由 site/next.config.mjs 从同一份 node_modules 读出来、构建时写进 lib/practice/runner.ts。
-const pyodide = resolve(vendor, "pyodide", await version("pyodide"));
-const typescript = resolve(vendor, "typescript", await version("typescript"));
+if (process.env.NEXT_PUBLIC_RUNTIME_BASE_URL) {
+  console.log(`Using remote R2/CDN practice runtimes (${process.env.NEXT_PUBLIC_RUNTIME_BASE_URL}); skipping local vendor copy.`);
+  process.exit(0);
+}
+
+const pyPkg = resolve(modules, "pyodide/package.json");
+const tsPkg = resolve(modules, "typescript/package.json");
+if (!existsSync(pyPkg) || !existsSync(tsPkg)) {
+  console.log("Local pyodide/typescript packages not installed; relying on manifest.json runtime URLs.");
+  process.exit(0);
+}
+
+const version = async (pkgPath) => JSON.parse(await readFile(pkgPath, "utf8")).version;
+const pyodide = resolve(vendor, "pyodide", await version(pyPkg));
+const typescript = resolve(vendor, "typescript", await version(tsPkg));
 await rm(vendor, { recursive: true, force: true });
 await mkdir(pyodide, { recursive: true });
 await mkdir(typescript, { recursive: true });

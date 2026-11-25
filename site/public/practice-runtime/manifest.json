@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "defaultVendorPrefix": "vendor/",
+  "runtimes": {
+    "pyodide": {
+      "version": "314.0.8",
+      "path": "pyodide/314.0.8/",
+      "entry": "pyodide.mjs",
+      "files": [
+        "pyodide.js",
+        "pyodide.mjs",
+        "pyodide.asm.mjs",
+        "pyodide.asm.wasm",
+        "python_stdlib.zip",
+        "pyodide-lock.json"
+      ],
+      "uncompressedBytes": 14680064
+    },
+    "typescript": {
+      "version": "5.6.3",
+      "path": "typescript/5.6.3/typescript.js",
+      "entry": "typescript.js",
+      "files": ["typescript.js"]
+    },
+    "clang-wasm": {
+      "version": "22.0.0",
+      "path": "clang/22.0.0/",
+      "compressedBytes": 21286092,
+      "distribution": "r2"
+    },
+    "go-wasm": {
+      "version": "1.27.4",
+      "path": "go/1.27.4/",
+      "compressedBytes": 17301504,
+      "distribution": "r2"
+    }
+  }
+}

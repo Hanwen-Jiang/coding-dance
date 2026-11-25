@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# 装一个运行器节点（Linux 主机，或者 win-gw-lou 上开了嵌套虚拟化的 Ubuntu 虚拟机）：Node、Firecracker 这一层（firecracker.sh）、
-# 运行器服务。再跑一次就是更新（重新构建镜像和 microVM 的根文件系统、换上新的服务代码、重启），密钥和节点编号不变。
+# 装一个运行器节点（Linux 主机，或者 win-gw-lou 上开了嵌套虚拟化的 Ubuntu 虚拟机）：
+# 编译 Go 静态单二进制 cd-runner（宿主机零 Node.js 运行时依赖）、装 Firecracker 这一层（firecracker.sh）、启动 systemd 服务。
+# 再跑一次就是更新（重新构建镜像和 microVM 的根文件系统、换上新的 cd-runner 二进制、重启），密钥和节点编号不变。
 # 每台机器是集群里的一个节点，各有一个编号（网站的 RUNNER_NODES 里写同一个），所有节点共用一个密钥：
 #   RUNNER_NODE_ID=lou1 sudo -E bash tools/runner/deploy/setup.sh                        # 第一个节点（在仓库根目录），会生成密钥
 #   RUNNER_NODE_ID=lou2 RUNNER_SECRET=<第一个节点的密钥> sudo -E bash tools/runner/deploy/setup.sh   # 再加节点：用同一个密钥
@@ -13,7 +14,7 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 APP=/opt/lc-runner
 ENV_FILE=/etc/lc-runner.env
-NODE_VERSION=24.11.1
+GO_VERSION=1.25.4
 DRIVER="${RUNNER_DRIVER:-firecracker}"
 
 [ "$(id -u)" = 0 ] || { echo "要用 sudo 运行"; exit 1; }
@@ -26,13 +27,21 @@ if [ "$DRIVER" = docker ] && [ "${RUNNER_ALLOW_DOCKER:-}" != 1 ]; then
   exit 1
 fi
 
-echo "== 装 Node $NODE_VERSION =="
-if ! node --version 2>/dev/null | grep -q "^v24\."; then
-  curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz" | tar -xJ -C /opt
-  ln -sf "/opt/node-v${NODE_VERSION}-linux-x64/bin/node" /usr/local/bin/node
+echo "== 编译 Go 单二进制 cd-runner（宿主机零 Node.js 依赖） =="
+if ! command -v go >/dev/null 2>&1; then
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) GOARCH_DL=amd64 ;;
+    aarch64|arm64) GOARCH_DL=arm64 ;;
+    *) echo "不支持的架构: $ARCH"; exit 1 ;;
+  esac
+  curl -fsSL "https://go.dev/dl/go${GO_VERSION}.linux-${GOARCH_DL}.tar.gz" | tar -xz -C /usr/local
+  export PATH="/usr/local/go/bin:$PATH"
 fi
-
 VERSION="$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || date +%Y%m%d%H%M)"
+( cd "$REPO" && CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /usr/local/bin/cd-runner ./cmd/cd-runner )
+chmod 0755 /usr/local/bin/cd-runner
+
 id lc-runner >/dev/null 2>&1 || useradd --system --home-dir "$APP" --shell /usr/sbin/nologin lc-runner
 if [ "$DRIVER" = firecracker ]; then
   echo "== Firecracker（agent-runtime 的 fc-manager、客户机内核、根文件系统） =="
@@ -49,16 +58,13 @@ else
   FC_TOKEN=""
 fi
 
-echo "== 服务代码 =="
 mkdir -p "$APP"
-rm -rf "$APP/lib"
-cp -r "$REPO/tools/runner/server.mjs" "$REPO/tools/runner/lib" "$APP/"
 chown -R root:root "$APP"
 
 if [ ! -f "$ENV_FILE" ]; then
   SECRET="${RUNNER_SECRET:-$(openssl rand -hex 32)}"
   cat > "$ENV_FILE" <<EOF
-# 远端运行器的配置（见 tools/runner/README.md）。RUNNER_SECRET 集群里所有节点一样，也和网站 Pages 的加密环境变量 RUNNER_SECRET 一样。
+# 远端运行器的配置（见 tools/runner/README.md）。RUNNER_SECRET 集群里所有节点一样，也和网站 Pages / cd-api 的 RUNNER_SECRET 一样。
 RUNNER_NODE_ID=$RUNNER_NODE_ID
 RUNNER_SECRET=$SECRET
 RUNNER_HOST=${RUNNER_LISTEN:-127.0.0.1}
@@ -85,7 +91,7 @@ systemctl restart lc-runner
 sleep 2
 systemctl --no-pager --lines=5 status lc-runner || true
 PORT="$(grep '^RUNNER_PORT=' "$ENV_FILE" | cut -d= -f2)"
-curl -fsS "http://127.0.0.1:${PORT}/healthz" && echo " ← 服务起来了"
+curl -fsS "http://127.0.0.1:${PORT}/healthz" && echo " ← cd-runner 服务起来了"
 NODE="$(grep '^RUNNER_NODE_ID=' "$ENV_FILE" | cut -d= -f2)"
-echo "节点 $NODE 装好了（$DRIVER）。下一步：Tunnel 里加公开主机名 run-$NODE.codingdance.cn 指到这个服务，"
-echo "再把「$NODE=https://run-$NODE.codingdance.cn」加进网站 wrangler.toml 的 RUNNER_NODES（见 README「接上 Tunnel」）。"
+echo "节点 $NODE 装好了（cd-runner / $DRIVER）。下一步：Tunnel 里加公开主机名 run-$NODE.codingdance.cn 指到这个服务，"
+echo "再把「$NODE=https://run-$NODE.codingdance.cn」加进 RUNNER_NODES（见 README「接上 Tunnel」）。"

@@ -14,10 +14,17 @@ export interface PracticeRunOptions {
   timeoutMs?: number;
 }
 
-/** Versioned runtime paths under /practice-runtime/ (copied by tools/practice-runtime/prepare.mjs, cached for a year). */
+/**
+ * Versioned runtime paths resolved from manifest.json / R2 CDN (NEXT_PUBLIC_RUNTIME_BASE_URL)
+ * with automatic fallback to local /practice-runtime/vendor/ for offline development.
+ */
+const RUNTIME_PREFIX = process.env.NEXT_PUBLIC_RUNTIME_BASE_URL
+  ? `${process.env.NEXT_PUBLIC_RUNTIME_BASE_URL.replace(/\/+$/, "")}/`
+  : "vendor/";
+
 const VENDOR = {
-  pyodide: `vendor/pyodide/${process.env.PRACTICE_PYODIDE_VERSION}/`,
-  typescript: `vendor/typescript/${process.env.PRACTICE_TYPESCRIPT_VERSION}/typescript.js`,
+  pyodide: `${RUNTIME_PREFIX}pyodide/${process.env.PRACTICE_PYODIDE_VERSION}/`,
+  typescript: `${RUNTIME_PREFIX}typescript/${process.env.PRACTICE_TYPESCRIPT_VERSION}/typescript.js`,
 };
 
 /**

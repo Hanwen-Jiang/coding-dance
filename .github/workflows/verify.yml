@@ -4,11 +4,42 @@ name: verify
 # 再把六种语言的每段题解编译、运行，和 Python 标准解法的答案比对。
 on:
   push:
-    branches: [main, multilang]
+    branches: [main, multilang, feat/go-modernization]
   pull_request:
   workflow_dispatch:
 
 jobs:
+  go-modernization:
+    name: Go 控制面与零私有源构建
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Go 静态检查与竞态单测（cd-runner / cd-api / cd-build）
+        run: |
+          go vet ./...
+          go test -race ./...
+      - name: 编译纯静态三二进制并执行并发题库核对与 R2 打包
+        run: |
+          mkdir -p /tmp/cd-bin
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-bin/cd-runner ./cmd/cd-runner
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-bin/cd-api ./cmd/cd-api
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-bin/cd-build ./cmd/cd-build
+          /tmp/cd-bin/cd-build verify --root .
+          /tmp/cd-bin/cd-build bundle --root . --out /tmp/r2-staging
+      - name: 零私有源 Token 静态前端构建验证（HeroUI Pro Shim + R2 Runtime Manifest）
+        working-directory: site
+        run: |
+          npm install --no-audit --no-fund --ignore-scripts
+          HEROUI_PRO_SHIM=1 NEXT_PUBLIC_RUNTIME_BASE_URL=https://assets.codingdance.cn/practice-runtime/vendor npm run build
+          test -f out/index.html
+
   build:
     name: 生成器和网站测试
     runs-on: ubuntu-latest
