@@ -337,19 +337,76 @@ const SPEC = { presets: [{"label":"示例 1","args":{"nums":[2,3,-2,4]},"note":"
 { t: "标准解法", note: null, legend: [["a","当前的数"],["c","最大积对应的子数组"],["b","最小积对应的子数组"]], build(a, snap) {
     const nums = a.nums, n = nums.length;
     const H = [nums[0]], Lo = [nums[0]]; let best = nums[0];
-    const view = (i) => [
+    const view = (i, opts = {}) => [
       { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === i ? "a" : "" })), ptrs: { i } },
-      { t: "array", label: "hi：以 i 结尾的最大积", items: nums.map((_, k) => ({ v: k < H.length ? H[k] : "", cls: k === i ? "c" : "" })), ptrs: {} },
-      { t: "array", label: "lo：以 i 结尾的最小积", items: nums.map((_, k) => ({ v: k < Lo.length ? Lo[k] : "", cls: k === i ? "b" : "" })), ptrs: {} },
+      {
+        t: "array",
+        label: "hi：以 i 结尾的最大积",
+        items: nums.map((_, k) => ({
+          v: k < H.length ? H[k] : "",
+          cls: opts.swap && k === i - 1 ? "b" : k === i ? "c" : "",
+        })),
+        ptrs: {},
+        feeds: (opts.feedsHi || []).slice(),
+      },
+      {
+        t: "array",
+        label: "lo：以 i 结尾的最小积",
+        items: nums.map((_, k) => ({
+          v: k < Lo.length ? Lo[k] : "",
+          cls: opts.swap && k === i - 1 ? "c" : k === i ? "b" : "",
+        })),
+        ptrs: {},
+        feeds: (opts.feedsLo || []).slice(),
+      },
     ];
-    snap("开始", `第 0 个数 ${nums[0]}：以它结尾的子数组只有它自己，hi = lo = ${nums[0]}。`, view(0), { at: "init", facts: [["最大积", best]] });
+    snap("开始", `第 0 个数 ${nums[0]}：以它结尾的子数组只有它自己，hi = lo = ${nums[0]}。`, view(0), {
+      at: "init",
+      facts: [["hi", nums[0]], ["lo", nums[0]], ["最大积 best", best]],
+    });
     for (let i = 1; i < n; i++) {
-      const x = nums[i], h = H[i - 1], l = Lo[i - 1], c = [x, h * x, l * x];
-      const nh = Math.max(...c), nl = Math.min(...c);
+      const x = nums[i], h = H[i - 1], l = Lo[i - 1];
+      if (x < 0) {
+        snap(
+          `负数互换 (${x})`,
+          `当前数是负数 ${x}，乘负数会让大小反转，所以先把 hi (${h}) 和 lo (${l}) 互换。`,
+          view(i, { swap: true }),
+          {
+            at: "swap",
+            kind: "warn",
+            facts: [["当前 x", `${x} (< 0)`], ["hi (交换)", l, h], ["lo (交换)", h, l], ["最大积 best", best]],
+          },
+        );
+      }
+      const effH = x < 0 ? l : h, effL = x < 0 ? h : l;
+      const nh = Math.max(x, effH * x), nl = Math.min(x, effL * x);
+      const oldBest = best;
       H.push(nh); Lo.push(nl); best = Math.max(best, nh);
-      snap(`看 ${x}`, `三个候选：${x} 自己、hi×${x} = ${h * x}、lo×${x} = ${l * x}。` + (x < 0 ? "乘的是负数，原来的最小积变成了最大的候选，所以代码里先把 hi、lo 互换。" : "") + `新的 hi = <b>${nh}</b>，lo = ${nl}。`, view(i), { at: x < 0 ? ["swap", "update"] : "update", facts: [["最大积", best]] });
+      const hiFromPrev = effH * x >= x;
+      const loFromPrev = effL * x <= x;
+      const feedsHi = [{ from: i - 1, to: i, win: hiFromPrev, label: hiFromPrev ? (x < 0 ? `旧lo×${x}` : `×${x}`) : `另起 ${x}` }];
+      const feedsLo = [{ from: i - 1, to: i, win: loFromPrev, label: loFromPrev ? (x < 0 ? `旧hi×${x}` : `×${x}`) : `另起 ${x}` }];
+      snap(
+        `更新 (${x})`,
+        `比较 ${x} 自己与前值乘 ${x}：hi = max(${x}, ${effH}×${x}) = <b>${nh}</b>，lo = min(${x}, ${effL}×${x}) = ${nl}。`,
+        view(i, { feedsHi, feedsLo }),
+        {
+          at: "update",
+          facts: [
+            ["当前 x", x],
+            nh !== effH ? ["hi", nh, effH] : ["hi", nh],
+            nl !== effL ? ["lo", nl, effL] : ["lo", nl],
+            best !== oldBest ? ["最大积 best", best, oldBest] : ["最大积 best", best],
+          ],
+        },
+      );
     }
-    snap("完成", `所有 hi 里最大的是 <b>${best}</b>。`, view(-1), { at: "done", kind: "ok", ans: best, facts: [["最大积", best]] });
+    snap("完成", `所有 hi 里最大的是 <b>${best}</b>。`, view(-1), {
+      at: "done",
+      kind: "ok",
+      ans: best,
+      facts: [["最大积 best", best]],
+    });
   } }
 ] };
 (function () {

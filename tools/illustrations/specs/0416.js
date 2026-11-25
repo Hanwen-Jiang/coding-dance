@@ -48,22 +48,70 @@ assert s.canPartition([100]*200) is True
   ],
   build(a, snap) {
     const nums = a.nums, total = nums.reduce((s, x) => s + x, 0);
-    if (total % 2) { snap("总和是奇数", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, [{ t: "array", label: "nums", items: nums, ptrs: {} }], { at: "odd", kind: "warn", ans: false, facts: [["总和", total]] }); return; }
+    if (total % 2) { snap("总和是奇数", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, [{ t: "array", label: "nums", items: nums.slice(), ptrs: {} }], { at: "odd", kind: "warn", ans: false, facts: [["总和", total]] }); return; }
     const T = total / 2; let dp = Array(T + 1).fill(false); dp[0] = true;
-    const view = (xi, fresh) => [
+    const view = (xi, fresh, opts = {}) => [
       { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === xi ? "a" : k < xi ? "d" : "" })), ptrs: {} },
       // dp[0] 是边界（虚线）：什么都不选，和为 0。j < x 时 dp[j - x] 的下标是负数，越界，所以内层循环只到 x 为止
-      { t: "array", label: `dp[j]：能不能凑出和 j（target = ${T}，虚线 dp[0] 是边界）`, items: dp.map((v, j) => ({ v: v ? "✓" : "", cls: fresh.includes(j) ? "c" : j === 0 ? "x k" : v ? "k" : j === T ? "e" : "" })), ptrs: { target: T } },
+      {
+        t: "array",
+        label: `dp[j]：能不能凑出和 j（target = ${T}，虚线 dp[0] 是边界）`,
+        items: dp.map((v, j) => ({
+          v: v ? "✓" : "✗",
+          ...(opts.prevMap && opts.prevMap[j] !== undefined ? { prev: opts.prevMap[j] } : {}),
+          cls: fresh.includes(j) ? "c" : j === 0 ? "x k" : v ? "k" : j === T ? "e" : "",
+        })),
+        ptrs: { target: T },
+        feeds: (opts.feeds || []).slice(),
+      },
     ];
-    snap("边界", `总和 ${total}，目标是挑出和为 <b>${T}</b> 的一些数。dp[0] = ✓ 是边界：什么都不选，和就是 0。<br>加入数 x 时，j < x 的 dp[j − x] 下标是负数，越界了，这些 j 本来也凑不进 x，所以内层循环只走到 j = x 为止。`, view(-1, []), { at: "init", facts: [["总和", total], ["target", T]] });
+    let trueCount = 1;
+    snap("边界", `总和 ${total}，目标是挑出和为 <b>${T}</b> 的一些数。dp[0] = ✓ 是边界：什么都不选，和就是 0。<br>加入数 x 时，j < x 的 dp[j − x] 下标是负数，越界了，这些 j 本来也凑不进 x，所以内层循环只走到 j = x 为止。`, view(-1, []), {
+      at: "init",
+      facts: [["总和", total], ["target", T], ["可凑出和数", trueCount]],
+    });
     for (let k = 0; k < nums.length; k++) {
-      const x = nums[k], nd = dp.slice(), fresh = [];
-      for (let j = T; j >= x; j--) if (!dp[j] && dp[j - x]) { nd[j] = true; fresh.push(j); }
+      const x = nums[k], nd = dp.slice(), fresh = [], prevMap = {}, feeds = [], oldT = dp[T];
+      for (let j = T; j >= x; j--) {
+        if (!dp[j] && dp[j - x]) {
+          nd[j] = true;
+          fresh.push(j);
+          prevMap[j] = "✗";
+          feeds.push({ from: j - x, to: j, win: true, label: `+${x}` });
+        }
+      }
       dp = nd;
-      snap(`加入 ${x}`, fresh.length ? `原来能凑出的和都加上 ${x}，新能凑出 ${fresh.slice().reverse().join("、")}。` + (dp[T] ? `其中有 ${T}，找到了。` : "") : `加上 ${x} 后没有新的和（超过 ${T} 的不用管）。`, view(k, fresh), { at: "add", facts: [["总和", total], ["target", T]] });
-      if (dp[T]) { snap("完成", `能凑出 ${T}，可以分成两份，返回 <b>true</b>。（代码里不提前返回，剩下的数加完后 dp[target] 仍然是 true。）`, view(-1, []), { at: "done", kind: "ok", ans: true, facts: [["总和", total], ["target", T]] }); return; }
+      const oldCount = trueCount;
+      trueCount = dp.filter(Boolean).length;
+      snap(
+        `加入 ${x}`,
+        fresh.length ? `原来能凑出的和都加上 ${x}，新能凑出 ${fresh.slice().reverse().join("、")}。` + (dp[T] ? `其中有 ${T}，找到了。` : "") : `加上 ${x} 后没有新的和（超过 ${T} 的不用管）。`,
+        view(k, fresh, { prevMap, feeds }),
+        {
+          at: "add",
+          facts: [
+            ["当前数 x", x],
+            ["可凑出和数", trueCount, oldCount],
+            dp[T] && !oldT ? ["dp[target]", "✓", "✗"] : ["dp[target]", dp[T] ? "✓" : "✗"],
+          ],
+        },
+      );
+      if (dp[T]) {
+        snap("完成", `能凑出 ${T}，可以分成两份，返回 <b>true</b>。（代码里不提前返回，剩下的数加完后 dp[target] 仍然是 true。）`, view(-1, []), {
+          at: "done",
+          kind: "ok",
+          ans: true,
+          facts: [["总和", total], ["target", T], ["dp[target]", "✓"]],
+        });
+        return;
+      }
     }
-    snap("完成", `所有数都加完了，还是凑不出 ${T}，返回 <b>false</b>。`, view(-1, []), { at: "done", kind: "warn", ans: false, facts: [["总和", total], ["target", T]] });
+    snap("完成", `所有数都加完了，还是凑不出 ${T}，返回 <b>false</b>。`, view(-1, []), {
+      at: "done",
+      kind: "warn",
+      ans: false,
+      facts: [["总和", total], ["target", T], ["dp[target]", "✗"]],
+    });
   },
   alts: [{
     t: "位运算",
@@ -73,21 +121,56 @@ assert s.canPartition([100]*200) is True
     build(a, snap) {
       const nums = a.nums, total = nums.reduce((s, x) => s + x, 0), T = total % 2 ? null : total / 2;
       let bits = Array(total + 1).fill(0); bits[0] = 1;
-      const view = (xi, fresh) => [
+      const view = (xi, fresh, opts = {}) => [
         { t: "array", label: "nums", items: nums.map((v, k) => ({ v, cls: k === xi ? "a" : k < xi ? "d" : "" })) },
-        { t: "array", label: "bits（下标 j 就是第 j 位，最左边是最低位）", items: bits.map((b, j) => ({ v: b, cls: fresh.includes(j) ? "c" : b ? "k" : j === T ? "e" : "" })), ptrs: T === null ? {} : { target: T } },
+        {
+          t: "array",
+          label: "bits（下标 j 就是第 j 位，最左边是最低位）",
+          items: bits.map((b, j) => ({
+            v: b,
+            ...(opts.prevMap && opts.prevMap[j] !== undefined ? { prev: opts.prevMap[j] } : {}),
+            cls: fresh.includes(j) ? "c" : b ? "k" : j === T ? "e" : "",
+          })),
+          ptrs: T === null ? {} : { target: T },
+          feeds: (opts.feeds || []).slice(),
+        },
       ];
-      const f = (at) => ({ at, facts: [["总和", total], ["target", T === null ? "—" : T]] });
-      snap("开始", "bits = 1，只有第 0 位是 1：什么都不选，和为 0。", view(-1, []), f("init"));
-      nums.forEach((x, k) => {
-        const nb = bits.slice(), fresh = [];
-        for (let j = total; j >= x; j--) if (bits[j - x] && !bits[j]) { nb[j] = 1; fresh.push(j); }
-        bits = nb;
-        snap(`加入 ${x}`, `bits << ${x}：每个能凑出的和都加上 ${x}，再和原来的 bits 按位或。` + (fresh.length ? `新能凑出 ${fresh.slice().reverse().join("、")}。` : "没有新的和。"), view(k, fresh), f("add"));
+      let ones = 1;
+      snap("开始", "bits = 1，只有第 0 位是 1：什么都不选，和为 0。", view(-1, []), {
+        at: "init",
+        facts: [["总和", total], ["target", T === null ? "—" : T], ["置 1 位数", ones]],
       });
-      if (T === null) snap("完成", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f("done") });
-      else if (bits[T]) snap("完成", `第 ${T} 位是 1，能凑出总和的一半，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, ...f("done") });
-      else snap("完成", `第 ${T} 位是 0，凑不出总和的一半，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, ...f("done") });
+      nums.forEach((x, k) => {
+        const nb = bits.slice(), fresh = [], prevMap = {}, feeds = [];
+        for (let j = total; j >= x; j--) {
+          if (bits[j - x] && !bits[j]) {
+            nb[j] = 1;
+            fresh.push(j);
+            prevMap[j] = 0;
+            feeds.push({ from: j - x, to: j, win: true, label: `+${x}` });
+          }
+        }
+        bits = nb;
+        const prevOnes = ones;
+        ones = bits.reduce((s, b) => s + b, 0);
+        snap(
+          `加入 ${x}`,
+          `bits << ${x}：每个能凑出的和都加上 ${x}，再和原来的 bits 按位或。` + (fresh.length ? `新能凑出 ${fresh.slice().reverse().join("、")}。` : "没有新的和。"),
+          view(k, fresh, { prevMap, feeds }),
+          {
+            at: "add",
+            facts: [
+              ["当前数 x", x],
+              ["总和", total],
+              ["target", T === null ? "—" : T],
+              ["置 1 位数", ones, prevOnes],
+            ],
+          },
+        );
+      });
+      if (T === null) snap("完成", `总和 ${total} 是奇数，不可能分成相等的两份，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, at: "done", facts: [["总和", total], ["target", "—"], ["结果", "false"]] });
+      else if (bits[T]) snap("完成", `第 ${T} 位是 1，能凑出总和的一半，返回 <b>true</b>。`, view(-1, []), { kind: "ok", ans: true, at: "done", facts: [["总和", total], ["target", T], ["结果", "true"]] });
+      else snap("完成", `第 ${T} 位是 0，凑不出总和的一半，返回 <b>false</b>。`, view(-1, []), { kind: "warn", ans: false, at: "done", facts: [["总和", total], ["target", T], ["结果", "false"]] });
     },
   }],
   points: [

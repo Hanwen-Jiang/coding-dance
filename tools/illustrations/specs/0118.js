@@ -53,17 +53,40 @@ assert s.generate(2) == [[1],[1,1]]
   ],
   build(a, snap) {
     const n = a.n, res = [];
-    const view = (ci, cj) => res.map((row, i) => ({ t: "array", label: `第 ${i} 行`, idx: false, items: row.map((v, j) => ({ v, cls: i === ci && j === cj ? "a" : ci >= 0 && i === ci - 1 && (j === cj - 1 || j === cj) ? "e" : (j === 0 || j === row.length - 1) ? "c" : "" })) }));
-    snap("开始", "从第 0 行 [1] 开始，一行一行往下生成。", [{ t: "note", label: "三角", html: "还没有" }], { at: "init" });
+    const view = (ci, cj) => res.map((row, i) => ({
+      t: "array",
+      label: `第 ${i} 行`,
+      idx: false,
+      items: row.map((v, j) => ({
+        v,
+        cls: i === ci && j === cj ? "a" : ci >= 0 && i === ci - 1 && (j === cj - 1 || j === cj) ? "e" : (j === 0 || j === row.length - 1) ? "c" : "",
+      })),
+    }));
+    snap("开始", "从第 0 行 [1] 开始，一行一行往下生成。", [{ t: "note", label: "三角", html: "还没有" }], {
+      at: "init",
+      facts: [["目标行数", n], ["已生成行数", 0]],
+    });
     for (let i = 0; i < n; i++) {
       const row = Array(i + 1).fill(null); row[0] = 1; row[i] = 1; res.push(row);
-      snap(`第 ${i} 行`, `第 ${i} 行有 ${i + 1} 个数，先把首尾填成 1。`, view(-1, -1), { at: "row" });
+      snap(`第 ${i} 行`, `第 ${i} 行有 ${i + 1} 个数，先把首尾填成 1。`, view(-1, -1), {
+        at: "row",
+        facts: [["当前行", `第 ${i} 行`], ["已生成行数", res.length, res.length - 1], ["首尾", "填 1"]],
+      });
       for (let j = 1; j < i; j++) {
-        row[j] = res[i - 1][j - 1] + res[i - 1][j];
-        snap(`第 ${i} 行`, `row[${j}] = 上一行的 ${res[i - 1][j - 1]} + ${res[i - 1][j]} = <b>${row[j]}</b>。`, view(i, j), { at: "mid" });
+        const leftUp = res[i - 1][j - 1], up = res[i - 1][j];
+        row[j] = leftUp + up;
+        snap(`第 ${i} 行`, `row[${j}] = 上一行的 ${leftUp} + ${up} = <b>${row[j]}</b>。`, view(i, j), {
+          at: "mid",
+          facts: [["肩上左", leftUp], ["肩上右", up], [`row[${j}]`, row[j]]],
+        });
       }
     }
-    snap("完成", `生成了 ${n} 行。`, view(-1, -1), { at: "done", kind: "ok", ans: res.map((r) => r.slice()) });
+    snap("完成", `生成了 ${n} 行。`, view(-1, -1), {
+      at: "done",
+      kind: "ok",
+      ans: res.map((r) => r.slice()),
+      facts: [["总行数", n], ["最后一行", `[${res[n - 1].join(", ")}]`]],
+    });
   },
   points: [
     { t: "j 的范围", body: "<code>range(1, i)</code>，第 0 行和第 1 行没有中间的数，循环自然不执行。" },

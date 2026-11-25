@@ -55,20 +55,29 @@ assert s.uniquePaths(10, 10) == 48620
   build(a, snap) {
     const { m, n } = a, dp = Array.from({ length: m }, (_, i) => Array.from({ length: n }, (_, j) => (i === 0 || j === 0 ? 1 : null)));
     // 表外面多画一圈虚线：第 -1 行、第 -1 列是越界的位置，没有路能从那里来，视作 0
-    const view = (ci, cj, fin, edge) => [{
+    const view = (ci, cj, fin, edge, feeds = []) => [{
       t: "grid", label: "dp[i][j]：从左上走到 (i, j) 的路径数（虚线是越界的位置，视作 0）",
       rowLabels: [-1, ...dp.map((_, i) => i)], colLabels: [-1, ...dp[0].map((_, j) => j)],
       rows: [
         [{ v: "", cls: "x" }, ...dp[0].map(() => ({ v: 0, cls: edge ? "x e" : "x" }))],
         ...dp.map((r, i) => [{ v: 0, cls: edge ? "x e" : "x" }, ...r.map((v, j) => ({ v: v === null ? "" : v, cls: fin && i === m - 1 && j === n - 1 ? "c" : i === ci && j === cj ? "a" : (i === ci - 1 && j === cj) || (i === ci && j === cj - 1) ? "e" : edge && (i === 0 || j === 0) ? "k" : "" }))]),
       ],
+      feeds: feeds.slice(),
     }];
-    snap("边界", "第一行的格子，上面是越界的第 -1 行：那里不存在，没有路能从那里来，算 <b>0</b> 条。所以第一行只能从左边一路走过来，路径数是 0 + 1 = 1。第一列同理（左边越界，算 0）。代码里直接把第一行、第一列填成 1，就不用再判断越界了。", view(-1, -1, false, true), { at: "init" });
+    snap("边界", "第一行的格子，上面是越界的第 -1 行：那里不存在，没有路能从那里来，算 <b>0</b> 条。所以第一行只能从左边一路走过来，路径数是 0 + 1 = 1。第一列同理（左边越界，算 0）。代码里直接把第一行、第一列填成 1，就不用再判断越界了。", view(-1, -1, false, true, []), { at: "init", facts: [["网格", `${m} × ${n}`], ["边界", "第 0 行/列 = 1"]] });
     for (let i = 1; i < m; i++) for (let j = 1; j < n; j++) {
       dp[i][j] = dp[i - 1][j] + dp[i][j - 1];
-      snap(`(${i}, ${j})`, `从上面 (${i - 1}, ${j}) 来有 ${dp[i - 1][j]} 种，从左边 (${i}, ${j - 1}) 来有 ${dp[i][j - 1]} 种。dp = <b>${dp[i][j]}</b>。`, view(i, j), { at: "cell" });
+      snap(
+        `(${i}, ${j})`,
+        `从上面 (${i - 1}, ${j}) 来有 ${dp[i - 1][j]} 种，从左边 (${i}, ${j - 1}) 来有 ${dp[i][j - 1]} 种。dp = <b>${dp[i][j]}</b>。`,
+        view(i, j, false, false, [
+          { from: [i, j + 1], to: [i + 1, j + 1], win: true, label: "↑+←" },
+          { from: [i + 1, j], to: [i + 1, j + 1], win: true },
+        ]),
+        { at: "cell", facts: [["位置", `(${i}, ${j})`], ["上面 + 左边", `${dp[i - 1][j]} + ${dp[i][j - 1]}`], ["dp[i][j]", dp[i][j]]] },
+      );
     }
-    snap("完成", `到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true), { at: "done", kind: "ok", ans: dp[m - 1][n - 1] });
+    snap("完成", `到右下角一共 <b>${dp[m - 1][n - 1]}</b> 条路径。`, view(-1, -1, true, false, []), { at: "done", kind: "ok", ans: dp[m - 1][n - 1], facts: [["网格", `${m} × ${n}`], ["总路径数", dp[m - 1][n - 1]]] });
   },
   alts: [{
     t: "空间压缩成一行",
@@ -78,21 +87,48 @@ assert s.uniquePaths(10, 10) == 48620
     build(a, snap) {
       const { m, n } = a, full = Array.from({ length: m }, () => Array(n).fill(null)), dp = Array(n).fill(1);
       full[0] = dp.slice();
-      const view = (i, j) => [
-        { t: "grid", label: "对照：二维表（灰的行已经用完、丢掉了，一维 dp 里只有当前这一行）", rows: full.map((r, x) => r.map((v, y) => ({ v: v === null ? "" : v, cls: x === i && y === j ? "a" : x < i - 1 ? "d" : x === i - 1 ? "g" : x === i && v !== null ? "k" : "" }))) },
-        { t: "array", label: i === 0 || j >= n ? `dp（一行）：现在整行都是第 ${i} 行` : `dp（一行）：左边已经是第 ${i} 行，右边还是第 ${i - 1} 行`, items: dp.map((v, y) => ({ v, cls: y === j ? "a" : i === 0 || y < j || y === 0 ? "k" : "g" })), ptrs: { j: j >= 0 && j < n ? j : null } },
+      const view = (i, j, opts = {}) => [
+        {
+          t: "grid",
+          label: "对照：二维表（灰的行已经用完、丢掉了，一维 dp 里只有当前这一行）",
+          rows: full.map((r, x) => r.map((v, y) => ({ v: v === null ? "" : v, cls: x === i && y === j ? "a" : x < i - 1 ? "d" : x === i - 1 ? "g" : x === i && v !== null ? "k" : "" }))),
+          feeds: (opts.gridFeeds || []).slice(),
+        },
+        {
+          t: "array",
+          label: i === 0 || j >= n ? `dp（一行）：现在整行都是第 ${i} 行` : `dp（一行）：左边已经是第 ${i} 行，右边还是第 ${i - 1} 行`,
+          items: dp.map((v, y) => ({
+            v,
+            ...(opts.prevMap && opts.prevMap[y] !== undefined ? { prev: opts.prevMap[y] } : {}),
+            cls: y === j ? "a" : i === 0 || y < j || y === 0 ? "k" : "g",
+          })),
+          ptrs: { j: j >= 0 && j < n ? j : null },
+          feeds: (opts.arrFeeds || []).slice(),
+        },
       ];
-      snap("开始", "只用一行 dp。一开始它就是第 0 行：全是 1。", view(0, -1), { at: "init" });
+      snap("开始", "只用一行 dp。一开始它就是第 0 行：全是 1。", view(0, -1), { at: "init", facts: [["当前行", 0], ["dp[n-1]", dp[n - 1]]] });
       for (let i = 1; i < m; i++) {
         full[i][0] = 1;
-        snap(`第 ${i} 行`, `开始算第 ${i} 行。dp 里现在存的整行都是第 ${i - 1} 行的值；dp[0] 是第 0 列，永远是 1，不用改。`, view(i, -1), { at: "row" });
+        snap(`第 ${i} 行`, `开始算第 ${i} 行。dp 里现在存的整行都是第 ${i - 1} 行的值；dp[0] 是第 0 列，永远是 1，不用改。`, view(i, -1), { at: "row", facts: [["当前行", i, i - 1], ["dp[0]", 1]] });
         for (let j = 1; j < n; j++) {
           const up = dp[j], left = dp[j - 1];
           dp[j] = up + left; full[i][j] = dp[j];
-          snap(`(${i}, ${j})`, `dp[${j}] 更新前是 ${up}，这是第 ${i - 1} 行的值，也就是<b>上面</b>；dp[${j - 1}] = ${left} 刚更新过，是第 ${i} 行的值，也就是<b>左边</b>。dp[${j}] = ${up} + ${left} = <b>${dp[j]}</b>。`, view(i, j), { at: "cell" });
+          snap(
+            `(${i}, ${j})`,
+            `dp[${j}] 更新前是 ${up}，这是第 ${i - 1} 行的值，也就是<b>上面</b>；dp[${j - 1}] = ${left} 刚更新过，是第 ${i} 行的值，也就是<b>左边</b>。dp[${j}] = ${up} + ${left} = <b>${dp[j]}</b>。`,
+            view(i, j, {
+              prevMap: { [j]: up },
+              gridFeeds: [
+                { from: [i - 1, j], to: [i, j], win: true, label: "↑+←" },
+                { from: [i, j - 1], to: [i, j], win: true },
+              ],
+              arrFeeds: [{ from: j - 1, to: j, win: true, label: `+${left}` }],
+            }),
+            { at: "cell", facts: [["位置", `(${i}, ${j})`], ["上面 (旧dp[j])", up], ["左边 dp[j-1]", left], ["dp[j]", dp[j], up]] },
+          );
         }
       }
-      snap("完成", `最后一行算完，dp[${n - 1}] = <b>${dp[n - 1]}</b>。只用了长度 ${n} 的一行，空间从 O(m·n) 降到 O(n)。`, view(m - 1, n), { at: "done", kind: "ok", ans: dp[n - 1] });
+      snap("完成", `最后一行算完，dp[${n - 1}] = <b>${dp[n - 1]}</b>。只用了长度 ${n} 的一行，空间从 O(m·n) 降到 O(n)。`, view(m - 1, n), { at: "done", kind: "ok", ans: dp[n - 1], facts: [["总路径数", dp[n - 1]], ["空间", `O(${n})`]] });
     },
   }],
   points: [

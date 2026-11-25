@@ -341,20 +341,85 @@ const SPEC = { presets: [{"label":"示例 1","args":{"s":"leetcode","words":["le
   })(R); return { args: r.args, note: r.note }; }, methods: [
 { t: "标准解法", note: null, legend: [["e","能拆的前缀"],["a","最后一个词 s[j:i]"],["c","dp 为真"],["x","边界：空串"]], build(a, snap) {
     const s = a.s, W = new Set(a.words), n = s.length, dp = Array(n + 1).fill(false); dp[0] = true;
-    const view = (i, j) => [
-      { t: "array", label: "s", items: s.split("").map((c, k) => ({ v: c, cls: j >= 0 && k >= j && k < i ? "a" : j >= 0 && k < j ? "e" : "" })), ptrs: {} },
+    const view = (i, j, opts = {}) => [
+      {
+        t: "array",
+        label: "s",
+        items: s.split("").map((c, k) => ({ v: c, cls: j >= 0 && k >= j && k < i ? "a" : j >= 0 && k < j ? "e" : "" })),
+        ptrs: {},
+      },
       // dp[0] 是边界（虚线）：空串不用拆，直接给 ✓。整个前缀本身就是一个词时，靠它接上
-      { t: "array", label: "dp[i]：前 i 个字符能不能拆（虚线 dp[0] 是边界）", items: dp.map((v, k) => ({ v: v ? "✓" : "✗", cls: k === i ? (v ? "c" : "w") : k === 0 ? (j === 0 ? "x e" : "x k") : v ? "k" : "d" })), ptrs: { i: i >= 0 ? i : null } },
+      {
+        t: "array",
+        label: "dp[i]：前 i 个字符能不能拆（虚线 dp[0] 是边界）",
+        items: dp.map((v, k) => ({
+          v: v ? "✓" : "✗",
+          ...(opts.prevMap && opts.prevMap[k] !== undefined ? { prev: opts.prevMap[k] } : {}),
+          cls: k === i ? (v ? "c" : "w") : k === 0 ? (j === 0 ? "x e" : "x k") : (opts.tried && opts.tried.includes(k)) ? "e" : v ? "k" : "d",
+        })),
+        ptrs: { i: i >= 0 ? i : null },
+        feeds: (opts.feeds || []).slice(),
+      },
     ];
-    snap("边界", `字典是 {${a.words.join(", ")}}。dp[0] = ✓ 是边界：前 0 个字符是空串，什么都不用拆。<br>它的用处：如果整个前缀 s[0:i] 本身就是一个词，最后一个词从 j = 0 开始，要靠 dp[0] = ✓ 才能接上。`, view(-1, -1), { at: "init" });
+    snap("边界", `字典是 {${a.words.join(", ")}}。dp[0] = ✓ 是边界：前 0 个字符是空串，什么都不用拆。<br>它的用处：如果整个前缀 s[0:i] 本身就是一个词，最后一个词从 j = 0 开始，要靠 dp[0] = ✓ 才能接上。`, view(-1, -1), {
+      at: "init",
+      facts: [["字典大小", W.size], ["dp[0]", "✓"]],
+    });
     for (let i = 1; i <= n; i++) {
+      const validJs = [];
+      for (let j = 0; j < i; j++) if (dp[j]) validJs.push(j);
       let hit = -1;
-      for (let j = 0; j < i; j++) if (dp[j] && W.has(s.slice(j, i))) { hit = j; break; }
-      dp[i] = hit >= 0;
-      if (hit >= 0) snap(`dp[${i}]`, `前 ${hit} 个字符能拆（dp[${hit}] = ✓），"${s.slice(hit, i)}" 又在字典里。所以 "${s.slice(0, i)}" 能拆，dp[${i}] = <b>✓</b>。`, view(i, hit), { at: ["try", "hit"] });
-      else snap(`dp[${i}]`, `"${s.slice(0, i)}" 找不到能拆的切法：所有 dp[j] = ✓ 的 j，s[j:${i}] 都不在字典里。dp[${i}] = ✗。`, view(i, -1), { at: "try" });
+      for (const j of validJs) if (W.has(s.slice(j, i))) { hit = j; break; }
+      if (hit >= 0) {
+        const tried = validJs.filter((j) => j <= hit);
+        snap(
+          `试切分 dp[${i}]`,
+          `看前 ${i} 个字符 "${s.slice(0, i)}"：从已为 ✓ 的前缀位置 ${tried.join(", ")} 尝试接出末尾词 s[j:${i}]。`,
+          view(i, -1, {
+            tried,
+            feeds: tried.map((j) => ({ from: j, to: i, win: false })),
+          }),
+          {
+            at: "try",
+            facts: [["前缀", `"${s.slice(0, i)}"`], ["候选切分点", tried.join(", ")], ["dp[" + i + "]", "✗"]],
+          },
+        );
+        dp[i] = true;
+        snap(
+          `dp[${i}] = ✓`,
+          `前 ${hit} 个字符能拆（dp[${hit}] = ✓），"${s.slice(hit, i)}" 又在字典里。所以 "${s.slice(0, i)}" 能拆，dp[${i}] = <b>✓</b>。`,
+          view(i, hit, {
+            tried,
+            prevMap: { [i]: "✗" },
+            feeds: tried.map((j) => ({ from: j, to: i, win: j === hit, ...(j === hit ? { label: `"${s.slice(hit, i)}"` } : {}) })),
+          }),
+          {
+            at: "hit",
+            kind: "ok",
+            facts: [["命中词", `"${s.slice(hit, i)}"`], ["切分点 j", hit], ["dp[" + i + "]", "✓", "✗"]],
+          },
+        );
+      } else {
+        snap(
+          `dp[${i}] = ✗`,
+          `"${s.slice(0, i)}" 找不到能拆的切法：所有 dp[j] = ✓ 的 j，s[j:${i}] 都不在字典里。dp[${i}] = ✗。`,
+          view(i, -1, {
+            tried: validJs,
+            feeds: validJs.map((j) => ({ from: j, to: i, win: false })),
+          }),
+          {
+            at: "try",
+            facts: [["前缀", `"${s.slice(0, i)}"`], ["尝试切分点", validJs.length ? validJs.join(", ") : "无"], ["dp[" + i + "]", "✗"]],
+          },
+        );
+      }
     }
-    snap("完成", `dp[${n}] = ${dp[n] ? "✓" : "✗"}，返回 <b>${dp[n]}</b>。`, view(n, -1), { at: "done", kind: dp[n] ? "ok" : "warn", ans: dp[n] });
+    snap("完成", `dp[${n}] = ${dp[n] ? "✓" : "✗"}，返回 <b>${dp[n]}</b>。`, view(n, -1), {
+      at: "done",
+      kind: dp[n] ? "ok" : "warn",
+      ans: dp[n],
+      facts: [["结果 dp[" + n + "]", dp[n] ? "✓" : "✗"]],
+    });
   } }
 ] };
 (function () {
