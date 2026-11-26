@@ -44,18 +44,20 @@
 在确认以下全部条件满足并验证通过前，**禁止**将该分支合入 `main`：
 
 1. **数据源就绪（二选一，推荐先 R2）**：
-   - [ ] 使用 `go run ./cmd/cd-build build` 生成完整的 `v1/manifest.json` 及内容寻址分片，上传到 R2 并在 Cloudflare Pages 配置好 `R2_ASSETS_BASE_URL`（含 Production 与 Preview）；**或**确保 `site/package.json` 的 `build` 自动生成 `site/public/_r2/v1/` 并确认包体积符合 Pages 限制。
-   - [ ] 如果还需要支持平滑过渡期回退，不要在第一批合并时就删光 `tools/practice/data/` 和 `tools/illustrations/data/`，等 R2 线上验证稳定后再单独提交清理 PR。
+   - [x] 使用 `go run ./cmd/cd-build bundle` 生成完整的 `v1/manifest.json`（100 题 + 22 专题，3.59 MiB）及内容寻址分片（224 个对象），已上传至 R2 桶 `coding-dance-assets` 并绑定 `https://assets.cgent.link/v1/manifest.json`，Preview 环境已配置 `R2_ASSETS_BASE_URL`；**待上线时**：同步在 Production 配置 `R2_ASSETS_BASE_URL`。
+   - [x] 第一阶段在 `main` 保留 `tools/practice/data/` 与 `tools/illustrations/data/` 作为平稳过渡与回退，确认 R2 稳定后再单独清理。
 2. **Go `cd-api` 后端就绪**：
-   - [ ] `cmd/cd-api`（含 PostgreSQL 与 Valkey/KV）已在公网或 Cloudflare Tunnel 上稳定运行，`/healthz` 返回 `200`。
-   - [ ] Cloudflare Pages `lc-hot100` 已配置好 `CD_API_UPSTREAM`（以及必要的 `CD_API_ACCESS_ID` / `CD_API_ACCESS_SECRET`、`EDGE_PROXY_KEY`）。
-   - [ ] 若前端经过 EdgeOne 反代，确保 EdgeOne 回源保留 `X-Forwarded-Host`、`X-Forwarded-Proto` 与 `X-Edge-Proxy-Key`。
+   - [x] `cmd/cd-api`（连同 CNPG 隔离库 `coding_dance` + Valkey `valkey-agentruntime.data.svc:6379`）已在 `ar-node-1` `coding-dance` 命名空间运行，经 Cloudflare Tunnel 暴露 `https://cd-api.cgent.link/healthz` 返回 `200 {"ok":true,"service":"cd-api"}`。
+   - [x] Cloudflare Pages `lc-hot100` Preview 环境（`go-mod-preview.lc-hot100.pages.dev`）已配置 `CD_API_UPSTREAM=https://cd-api.cgent.link` 与 `R2_ASSETS_BASE_URL=https://assets.cgent.link`，且 `_lib/bff.ts` 已改为未配置 `CD_API_UPSTREAM` 时全量回退现有 Pages Functions（生产零中断）。
+   - [ ] **待生产切换前补齐**：将生产 `GITHUB_APP_CLIENT_ID`、`GITHUB_APP_CLIENT_SECRET`、`SESSION_SECRET`、`RUNNER_NODES`、`RUNNER_SECRET` 注入 `cd-api-secrets`（并在 GitHub App 登记回调域名，EdgeOne 回源保留 `X-Forwarded-Host` / `X-Edge-Proxy-Key`），验证登录后再开启 Production 的 `CD_API_UPSTREAM`。
 3. **Go `cd-runner` 运行器就绪**：
-   - [ ] `RUNNER_NODES` 对应节点已升级为 Go `cd-runner`，`/api/run`（GET）返回 `features` 包含 `dap-ws` 与 `ts-transform`。
-4. **Preview 环境全量冒烟验证通过**：
-   - [ ] 在 Cloudflare Pages Preview 部署中实测以下接口全部正常，再合入 `main`：
-     - `GET /api/problems` → `200`，第 1 题 `hasSpec: true`、`hasIllustration: true`
-     - `GET /api/problem/1` → `200`，包含完整题解与 `Demo V2` 动画 spec
-     - `GET /api/practice/1` → `200`，返回完整练习题数据与 `starters`
-     - `GET /api/session` → `200`，`configured: true`
-     - GitHub 登录 / 退出、`codingdance.cn` 与 `leetcode.cgent.link` SSO、以及运行/保存进度流程全通。
+   - [ ] `RUNNER_NODES` 对应节点已升级为 Go `cd-runner`，`/api/run`（GET）返回 `features` 包含 `dap-ws` 与 `ts-transform`（注：`main` 已合入 `489b31b` 多分组 Cloudflare Containers PoC 与 `a178caf` Watch/DAP 前端）。
+   - [x] Cloudflare Containers PoC（`lc-runner-cf-poc`，Worker 自定义域 `https://cf-runner-poc.cgent.link`，版本 `c524e785-1613-4260-86b3-e04d8a594cbf`）已构建并推送 `lc-runner-{script,jvm,native}:poc` 三组镜像，修复 DO `port.fetch` 必须走 `http://` 与 `WebSocketPair` 中继后跑通全量 `test-poc.mjs`：冷启动 `cfBootMs` `script=524ms / jvm=526ms / native=551ms`，热跑 `python=150ms / go=445ms / java=975ms`，`cpp/go/java` Trace 调试（15/15/13 steps）与 WebSocket DAP（3215/4981/3255ms）全绿，`enableInternet: false` 实测返回 `NET_BLOCKED`。
+4. **Preview 环境全量冒烟验证**：
+   - [x] 在 Cloudflare Pages Preview（`https://go-mod-preview.lc-hot100.pages.dev`）实测以下公开与 BFF 接口全部 `200`：
+     - `GET /api/problems` → `200`（15,501 bytes，第 1 题 `hasSpec: true`、`hasIllustration: true`）
+     - `GET /api/problem/1` → `200`（14,568 bytes，含完整题解与 `Demo V2` 动画 spec）
+     - `GET /api/practice/1` → `200`（6,594 bytes，经 R2 返回完整练习数据与 `starters`）
+     - `GET /api/topics` → `200`（11,946 bytes，经 R2 返回专题目录）
+     - `GET /api/session` → `200`（548 bytes，由 `https://cd-api.cgent.link` 响应）
+   - [ ] 带真实 `GITHUB_APP_CLIENT_ID`/`SECRET` 完成 Preview/生产登录、`codingdance.cn` 与 `leetcode.cgent.link` SSO、以及运行/保存进度全链路验证，再合入完整删除旧 JSON/Functions 的阶段。

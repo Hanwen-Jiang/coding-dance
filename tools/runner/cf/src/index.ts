@@ -219,16 +219,26 @@ export default {
       return jsonRes({ error: "没有这个接口" }, 404);
     }
 
-    const ns = bindingForGroup(env, group);
-    const stub = ns.get(ns.idFromName(`${auth.user}:${group}`));
-    const headers = new Headers(request.headers);
-    headers.set("x-cf-group", group);
-    const fwd = new Request(request.url, {
-      method: request.method,
-      headers,
-      body: request.method === "GET" || request.method === "HEAD" ? undefined : bodyBuf,
-    });
-    return stub.fetch(fwd);
+    try {
+      const ns = bindingForGroup(env, group);
+      const stub = ns.get(ns.idFromName(`${auth.user}:${group}`));
+      const headers = new Headers(request.headers);
+      headers.set("x-cf-group", group);
+      const fwd = new Request(request.url, {
+        method: request.method,
+        headers,
+        body: request.method === "GET" || request.method === "HEAD" ? undefined : bodyBuf,
+      });
+      return await stub.fetch(fwd);
+    } catch (err) {
+      return jsonRes(
+        {
+          error: err instanceof Error ? err.message : String(err),
+          group,
+        },
+        500,
+      );
+    }
   },
 };
 
@@ -332,31 +342,79 @@ export class RunnerContainerDO extends DurableObject<Env> {
   }
 
   async fetch(request: Request): Promise<Response> {
-    const boot = await this.ensureReady();
-    await this.touchIdleAlarm();
+    try {
+      const boot = await this.ensureReady();
+      await this.touchIdleAlarm();
 
-    const port = this.container().getTcpPort(CONTAINER_PORT);
-    if ((request.headers.get("upgrade") || "").toLowerCase() === "websocket") {
-      return port.fetch(request);
-    }
+      const port = this.container().getTcpPort(CONTAINER_PORT);
+      const containerUrl = request.url.replace(/^https:/, "http:");
+      const upstream = await port.fetch(containerUrl, request);
 
-    const upstream = await port.fetch(request);
-    const url = new URL(request.url);
-    if (request.method === "POST" && url.pathname === "/v1/run" && upstream.ok) {
-      const data = (await upstream.json().catch(() => null)) as Record<string, unknown> | null;
-      if (data && typeof data === "object") {
-        return jsonRes(
-          {
-            ...data,
-            cfGroup: this.group,
-            cfColdStart: boot.coldStart,
-            cfContainerBootMs: boot.bootMs,
-          },
-          upstream.status,
-        );
+      if (upstream.webSocket) {
+        const containerWs = upstream.webSocket;
+        const pair = new WebSocketPair();
+        const client = pair[0];
+        const server = pair[1];
+        containerWs.accept();
+        server.accept();
+        server.addEventListener("message", (event) => {
+          void this.touchIdleAlarm();
+          try {
+            containerWs.send(event.data);
+          } catch {
+            server.close(1011, "Container WebSocket forward error");
+          }
+        });
+        containerWs.addEventListener("message", (event) => {
+          void this.touchIdleAlarm();
+          try {
+            server.send(event.data);
+          } catch {
+            containerWs.close(1011, "Client WebSocket forward error");
+          }
+        });
+        server.addEventListener("close", (event) => {
+          const code = event.code === 1005 || event.code === 1006 ? 1000 : event.code;
+          containerWs.close(code, event.reason);
+        });
+        containerWs.addEventListener("close", (event) => {
+          const code = event.code === 1005 || event.code === 1006 ? 1000 : event.code;
+          server.close(code, event.reason);
+        });
+        server.addEventListener("error", () => containerWs.close(1011, "Client WebSocket error"));
+        containerWs.addEventListener("error", () => server.close(1011, "Container WebSocket error"));
+        return new Response(null, {
+          status: upstream.status,
+          webSocket: client,
+          headers: upstream.headers,
+        });
       }
+
+      const url = new URL(request.url);
+      if (request.method === "POST" && url.pathname === "/v1/run" && upstream.ok) {
+        const data = (await upstream.json().catch(() => null)) as Record<string, unknown> | null;
+        if (data && typeof data === "object") {
+          return jsonRes(
+            {
+              ...data,
+              cfGroup: this.group,
+              cfColdStart: boot.coldStart,
+              cfContainerBootMs: boot.bootMs,
+            },
+            upstream.status,
+          );
+        }
+      }
+      return upstream;
+    } catch (err) {
+      return jsonRes(
+        {
+          error: err instanceof Error ? err.message : String(err),
+          group: this.group,
+        },
+        500,
+      );
     }
-    return upstream;
   }
 }
 
