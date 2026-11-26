@@ -7,12 +7,29 @@
  * 把外层各个作用域里声明过的名字都列上就行。改写后的源码再交给 TypeScript 转成 JS（TS）或者直接运行（JS）。
  */
 (function () {
-  function instrument(ts, source, language, mode) {
+  function instrument(ts, source, language, mode, watch) {
     const fileName = language === "typescript" ? "solution.ts" : "solution.js";
     const sf = ts.createSourceFile(fileName, source, ts.ScriptTarget.ES2022, true, language === "typescript" ? ts.ScriptKind.TS : ts.ScriptKind.JS);
     const lineOf = (node) => sf.getLineAndCharacterOfPosition(node.getStart(sf)).line + 1;
     const edits = []; // { pos, text, close, depth }
     const add = (pos, text, close, depth) => edits.push({ pos, text, close, depth, seq: edits.length });
+
+    // 过滤用户输入的追踪表达式：去重、上限 20 条、用 TS 解析器校验为合法表达式，避免破坏源码插桩
+    const validWatches = [];
+    if (Array.isArray(watch)) {
+      const seenWatch = new Set();
+      for (const rawExpr of watch) {
+        if (typeof rawExpr !== "string") continue;
+        const expr = rawExpr.trim();
+        if (!expr || seenWatch.has(expr)) continue;
+        seenWatch.add(expr);
+        try {
+          const wf = ts.createSourceFile("watch.ts", `(${expr})`, ts.ScriptTarget.ES2022, false, ts.ScriptKind.TS);
+          if (!wf.parseDiagnostics || wf.parseDiagnostics.length === 0) validWatches.push(expr);
+        } catch { /* ignore invalid expression */ }
+        if (validWatches.length >= 20) break;
+      }
+    }
 
     const bindingNames = (name, out) => {
       if (!name) return;
@@ -44,7 +61,9 @@
       const names = [...new Set(scopes.flat())].filter((n) => IDENT.test(n) && !n.startsWith("__"));
       const parts = names.map((n) => `${n}: () => ${n}`);
       if (thisOk) parts.push("this: () => this");
-      return `() => __snap({ ${parts.join(", ")} })`;
+      if (!validWatches.length) return `() => __snap({ ${parts.join(", ")} })`;
+      const watchParts = validWatches.map((expr) => `[${JSON.stringify(expr)}, () => (${expr})]`);
+      return `() => __snap({ ${parts.join(", ")} }, [${watchParts.join(", ")}])`;
     };
     const SKIP = (st) => ts.isFunctionDeclaration(st) || ts.isClassDeclaration(st) || ts.isInterfaceDeclaration(st) || ts.isTypeAliasDeclaration(st)
       || ts.isModuleDeclaration(st) || ts.isImportDeclaration(st) || ts.isExportDeclaration(st) || ts.isEmptyStatement(st)

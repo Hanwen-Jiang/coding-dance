@@ -21,18 +21,19 @@ const execute = context.PracticeKernel.executeJavaScript, instrument = context.P
 const { loadPyodide } = await import(pathToFileURL(path.join(modules, "pyodide/pyodide.mjs")).href);
 const python = await loadPyodide({ indexURL: path.join(modules, "pyodide") + path.sep, stdout: () => {}, stderr: () => {} });
 python.runPython(fs.readFileSync(path.join(rt, "python-runner.py"), "utf8"));
-const runPython = (code, mode, signature, test, trace = true) => {
-  python.globals.set("__practice_request_json", JSON.stringify({ code, mode, signature, test, trace }));
+const runPython = (code, mode, signature, test, trace = true, watch = []) => {
+  python.globals.set("__practice_request_json", JSON.stringify({ code, mode, signature, test, trace, watch }));
   return JSON.parse(python.runPython("__practice_run(__practice_request_json)"));
 };
 const toJs = (code) => ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None }, reportDiagnostics: true });
-const runJs = (code, language, mode, signature, test) => {
-  let src = instrument(ts, code, language, mode);
+const runJs = (code, language, mode, signature, test, watch = []) => {
+  let src = instrument(ts, code, language, mode, watch);
   if (language === "typescript") src = toJs(src).outputText;
   // kernel 跑在 vm 里，数组、对象的原型和这里不是同一个：转一遍 JSON 再比
   return JSON.parse(JSON.stringify(execute(src, mode, signature, test, true)));
 };
 const vars = (step) => Object.fromEntries(step.vars);
+const watches = (step) => Object.fromEntries(step.watches || []);
 const TWO = { fn: "twoSum", params: ["int[]", "int"], ret: "int[]" };
 
 // —— Python ——
@@ -76,6 +77,18 @@ const TWO = { fn: "twoSum", params: ["int[]", "int"], ret: "int[]" };
   const boom = runPython("class Solution:\n    def twoSum(self, nums, target):\n        return nums[10]\n", "leetcode", TWO, { input: [[1], 1] });
   assert.match(boom.error, /IndexError/);
   assert.ok(boom.trace.steps.some((s) => s.event === "exception" && /IndexError/.test(s.exc)));
+
+  const pyWatch = runPython(
+    "class Solution:\n    def twoSum(self, nums, target):\n        seen = {}\n        for i, x in enumerate(nums):\n            if target - x in seen:\n                return [seen[target - x], i]\n            seen[x] = i\n",
+    "leetcode",
+    TWO,
+    { input: [[2, 7, 11, 15], 9] },
+    true,
+    ["nums[i]", "target - x", "len(seen)", "invalid syntax ((("],
+  );
+  assert.deepEqual(pyWatch.actual, [0, 1]);
+  assert.equal(pyWatch.trace.steps.length, steps.length, "Python watch 求值不能多记步数");
+  assert.deepEqual(watches(pyWatch.trace.steps[4]), { "nums[i]": "2", "target - x": "7", "len(seen)": "1" });
 }
 
 // —— JavaScript / TypeScript ——
@@ -98,6 +111,30 @@ const TWO = { fn: "twoSum", params: ["int[]", "int"], ret: "int[]" };
   const acm = runJs('import { readFileSync } from "node:fs";\nconst n: number = Number(readFileSync(0, "utf8"));\nlet total = 0;\nfor (let k = 0; k < n; k++) total += k;\nconsole.log(total);', "typescript", "acm", {}, { stdin: "4\n" });
   assert.equal(acm.stdout, "6\n");
   assert.deepEqual(acm.trace.steps.at(-1).line, 5);
+
+  const jsWatch = runJs(
+    "var twoSum = function(nums, target) {\n  const seen = new Map();\n  for (let i = 0; i < nums.length; i++) {\n    const need = target - nums[i];\n    if (seen.has(need)) return [seen.get(need), i];\n    seen.set(nums[i], i);\n  }\n};",
+    "javascript",
+    "leetcode",
+    TWO,
+    { input: [[2, 7, 11, 15], 9] },
+    ["nums[i]", "target - nums[i]", "seen.size", "bad syntax ((("],
+  );
+  assert.deepEqual(jsWatch.actual, [0, 1]);
+  assert.equal(jsWatch.trace.steps.length, r.trace.steps.length, "JS watch 求值不能多记步数");
+  assert.deepEqual(watches(jsWatch.trace.steps[5]), { "nums[i]": "7", "target - nums[i]": "2", "seen.size": "1" });
+
+  const tsWatch = runJs(
+    "function helper(x: number): number { return x * 2; }\nfunction twoSum(nums: number[], target: number): number[] {\n  const m = new Map<number, number>();\n  for (let i = 0; i < nums.length; i++) {\n    const d = helper(nums[i]);\n    if (m.has(target - nums[i])) return [m.get(target - nums[i])!, i];\n    m.set(nums[i], i);\n  }\n  return [];\n}",
+    "typescript",
+    "leetcode",
+    TWO,
+    { input: [[2, 7], 9] },
+    ["helper(nums[i])", "m.size"],
+  );
+  assert.deepEqual(tsWatch.actual, [0, 1]);
+  assert.ok(tsWatch.trace.steps.some((s) => watches(s)["helper(nums[i])"] === "4" && watches(s)["m.size"] === "0"));
+  assert.ok(tsWatch.trace.steps.every((s) => s.fn !== "helper" || s.line === 1), "TS watch 调用辅助函数不能触发额外步骤");
 
   // 全部官方题解：插桩前后答案一样
   let files = 0, cases = 0;

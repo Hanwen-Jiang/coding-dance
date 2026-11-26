@@ -71,6 +71,8 @@ export interface PracticeRunRequest {
   cases: PracticeCase[];
   /** 调试：只跑一组用例，同时记下每一步执行到哪一行、当时的变量 */
   debug?: boolean;
+  /** 调试时额外追踪求值的变量或表达式（浏览器录制期同步记录每步值） */
+  watch?: string[];
   /** Python、JavaScript、TypeScript 选了云端就交给运行器（调试除外：云端不调试这三种，仍在浏览器里）；其余语言总在云端 */
   target?: PracticeTarget;
 }
@@ -84,6 +86,8 @@ export interface PracticeTraceStep {
   stack: [string, number][];
   /** 当前函数里看得到的变量：[名字, 显示用的值] */
   vars: [string, string][];
+  /** 用户指定追踪的表达式在该步的值：[表达式, 显示用的值] */
+  watches?: [string, string][];
   /** 到这一步为止标准输出有多少个字符 */
   out: number;
   ret?: string;

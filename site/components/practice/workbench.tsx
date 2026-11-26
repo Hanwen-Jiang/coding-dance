@@ -12,7 +12,7 @@ import { ChevronDown, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
 import { PixelCodeMark, PixelLoader, Skel } from "@/components/pixel";
 import { CompanionPromptBanner, PracticeCompanionPanel } from "@/components/practice/companion";
 import { PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
-import { type DebugRun, PracticeDebugger } from "@/components/practice/debugger";
+import { type DebugRun, LiveDapDebugger, PracticeDebugger } from "@/components/practice/debugger";
 import { PracticeResults } from "@/components/practice/results";
 import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice/resize";
 import {
@@ -25,7 +25,9 @@ import {
   revealCompanionHint,
   useCompanionMode,
 } from "@/lib/companion";
+import { apiWsUrl } from "@/lib/api-base";
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
+import { DapClient, DapConnectError, type DapSnapshot } from "@/lib/practice/dap-client";
 import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
 import { isRemote, readTarget, remoteLacks, RemoteLoginError, RemoteQuotaError, remoteStatus, REMOTE_DEBUG_LANGUAGES, writeTarget, type RemoteStatus } from "@/lib/practice/remote";
@@ -465,8 +467,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   // 调试：一组输入的执行记录、当前看到第几步、编辑器里的断点；调试用的输入跟着上一次看的是「示例」还是「自定义」
   const [debugRun, setDebugRun] = useState<DebugRun | null>(null);
   const [debugIndex, setDebugIndex] = useState(0);
+  const [dapSnap, setDapSnap] = useState<DapSnapshot | null>(null);
+  const [cloudDebugMode, setCloudDebugMode] = useState<"dap" | "trace">("dap");
+  const dapClientRef = useRef<DapClient | null>(null);
   const [breakpoints, setBreakpoints] = useState<number[]>([]);
-  /** 调试时钉住追踪的变量（重新调试、换步都还在） */
+  /** 调试时钉住追踪的变量或表达式（重新调试、换步都还在） */
   const [watch, setWatch] = useState<string[]>([]);
   const caseTab = useRef<"examples" | "custom">("examples");
   const abortRef = useRef<AbortController | null>(null);
@@ -556,8 +561,19 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     return () => {
       sequenceRef.current++;
       abortRef.current?.abort();
+      dapClientRef.current?.disconnect();
+      dapClientRef.current = null;
+      setDapSnap(null);
     };
   }, [draftKey]);
+
+  useEffect(() => {
+    void dapClientRef.current?.setBreakpoints(breakpoints);
+  }, [breakpoints]);
+
+  useEffect(() => {
+    void dapClientRef.current?.setWatch(watch);
+  }, [watch]);
 
   // —— 存进用户自己的进度仓（要登录并开通）：草稿（Ctrl+S、停下 60 秒后自动存）和「测试全部」的记录，都走 save-queue 排队 ——
   const { ready: repoReady, refresh: refreshProgress, loading: sessionLoading, session, error: sessionError, loginHref } = useProgress();
@@ -799,8 +815,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     });
   };
 
-  /** 调试：用当前的示例（或者自定义输入）跑一遍，记下每一步，在「调试」里一步步看 */
-  const runDebug = async () => {
+  const canUseDap = REMOTE_DEBUG_LANGUAGES.includes(language) && !!(cloud?.features ?? []).includes("dap-ws");
+
+  /** 调试：Java/C++/Go 优先连 /api/dap 实时调试（支持表达式实时求值），其余语言或回退模式用录制回放 */
+  const runDebug = async (overrideMode?: "dap" | "trace") => {
     if (!ready || running || abortRef.current) return;
     let test: PracticeCase;
     try {
@@ -822,24 +840,79 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       setNeedLogin(true);
       return;
     }
+    dapClientRef.current?.disconnect();
+    dapClientRef.current = null;
+
     const token = ++sequenceRef.current;
     const controller = new AbortController();
     abortRef.current = controller;
     const snapshot = codeRef.current;
+    const label = test.label || (caseTab.current === "custom" ? "自定义用例" : `示例 ${sample + 1}`);
+    const desiredMode = overrideMode ?? cloudDebugMode;
     setError(null);
-    setStatus(target === "cloud" && !cloudOnly ? "正在浏览器里调试（云端只调试 Java、C++、Go）：记下每一步…" : "正在调试：记下每一步…");
     setPanelOpen(true);
-    setRunning(true);
     setTab("debug");
+
+    if (canUseDap && desiredMode === "dap") {
+      setDebugRun(null);
+      setStatus("正在启动云端实时 DAP 调试器…");
+      setRunning(true);
+      const client = new DapClient({
+        url: apiWsUrl(`/api/dap?lang=${encodeURIComponent(language)}`),
+        lang: language,
+        mode,
+        code: snapshot,
+        label,
+        ...(mode === "leetcode" ? { sig: problem.signature } : {}),
+        ...(mode === "acm" ? { stdin: test.stdin } : { cases: [{ input: test.input }] }),
+        breakpoints,
+        watch,
+        onUpdate: (snap) => {
+          if (sequenceRef.current === token) setDapSnap(snap);
+        },
+      });
+      dapClientRef.current = client;
+      const onAbort = () => client.disconnect();
+      controller.signal.addEventListener("abort", onAbort, { once: true });
+      try {
+        await client.readyPromise;
+        if (sequenceRef.current === token) {
+          setRunning(false);
+          abortRef.current = null;
+        }
+        return;
+      } catch (e) {
+        controller.signal.removeEventListener("abort", onAbort);
+        if (sequenceRef.current !== token) return;
+        dapClientRef.current = null;
+        if (controller.signal.aborted) {
+          setRunning(false);
+          abortRef.current = null;
+          return;
+        }
+        if (e instanceof DapConnectError && e.compileError) {
+          setRunning(false);
+          abortRef.current = null;
+          return;
+        }
+        // WebSocket 连接失败（如旧节点或代理未放行 WS）：自动回退为录制回放调试
+        setDapSnap(null);
+      }
+    } else {
+      setDapSnap(null);
+    }
+
+    setStatus(target === "cloud" && !cloudOnly ? "正在浏览器里调试（云端只调试 Java、C++、Go）：记下每一步…" : "正在调试：记下每一步…");
+    setRunning(true);
     try {
-      const result = await runPractice({ problem, language, mode, code: snapshot, cases: [test], debug: true, target }, {
+      const result = await runPractice({ problem, language, mode, code: snapshot, cases: [test], debug: true, target, watch }, {
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
       });
       if (result.quota) setCloud((prev) => (prev ? { ...prev, quota: result.quota } : prev));
       if (sequenceRef.current !== token) return;
       const r = result.results[0];
-      setDebugRun({ trace: r?.trace ?? null, stdout: r?.stdout ?? "", error: r?.error, code: snapshot, label: test.label || (caseTab.current === "custom" ? "自定义用例" : `示例 ${sample + 1}`), cancelled: result.cancelled });
+      setDebugRun({ trace: r?.trace ?? null, stdout: r?.stdout ?? "", error: r?.error, code: snapshot, label, cancelled: result.cancelled });
       // 有断点就直接停在第一个断点上，没有就从第一步开始
       const steps = r?.trace?.steps ?? [];
       const firstBreak = steps.findIndex((s) => s.event === "line" && breakpoints.includes(s.line));
@@ -856,8 +929,13 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
     }
   };
+  const liveDebugging = tab === "debug" && !!dapSnap && dapSnap.code === code;
   const debugging = tab === "debug" && !!debugRun && debugRun.code === code;
-  const debugLine = debugging ? debugRun?.trace?.steps[Math.min(debugIndex, debugRun.trace.steps.length - 1)]?.line ?? null : null;
+  const debugLine = liveDebugging
+    ? (dapSnap.status === "paused" ? dapSnap.line : null)
+    : debugging
+    ? debugRun?.trace?.steps[Math.min(debugIndex, debugRun.trace.steps.length - 1)]?.line ?? null
+    : null;
 
   const selectedSample = samples[Math.min(sample, samples.length - 1)];
 
@@ -1074,12 +1152,71 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             <label className="flex min-w-0 flex-col gap-1 text-xs text-muted">{mode === "leetcode" ? "预期结果（JSON，可选）" : "预期标准输出（可选）"}<TextArea aria-label="自定义预期结果" className="w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomExpected(event.target.value)} rows={2} value={customExpected} variant="secondary" /></label>
           </div>}
           {tab === "results" && (running ? busyNote : report ? <PracticeResults problem={problem} cases={report.cases} key={report.result.duration} mode={mode} result={report.result} stale={report.code !== code} unchecked={report.unchecked} /> : needLogin ? null : <p className="py-4 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
-          {tab === "debug" && (running ? busyNote : debugRun ? <PracticeDebugger breakpoints={breakpoints} index={debugIndex} onIndex={setDebugIndex} onWatch={setWatch} run={debugRun} stale={debugRun.code !== code} watch={watch} /> : (
-            <div className="flex flex-col items-center gap-2.5 py-4 text-center">
-              <p className="max-w-sm text-xs leading-6 text-muted">用{caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}把程序跑一遍，记下每一行执行时的变量，然后一步步往前、往后看。点行号可以加断点。{target === "cloud" && !cloudOnly && "选了云端运行，调试仍在浏览器里。"}</p>
-              <Button className="practice-tb-btn" isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="secondary"><BugIcon />开始调试</Button>
-            </div>
-          ))}
+          {tab === "debug" && (() => {
+            const debugModeToggle = canUseDap ? (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
+                <span>调试方式：{cloudDebugMode === "dap" ? "实时 DAP（支持表达式实时求值）" : "录制回放（可前后回退步骤）"}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    className={clsx("rounded px-1.5 py-0.5", cloudDebugMode === "dap" ? "bg-accent/10 text-accent font-medium" : "hover:bg-surface-secondary")}
+                    onClick={() => { setCloudDebugMode("dap"); void runDebug("dap"); }}
+                    type="button"
+                  >实时 DAP</button>
+                  <button
+                    className={clsx("rounded px-1.5 py-0.5", cloudDebugMode === "trace" ? "bg-accent/10 text-accent font-medium" : "hover:bg-surface-secondary")}
+                    onClick={() => { setCloudDebugMode("trace"); void runDebug("trace"); }}
+                    type="button"
+                  >录制回放</button>
+                </div>
+              </div>
+            ) : null;
+            if (running) return busyNote;
+            if (dapSnap) {
+              return (
+                <LiveDapDebugger
+                  breakpoints={breakpoints}
+                  modeToggle={debugModeToggle}
+                  onContinue={() => void dapClientRef.current?.continue()}
+                  onNext={() => void dapClientRef.current?.next()}
+                  onRestart={() => void runDebug("dap")}
+                  onStepIn={() => void dapClientRef.current?.stepIn()}
+                  onStepOut={() => void dapClientRef.current?.stepOut()}
+                  onStop={() => { dapClientRef.current?.disconnect(); dapClientRef.current = null; }}
+                  onWatch={setWatch}
+                  snap={dapSnap}
+                  stale={dapSnap.code !== code}
+                  watch={watch}
+                />
+              );
+            }
+            if (debugRun) {
+              return (
+                <PracticeDebugger
+                  breakpoints={breakpoints}
+                  canRecordWatchExpr={!isRemote(language)}
+                  index={debugIndex}
+                  modeToggle={debugModeToggle}
+                  onIndex={setDebugIndex}
+                  onRerunDebug={() => void runDebug("trace")}
+                  onWatch={setWatch}
+                  run={debugRun}
+                  stale={debugRun.code !== code}
+                  watch={watch}
+                />
+              );
+            }
+            return (
+              <div className="flex flex-col items-center gap-2.5 py-4 text-center">
+                {debugModeToggle}
+                <p className="max-w-sm text-xs leading-6 text-muted">
+                  {canUseDap && cloudDebugMode === "dap"
+                    ? `用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}连接云端 DAP 真调试器：支持断点停住、单步调试，以及输入表达式实时求值。`
+                    : `用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}把程序跑一遍，记下每一行执行时的变量，然后一步步往前、往后看。点行号可以加断点。${target === "cloud" && !cloudOnly ? "选了云端运行，调试仍在浏览器里。" : ""}`}
+                </p>
+                <Button className="practice-tb-btn" isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="secondary"><BugIcon />开始调试</Button>
+              </div>
+            );
+          })()}
           {tab === "companion" && companionMode !== "off" && (
             <PracticeCompanionPanel
               consentMode={companionMode}

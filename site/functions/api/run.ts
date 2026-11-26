@@ -26,7 +26,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
   }, 200, [cookie]);
 };
 
-export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
+export const onRequestPost = async ({ request, env, waitUntil }: { request: Request; env: Env; waitUntil?: (p: Promise<unknown>) => void }) => {
   if (!sameOrigin(request, env)) return privateJson({ error: "不接受跨站请求" }, 403);
   if (!runnerConfigured(env)) return privateJson({ error: "云端运行还没有部署，暂时不能在云端运行" }, 503);
   const { session, cookie } = await getSession(request, env);
@@ -39,7 +39,7 @@ export const onRequestPost = async ({ request, env }: { request: Request; env: E
   const q = await consumeQuota(env, session);
   if (!q.ok) return privateJson({ error: q.error, code: q.code, quota: q.quota }, q.status, [cookie]);
 
-  const { res, tried } = await runOnCluster(env, session.l, body, hint);
+  const { res, tried } = await runOnCluster(env, session.l, body, { ...hint, waitUntil });
   if (!res) {
     await refundQuota(env, session.l, q.quota.day);
     return privateJson({ error: `云端运行器都忙或者不在线（试了 ${tried.length} 个节点），稍后再试` }, 503, [cookie]);

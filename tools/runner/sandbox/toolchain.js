@@ -21,6 +21,19 @@ const SAN_ENV = {
   UBSAN_OPTIONS: "print_stacktrace=1:halt_on_error=1",
 };
 const JAVA_FLAGS = ["-Xss64m", "-Xmx512m", "-XX:+UseSerialGC", "-XX:-UsePerfData", "-Dfile.encoding=UTF-8", "-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8"];
+/** javac 同样跑在 JVM 上：只用 C1 + SerialGC + CDS 归档，减少 1 核沙箱里的冷启开销 */
+const JAVAC_JVM = [
+  "-J-Xss16m",
+  "-J-Xmx512m",
+  "-J-XX:+UseSerialGC",
+  "-J-XX:TieredStopAtLevel=1",
+  "-J-XX:-UsePerfData",
+  "-J-Xshare:auto",
+  "-J-Xlog:cds=off",
+  "-J-Xlog:cds+dynamic=off",
+  "-J-Duser.language=zh",
+  "-J-Duser.country=CN",
+];
 const nodeMajor = Number(process.versions.node.split(".")[0]);
 const NODE_FLAGS = ["--stack-size=4000", "--max-old-space-size=512", "--no-warnings", ...(nodeMajor < 23 ? ["--experimental-strip-types"] : [])];
 /**
@@ -156,7 +169,9 @@ async function compile(lang, prog, dir, { debug = false, acm = false, timeoutMs 
     return done({ file: process.execPath, args: (from, tok) => [...flags, ...prog.args(from, tok)] });
   }
   if (lang === "java") {
-    const r = await run("javac", ["-J-Duser.language=zh", "-J-Duser.country=CN", "-encoding", "UTF-8", "-proc:none", "-nowarn", "-Xlint:none", "-g", "-d", "out", prog.user], { cwd: dir, timeoutMs });
+    const jsa = path.join(PREP, "java", "javac.jsa");
+    const cds = exists(jsa) ? [`-J-XX:SharedArchiveFile=${jsa}`] : [];
+    const r = await run("javac", [...JAVAC_JVM, ...cds, "-encoding", "UTF-8", "-proc:none", "-nowarn", "-Xlint:none", "-g", "-d", "out", prog.user], { cwd: dir, timeoutMs });
     if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr + r.stdout);
     return done({ file: "java", args: (from, tok) => [...JAVA_FLAGS, "-cp", "out", prog.main, ...prog.args(from, tok)], classpath: path.join(dir, "out"), main: prog.main });
   }
@@ -293,4 +308,4 @@ function findCsharp(rsp) {
   return null;
 }
 
-module.exports = { compile, crashMessage, mapLines, compileMessage, PREP, exists, PY, CPP_FLAGS, JAVA_FLAGS, WIN, EXE, C_FLAGS, SWIFT_FLAGS, JVM_COMPILE, KOTLIN_HOME, SCALA_HOME, kotlincArgs, scalacArgs, findCsharp };
+module.exports = { compile, crashMessage, mapLines, compileMessage, PREP, exists, PY, CPP_FLAGS, JAVA_FLAGS, JAVAC_JVM, WIN, EXE, C_FLAGS, SWIFT_FLAGS, JVM_COMPILE, KOTLIN_HOME, SCALA_HOME, kotlincArgs, scalacArgs, findCsharp };

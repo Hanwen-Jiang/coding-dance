@@ -40,7 +40,7 @@
   async function run(message) {
     let code = message.code;
     // 调试：先在原文上插入记录调用（行号对得上原文），TypeScript 再照常转成 JS
-    if (message.debug && instrument) code = instrument(typescript, code, language, message.mode);
+    if (message.debug && instrument) code = instrument(typescript, code, language, message.mode, message.watch);
     if (language === "typescript") {
       const result = typescript.transpileModule(code, { compilerOptions: { target: typescript.ScriptTarget.ES2022, module: typescript.ModuleKind.None }, reportDiagnostics: true });
       const diagnostics = (result.diagnostics || []).filter((d) => d.category === typescript.DiagnosticCategory.Error);
@@ -52,7 +52,7 @@
       const start = performance.now(); let result;
       try {
         if (language === "python") {
-          pyodide.globals.set("__practice_request_json", JSON.stringify({ code, mode: message.mode, signature: message.signature, test: message.cases[index], trace: !!message.debug }));
+          pyodide.globals.set("__practice_request_json", JSON.stringify({ code, mode: message.mode, signature: message.signature, test: message.cases[index], trace: !!message.debug, watch: Array.isArray(message.watch) ? message.watch : [] }));
           result = JSON.parse(pyodide.runPython("__practice_run(__practice_request_json)"));
         } else result = kernel.executeJavaScript(code, message.mode, message.signature, message.cases[index], !!message.debug);
       } catch (error) { result = { actual: null, stdout: "", error: String(error?.message || error) }; }

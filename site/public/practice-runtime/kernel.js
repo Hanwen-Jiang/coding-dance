@@ -74,7 +74,7 @@
   }
   function makeTracer(outLength) {
     const steps = [], stack = [];
-    let full = false, bytes = 0, lastId = 0;
+    let full = false, bytes = 0, lastId = 0, evaluatingWatch = false;
     const record = (step) => {
       steps.push(step);
       bytes += JSON.stringify(step).length;
@@ -96,13 +96,38 @@
       }
       return out;
     };
+    const evalWatches = (watchGetters) => {
+      if (!Array.isArray(watchGetters) || !watchGetters.length) return [];
+      const out = [];
+      evaluatingWatch = true;
+      try {
+        for (const [expr, get] of watchGetters) {
+          let value;
+          try { value = get(); } catch { continue; }
+          if (typeof value === "function") continue;
+          out.push([expr, show(value)]);
+        }
+      } finally {
+        evaluatingWatch = false;
+      }
+      return out;
+    };
+    const unpack = (snapResult) => {
+      if (snapResult && typeof snapResult === "object" && "vars" in snapResult && "watches" in snapResult) {
+        return snapResult;
+      }
+      return { vars: snapResult, watches: null };
+    };
     const where = (line) => { if (stack.length) stack[stack.length - 1][1] = line; return stack.length ? stack[stack.length - 1][0] : "<module>"; };
     const frames = () => stack.map(([n, l]) => [n, l]);
     const hooks = {
-      __snap: (getters) => getters,
+      __snap: (getters, watchGetters) => ({ vars: getters, watches: watchGetters }),
       __step(line, snap, id) {
+        if (evaluatingWatch) return;
         if (full) throw new StepLimit("step limit");
-        const fn = where(line), step = { line, event: "line", fn, stack: frames(), vars: vars(snap()), out: outLength() };
+        const fn = where(line), { vars: vGetters, watches: wGetters } = unpack(snap());
+        const w = evalWatches(wGetters);
+        const step = { line, event: "line", fn, stack: frames(), vars: vars(vGetters), out: outLength(), ...(w.length ? { watches: w } : {}) };
         // 同一行上紧挨着的两条不同语句（比如 if (…) return …），变量也没变：只算一步。同一条语句反复执行（循环）照常每次都记
         const last = steps[steps.length - 1];
         if (last && last.event === "line" && lastId !== id && JSON.stringify(last) === JSON.stringify(step)) { lastId = id; return; }
@@ -110,13 +135,18 @@
         record(step);
       },
       __ret(line, snap, value) {
-        if (!full) { const fn = where(line); record({ line, event: "return", fn, stack: frames(), vars: vars(snap()), out: outLength(), ret: show(value) }); }
+        if (evaluatingWatch) return value;
+        if (!full) {
+          const fn = where(line), { vars: vGetters, watches: wGetters } = unpack(snap());
+          const w = evalWatches(wGetters);
+          record({ line, event: "return", fn, stack: frames(), vars: vars(vGetters), out: outLength(), ...(w.length ? { watches: w } : {}), ret: show(value) });
+        }
         return value;
       },
-      __enter(name) { stack.push([name, 0]); },
-      __exit() { stack.pop(); },
+      __enter(name) { if (!evaluatingWatch) stack.push([name, 0]); },
+      __exit() { if (!evaluatingWatch) stack.pop(); },
       __exc(error) {
-        if (full || error instanceof StepLimit || !stack.length) return;
+        if (evaluatingWatch || full || error instanceof StepLimit || !stack.length) return;
         const [fn, line] = stack[stack.length - 1];
         if (steps.length && steps[steps.length - 1].event === "exception" && steps[steps.length - 1].exc === String(error?.message || error)) return; // 往外层传的同一个异常只记一次
         record({ line, event: "exception", fn, stack: frames(), vars: [], out: outLength(), exc: `${error?.name || "Error"}: ${error?.message || error}` });

@@ -223,6 +223,40 @@ def __practice_run(request_json):
     steps, trace_state = [], {"bytes": 0, "full": False}
     short = _practice_short_repr()
     builtin_names = set(namespace)  # 预先导入的名字，ACM 模式的模块级变量里不显示
+    watch_compiled = []
+    if tracing:
+        seen_watch = set()
+        for raw_expr in (request.get("watch") or []):
+            if not isinstance(raw_expr, str):
+                continue
+            expr = raw_expr.strip()
+            if not expr or expr in seen_watch:
+                continue
+            seen_watch.add(expr)
+            try:
+                watch_compiled.append((expr, compile(expr, "<watch>", "eval")))
+            except BaseException:
+                pass
+            if len(watch_compiled) >= 20:
+                break
+
+    def eval_watches(frame):
+        if not watch_compiled:
+            return []
+        out = []
+        _practice_sys.settrace(None)
+        try:
+            for expr, code_obj in watch_compiled:
+                try:
+                    val = eval(code_obj, frame.f_globals, frame.f_locals)
+                except BaseException:
+                    continue
+                if isinstance(val, (_practice_types.ModuleType, _practice_types.FunctionType, _practice_types.BuiltinFunctionType, type)):
+                    continue
+                out.append([expr, show(val)])
+        finally:
+            _practice_sys.settrace(tracer)
+        return out
 
     def show(value):
         try:
@@ -265,6 +299,9 @@ def __practice_run(request_json):
                 raise _PracticeStepLimit()
             return tracer
         step = {"line": frame.f_lineno, "event": event, "fn": frame.f_code.co_name, "stack": stack_of(frame), "vars": visible(frame), "out": stdout.tell()}
+        w_out = eval_watches(frame)
+        if w_out:
+            step["watches"] = w_out
         if event == "return":
             step["ret"] = show(arg)
         elif event == "exception":

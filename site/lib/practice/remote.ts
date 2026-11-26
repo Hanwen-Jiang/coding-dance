@@ -61,23 +61,30 @@ export const remoteLacks = (status: RemoteStatus | null | undefined, language: P
 };
 
 interface RemoteCase { index: number; actual: unknown; stdout: string; stderr?: string; error?: string; duration: number; trace?: PracticeTrace }
-interface RemoteReply { results?: RemoteCase[]; compileError?: string; compileMs?: number; runMs?: number; queueMs?: number; error?: string; code?: string; quota?: CloudQuotaInfo }
+interface RemoteReply { results?: RemoteCase[]; compileError?: string; compileMs?: number; runMs?: number; queueMs?: number; bootMs?: number; totalMs?: number; error?: string; code?: string; quota?: CloudQuotaInfo }
 
 export interface RemoteStatus { available: boolean; reason?: string; langs?: string[]; debugLangs?: string[]; features?: string[]; quota?: CloudQuotaInfo }
 
 /** 运行器在不在线（题目页打开练习区时问一次，缓存一分钟） */
 let statusCache: { at: number; value: Promise<RemoteStatus> } | null = null;
+let lastStatus: RemoteStatus | null = null;
 export function remoteStatus(): Promise<RemoteStatus> {
   if (statusCache && Date.now() - statusCache.at < 60000) return statusCache.value;
   const value = fetch("/api/run", { cache: "no-store" })
     .then((r) => r.json() as Promise<RemoteStatus>)
+    .then((s) => {
+      lastStatus = s;
+      return s;
+    })
     .catch(() => ({ available: false, reason: "连不上网站的接口" }));
   statusCache = { at: Date.now(), value };
   return value;
 }
 
 function patchCachedQuota(quota?: CloudQuotaInfo) {
-  if (!quota || !statusCache) return;
+  if (!quota) return;
+  if (lastStatus) lastStatus = { ...lastStatus, quota };
+  if (!statusCache) return;
   const prev = statusCache.value;
   statusCache = { at: statusCache.at, value: prev.then((s) => ({ ...s, quota })) };
 }
@@ -89,7 +96,8 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
   const unavailable = request.mode === "leetcode" ? request.problem.leetcodeUnavailable?.[request.language] : undefined;
   if (unavailable) throw new Error(unavailable);
   if (request.debug && !REMOTE_DEBUG_LANGUAGES.includes(request.language)) throw new Error("这门语言暂时不能调试（云端只有 Java、C++、Go 接了调试器），可以先运行，用打印看中间结果");
-  if (remoteLacks(await remoteStatus(), request.language)) throw new Error(`云端运行器还没装上这门语言（节点正在更新），暂时不能运行，${isRemote(request.language) ? "稍后再试" : "可以先换回浏览器运行"}`);
+  if (lastStatus && remoteLacks(lastStatus, request.language)) throw new Error(`云端运行器还没装上这门语言（节点正在更新），暂时不能运行，${isRemote(request.language) ? "稍后再试" : "可以先换回浏览器运行"}`);
+  if (!statusCache || Date.now() - statusCache.at >= 60000) void remoteStatus();
   const started = performance.now();
   options.onStatus?.(request.debug ? "正在云端调试：编译、在调试器里一步步记下来…" : isRemote(request.language) ? "正在云端编译运行…" : "正在云端运行…");
   const body = {

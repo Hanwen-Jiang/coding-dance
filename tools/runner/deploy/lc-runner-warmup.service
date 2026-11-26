@@ -1,0 +1,14 @@
+[Unit]
+Description=lc-hot100 远端运行器 Page Cache 启动预热
+After=lc-runner.service fc-manager.service
+Wants=lc-runner.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/lc-runner.env
+ExecStart=/usr/local/bin/lc-runner-warmup
+TimeoutStartSec=180
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target

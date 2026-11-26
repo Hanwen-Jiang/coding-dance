@@ -59,8 +59,8 @@ step("Go 标准库", () => {
   fs.rmSync(t, { recursive: true, force: true });
 });
 
-step("Java 调试器", () => {
-  sh("javac", ["-encoding", "UTF-8", "-d", path.join(PREP, "jdi"), path.join(__dirname, "trace", "JdiTrace.java")]);
+step("Java 调试器（JdiTrace + JdiDap）", () => {
+  sh("javac", ["-encoding", "UTF-8", "-d", path.join(PREP, "jdi"), path.join(__dirname, "trace", "JdiTrace.java"), path.join(__dirname, "trace", "JdiDap.java")]);
 });
 
 // —— 后加的九种语言 ——
@@ -80,6 +80,23 @@ function expectRun(cmd, args, opts) {
   const out = sh(cmd, args, opts).stdout;
   if (!out.includes("R:0:[[3],[9,20],[15,7]]")) throw new Error(`${cmd} 跑出来的结果不对：${out.slice(0, 500)}`);
 }
+
+// javac 跑在 JVM 上：编一个代表性题目，把加载过的编译器类存成 CDS 归档，减少 1 核沙箱里的冷启开销
+const JAVA_SAMPLE = "class Solution {\n    public List<List<Integer>> levelOrder(TreeNode root) {\n        List<List<Integer>> res = new ArrayList<>();\n        Queue<TreeNode> q = new ArrayDeque<>();\n        if (root != null) q.offer(root);\n        while (!q.isEmpty()) {\n            int n = q.size();\n            List<Integer> level = new ArrayList<>(n);\n            for (int i = 0; i < n; i++) {\n                TreeNode t = q.poll();\n                level.add(t.val);\n                if (t.left != null) q.offer(t.left);\n                if (t.right != null) q.offer(t.right);\n            }\n            res.add(level);\n        }\n        Map<Integer, Integer> m = new HashMap<>();\n        m.put(1, m.getOrDefault(1, 0) + 1);\n        return res;\n    }\n}\n";
+step("Java 编译器（javac）的 CDS 归档", () => {
+  const jsa = path.join(PREP, "java", "javac.jsa");
+  fs.mkdirSync(path.dirname(jsa), { recursive: true });
+  const s = sample("java", JAVA_SAMPLE);
+  const out = path.join(s.dir, "out");
+  fs.mkdirSync(out);
+  sh("javac", [...T.JAVAC_JVM, `-J-XX:ArchiveClassesAtExit=${jsa}`, "-encoding", "UTF-8", "-proc:none", "-nowarn", "-Xlint:none", "-g", "-d", out, s.prog.user], { cwd: s.dir });
+  if (fs.statSync(jsa).size <= 0) throw new Error("javac.jsa 生成失败（空文件）");
+  fs.rmSync(out, { recursive: true, force: true });
+  fs.mkdirSync(out);
+  sh("javac", [...T.JAVAC_JVM, `-J-XX:SharedArchiveFile=${jsa}`, "-encoding", "UTF-8", "-proc:none", "-nowarn", "-Xlint:none", "-g", "-d", out, s.prog.user], { cwd: s.dir });
+  expectRun("java", [...T.JAVA_FLAGS, "-cp", out, s.prog.main, "0", "t"], { cwd: s.dir });
+  fs.rmSync(s.dir, { recursive: true, force: true });
+});
 
 step("C# 编译器和引用程序集", () => {
   const dir = path.join(PREP, "csharp");

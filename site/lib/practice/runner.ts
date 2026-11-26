@@ -65,7 +65,7 @@ export async function runPractice(request: PracticeRunRequest, options: Practice
       else if (message.type === "status") options.onStatus?.(message.text);
       else if (message.type === "ready") {
         options.onStatus?.("正在运行测试…");
-        channel.port1.postMessage({ type: "run", code: request.code, mode: request.mode, signature: request.problem.signature, cases: request.cases.map(({ input, stdin }) => ({ input, stdin })), debug: !!request.debug });
+        channel.port1.postMessage({ type: "run", code: request.code, mode: request.mode, signature: request.problem.signature, cases: request.cases.map(({ input, stdin }) => ({ input, stdin })), debug: !!request.debug, ...(request.debug && request.watch?.length ? { watch: request.watch } : {}) });
         timeout(caseLimit, "运行超时，请检查是否存在死循环或复杂度过高");
       } else if (message.type === "case-start") {
         index = message.index;
