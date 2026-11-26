@@ -3,6 +3,12 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "workers_dev": true,
+  "routes": [
+    {
+      "pattern": "run-cf-poc.codingdance.cn",
+      "custom_domain": true
+    }
+  ],
   "vars": {
     "RUNNER_NODE_ID": "cf-poc",
     "CONTAINER_SLEEP_MS": "120000"
