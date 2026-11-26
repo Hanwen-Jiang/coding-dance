@@ -247,9 +247,12 @@ try {
     await page.waitForFunction(() => !document.querySelector('[role="menu"]'));
   };
   const typeAfter = async (head, keys) => {
-    await writeCode(head);
-    await page.getByRole("textbox", { name: "代码编辑器", exact: true }).click();
-    await page.keyboard.press("ControlOrMeta+End");
+    await page.getByRole("textbox", { name: "代码编辑器", exact: true }).evaluate((e, value) => {
+      const v = e.cmTile?.root?.view || e.cmView?.view;
+      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: value }, selection: { anchor: value.length } });
+      v.focus();
+    }, head);
+    await page.waitForTimeout(50);
     await page.keyboard.press("Enter");
     await page.keyboard.type(keys);
     await page.waitForTimeout(500);
