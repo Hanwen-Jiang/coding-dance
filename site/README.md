@@ -21,11 +21,11 @@
 
 登录并开通进度仓后，练习区会写进用户自己的进度仓（`lib/practice/record.ts` 按进度仓的规则生成文件，`/api/progress/practice` 写入）：Ctrl+S 和停下 60 秒后自动存草稿（`drafts/`）；全量测试跑完自动记一条尝试记录，全部通过再存成题解；「保存」菜单可以手动「存为尝试记录」（示例、精简、自定义用例没通过的那次也能记，写明是哪组用例；全部通过但不是全量的会先跑全量——「通过」只能来自全量测试）和「存为我的题解」（不管通没通过都存，没全量通过的写法名标「未通过」或「未验证」，在「我的历史题解」里看得出来；同一份代码不重复存）。没登录时草稿只存在浏览器里。
 
-练习数据在仓库根目录运行 `node tools/practice/build.cjs` 重新生成。修改题面格式、代码模板或用例后，需要重新构建网站。开发验证时，先启动本地预览，再运行 `node tools/practice-ui/test.mjs`；浏览器回归默认使用本机 Chrome，可通过 `CHROME_PATH` 和 `PRACTICE_BASE_URL` 指定其他浏览器路径与预览地址。
+练习数据在仓库根目录运行 `go run ./cmd/cd-build build --root . [--bundle site/public/_r2]` 并发生成（由声明式契约 `contracts/practice-meta.json`、spec、判题用例和题面生成；派生 JSON 自 Phase 3 起不再提交 Git）。开发验证时，先启动本地预览，再运行 `node tools/practice-ui/test.mjs`；浏览器回归默认使用本机 Chrome，可通过 `CHROME_PATH` 和 `PRACTICE_BASE_URL` 指定其他浏览器路径与预览地址。
 
 ## 数据从哪来
 
-网站本身是静态页面。原题、提示和用户进度等数据在运行时由 `functions/`（Cloudflare Pages Functions）通过 GitHub API 读取；练习模板、ACM 题面和练习测试用例则随网站构建发布：
+网站本身是静态页面。原题、用户进度等数据在运行时由 `functions/`（Cloudflare Pages Functions）经 GitHub / `cd-api` 读取；派生题库（`illustrations/data` 与 `practice/data`）则由 `cd-build` 打包为内容寻址清单并按三层顺序读取（`R2_ASSETS_BASE_URL` → Pages 静态资产 `/_r2/v1/manifest.json` → GitHub 仓库回退）：
 
 | 网站上的内容 | 仓库里的来源 |
 | --- | --- |
@@ -33,9 +33,9 @@
 | 每道题的状态 | 登录用户自己的进度仓里的 `progress.json` |
 | 重要程度（Hot 20 / P0 / P1 / P2 / P3） | `studyplan/优先级清单.md` |
 | 原题 | `problems/<编号>.<题名>.md` 的「题目描述」一节，图片在 `problems/images/` |
-| 练习模板、ACM 题面、练习测试用例（`/api/practice/<题号>`） | 资源仓的 `tools/practice/data/<四位编号>.json`，由 `node tools/practice/build.cjs` 从 spec 和判题用例生成；和其他题目资源一样运行时读，push 后一分钟内生效 |
-| 分层提示、简洁写法、标准题解（六种语言）、注意点、动画演示（有几种解法就有几个演示，可以切换；每一步高亮对应的代码行） | `tools/illustrations/data/<编号>.json`（由 `tools/illustrations/build.js` 从 spec 和 `code/` 导出） |
-| 基础专题的目录和内容（`/api/topics`、`/api/topic/<slug>`；题目页的「相关基础」按专题的 `related` 反查） | `tools/illustrations/data/topics/index.json`、`data/topics/<slug>.json`（由 `build.js` 从 `tools/illustrations/topics/` 和 `code/topics/` 导出）。`/learn/<slug>/` 的页面外壳是静态导出的，slug 列表在 `lib/topic-slugs.ts`：加专题要改它并重新部署，只改内容不用 |
+| 练习模板、ACM 题面、练习测试用例（`/api/practice/<题号>`） | 由 `cd-build build` 从声明式契约 `contracts/practice-meta.json`、spec 和题面并发生成，打包至内容寻址 R2 / `/_r2/` 资产目录 |
+| 分层提示、简洁写法、标准题解（六种语言）、注意点、动画演示（有几种解法就有几个演示，可以切换；每一步高亮对应的代码行） | 由 `cd-build build` 从 `tools/illustrations/specs/` 和 `code/` 并发导出至内容寻址 R2 / `/_r2/` 资产目录 |
+| 基础专题的目录和内容（`/api/topics`、`/api/topic/<slug>`；题目页的「相关基础」按专题的 `related` 反查） | 由 `cd-build build` 从 `tools/illustrations/topics/` 和 `code/topics/` 并发导出 `index.json` 与 `<slug>.json` 至内容寻址 R2 / `/_r2/`。`/learn/<slug>/` 的页面外壳是静态导出的，slug 列表在 `lib/topic-slugs.ts`：加专题要改它并重新部署 |
 | 用户的常用语言（题解和演示里的代码按它显示） | 登录用户自己的进度仓里的 `settings.json`；没登录时存在浏览器里 |
 | 我的历史题解 | 登录用户自己的进度仓里的 `solutions/<语言>/<编号>.*`（Java 文件只取 submit region 里的代码） |
 | 尝试记录（每次提交的原样代码、结果和分析，按时间排） | 登录用户自己的进度仓里的 `attempts/<编号>.<题名>/<日期>.<序号>.<结果>.md` |

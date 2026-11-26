@@ -2,7 +2,7 @@ name = "lc-hot100"
 pages_build_output_dir = "out"
 compatibility_date = "2026-10-01"
 
-# 网站的数据就是这个仓库：Pages Functions 在运行时通过 GitHub API 读取。
+# 网站的数据优先经三级内容寻址清单读取（R2_ASSETS_BASE_URL -> Pages 静态 ASSETS /_r2/v1/... -> GitHub API 回退）。
 # 私有仓库需要令牌：wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 # 令牌只存在 Cloudflare 的加密环境变量里，不要写进这个文件或仓库里的任何地方。
 # 登录用的 GitHub App：GITHUB_APP_CLIENT_ID、GITHUB_APP_CLIENT_SECRET，会话加密密钥 SESSION_SECRET，
@@ -10,6 +10,9 @@ compatibility_date = "2026-10-01"
 [vars]
 GITHUB_REPO = "Hanwen-Jiang/leetcode"
 GITHUB_BRANCH = "main"
+# 可选：独立的 R2 公共 CDN 根路径（如 "https://assets.codingdance.cn/r2"，下挂 v1/manifest.json）。
+# 未设置时自动读取随站点一起构建发布的 Pages 静态资产 `/_r2/v1/manifest.json`，再无则回退 GitHub 仓库。
+# R2_ASSETS_BASE_URL = "https://assets.codingdance.cn/r2"
 # 0 进度的进度仓模板，用户用它在自己账号下建名为 PROGRESS_REPO 的进度仓
 TEMPLATE_REPO = "Hanwen-Jiang/hot100-progress-template"
 PROGRESS_REPO = "hot100-progress"

@@ -32,8 +32,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - name: 编译静态 cd-runner 二进制
-        run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-runner ./cmd/cd-runner
+      - name: 编译静态 cd-runner 与 cd-build 二进制
+        run: |
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-runner ./cmd/cd-runner
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-build ./cmd/cd-build
       - name: 腾出磁盘空间（镜像好几 GB，还要再转成一份 ext4 根文件系统）
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium
@@ -83,6 +85,7 @@ jobs:
           sudo install -m 0644 -o "$(id -u)" /var/lib/agentruntime/fc/images/vmlinux /var/lib/agentruntime/fc/images/vmlinux.key fc-kernel/
       - name: 经 cd-runner 在真 Firecracker microVM 里跑全套沙箱与 WebSocket DAP 测试
         run: |
+          /tmp/cd-build build --root . --quick
           token="$(sudo sed -n 's/.*"sandbox\/fc-manager-token":"\([^"]*\)".*/\1/p' /etc/agentruntime/fc-manager-secrets.json)"
           echo "::add-mask::$token"
           CD_RUNNER_BIN=/tmp/cd-runner RUNNER_TEST_FC_URL=http://127.0.0.1:8097 RUNNER_TEST_FC_TOKEN="$token" node tools/runner/test/sandbox.test.mjs

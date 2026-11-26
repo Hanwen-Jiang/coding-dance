@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/Hanwen-Jiang/coding-dance/internal/builder"
@@ -90,6 +91,72 @@ func main() {
 			fmt.Printf("✓ R2 增量同步完成：新上传 %d 个对象，跳过已存在 %d 个对象\n", sum.Uploaded, sum.Skipped)
 		}
 
+	case "build":
+		fs := flag.NewFlagSet("build", flag.ExitOnError)
+		root := fs.String("root", ".", "repository root")
+		workers := fs.Int("workers", runtime.NumCPU(), "max concurrent workers")
+		strict := fs.Bool("strict", false, "strict illustration/demo verification")
+		quick := fs.Bool("quick", false, "quick mode: skip 20x random demo validation")
+		bundle := fs.String("bundle", "", "optional R2 bundle output directory (e.g. site/public/_r2)")
+		_ = fs.Parse(os.Args[2:])
+
+		err := builder.BuildWorkspace(ctx, *root, builder.BuildOptions{
+			Workers:   *workers,
+			Strict:    *strict,
+			Quick:     *quick,
+			BundleOut: *bundle,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "✗ 构建失败: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("✓ cd-build build 完成（耗时 %s）\n", time.Since(t0).Round(time.Millisecond))
+
+	case "judge":
+		fs := flag.NewFlagSet("judge", flag.ExitOnError)
+		root := fs.String("root", ".", "repository root")
+		workers := fs.Int("workers", runtime.NumCPU(), "max concurrent judge workers")
+		langCSV := fs.String("lang", "", "comma-separated languages (default: all 6)")
+		require := fs.Bool("require", false, "fail if a selected language runtime is missing")
+		_ = fs.Parse(os.Args[2:])
+
+		var langs []string
+		if strings.TrimSpace(*langCSV) != "" {
+			for _, part := range strings.Split(*langCSV, ",") {
+				if p := strings.TrimSpace(part); p != "" {
+					langs = append(langs, p)
+				}
+			}
+		}
+		err := builder.JudgeWorkspace(ctx, *root, builder.JudgeOptions{
+			Langs:   langs,
+			Require: *require,
+			Targets: fs.Args(),
+			Workers: *workers,
+		})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "✗ 判题失败: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("✓ cd-build judge 通过（耗时 %s）\n", time.Since(t0).Round(time.Millisecond))
+
+	case "dump-official-examples":
+		fs := flag.NewFlagSet("dump-official-examples", flag.ExitOnError)
+		root := fs.String("root", ".", "repository root")
+		_ = fs.Parse(os.Args[2:])
+
+		out, err := builder.DumpOfficialExamples(*root)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "✗ 解析官方示例失败: %v\n", err)
+			os.Exit(1)
+		}
+		b, err := builder.MarshalJSONNoEscape(out)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "✗ 序列化失败: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Println(string(b))
+
 	default:
 		usage()
 		os.Exit(1)
@@ -97,5 +164,5 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "用法: cd-build <verify | export-contracts | bundle> [参数]")
+	fmt.Fprintln(os.Stderr, "用法: cd-build <build | judge | verify | export-contracts | bundle | dump-official-examples> [参数]")
 }

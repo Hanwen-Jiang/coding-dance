@@ -114,16 +114,17 @@ coding-dance/
 
 ---
 
-### Phase 3：声明式题库契约与 Go 并发构建器 `cd-build`
+### Phase 3：声明式题库契约与 Go 并发构建器 `cd-build`（已完成）
 
-**核心目标**：用 `Go + errgroup` 替代串行混编脚本链，秒级完成全量标记核对、判题用例校验与内容寻址 R2 构建物生成，逐步停止向 Git 提交大批量派生 JSON。
+**核心目标**：用纯 Go 并发工具链彻底替代串行混编脚本链（`tools/practice/build.cjs`、`official-examples.py`、`descriptions.cjs`、`boundaries.cjs`、`tools/illustrations/judge/run.js`），秒级完成全量标记核对、六语言判题、纯 Go 100 题练习数据生成与内容寻址 R2 构建物打包，并从 Git 彻底清理 375 份派生 JSON 污染。
 
-1. **声明式题库契约（`contracts/schema/problem.schema.json`）**
-   - 将题目元数据（题号、标题、难度、专题、函数签名 `sig`、分层提示 `hints`、易错点 `points`、预设输入 `presets`、边界输入 `boundaries`、各语言起始模板引用）定义为纯声明式 JSON 契约，多语言标准题解保持独立源码文件（带 `#@tag` / `//@tag` 标记）。
+1. **声明式题库契约（`contracts/practice-meta.json` + `contracts/schema/problem.schema.json`）**
+   - 将题面叙述（`descriptions`）与手写边界用例（`boundaries`）沉淀为声明式 JSON 契约 `contracts/practice-meta.json`，与题号、标题、难度、专题、函数签名 `sig`、分层提示 `hints`、易错点 `points`、预设输入 `presets` 一并由 `cd-build export-contracts` 并发导出。
 2. **`cd-build` 并发流水线（基于 `internal/conc.Group`）**
-   - `verify`：并发扫描全部 100 道热题与 22 个基础专题，提取 `#@tag` / `//@tag` 行号映射表，严格校验多语言步骤标记集合与 Python 标准代码 100% 一致，校验官方示例、预设与判题用例完整性及 ACM 编解码往返一致性。
-   - `judge`：按 CPU 核心数并发调度多语言工具链（`python3`、`go`、`node`、`tsc`、`javac`/`java`、`g++`）编译运行标准题解并与基准用例对拍。
-   - `bundle`：生成确定性、去空白规范化的内容寻址产物包（`dist/r2/v1/problems/<id>.<sha256[:12]>.json`、`dist/r2/v1/practice/<id>.<sha256[:12]>.json`、`dist/r2/v1/topics/<slug>.<sha256[:12]>.json`）及顶层 `dist/r2/v1/manifest.json`，支持通过 S3/R2 API 一键增量上传（仅上传远端不存在的 SHA-256 对象）。
+   - `build`：多路分片并发运行图解导出（`--no-topic-index`）并由 Go 统一汇总 `topics/index.json`（校验 `site/lib/topic-slugs.ts`），随后并发执行纯 Go 100 题练习生成器（`internal/builder/practice_gen.go`、`starters.go`、`examples.go`、`acm_codec.go`：生成 15 语言起始模板、248 组官方示例、1598 组测试用例及两代草稿迁移哈希），可选 `--bundle site/public/_r2` 一站生成内容寻址资源包。
+   - `verify`：并发扫描全部 100 道热题与 22 个基础专题，提取 `#@tag` / `//@tag` 行号映射表，严格校验多语言步骤标记集合与 Python 标准代码 100% 一致，校验官方示例、预设与判题用例完整性。
+   - `judge`：按 CPU 核心数并发调度多语言工具链（`python3`、`go`、`node`、`tsc --strict`、`javac`/`java`、`g++`）编译运行全部题解并与基准用例对拍。
+   - `bundle`：生成确定性内容寻址产物包（`v1/problems/<id>.<sha256[:12]>.json`、`v1/practice/<id>.<sha256[:12]>.json`、`v1/topics/<slug>.<sha256[:12]>.json`、`v1/manifest.json`），支持 SigV4 R2 增量同步，边缘路由 `site/functions/_lib/r2.ts` 按 `R2_ASSETS_BASE_URL` → `env.ASSETS` (`/_r2/...`) → GitHub Raw 三级顺序无感切换，Git 仓库已全面忽略并停止跟踪 `tools/illustrations/{data,cases}` 与 `tools/practice/data`。
 
 ---
 

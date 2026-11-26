@@ -5,6 +5,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -46,12 +47,26 @@ func TestVerifyRealWorkspaceBundleAndR2Upload(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	_, err1 := os.Stat(filepath.Join(repoRoot, "tools", "illustrations", "data", "0001.json"))
+	_, err2 := os.Stat(filepath.Join(repoRoot, "tools", "practice", "data", "0001.json"))
+	if err1 != nil || err2 != nil {
+		if err := BuildWorkspace(context.Background(), repoRoot, BuildOptions{Workers: 8, Quick: true}); err != nil {
+			t.Fatalf("BuildWorkspace failed: %v", err)
+		}
+	}
 	rep, err := VerifyWorkspace(context.Background(), repoRoot, 8)
 	if err != nil {
 		t.Fatalf("VerifyWorkspace on real repo failed: %v", err)
 	}
 	if rep.ProblemsChecked != 100 || rep.TopicsChecked != 22 || rep.CodeFilesParsed < 500 {
 		t.Fatalf("unexpected workspace verification counts: %+v", rep)
+	}
+	if err := JudgeWorkspace(context.Background(), repoRoot, JudgeOptions{
+		Langs:   []string{"python", "go", "javascript"},
+		Targets: []string{"1"},
+		Workers: 4,
+	}); err != nil {
+		t.Fatalf("JudgeWorkspace(1, python/go/js) failed: %v", err)
 	}
 
 	contractsDir := t.TempDir()

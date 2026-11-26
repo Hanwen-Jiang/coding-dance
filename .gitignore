@@ -23,3 +23,7 @@ __pycache__/
 /cd-api
 /cd-build
 /contracts/generated/
+/tools/illustrations/data/
+/tools/illustrations/cases/
+/tools/practice/data/
+/site/public/_r2/

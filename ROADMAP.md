@@ -214,6 +214,11 @@
 
 ## 变更记录
 
+- 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 3（`cd-build` + declarative contracts + 3 级 R2/ASSETS 清单读取 + 停止 375 份派生 JSON Git 污染）：
+  - 新增声明式题库契约 `contracts/practice-meta.json`（汇总 100 道题 ACM 题面叙述与边界用例）与 `contracts/schema/problem.schema.json` 字段对齐；
+  - 将全部构建与六语言并发判题下沉至 Go CLI `cmd/cd-build`（`internal/builder/{build,practice_gen,starters,judge,examples,acm_codec,sig,verify,r2}.go`：`build` 分片并发建图解 + 统一 `topics/index.json` + 纯 Go 100 题练习生成 + `--bundle site/public/_r2`；`judge` 多核并发跑 `python/go/javascript/typescript(tsc --strict)/java/cpp`；`verify` / `export-contracts` / `dump-official-examples`）；
+  - 彻底退役 `tools/practice/{build.cjs,official-examples.py,descriptions.cjs,boundaries.cjs}` 与 `tools/illustrations/judge/run.js`，并通过 `git rm -rf` + `.gitignore` 从 Git 移除全部 375 份派生 JSON；
+  - 网站边缘层新增 `site/functions/_lib/r2.ts` 与端到端测试 `r2.test.ts`，支持 `R2_ASSETS_BASE_URL` → Pages 静态 `env.ASSETS` (`/_r2/v1/...`) → GitHub Raw 三级回退。
 - 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 2：
   - 将 `cd-api`（`cmd/cd-api` + `internal/api` + `internal/progress`）接入零 CGO PostgreSQL 热存储（`pgx/v5/stdlib` `PostgresStore` + 事务发件箱 `git_sync_outbox`，保留 `MemoryStore` 内存兜底）、实现 GitHub App OAuth 登录/授权/回调/退出、Valkey/KV `fam:<family>` 单次使用 refresh token 去重、`Hydrator` 冷启动异步并发回填（`conc.WithContext`），并补齐 `/api/session`、`/api/auth/*`、`/api/progress*`、`/api/settings`、`/api/solutions/{id}`、`/api/sync/{repo,blobs,commit}`、`/api/run`、`/api/dap`、`/api/companion/*` 与 `/api/admin/runner` 全量 BFF 接口；
   - 前端新增 `site/lib/api-base.ts` 支持同源 Edge BFF 代理或 `NEXT_PUBLIC_API_BASE_URL` 直连，Cloudflare Pages 边缘层通过 `site/functions/_lib/bff.ts` 与 `_middleware.ts`（`CD_API_UPSTREAM`）统一转发并彻底退役约 1,500 行直连 GitHub REST OLTP Pages Functions 与三域名 `sso.ts` 重定向链；

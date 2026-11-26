@@ -303,19 +303,39 @@ func marksEqual(a, b map[string][]int) bool {
 
 // DeclarativeProblemContract matches contracts/schema/problem.schema.json.
 type DeclarativeProblemContract struct {
-	ID          int                   `json:"id"`
-	Name        string                `json:"name"`
-	Level       string                `json:"level"`
-	Topic       string                `json:"topic"`
-	H1          string                `json:"h1"`
-	Lede        string                `json:"lede"`
-	Handwritten bool                  `json:"handwritten,omitempty"`
-	Sig         json.RawMessage       `json:"sig"`
-	Hints       json.RawMessage       `json:"hints"`
-	Points      json.RawMessage       `json:"points"`
-	Presets     json.RawMessage       `json:"presets,omitempty"`
-	FixedCases  int                   `json:"fixedCases"`
-	CodeEntries []ContractCodeEntry   `json:"codeEntries"`
+	ID             int                   `json:"id"`
+	Name           string                `json:"name"`
+	Level          string                `json:"level"`
+	Topic          string                `json:"topic"`
+	H1             string                `json:"h1"`
+	Lede           string                `json:"lede"`
+	Handwritten    bool                  `json:"handwritten,omitempty"`
+	Sig            json.RawMessage       `json:"sig"`
+	Hints          json.RawMessage       `json:"hints"`
+	Points         json.RawMessage       `json:"points"`
+	Presets        json.RawMessage       `json:"presets,omitempty"`
+	FixedCases     int                   `json:"fixedCases"`
+	ACMDescription string                `json:"acmDescription,omitempty"`
+	Boundaries     []json.RawMessage     `json:"boundaries,omitempty"`
+	CodeEntries    []ContractCodeEntry   `json:"codeEntries"`
+}
+
+type practiceMetaContract struct {
+	Version      int                        `json:"version"`
+	Descriptions map[string]string          `json:"descriptions"`
+	Boundaries   map[string][]json.RawMessage `json:"boundaries"`
+}
+
+func loadPracticeMeta(repoRoot string) (practiceMetaContract, error) {
+	var meta practiceMetaContract
+	raw, err := os.ReadFile(filepath.Join(repoRoot, "contracts", "practice-meta.json"))
+	if err != nil {
+		return meta, fmt.Errorf("read contracts/practice-meta.json: %w", err)
+	}
+	if err := json.Unmarshal(raw, &meta); err != nil {
+		return meta, fmt.Errorf("parse contracts/practice-meta.json: %w", err)
+	}
+	return meta, nil
 }
 
 type ContractCodeEntry struct {
@@ -349,6 +369,11 @@ func ExportContracts(ctx context.Context, repoRoot, outDir string, workers int) 
 		if !e.IsDir() && len(e.Name()) == 9 && strings.HasSuffix(e.Name(), ".json") {
 			files = append(files, e.Name())
 		}
+	}
+
+	var meta practiceMetaContract
+	if rawMeta, err := os.ReadFile(filepath.Join(repoRoot, "contracts", "practice-meta.json")); err == nil {
+		_ = json.Unmarshal(rawMeta, &meta)
 	}
 
 	g, gCtx := conc.WithContext(ctx)
@@ -409,20 +434,23 @@ func ExportContracts(ctx context.Context, repoRoot, outDir string, workers int) 
 			if ill.Demo != nil {
 				presets = ill.Demo.Presets
 			}
+			idStr := strconv.Itoa(ill.ID)
 			contract := DeclarativeProblemContract{
-				ID:          ill.ID,
-				Name:        ill.Name,
-				Level:       ill.Level,
-				Topic:       ill.Topic,
-				H1:          ill.H1,
-				Lede:        ill.Lede,
-				Handwritten: ill.Handwritten,
-				Sig:         cf.Sig,
-				Hints:       ill.Hints,
-				Points:      ill.Points,
-				Presets:     presets,
-				FixedCases:  cf.Fixed,
-				CodeEntries: cEntries,
+				ID:             ill.ID,
+				Name:           ill.Name,
+				Level:          ill.Level,
+				Topic:          ill.Topic,
+				H1:             ill.H1,
+				Lede:           ill.Lede,
+				Handwritten:    ill.Handwritten,
+				Sig:            cf.Sig,
+				Hints:          ill.Hints,
+				Points:         ill.Points,
+				Presets:        presets,
+				FixedCases:     cf.Fixed,
+				ACMDescription: meta.Descriptions[idStr],
+				Boundaries:     meta.Boundaries[idStr],
+				CodeEntries:    cEntries,
 			}
 			encoded, err := json.MarshalIndent(contract, "", "  ")
 			if err != nil {
