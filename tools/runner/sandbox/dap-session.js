@@ -239,96 +239,116 @@ async function runStdioMode() {
   }
 }
 
-// Firecracker microVM daemon mode: compiles & keeps DAP adapter running behind a local Unix socket in stateDir.
+// Firecracker microVM daemon mode: compiles once & keeps DAP adapter running behind a local Unix socket in stateDir.
 async function runDaemonSetup(stateDir) {
   fs.mkdirSync(stateDir, { recursive: true });
   const raw = fs.readFileSync(0, "utf8");
-  const spec = JSON.parse(raw);
-  const workDir = path.join(stateDir, "work");
-  fs.mkdirSync(workDir, { recursive: true });
-
-  // Compile check upfront so compile errors return synchronously
-  const mode = spec.mode === "leetcode" ? "leetcode" : "acm";
-  const cases = Array.isArray(spec.cases) && spec.cases.length ? [spec.cases[0]] : [mode === "acm" ? { stdin: String(spec.stdin || "") } : { input: [] }];
-  const checkProg = mode === "acm" ? acmProgram({ ...spec, mode, cases }) : leetcodeProgram({ ...spec, mode, cases });
-  const checkBuilt = await compile(spec.lang, checkProg, workDir, { debug: true, acm: mode === "acm" });
-  if (!checkBuilt.ok) {
-    process.stdout.write(JSON.stringify({ ok: false, compileError: checkBuilt.error }));
-    return;
-  }
   fs.writeFileSync(path.join(stateDir, "spec.json"), raw);
+  const errPath = path.join(stateDir, "worker.err");
+  const errFd = fs.openSync(errPath, "a");
+  let bgExited = false;
+  let bgCode = null;
   const bg = cp.spawn(process.execPath, [__filename, "daemon-worker", stateDir], {
     detached: true,
-    stdio: "ignore",
+    stdio: ["ignore", "ignore", errFd],
   });
+  fs.closeSync(errFd);
+  bg.once("exit", (code) => { bgExited = true; bgCode = code; });
   bg.unref();
-  const sockPath = path.join(stateDir, "dap.sock");
-  for (let i = 0; i < 100; i++) {
-    if (exists(sockPath)) {
-      process.stdout.write(JSON.stringify({ ok: true, lang: spec.lang, mode, userFile: checkProg.user, lines: checkProg.n }));
+
+  const statusPath = path.join(stateDir, "status.json");
+  for (let i = 0; i < 1000; i++) {
+    if (exists(statusPath)) {
+      process.stdout.write(fs.readFileSync(statusPath, "utf8"));
       return;
     }
-    await new Promise((r) => setTimeout(r, 30));
+    if (bgExited && i >= 2) break;
+    await new Promise((r) => setTimeout(r, 50));
   }
-  process.stdout.write(JSON.stringify({ ok: false, error: "microVM 内 DAP 守护进程启动超时" }));
+  let tailErr = "";
+  try { tailErr = fs.readFileSync(errPath, "utf8").trim().split(/\r?\n/).slice(-4).join(" | "); } catch {}
+  process.stdout.write(JSON.stringify({ ok: false, error: `microVM 内 DAP 守护进程启动失败${bgExited ? `（退出码 ${bgCode}）` : "（超时）"}` + (tailErr ? "：" + tailErr : "") }));
 }
 
 async function runDaemonWorker(stateDir) {
-  const spec = JSON.parse(fs.readFileSync(path.join(stateDir, "spec.json"), "utf8"));
-  const workDir = path.join(stateDir, "work2");
-  fs.mkdirSync(workDir, { recursive: true });
-  const started = await prepareAndSpawnAdapter(spec, workDir);
-  if (!started.ok) process.exit(1);
-  const { inStream, outStream, kill, onClose, meta } = started;
+  const statusPath = path.join(stateDir, "status.json");
+  const writeStatus = (obj) => {
+    const tmp = statusPath + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(obj));
+    fs.renameSync(tmp, statusPath);
+  };
+  try {
+    const spec = JSON.parse(fs.readFileSync(path.join(stateDir, "spec.json"), "utf8"));
+    const workDir = path.join(stateDir, "work");
+    fs.mkdirSync(workDir, { recursive: true });
+    const started = await prepareAndSpawnAdapter(spec, workDir);
+    if (!started.ok) {
+      writeStatus({ ok: false, compileError: started.compileError });
+      process.exit(0);
+    }
+    const { inStream, outStream, kill, onClose, meta } = started;
 
-  const outQueue = [];
-  let waiter = null;
-  let exited = false;
+    const outQueue = [];
+    let waiter = null;
+    let exited = false;
 
-  const notify = () => { if (waiter) { const w = waiter; waiter = null; w(); } };
-  const fromAdapter = new DapFrameParser((frame) => {
-    outQueue.push(rewriteAdapterToClient(frame, meta));
-    notify();
-  });
-  outStream.on("data", (c) => fromAdapter.push(c));
-  onClose(() => { exited = true; notify(); setTimeout(() => process.exit(0), 2000); });
-
-  const sockPath = path.join(stateDir, "dap.sock");
-  const srv = net.createServer((conn) => {
-    let reqBuf = "";
-    conn.on("data", (c) => { reqBuf += c.toString("utf8"); });
-    conn.on("end", async () => {
-      try {
-        const req = JSON.parse(reqBuf || "{}");
-        for (const f of req.frames || []) {
-          inStream.write(frameBuf(rewriteClientToAdapter(f, meta)));
-        }
-        const waitMs = Math.min(5000, Math.max(0, Number(req.waitMs) || 0));
-        if (!outQueue.length && !exited && waitMs > 0) {
-          await new Promise((resolve) => {
-            const t = setTimeout(() => { if (waiter === done) waiter = null; resolve(); }, waitMs);
-            const done = () => { clearTimeout(t); resolve(); };
-            waiter = done;
-          });
-        }
-        const batch = outQueue.splice(0, 64);
-        conn.end(JSON.stringify({ ok: true, frames: batch, exited }));
-        if (req.close) { kill(); process.exit(0); }
-      } catch (e) {
-        conn.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
-      }
+    const notify = () => { if (waiter) { const w = waiter; waiter = null; w(); } };
+    const fromAdapter = new DapFrameParser((frame) => {
+      outQueue.push(rewriteAdapterToClient(frame, meta));
+      notify();
     });
-  });
-  srv.listen(sockPath);
+    outStream.on("data", (c) => fromAdapter.push(c));
+    onClose(() => { exited = true; notify(); setTimeout(() => process.exit(0), 2000); });
+
+    const sockPath = path.join(stateDir, "dap.sock");
+    const srv = net.createServer({ allowHalfOpen: true }, (conn) => {
+      let reqBuf = "";
+      conn.on("data", (c) => { reqBuf += c.toString("utf8"); });
+      conn.on("end", async () => {
+        try {
+          const req = JSON.parse(reqBuf || "{}");
+          for (const f of req.frames || []) {
+            inStream.write(frameBuf(rewriteClientToAdapter(f, meta)));
+          }
+          const rawWait = Number(req.waitMs);
+          const waitMs = Number.isFinite(rawWait) ? Math.min(5000, Math.max(0, rawWait)) : 0;
+          if (!outQueue.length && !exited && waitMs > 0) {
+            await new Promise((resolve) => {
+              const t = setTimeout(() => { if (waiter === done) waiter = null; resolve(); }, waitMs);
+              const done = () => { clearTimeout(t); resolve(); };
+              waiter = done;
+            });
+          }
+          const batch = outQueue.splice(0, 64);
+          conn.end(JSON.stringify({ ok: true, frames: batch, exited }));
+          if (req.close) { kill(); srv.close(); process.exit(0); }
+        } catch (e) {
+          conn.end(JSON.stringify({ ok: false, error: String(e.message || e) }));
+        }
+      });
+    });
+    srv.once("error", (err) => {
+      try { writeStatus({ ok: false, error: String((err && err.message) || err) }); } catch {}
+      process.exit(1);
+    });
+    srv.listen(sockPath, () => {
+      writeStatus({ ok: true, lang: meta.lang, mode: meta.mode, userFile: meta.userFile, lines: meta.n });
+    });
+  } catch (e) {
+    try { writeStatus({ ok: false, error: String((e && e.message) || e) }); } catch {}
+    process.exit(1);
+  }
 }
 
 async function runPoll(stateDir, waitMs) {
   const sockPath = path.join(stateDir, "dap.sock");
   const inRaw = fs.readFileSync(0, "utf8");
   const inReq = inRaw ? JSON.parse(inRaw) : {};
+  const parsedWait = waitMs !== undefined && waitMs !== "" ? Number(waitMs) : 1000;
+  const effWait = Number.isFinite(parsedWait) ? parsedWait : 1000;
   const reply = await new Promise((resolve) => {
     const c = net.connect(sockPath, () => {
-      c.end(JSON.stringify({ frames: inReq.frames || [], waitMs: Number(waitMs) || 1000, close: !!inReq.close }));
+      c.end(JSON.stringify({ frames: inReq.frames || [], waitMs: effWait, close: !!inReq.close }));
     });
     let out = "";
     c.on("data", (b) => { out += b.toString("utf8"); });

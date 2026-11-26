@@ -528,3 +528,214 @@ func TestLiveJavaLeetCodeDAPBreakpointVarsAndStep(t *testing.T) {
 	readUntil(func(m map[string]any) bool { return m["type"] == "event" && m["event"] == "terminated" })
 	_ = conn.WriteJSON(map[string]any{"seq": 11, "type": "request", "command": "disconnect"})
 }
+
+func TestLiveJavaDAPViaDaemonAndPollProtocol(t *testing.T) {
+	if _, err := exec.LookPath("javac"); err != nil {
+		t.Skip("javac not installed locally")
+	}
+	if _, err := exec.LookPath("node"); err != nil {
+		t.Skip("node not installed locally")
+	}
+
+	dapScript := resolveLocalSandboxFile("dap-session.js")
+	// Keep Unix domain socket path well below macOS 104-byte SUN_LEN limit.
+	workspaceRoot, err := os.MkdirTemp("", "fc-dap-*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(workspaceRoot) })
+	workDir := filepath.Join(workspaceRoot, "work")
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	fcToken := strings.Repeat("d", 40)
+	var mu sync.Mutex
+	envs := make(map[string]struct{})
+	mapStateDir := func(guestDir string) string {
+		clean := filepath.Clean(guestDir)
+		rel := strings.TrimPrefix(clean, "/workspace/")
+		if rel == clean {
+			rel = filepath.Base(clean)
+		}
+		return filepath.Join(workspaceRoot, rel)
+	}
+
+	fakeFC := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" {
+			writeJSON(w, http.StatusOK, map[string]any{"ok": true}, nil)
+			return
+		}
+		if r.Header.Get("Authorization") != "Bearer "+fcToken {
+			writeJSON(w, http.StatusUnauthorized, map[string]any{"code": "unauthenticated"}, nil)
+			return
+		}
+		if r.Method == http.MethodPost && r.URL.Path == "/v1/envs" {
+			id := "env-" + randomHex(4)
+			mu.Lock()
+			envs[id] = struct{}{}
+			mu.Unlock()
+			writeJSON(w, http.StatusCreated, map[string]any{"env_id": id, "runtime": "lc-runner"}, nil)
+			return
+		}
+		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		if len(parts) >= 3 && parts[0] == "v1" && parts[1] == "envs" {
+			id := parts[2]
+			if r.Method == http.MethodDelete && len(parts) == 3 {
+				mu.Lock()
+				delete(envs, id)
+				mu.Unlock()
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/agent/v1/exec") {
+				var req struct {
+					Argv      []string `json:"argv"`
+					Stdin     string   `json:"stdin"`
+					TimeoutMs int64    `json:"timeout_ms"`
+				}
+				_ = json.NewDecoder(r.Body).Decode(&req)
+				stdinRaw, _ := base64.StdEncoding.DecodeString(req.Stdin)
+
+				args := append([]string(nil), req.Argv...)
+				if len(args) >= 4 {
+					args[3] = mapStateDir(args[3])
+				}
+				cmd := exec.CommandContext(r.Context(), args[0], args[1:]...)
+				cmd.Env = append(os.Environ(), "RUNNER_WORK="+workDir)
+				cmd.Stdin = bytes.NewReader(stdinRaw)
+				var stdout, stderr bytes.Buffer
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stderr
+				err := cmd.Run()
+				code := 0
+				if err != nil {
+					code = 1
+				}
+				writeJSON(w, http.StatusOK, map[string]any{
+					"exit_code": code,
+					"timed_out": false,
+					"stdout":    base64.StdEncoding.EncodeToString(stdout.Bytes()),
+					"stderr":    base64.StdEncoding.EncodeToString(stderr.Bytes()),
+				}, nil)
+				return
+			}
+		}
+		writeJSON(w, http.StatusNotFound, map[string]any{"code": "not_found"}, nil)
+	}))
+	defer fakeFC.Close()
+
+	drv := NewFirecrackerDriver(FirecrackerConfig{
+		URL:            fakeFC.URL,
+		Token:          fcToken,
+		DAPSessionPath: dapScript,
+	})
+	if err := drv.Init(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	secret := strings.Repeat("m", 40)
+	srv := NewServer(Config{
+		Node:         "lou1",
+		Secret:       secret,
+		DAPIdleMs:    20000,
+		DAPMaxMs:     60000,
+		DAPMaxActive: 4,
+	}, drv, func(map[string]any) {})
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	hdrs := SignedHeaders(secret, "GET", "/v1/dap", "lou1", "fc-java-user", nil, time.Now())
+	q := url.Values{}
+	q.Set("time", hdrs["x-runner-time"])
+	q.Set("nonce", hdrs["x-runner-nonce"])
+	q.Set("user", hdrs["x-runner-user"])
+	q.Set("node", hdrs["x-runner-node"])
+	q.Set("sig", hdrs["x-runner-signature"])
+
+	conn, err := ws.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/v1/dap?"+q.Encode(), nil)
+	if err != nil {
+		t.Fatalf("ws dial failed: %v", err)
+	}
+	defer conn.Close()
+
+	javaCode := strings.Join([]string{
+		"class Solution {",
+		"    public int[] twoSum(int[] nums, int target) {",
+		"        Map<Integer, Integer> seen = new HashMap<>();",
+		"        for (int i = 0; i < nums.length; i++) {",
+		"            int need = target - nums[i];",
+		"            if (seen.containsKey(need)) return new int[]{seen.get(need), i};",
+		"            seen.put(nums[i], i);",
+		"        }",
+		"        return new int[0];",
+		"    }",
+		"}",
+	}, "\n")
+
+	if err := conn.WriteJSON(DAPInitRequest{
+		Type:  "init",
+		Lang:  "java",
+		Mode:  "leetcode",
+		Code:  javaCode,
+		Sig:   json.RawMessage(`{"fn":"twoSum","params":["int[]","int"],"ret":"int[]"}`),
+		Cases: []JobCase{{Input: json.RawMessage(`[[3, 2, 4], 6]`)}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	readUntil := func(label string, match func(map[string]any) bool) map[string]any {
+		_ = conn.SetReadDeadline(time.Now().Add(30 * time.Second))
+		for {
+			_, raw, rErr := conn.ReadMessage()
+			if rErr != nil {
+				t.Fatalf("ws read failed waiting for %s: %v", label, rErr)
+			}
+			var m map[string]any
+			if json.Unmarshal(raw, &m) == nil && match(m) {
+				return m
+			}
+		}
+	}
+
+	ready := readUntil("ready", func(m map[string]any) bool { return m["type"] == "ready" || m["type"] == "compile_error" || m["type"] == "error" })
+	if ready["type"] != "ready" {
+		t.Fatalf("expected ready from real daemon+poll, got %#v", ready)
+	}
+	_ = conn.WriteJSON(map[string]any{"seq": 1, "type": "request", "command": "initialize"})
+	readUntil("initialize", func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "initialize" })
+
+	_ = conn.WriteJSON(map[string]any{
+		"seq": 2, "type": "request", "command": "setBreakpoints",
+		"arguments": map[string]any{"breakpoints": []map[string]any{{"line": 5}}},
+	})
+	readUntil("setBreakpoints", func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "setBreakpoints" })
+
+	_ = conn.WriteJSON(map[string]any{"seq": 3, "type": "request", "command": "launch"})
+	_ = conn.WriteJSON(map[string]any{"seq": 4, "type": "request", "command": "configurationDone"})
+
+	stopped := readUntil("stopped", func(m map[string]any) bool { return m["type"] == "event" && m["event"] == "stopped" })
+	threadID := int64(stopped["body"].(map[string]any)["threadId"].(float64))
+
+	_ = conn.WriteJSON(map[string]any{"seq": 5, "type": "request", "command": "stackTrace", "arguments": map[string]any{"threadId": threadID}})
+	stResp := readUntil("stackTrace", func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "stackTrace" })
+	frames := stResp["body"].(map[string]any)["stackFrames"].([]any)
+	if len(frames) == 0 || int(frames[0].(map[string]any)["line"].(float64)) != 5 {
+		t.Fatalf("expected stackTrace line 5 from daemon+poll, got %#v", stResp)
+	}
+
+	_ = conn.WriteJSON(map[string]any{"seq": 6, "type": "request", "command": "disconnect"})
+	_ = conn.Close()
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		left := len(envs)
+		mu.Unlock()
+		if left == 0 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("expected microVM env to be deleted on close")
+}

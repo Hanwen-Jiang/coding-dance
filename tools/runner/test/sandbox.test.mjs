@@ -76,7 +76,7 @@ const runnerProc = spawn(runnerBin, [], {
     RUNNER_USER_PER_MIN: "5000",
     RUNNER_CASE_MS: "5000",
     RUNNER_TOTAL_MS: "60000",
-    RUNNER_JOB_MS: "180000",
+    RUNNER_JOB_MS: FC_URL ? "90000" : "180000",
   },
 });
 let runnerStderr = "";
@@ -327,7 +327,7 @@ public:
           if (wake) { const w = wake; wake = null; w(); }
         };
         await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
-        const waitMsg = async (pred, ms = 25000) => {
+        const waitMsg = async (pred, ms = 45000) => {
           const deadline = Date.now() + ms;
           for (;;) {
             const idx = queue.findIndex(pred);

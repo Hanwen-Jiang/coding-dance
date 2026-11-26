@@ -439,6 +439,8 @@ func (d *FirecrackerDriver) destroyEnvAsync(envID string) {
 
 func guestDefaultEnv() map[string]string {
 	return map[string]string{
+		"PATH":            "/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"HOME":            "/tmp",
 		"RUNNER_WORK":     "/workspace",
 		"RUNNER_PREPARED": "/opt/lc/prepared",
 		"PYTHON":          "python3",
@@ -540,7 +542,7 @@ func (d *FirecrackerDriver) StartDAP(ctx context.Context, req DAPInitRequest) (D
 	}
 
 	d.live.Add(1)
-	stateDir := "/tmp/cd-dap-" + randomHex(4)
+	stateDir := "/workspace/cd-dap-" + randomHex(4)
 	specBytes, _ := json.Marshal(req)
 
 	execStatus, execRes, execText, err := d.call(ctx, http.MethodPost, fmt.Sprintf("/v1/envs/%s/agent/v1/exec", envID), map[string]any{
@@ -591,11 +593,11 @@ func (d *FirecrackerDriver) StartDAP(ctx context.Context, req DAPInitRequest) (D
 		cancel:   cancel,
 	}
 
-	// Parse client DAP frames written to inW into a wakeable queue
 	frameWake := make(chan struct{}, 1)
-	var outMu sync.Mutex
+	var frameMu sync.Mutex
 	var pendingFrames []string
 
+	// Parse client DAP frames written to inW into a wakeable queue for the instant-push goroutine.
 	go func() {
 		br := bufio.NewReaderSize(inR, 64<<10)
 		for {
@@ -604,9 +606,9 @@ func (d *FirecrackerDriver) StartDAP(ctx context.Context, req DAPInitRequest) (D
 				cancel()
 				return
 			}
-			outMu.Lock()
+			frameMu.Lock()
 			pendingFrames = append(pendingFrames, string(f))
-			outMu.Unlock()
+			frameMu.Unlock()
 			select {
 			case frameWake <- struct{}{}:
 			default:
@@ -614,58 +616,94 @@ func (d *FirecrackerDriver) StartDAP(ctx context.Context, req DAPInitRequest) (D
 		}
 	}()
 
-	// Poll / push loop over fc-manager /agent/v1/exec
+	var outWriteMu sync.Mutex
+	writeFrames := func(frames []string) bool {
+		if len(frames) == 0 {
+			return true
+		}
+		outWriteMu.Lock()
+		defer outWriteMu.Unlock()
+		for _, f := range frames {
+			if WriteDAPFrame(outW, []byte(f)) != nil {
+				return false
+			}
+		}
+		return true
+	}
+
+	execPoll := func(pollCtx context.Context, frames []string, waitMs string, execMs int64, httpTimeout time.Duration) ([]string, bool, bool) {
+		pollReq, _ := json.Marshal(map[string]any{"frames": frames})
+		st, pRes, _, pErr := d.call(pollCtx, http.MethodPost, fmt.Sprintf("/v1/envs/%s/agent/v1/exec", envID), map[string]any{
+			"argv":                 []string{"node", d.DAPSessionPath, "poll", stateDir, waitMs},
+			"stdin":                base64.StdEncoding.EncodeToString(pollReq),
+			"timeout_ms":           execMs,
+			"env":                  guestDefaultEnv(),
+			"exec_id":              randomUUID(),
+			"offload_inline_bytes": 0,
+		}, httpTimeout)
+		if pErr != nil || st != http.StatusOK || pRes == nil {
+			return nil, false, false
+		}
+		sb64, _ := pRes["stdout"].(string)
+		rawPoll, _ := base64.StdEncoding.DecodeString(sb64)
+		var pr struct {
+			OK     bool     `json:"ok"`
+			Frames []string `json:"frames"`
+			Exited bool     `json:"exited"`
+		}
+		if json.Unmarshal(rawPoll, &pr) != nil {
+			return nil, false, false
+		}
+		return pr.Frames, pr.Exited, true
+	}
+
+	var loopWG sync.WaitGroup
+	loopWG.Add(2)
 	go func() {
-		defer func() {
-			_ = outW.Close()
-			_ = inR.Close()
-		}()
+		<-sessCtx.Done()
+		loopWG.Wait()
+		_ = outW.Close()
+		_ = inR.Close()
+	}()
+
+	// Push goroutine: flushes client requests to dap.sock with waitMs="0" immediately on wakeup.
+	go func() {
+		defer loopWG.Done()
+		defer cancel()
+		for {
+			frameMu.Lock()
+			batch := append([]string(nil), pendingFrames...)
+			pendingFrames = pendingFrames[:0]
+			frameMu.Unlock()
+			if len(batch) > 0 {
+				frames, exited, ok := execPoll(sessCtx, batch, "0", 15000, 20*time.Second)
+				if !ok || !writeFrames(frames) || exited {
+					return
+				}
+				continue
+			}
+			select {
+			case <-sessCtx.Done():
+				return
+			case <-frameWake:
+			}
+		}
+	}()
+
+	// Long-poll goroutine: drains adapter responses/events continuously without waiting for client input.
+	go func() {
+		defer loopWG.Done()
+		defer cancel()
 		for {
 			if sessCtx.Err() != nil {
 				return
 			}
-			outMu.Lock()
-			batch := append([]string(nil), pendingFrames...)
-			pendingFrames = pendingFrames[:0]
-			outMu.Unlock()
-
-			waitMs := "1200"
-			if len(batch) > 0 {
-				waitMs = "150"
-			}
-			pollReq, _ := json.Marshal(map[string]any{"frames": batch})
-			st, pRes, _, pErr := d.call(sessCtx, http.MethodPost, fmt.Sprintf("/v1/envs/%s/agent/v1/exec", envID), map[string]any{
-				"argv":                 []string{"node", d.DAPSessionPath, "poll", stateDir, waitMs},
-				"stdin":                base64.StdEncoding.EncodeToString(pollReq),
-				"timeout_ms":           10000,
-				"env":                  guestDefaultEnv(),
-				"exec_id":              randomUUID(),
-				"offload_inline_bytes": 0,
-			}, 15*time.Second)
-			if pErr != nil || st != http.StatusOK || pRes == nil {
-				return
-			}
-			sb64, _ := pRes["stdout"].(string)
-			rawPoll, _ := base64.StdEncoding.DecodeString(sb64)
-			var pr struct {
-				OK     bool     `json:"ok"`
-				Frames []string `json:"frames"`
-				Exited bool     `json:"exited"`
-			}
-			if json.Unmarshal(rawPoll, &pr) != nil {
-				return
-			}
-			for _, f := range pr.Frames {
-				if WriteDAPFrame(outW, []byte(f)) != nil {
-					return
-				}
-			}
-			if pr.Exited {
+			frames, exited, ok := execPoll(sessCtx, []string{}, "1500", 20000, 25*time.Second)
+			if !ok || !writeFrames(frames) || exited {
 				return
 			}
 		}
 	}()
-	_ = frameWake // drain handled continuously by tight long-poll
 
 	return fcSess, nil
 }
@@ -688,8 +726,22 @@ func (s *fcDAPSession) Close() error {
 	s.closeOnce.Do(func() {
 		s.cancel()
 		_ = s.inW.Close()
+		closeReq, _ := json.Marshal(map[string]any{"frames": []string{}, "close": true})
+		_, _, _, _ = s.driver.call(context.Background(), http.MethodPost, fmt.Sprintf("/v1/envs/%s/agent/v1/exec", s.envID), map[string]any{
+			"argv":                 []string{"node", s.driver.DAPSessionPath, "poll", s.stateDir, "0"},
+			"stdin":                base64.StdEncoding.EncodeToString(closeReq),
+			"timeout_ms":           3000,
+			"env":                  guestDefaultEnv(),
+			"exec_id":              randomUUID(),
+			"offload_inline_bytes": 0,
+		}, 3*time.Second)
 		s.driver.live.Add(-1)
-		s.driver.destroyEnvAsync(s.envID)
+		delStatus, _, _, delErr := s.driver.call(context.Background(), http.MethodDelete, "/v1/envs/"+s.envID, nil, 10*time.Second)
+		if delErr != nil && s.driver.LogFn != nil {
+			s.driver.LogFn(map[string]any{"event": "fc-delete", "env": s.envID, "error": delErr.Error()})
+		} else if delStatus != http.StatusNoContent && delStatus != http.StatusNotFound && s.driver.LogFn != nil {
+			s.driver.LogFn(map[string]any{"event": "fc-delete", "env": s.envID, "status": delStatus})
+		}
 	})
 	return nil
 }
