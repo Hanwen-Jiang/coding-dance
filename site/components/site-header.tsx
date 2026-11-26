@@ -1,13 +1,16 @@
 "use client";
 
 import { Button } from "@heroui/react";
+import clsx from "clsx";
 import NextLink from "next/link";
+import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 import { AccountButton } from "@/components/account";
 import { LangPicker } from "@/components/lang-picker";
 import { PixelIcon, PixelLogo, PixelTitle } from "@/components/pixel";
+import { useProgress } from "@/lib/progress";
 
 /** 旧的按钮只会存「浅色 / 深色」，存了就再也不跟随系统。换成新按钮后把旧的选择清掉一次，回到默认的跟随系统 */
 const THEME_RESET_KEY = "hot100:theme-follows-system";
@@ -41,6 +44,11 @@ function ThemeSwitch() {
 }
 
 export function SiteHeader() {
+  const pathname = usePathname() || "/";
+  const { ready } = useProgress();
+  const inLearn = pathname.startsWith("/learn");
+  const inSync = pathname.startsWith("/sync");
+
   return (
     <header className="sticky top-0 z-40 border-b border-separator bg-background/75 backdrop-blur-xl">
       <div className="site-header-inner mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
@@ -53,12 +61,29 @@ export function SiteHeader() {
         </NextLink>
         <div className="flex items-center gap-1">
           <NextLink
+            aria-current={inLearn ? "page" : undefined}
             aria-label="数据结构与算法基础"
-            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-muted no-underline transition-colors hover:text-foreground sm:px-3"
+            className={clsx(
+              "inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 no-underline transition-colors sm:px-3",
+              inLearn ? "bg-accent/10 text-accent" : "text-muted hover:text-foreground",
+            )}
             href="/learn/"
           >
             <PixelTitle cell={1.5} px={12} text="基础" weight={500} />
           </NextLink>
+          {ready && (
+            <NextLink
+              aria-current={inSync ? "page" : undefined}
+              aria-label="从力扣同步提交记录"
+              className={clsx(
+                "hidden items-center gap-1.5 rounded-lg px-2 py-1.5 no-underline transition-colors sm:inline-flex sm:px-2.5",
+                inSync ? "bg-accent/10 text-accent" : "text-muted hover:text-foreground",
+              )}
+              href="/sync/"
+            >
+              <PixelTitle cell={1.5} px={12} text="同步" weight={500} />
+            </NextLink>
+          )}
           <LangPicker />
           <ThemeSwitch />
           <AccountButton />

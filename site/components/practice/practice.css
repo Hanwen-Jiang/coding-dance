@@ -132,7 +132,8 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
 .practice-tb-run:hover { background: color-mix(in oklch, var(--accent) 18%, transparent) !important; }
 .practice-tb-group { gap: 0; }
 .practice-tb-caret { width: 18px !important; min-width: 18px !important; height: 24px !important; min-height: 24px !important; padding: 0 !important; border-radius: 6px !important; }
-.practice-tb-sep { width: 1px; height: 16px; margin: 0 3px; background: var(--separator); }
+.practice-tb-sep { width: 1px; height: 14px; margin: 0 4px; flex-shrink: 0; background: var(--separator); }
+.practice-tb-ai-dot { position: absolute; top: 3px; right: 3px; width: 6px; height: 6px; border-radius: 999px; background: var(--warning); box-shadow: 0 0 0 1.5px var(--surface); }
 /* 窄的时候按顺序让位：先藏测试按钮上的字，再藏「运行」两个字，最后藏文件名（只留图标和箭头） */
 @container (max-width: 600px) { .practice-tb-group .practice-tb-label { display: none; } }
 @container (max-width: 520px) { .practice-tb-run .practice-tb-label { display: none; } }
@@ -161,7 +162,10 @@ button.practice-status-where:disabled { opacity: 0.6; }
 .practice-notice-link { color: var(--accent); white-space: nowrap; }
 .practice-notice-link:hover { text-decoration: underline; }
 .practice-status-result { flex-shrink: 0; font-family: var(--font-mono); white-space: nowrap; }
-.practice-console-toggle { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; height: 20px; margin-left: auto; padding: 0 6px; border-radius: 4px; color: var(--muted); font-size: 11px; }
+.practice-status-actions { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; margin-left: auto; }
+.practice-status-shortcut { font-family: var(--font-mono); font-size: 10px; opacity: 0.7; white-space: nowrap; padding-right: 4px; }
+@container (max-width: 520px) { .practice-status-shortcut { display: none; } }
+.practice-console-toggle { display: inline-flex; flex-shrink: 0; align-items: center; gap: 4px; height: 20px; padding: 0 6px; border-radius: 4px; color: var(--muted); font-size: 11px; }
 .practice-console-toggle:hover { background: color-mix(in oklch, var(--foreground) 6%, transparent); color: var(--foreground); }
 .practice-console-toggle[aria-expanded="true"] { color: var(--foreground); }
 .practice-console-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

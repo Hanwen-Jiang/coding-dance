@@ -6,22 +6,51 @@ import type { Attempt } from "@/lib/types";
 
 export type CompanionConsentMode = "proactive_consent" | "on_demand" | "off";
 export type CompanionHintLevel = "L1" | "L2" | "L3" | "L4";
+export type CompanionIntent = "hint" | "debug" | "review" | "acm_io" | "chat";
 
 export const COMPANION_MODE_KEY = "hot100:companion:mode";
 const MODE_EVENT = "hot100:companion-mode";
 
 export const COMPANION_MODES: { id: CompanionConsentMode; label: string; desc: string }[] = [
   { id: "proactive_consent", label: "主动询问", desc: "连续卡住时先征询，同意后才给提示" },
-  { id: "on_demand", label: "仅按需点击", desc: "不主动打扰，点「伴学」再看" },
+  { id: "on_demand", label: "仅按需点击", desc: "不主动打扰，点「AI 助教」再聊" },
   { id: "off", label: "静默关闭", desc: "隐藏伴学提示并阻止后台分析" },
 ];
 
 export const HINT_LEVEL_META: { id: CompanionHintLevel; label: string; short: string; desc: string }[] = [
-  { id: "L1", label: "L1 方向提问", short: "L1 方向", desc: "提出 1～2 个关键思考方向，不点破结构与代码" },
+  { id: "L1", label: "L1 方向提问", short: "L1 方向", desc: "提出关键思考方向，不点破结构与代码" },
   { id: "L2", label: "L2 边界线索", short: "L2 边界", desc: "指出关键不变量与容易遗漏的边界条件，不给代码" },
-  { id: "L3", label: "L3 结构骨架", short: "L3 骨架", desc: "提供关键步骤伪代码与复杂度边界" },
-  { id: "L4", label: "L4 完整排查", short: "L4 完整", desc: "给出完整根因分析、优化思路与边界测试建议" },
+  { id: "L3", label: "L3 解题骨架", short: "L3 骨架", desc: "提供关键步骤拆解与思路骨架" },
+  { id: "L4", label: "L4 完整排查", short: "L4 排查", desc: "结合你的代码与报错给出根因诊断与优化建议" },
 ];
+
+export interface ProblemCoachContext {
+  topic?: string;
+  level?: string;
+  lede?: string;
+  hints?: { t: string; body: string }[];
+  points?: { t: string; body: string }[];
+  acm_io?: string;
+}
+
+export interface FailedCaseContext {
+  label?: string;
+  input?: string;
+  expected?: string;
+  actual?: string;
+  error?: string;
+}
+
+export interface CompanionMessage {
+  id: string;
+  role: "user" | "assistant";
+  title?: string;
+  content: string;
+  hint_level?: CompanionHintLevel;
+  engine?: "llm" | "context_coach";
+  next_steps?: string[];
+  quick_replies?: string[];
+}
 
 export function isCompanionMode(v: unknown): v is CompanionConsentMode {
   return v === "proactive_consent" || v === "on_demand" || v === "off";
@@ -77,10 +106,18 @@ export interface HintCheckResponse {
 export interface HintRevealResponse {
   hint_level: CompanionHintLevel;
   source: string;
+  engine?: "llm" | "context_coach";
   title: string;
   hint: string;
   next_steps?: string[];
+  quick_replies?: string[];
   runtime_task_id?: string;
+}
+
+export interface CompanionStatusResponse {
+  available: boolean;
+  authenticated: boolean;
+  llmEnabled?: boolean;
 }
 
 export interface HistoryAnalyzeResponse {
@@ -109,6 +146,16 @@ async function postCompanion<T>(path: string, body: Record<string, unknown>): Pr
   return data;
 }
 
+export async function fetchCompanionStatus(): Promise<CompanionStatusResponse | null> {
+  try {
+    const res = await fetch("/api/companion/status", { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as CompanionStatusResponse;
+  } catch {
+    return null;
+  }
+}
+
 export const checkCompanionHint = (payload: {
   consent_mode: CompanionConsentMode;
   problem_id: string;
@@ -125,13 +172,34 @@ export const revealCompanionHint = (payload: {
   user_consented: true;
   consent_token?: string;
   hint_level: CompanionHintLevel;
+  intent?: CompanionIntent;
+  mode?: "leetcode" | "acm" | "fast" | "runtime";
   problem_id: string;
   problem_title: string;
   language: string;
   code: string;
   error_output?: string;
-  mode?: "fast" | "runtime";
+  question?: string;
+  problem_context?: ProblemCoachContext;
+  failed_case?: FailedCaseContext;
 }) => postCompanion<HintRevealResponse>("/api/companion/hint-reveal", { ...payload, locale: "zh" });
+
+export const chatCompanion = (payload: {
+  consent_mode: CompanionConsentMode;
+  user_consented: true;
+  hint_level?: CompanionHintLevel;
+  intent?: CompanionIntent;
+  mode?: "leetcode" | "acm";
+  problem_id: string;
+  problem_title: string;
+  language: string;
+  code: string;
+  error_output?: string;
+  question: string;
+  history?: { role: "user" | "assistant"; content: string }[];
+  problem_context?: ProblemCoachContext;
+  failed_case?: FailedCaseContext;
+}) => postCompanion<HintRevealResponse>("/api/companion/chat", { ...payload, locale: "zh" });
 
 export const analyzeCompanionHistory = (payload: {
   consent_mode: CompanionConsentMode;

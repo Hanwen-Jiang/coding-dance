@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ButtonGroup, Card, Dropdown, ListBox, Modal, Select, TextArea } from "@heroui/react";
+import { Button, ButtonGroup, Card, Dropdown, Header, ListBox, Modal, Select, Separator, TextArea, Tooltip } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
@@ -11,7 +11,7 @@ import { flushSync } from "react-dom";
 import { ChevronDown, CodeIcon, DocIcon, PlayIcon } from "@/components/icons";
 import { PixelCodeMark, PixelLoader, Skel } from "@/components/pixel";
 import { CompanionPromptBanner, PracticeCompanionPanel } from "@/components/practice/companion";
-import { PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
+import { APPLY_CODE_EVENT, LOAD_EXAMPLE_EVENT, OPEN_COMPANION_EVENT, PracticeModeSwitch, PracticeStatement, usePractice } from "@/components/practice/context";
 import { type DebugRun, LiveDapDebugger, PracticeDebugger } from "@/components/practice/debugger";
 import { PracticeResults } from "@/components/practice/results";
 import { ResizeHandle, useMedia, useStoredFraction } from "@/components/practice/resize";
@@ -19,9 +19,14 @@ import {
   COMPANION_MODES,
   type CompanionConsentMode,
   type CompanionHintLevel,
+  type CompanionIntent,
+  type CompanionMessage,
+  type FailedCaseContext,
   type HintCheckResponse,
-  type HintRevealResponse,
+  type ProblemCoachContext,
+  chatCompanion,
   checkCompanionHint,
+  fetchCompanionStatus,
   revealCompanionHint,
   useCompanionMode,
 } from "@/lib/companion";
@@ -259,8 +264,16 @@ export function PracticeWorkbench() {
   const windowButtons = (
     <>
       <span aria-hidden className="practice-tb-sep" />
-      <Button aria-label={active ? "退出专注模式" : "进入专注模式"} className={clsx("practice-tb-icon", active && "practice-focus-exit-row")} isDisabled={focusPhase === "closing"} isIconOnly onPress={() => { if (active) closeFocus(); else openFocus(); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} /></Button>
-      {desktop && !active && <Button aria-label="收起练习区" className="practice-tb-icon" isIconOnly onPress={stow} ref={dockButton} size="sm" variant="ghost"><StowIcon /></Button>}
+      <Tooltip delay={350}>
+        <Button aria-label={active ? "退出专注模式" : "进入专注模式"} className={clsx("practice-tb-icon", active && "practice-focus-exit-row")} isDisabled={focusPhase === "closing"} isIconOnly onPress={() => { if (active) closeFocus(); else openFocus(); }} ref={focusButton} size="sm" variant="ghost"><ExpandIcon collapsed={active} /></Button>
+        <Tooltip.Content className="text-xs">{active ? "退出专注模式 (Esc)" : "专注模式"}</Tooltip.Content>
+      </Tooltip>
+      {desktop && !active && (
+        <Tooltip delay={350}>
+          <Button aria-label="收起练习区" className="practice-tb-icon" isIconOnly onPress={stow} ref={dockButton} size="sm" variant="ghost"><StowIcon /></Button>
+          <Tooltip.Content className="text-xs">收起练习区</Tooltip.Content>
+        </Tooltip>
+      )}
     </>
   );
   const [hinting, setHinting] = useState(false);
@@ -478,21 +491,32 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   const sequenceRef = useRef(0);
   const codeRef = useRef(code);
 
-  // —— Consent-First AI 伴学（proactive_consent / on_demand / off）——
+  const { detail } = usePractice();
+  // —— Consent-First AI 伴学小舞（proactive_consent / on_demand / off）——
   const [companionMode, setCompanionMode] = useCompanionMode();
   const [companionLevel, setCompanionLevel] = useState<CompanionHintLevel>("L1");
   const [companionPrompt, setCompanionPrompt] = useState<HintCheckResponse | null>(null);
   const [companionDismissed, setCompanionDismissed] = useState(false);
-  const [companionReveal, setCompanionReveal] = useState<HintRevealResponse | null>(null);
+  const [companionMessages, setCompanionMessages] = useState<CompanionMessage[]>([]);
   const [companionBusy, setCompanionBusy] = useState(false);
   const [companionError, setCompanionError] = useState<string | null>(null);
+  const [llmEnabled, setLlmEnabled] = useState<boolean | null>(null);
   const failStreakRef = useRef(0);
   const startedAtRef = useRef(Date.now());
+  const companionMsgSeq = useRef(0);
+
+  useEffect(() => {
+    let alive = true;
+    void fetchCompanionStatus().then((st) => {
+      if (alive && st) setLlmEnabled(!!st.llmEnabled);
+    });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
     setCompanionPrompt(null);
     setCompanionDismissed(false);
-    setCompanionReveal(null);
+    setCompanionMessages([]);
     setCompanionError(null);
     failStreakRef.current = 0;
     startedAtRef.current = Date.now();
@@ -507,34 +531,126 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     }
   }, [companionMode, tab]);
 
-  const requestCompanionReveal = useCallback(async (level: CompanionHintLevel, explicitToken?: string) => {
+  const problemContext = useMemo<ProblemCoachContext>(() => {
+    const spec = detail.spec;
+    return {
+      topic: detail.summary.topic,
+      level: detail.summary.level,
+      lede: spec?.lede,
+      hints: spec?.hints?.slice(0, 3).map((h) => ({ t: h.t, body: h.body.join(" ") })),
+      points: spec?.points?.slice(0, 4).map((p) => ({ t: p.t, body: p.body })),
+      acm_io: mode === "acm" ? `${problem.acm.input}\n${problem.acm.output}` : undefined,
+    };
+  }, [detail.spec, detail.summary.level, detail.summary.topic, mode, problem.acm.input, problem.acm.output]);
+
+  const buildFailedCase = useCallback((caseIndex?: number): FailedCaseContext | undefined => {
+    if (!report) return undefined;
+    const picked = typeof caseIndex === "number"
+      ? report.result.results[caseIndex]
+      : report.result.results.find((r) => r.error || (!report.unchecked && !r.passed));
+    if (!picked) return undefined;
+    const c = report.cases[picked.index];
+    return {
+      label: c?.label || `用例 ${picked.index + 1}`,
+      input: c ? (mode === "acm" ? c.stdin : formatPracticeInput(problem, c)) : "",
+      expected: c ? (mode === "acm" ? c.stdout : formatPracticeResult(problem, c.expected)) : "",
+      actual: mode === "acm" ? picked.stdout : formatPracticeResult(problem, picked.actual),
+      error: picked.error,
+    };
+  }, [mode, problem, report]);
+
+  const appendMessage = useCallback((msg: Omit<CompanionMessage, "id">) => {
+    const id = `cm-${++companionMsgSeq.current}`;
+    setCompanionMessages((prev) => [...prev.slice(-11), { ...msg, id }]);
+  }, []);
+
+  const askCompanionHint = useCallback(async (
+    level: CompanionHintLevel,
+    opts?: { intent?: CompanionIntent; explicitToken?: string; caseIndex?: number; userLabel?: string },
+  ) => {
     if (companionMode === "off") return;
     setCompanionLevel(level);
     setCompanionBusy(true);
     setCompanionError(null);
     setPanelOpen(true);
     setTab("companion");
-    const firstBad = report?.result.results.find((r) => r.error || (!report.unchecked && !r.passed));
+    if (opts?.userLabel) appendMessage({ role: "user", content: opts.userLabel });
+    const failedCase = buildFailedCase(opts?.caseIndex);
     try {
       const res = await revealCompanionHint({
         consent_mode: companionMode,
         user_consented: true,
-        consent_token: explicitToken ?? companionPrompt?.consent_token,
+        consent_token: opts?.explicitToken ?? companionPrompt?.consent_token,
         hint_level: level,
+        intent: opts?.intent ?? "hint",
+        mode,
         problem_id: String(problem.id),
         problem_title: problem.name,
         language,
         code: codeRef.current,
-        error_output: firstBad?.error || (firstBad ? `期望输出未匹配（用例 ${firstBad.index + 1}）` : undefined),
+        error_output: failedCase?.error || (failedCase ? `期望 ${failedCase.expected}，实际 ${failedCase.actual}` : undefined),
+        problem_context: problemContext,
+        failed_case: failedCase,
       });
-      setCompanionReveal(res);
+      appendMessage({
+        role: "assistant",
+        title: res.title,
+        content: res.hint,
+        hint_level: res.hint_level,
+        engine: res.engine,
+        next_steps: res.next_steps,
+        quick_replies: res.quick_replies,
+      });
       setCompanionPrompt(null);
     } catch (e) {
       setCompanionError(e instanceof Error ? e.message : String(e));
     } finally {
       setCompanionBusy(false);
     }
-  }, [companionMode, companionPrompt?.consent_token, language, problem.id, problem.name, report]);
+  }, [appendMessage, buildFailedCase, companionMode, companionPrompt?.consent_token, language, mode, problem.id, problem.name, problemContext]);
+
+  const sendCompanionChat = useCallback(async (question: string) => {
+    const q = question.trim();
+    if (!q || companionMode === "off") return;
+    setCompanionBusy(true);
+    setCompanionError(null);
+    setPanelOpen(true);
+    setTab("companion");
+    const history = companionMessages.slice(-4).map((m) => ({ role: m.role, content: m.content }));
+    appendMessage({ role: "user", content: q });
+    const failedCase = buildFailedCase();
+    try {
+      const res = await chatCompanion({
+        consent_mode: companionMode,
+        user_consented: true,
+        hint_level: companionLevel,
+        intent: "chat",
+        mode,
+        problem_id: String(problem.id),
+        problem_title: problem.name,
+        language,
+        code: codeRef.current,
+        error_output: failedCase?.error,
+        question: q,
+        history,
+        problem_context: problemContext,
+        failed_case: failedCase,
+      });
+      appendMessage({
+        role: "assistant",
+        title: res.title,
+        content: res.hint,
+        hint_level: res.hint_level,
+        engine: res.engine,
+        next_steps: res.next_steps,
+        quick_replies: res.quick_replies,
+      });
+    } catch (e) {
+      setCompanionError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setCompanionBusy(false);
+    }
+  }, [appendMessage, buildFailedCase, companionLevel, companionMessages, companionMode, language, mode, problem.id, problem.name, problemContext]);
 
   useEffect(() => {
     try {
@@ -620,11 +736,55 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   }, []);
 
   /** 换掉编辑器里的代码，但不当作用户的改动（不触发自动保存） */
-  const applyCode = (value: string) => {
+  const applyCode = useCallback((value: string) => {
     setCode(value);
     codeRef.current = value;
     try { localStorage.setItem(draftKey, value); } catch { /* 保留当前编辑内容。 */ }
-  };
+  }, [draftKey]);
+
+  // 响应题面 / 题解 / StudyBar 发来的联动事件（载入样例到自定义、填入题解到编辑器、打开 AI 助教）
+  useEffect(() => {
+    const onLoadExample = (e: Event) => {
+      const idx = (e as CustomEvent<{ index?: number }>).detail?.index ?? 0;
+      const picked = samples[Math.min(Math.max(0, idx), samples.length - 1)];
+      if (!picked) return;
+      setSample(Math.min(Math.max(0, idx), samples.length - 1));
+      setCustomInput(picked.stdin);
+      setCustomFields(practiceInputFields(problem, picked.input));
+      setCustomExpected(mode === "leetcode" ? formatPracticeValue(picked.expected) : picked.stdout);
+      setError(null);
+      caseTab.current = "custom";
+      setPanelOpen(true);
+      setTab("custom");
+    };
+    const onApplyCode = (e: Event) => {
+      const d = (e as CustomEvent<{ code?: string; language?: PracticeLanguage; mode?: PracticeMode }>).detail;
+      if (d?.code && d.language === language && d.mode === mode) {
+        applyCode(d.code);
+        setFlash("已将题解代码填入编辑器。");
+      }
+    };
+    const onOpenCompanion = (e: Event) => {
+      if (companionMode === "off") {
+        setCompanionDismissed(false);
+        setCompanionMode("on_demand");
+      }
+      setPanelOpen(true);
+      setTab("companion");
+      const intent = (e as CustomEvent<{ intent?: CompanionIntent }>).detail?.intent;
+      if (intent && intent !== "hint") {
+        void askCompanionHint(intent === "review" ? "L4" : "L2", { intent });
+      }
+    };
+    window.addEventListener(LOAD_EXAMPLE_EVENT, onLoadExample);
+    window.addEventListener(APPLY_CODE_EVENT, onApplyCode);
+    window.addEventListener(OPEN_COMPANION_EVENT, onOpenCompanion);
+    return () => {
+      window.removeEventListener(LOAD_EXAMPLE_EVENT, onLoadExample);
+      window.removeEventListener(APPLY_CODE_EVENT, onApplyCode);
+      window.removeEventListener(OPEN_COMPANION_EVENT, onOpenCompanion);
+    };
+  }, [applyCode, askCompanionHint, companionMode, language, mode, problem, samples, setCompanionMode]);
 
   // 打开时看一眼进度仓里有没有这道题的草稿（可能是在别的设备上写的）：本地没改过就直接换上，改过就问一下
   useEffect(() => {
@@ -981,20 +1141,26 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
           })}</ListBox></Select.Popover>
         </Select>
         <div className="practice-tabbar-scroll">
-          <PracticeModeSwitch />
+          <PracticeModeSwitch showGuide />
         </div>
         <span className="flex-1" />
         <div className="practice-run-controls">
           {running ? <Button className="practice-tb-btn" onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止</Button> : <>
-            <Button aria-label={tab === "custom" ? "运行自定义" : "运行示例"} className="practice-tb-btn practice-tb-run" isDisabled={!ready} onPress={runCurrent} size="sm" variant="secondary"><PlayIcon /><span className="practice-tb-label">运行</span></Button>
-            <Button aria-label={`调试（用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}，一步步看每一行和变量）`} className="practice-tb-icon" isDisabled={!ready} isIconOnly onPress={() => void runDebug()} size="sm" variant="ghost"><BugIcon /></Button>
+            <Tooltip delay={350}>
+              <Button aria-label={tab === "custom" ? "运行自定义" : "运行示例"} className="practice-tb-btn practice-tb-run" isDisabled={!ready} onPress={runCurrent} size="sm" variant="secondary"><PlayIcon /><span className="practice-tb-label">运行</span></Button>
+              <Tooltip.Content className="text-xs">{tab === "custom" ? "运行自定义 (⌘/Ctrl + Enter)" : "运行示例 (⌘/Ctrl + Enter)"}</Tooltip.Content>
+            </Tooltip>
+            <Tooltip delay={350}>
+              <Button aria-label={`调试（用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}，一步步看每一行和变量）`} className="practice-tb-icon" isDisabled={!ready} isIconOnly onPress={() => void runDebug()} size="sm" variant="ghost"><BugIcon /></Button>
+              <Tooltip.Content className="text-xs">单步调试（{caseTab.current === "custom" ? "自定义" : `示例 ${sample + 1}`}）</Tooltip.Content>
+            </Tooltip>
             {/* 测试：主按钮跑当前这一档，右边的小箭头换档（精简边界 / 全量），选过的记在浏览器里 */}
             <ButtonGroup className="practice-tb-group" size="sm" variant="ghost">
               <Button aria-label={level === "full" ? `全量测试，${problem.cases.length} 组用例，通过可当题解` : `精简边界测试，${quickCases.length} 组用例`} className="practice-tb-btn" isDisabled={!ready} onPress={() => void execute(level === "full" ? problem.cases : quickCases, level === "full" ? "full" : "quick")} variant="ghost">
                 <TestIcon /><span className="practice-tb-label">{level === "full" ? "全量" : "精简"}</span><span className="font-mono text-[11px] opacity-70">· {level === "full" ? problem.cases.length : quickCases.length}</span>
               </Button>
               <Dropdown>
-                <Button aria-label="选择测试档位" className="practice-tb-caret" isDisabled={!ready} isIconOnly size="sm" variant="ghost"><ChevronDown height={12} width={12} /></Button>
+                <Button aria-label="选择测试档位" className="practice-tb-caret" isDisabled={!ready} isIconOnly size="sm" variant="ghost"><span className="inline-flex" title="切换测试档位"><ChevronDown height={12} width={12} /></span></Button>
                 <Dropdown.Popover className="max-w-[300px]" placement="bottom end">
                   <Dropdown.Menu aria-label="测试档位" disallowEmptySelection onSelectionChange={(keys) => { const next = [...(keys as Set<string>)][0]; if (next === "quick" || next === "full") changeLevel(next); }} selectedKeys={new Set([level])} selectionMode="single">
                     <Dropdown.Item className="flex flex-col items-start gap-0.5" id="quick" textValue="精简边界测试">
@@ -1009,9 +1175,10 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
                 </Dropdown.Popover>
               </Dropdown>
             </ButtonGroup>
+            <span aria-hidden className="practice-tb-sep" />
             {/* 保存：手动记成尝试记录、存成我的题解（没通过也行） */}
             <Dropdown>
-              <Button aria-label="保存到进度仓" className="practice-tb-icon" isDisabled={!ready} isIconOnly size="sm" variant="ghost"><SaveIcon /></Button>
+              <Button aria-label="保存到进度仓" className="practice-tb-icon" isDisabled={!ready} isIconOnly size="sm" variant="ghost"><span className="inline-flex" title="保存到进度仓 (Ctrl/⌘+S 存草稿)"><SaveIcon /></span></Button>
               <Dropdown.Popover className="max-w-[300px]" placement="bottom end">
                 <Dropdown.Menu aria-label="保存到进度仓" disabledKeys={repoReady ? [] : ["attempt", "solution"]} onAction={(key) => { if (key === "attempt") saveAttempt(); else if (key === "solution") saveSolution(); }}>
                   <Dropdown.Item className="flex flex-col items-start gap-0.5" id="attempt" textValue="存为尝试记录">
@@ -1025,12 +1192,30 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
                 </Dropdown.Menu>
               </Dropdown.Popover>
             </Dropdown>
+            {/* AI 助教小舞 */}
+            {companionMode !== "off" && (
+              <Tooltip delay={350}>
+                <Button
+                  aria-label="打开 AI 助教小舞"
+                  className={clsx("practice-tb-icon relative", tab === "companion" && panelOpen && "text-accent")}
+                  isDisabled={!ready}
+                  isIconOnly
+                  onPress={() => { setPanelOpen(true); setTab("companion"); }}
+                  size="sm"
+                  variant="ghost"
+                >
+                  <SparkleIcon />
+                  {companionPrompt?.should_prompt && !companionDismissed && <span aria-hidden className="practice-tb-ai-dot" />}
+                </Button>
+                <Tooltip.Content className="text-xs">AI 助教小舞</Tooltip.Content>
+              </Tooltip>
+            )}
           </>}
         </div>
-        {/* 「⋯」：运行位置（浏览器 / 云端）、自动换行、编辑器提示档位、重置代码 */}
+        {/* 「⋯」：分组后的编辑器设置 */}
         <Dropdown>
-          <Button aria-label="编辑器设置" className="practice-tb-icon" isIconOnly size="sm" variant="ghost"><MoreIcon /></Button>
-          <Dropdown.Popover className="min-w-56 max-w-[300px]" placement="bottom end">
+          <Button aria-label="编辑器设置" className="practice-tb-icon" isIconOnly size="sm" variant="ghost"><span className="inline-flex" title="编辑器与助教设置"><MoreIcon /></span></Button>
+          <Dropdown.Popover className="min-w-60 max-w-[320px]" placement="bottom end">
             <Dropdown.Menu aria-label="编辑器设置" disabledKeys={["target:only", ...(running ? ["target:browser", "target:cloud"] : []), ...(running || !ready ? ["reset"] : [])]} onAction={(key) => {
               if (key === "wrap") toggleWrap();
               else if (key === "reset") setConfirmReset(true);
@@ -1038,29 +1223,43 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
               else if (typeof key === "string" && key.startsWith("hints:")) changeHints(key.slice(6) as PracticeHints);
               else if (typeof key === "string" && key.startsWith("companion:")) { setCompanionDismissed(false); setCompanionMode(key.slice(10) as CompanionConsentMode); }
             }}>
-              {cloudOnly ? (
-                <Dropdown.Item className="flex items-center justify-between gap-3" id="target:only" textValue="在云端运行">
-                  <span className="flex flex-col"><span className="text-sm">在云端运行</span><span className="text-[11px] text-muted">{LANGUAGES.find((entry) => entry.id === language)?.label} 只能在云端运行（要登录）</span></span><CheckIcon />
+              <Dropdown.Section>
+                <Header>运行环境</Header>
+                {cloudOnly ? (
+                  <Dropdown.Item className="flex items-center justify-between gap-3" id="target:only" textValue="在云端运行">
+                    <span className="flex flex-col"><span className="text-sm">在云端运行</span><span className="text-[11px] text-muted">{LANGUAGES.find((entry) => entry.id === language)?.label} 只能在云端运行（要登录）</span></span><CheckIcon />
+                  </Dropdown.Item>
+                ) : TARGETS.map((entry) => (
+                  <Dropdown.Item className="flex items-center justify-between gap-3" id={`target:${entry.id}`} key={entry.id} textValue={entry.label}>
+                    <span className="flex flex-col"><span className="text-sm">{entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{target === entry.id && <CheckIcon />}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Section>
+              <Separator />
+              <Dropdown.Section>
+                <Header>代码编辑</Header>
+                <Dropdown.Item className="flex items-center justify-between gap-3" id="wrap" textValue="自动换行">
+                  <span className="text-sm">自动换行</span>{wrap && <CheckIcon />}
                 </Dropdown.Item>
-              ) : TARGETS.map((entry) => (
-                <Dropdown.Item className="flex items-center justify-between gap-3" id={`target:${entry.id}`} key={entry.id} textValue={entry.label}>
-                  <span className="flex flex-col"><span className="text-sm">{entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{target === entry.id && <CheckIcon />}
-                </Dropdown.Item>
-              ))}
-              <Dropdown.Item className="flex items-center justify-between gap-3" id="wrap" textValue="自动换行">
-                <span className="text-sm">自动换行</span>{wrap && <CheckIcon />}
-              </Dropdown.Item>
-              {HINT_LEVELS.map((entry) => (
-                <Dropdown.Item className="flex items-center justify-between gap-3" id={`hints:${entry.id}`} key={entry.id} textValue={entry.label}>
-                  <span className="flex flex-col"><span className="text-sm">{entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{hints === entry.id && <CheckIcon />}
-                </Dropdown.Item>
-              ))}
-              {COMPANION_MODES.map((entry) => (
-                <Dropdown.Item className="flex items-center justify-between gap-3" id={`companion:${entry.id}`} key={entry.id} textValue={`AI 伴学：${entry.label}`}>
-                  <span className="flex flex-col"><span className="text-sm">AI 伴学 · {entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{companionMode === entry.id && <CheckIcon />}
-                </Dropdown.Item>
-              ))}
-              <Dropdown.Item className="text-danger" id="reset" textValue="重置代码"><span className="text-sm">重置代码…</span></Dropdown.Item>
+                {HINT_LEVELS.map((entry) => (
+                  <Dropdown.Item className="flex items-center justify-between gap-3" id={`hints:${entry.id}`} key={entry.id} textValue={entry.label}>
+                    <span className="flex flex-col"><span className="text-sm">{entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{hints === entry.id && <CheckIcon />}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Section>
+              <Separator />
+              <Dropdown.Section>
+                <Header>AI 伴学助教</Header>
+                {COMPANION_MODES.map((entry) => (
+                  <Dropdown.Item className="flex items-center justify-between gap-3" id={`companion:${entry.id}`} key={entry.id} textValue={`AI 伴学：${entry.label}`}>
+                    <span className="flex flex-col"><span className="text-sm">{entry.label}</span><span className="text-[11px] text-muted">{entry.desc}</span></span>{companionMode === entry.id && <CheckIcon />}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Section>
+              <Separator />
+              <Dropdown.Section>
+                <Dropdown.Item className="text-danger" id="reset" textValue="重置代码"><span className="text-sm">重置代码…</span></Dropdown.Item>
+              </Dropdown.Section>
             </Dropdown.Menu>
           </Dropdown.Popover>
         </Dropdown>
@@ -1106,7 +1305,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       {companionMode === "proactive_consent" && companionPrompt?.should_prompt && !companionDismissed && (
         <CompanionPromptBanner
           loading={companionBusy}
-          onAccept={(lvl) => { void requestCompanionReveal(lvl, companionPrompt.consent_token); }}
+          onAccept={(lvl) => { void askCompanionHint(lvl, { intent: "hint", explicitToken: companionPrompt.consent_token }); }}
           onDismiss={() => { setCompanionDismissed(true); setCompanionPrompt(null); }}
           prompt={companionPrompt}
         />
@@ -1151,7 +1350,29 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             {mode === "leetcode" ? <div className="grid gap-2.5 sm:grid-cols-2">{customFields.map((field, index) => <label className="flex min-w-0 flex-col gap-1 font-mono text-xs text-muted" key={field.key}>{field.label}<TextArea aria-label={`自定义参数 ${field.label}`} className="w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomFields((fields) => fields.map((item, i) => i === index ? { ...item, value: event.target.value } : item))} rows={2} value={field.value} variant="secondary" /></label>)}</div> : <label className="flex min-w-0 flex-col gap-1 text-xs text-muted">标准输入<TextArea aria-label="自定义输入" className="min-h-24 w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomInput(event.target.value)} rows={4} value={customInput} variant="secondary" /></label>}
             <label className="flex min-w-0 flex-col gap-1 text-xs text-muted">{mode === "leetcode" ? "预期结果（JSON，可选）" : "预期标准输出（可选）"}<TextArea aria-label="自定义预期结果" className="w-full font-mono text-xs" disabled={running} onChange={(event) => setCustomExpected(event.target.value)} rows={2} value={customExpected} variant="secondary" /></label>
           </div>}
-          {tab === "results" && (running ? busyNote : report ? <PracticeResults problem={problem} cases={report.cases} key={report.result.duration} mode={mode} result={report.result} stale={report.code !== code} unchecked={report.unchecked} /> : needLogin ? null : <p className="py-4 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
+          {tab === "results" && (running ? busyNote : report ? (
+            <PracticeResults
+              cases={report.cases}
+              key={report.result.duration}
+              mode={mode}
+              onAskAiDebug={companionMode !== "off" ? (ci) => { void askCompanionHint("L2", { intent: "debug", caseIndex: ci, userLabel: `帮我分析「${report.cases[report.result.results[ci]?.index ?? 0]?.label || `用例 ${(report.result.results[ci]?.index ?? 0) + 1}`}」的错因` }); } : undefined}
+              onAskAiReview={companionMode !== "off" ? () => { void askCompanionHint("L4", { intent: "review", userLabel: "请点评我这道题的写法与复杂度" }); } : undefined}
+              onEditCase={(caseIdx) => {
+                const targetCase = report.cases[caseIdx];
+                if (!targetCase) return;
+                setCustomInput(targetCase.stdin);
+                setCustomFields(practiceInputFields(problem, targetCase.input));
+                setCustomExpected(mode === "leetcode" ? formatPracticeValue(targetCase.expected) : targetCase.stdout);
+                setError(null);
+                caseTab.current = "custom";
+                setTab("custom");
+              }}
+              problem={problem}
+              result={report.result}
+              stale={report.code !== code}
+              unchecked={report.unchecked}
+            />
+          ) : needLogin ? null : <p className="py-4 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
           {tab === "debug" && (() => {
             const debugModeToggle = canUseDap ? (
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
@@ -1219,12 +1440,16 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
           })()}
           {tab === "companion" && companionMode !== "off" && (
             <PracticeCompanionPanel
+              allPassedRun={!!report && !report.result.cancelled && !report.unchecked && report.result.results.length === report.cases.length && report.result.results.length > 0 && report.result.results.every((r) => r.passed && !r.error)}
               consentMode={companionMode}
               error={companionError}
+              hasFailedRun={!!report && report.result.results.some((r) => r.error || (!report.unchecked && !r.passed))}
+              llmEnabled={llmEnabled}
               loading={companionBusy}
-              onRequestHint={(lvl) => { void requestCompanionReveal(lvl); }}
-              onSelectLevel={setCompanionLevel}
-              revealed={companionReveal}
+              messages={companionMessages}
+              mode={mode}
+              onSelectAndReveal={(lvl) => { void askCompanionHint(lvl, { intent: "hint" }); }}
+              onSendQuestion={(q) => { void sendCompanionChat(q); }}
               selectedLevel={companionLevel}
             />
           )}
@@ -1238,18 +1463,21 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
           : <button aria-label={`运行位置：${target === "cloud" ? "云端" : "浏览器"}（点一下换到${target === "cloud" ? "浏览器" : "云端"}）`} className="practice-status-where" data-testid="practice-run-target" disabled={running} onClick={() => changeTarget(target === "cloud" ? "browser" : "cloud")} title={target === "cloud" ? "在云端运行（要登录）；调试仍在浏览器里。点一下换回浏览器" : "在浏览器里运行（不用登录）。点一下换到云端"} type="button">{target === "cloud" ? <CloudIcon /> : <BrowserIcon />}{target === "cloud" ? "云端" : "浏览器"}</button>}
         <SaveStatus draft={draftState} flash={flash} repoReady={repoReady} run={runState} solution={solutionState} />
         {lastPassed !== null && <span className={clsx("practice-status-result", lastPassed === lastTotal ? "text-success" : "text-danger")} title="上次运行的结果">{lastPassed === lastTotal ? "✓" : "✗"} {lastPassed}/{lastTotal}</span>}
-        {companionMode !== "off" && (
-          <button
-            aria-label="打开 AI 伴学提示面板"
-            className="practice-console-toggle"
-            data-testid="practice-companion-toggle"
-            onClick={() => { setPanelOpen(true); setTab("companion"); }}
-            type="button"
-          >
-            伴学
-          </button>
-        )}
-        <button aria-expanded={panelOpen} aria-label="控制台" className="practice-console-toggle" onClick={() => setPanelOpen((open) => !open)} type="button"><TerminalIcon />控制台<ChevronDown className={clsx("transition-transform", !panelOpen && "rotate-180")} height={11} width={11} /></button>
+        <div className="practice-status-actions">
+          <span className="practice-status-shortcut">⌘↵ 运行</span>
+          {companionMode !== "off" && (
+            <button
+              aria-label="打开 AI 伴学提示面板"
+              className={clsx("practice-console-toggle", tab === "companion" && panelOpen && "text-accent")}
+              data-testid="practice-companion-toggle"
+              onClick={() => { setPanelOpen(true); setTab("companion"); }}
+              type="button"
+            >
+              AI 助教
+            </button>
+          )}
+          <button aria-expanded={panelOpen} aria-label="控制台" className="practice-console-toggle" onClick={() => setPanelOpen((open) => !open)} type="button"><TerminalIcon />控制台<ChevronDown className={clsx("transition-transform", !panelOpen && "rotate-180")} height={11} width={11} /></button>
+        </div>
       </div>
     </Card>
   );
@@ -1291,6 +1519,10 @@ function SaveIcon() {
 /** 调试：一只小虫子 */
 function BugIcon() {
   return <svg aria-hidden fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="14"><rect height="8.5" rx="3.5" width="7" x="4.5" y="5" /><path d="M8 7.5v6M6 3.5 6.8 5M10 3.5 9.2 5M4.5 8H2M14 8h-2.5M4.5 11.5l-2 1.5M11.5 11.5l2 1.5M4.6 6.2 2.8 5M11.4 6.2 13.2 5" /></svg>;
+}
+/** AI 助教：一颗星芒 */
+function SparkleIcon() {
+  return <svg aria-hidden fill="none" height="14" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" viewBox="0 0 16 16" width="14"><path d="M8 1.8 9.6 6.4 14.2 8 9.6 9.6 8 14.2 6.4 9.6 1.8 8 6.4 6.4Z" /></svg>;
 }
 
 /** 收起侧栏：一个框，右边一栏带向右的箭头 */

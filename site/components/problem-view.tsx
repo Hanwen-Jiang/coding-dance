@@ -10,7 +10,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 
 import { CodePanel } from "@/components/code-panel";
 import { AttemptsCompanionReview } from "@/components/practice/companion";
-import { PracticeProvider, PracticeStatement, prefetchPractice } from "@/components/practice/context";
+import { PracticeModeSwitch, PracticeProvider, PracticeStatement, prefetchPractice, usePractice } from "@/components/practice/context";
 import { PracticeWorkbench } from "@/components/practice/workbench";
 import { DemoPlayer } from "@/components/demo/demo-player";
 import { AlertIcon, BulbIcon, ChevronDown, ChevronLeft, ChevronRight, CodeIcon, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
@@ -21,7 +21,7 @@ import { TierChip, TopicChip } from "@/components/tags";
 import { useCompanionMode } from "@/lib/companion";
 import { IDS } from "@/lib/ids";
 import { codeIn } from "@/lib/langs";
-import { useCodingLayout } from "@/lib/practice/dock";
+import { setPracticeDocked, useCodingLayout } from "@/lib/practice/dock";
 import { PRACTICE_SAVED_EVENT } from "@/lib/practice/save-queue";
 import { usePrefs } from "@/lib/prefs";
 import { useProgress } from "@/lib/progress";
@@ -193,6 +193,7 @@ function Hints({ spec }: { spec: Spec }) {
 /** revealed 由题目页统一管：点开题解或者点开演示旁边的代码，两处一起显示 */
 function Solutions({ spec, revealed, onReveal }: { spec: Spec; revealed: boolean; onReveal: () => void }) {
   const { langs: prefs } = usePrefs();
+  const { problem, mode, applySolutionCode } = usePractice();
   const [tab, setTab] = useState<string | null>(null);
   const elegantIdx = spec.codes.findIndex((c) => c.kind === "elegant");
   const same = elegantIdx === 0;
@@ -251,7 +252,13 @@ function Solutions({ spec, revealed, onReveal }: { spec: Spec; revealed: boolean
               {same && t.id === "elegant" && <p className="text-sm text-muted">标准解法本身已经足够简洁，两者是同一份代码。</p>}
               {t.code.note && <p className="hint-text text-sm leading-6 text-muted" dangerouslySetInnerHTML={{ __html: t.code.note }} />}
             </div>
-            <SolutionCode code={t.code} />
+            <SolutionCode
+              code={t.code}
+              onApplyCode={applySolutionCode}
+              parameterNames={problem?.parameterNames}
+              preferredMode={mode}
+              signature={problem?.signature}
+            />
           </Tabs.Panel>
         ))}
       </Tabs>
@@ -737,6 +744,8 @@ function studyEntries(d: ProblemDetail, mine: Mine): StudyEntry[] {
 
 /** 一排入口：点一下弹出对应的面板，再点一下（或点面板的关闭）收起 */
 function StudyBar({ entries, open, onOpen, label = true }: { entries: StudyEntry[]; open: StudyKey | null; onOpen: (key: StudyKey | null) => void; label?: boolean }) {
+  const { openCompanion } = usePractice();
+  const [companionMode] = useCompanionMode();
   return (
     <div aria-label="提示、演示、题解和我的记录" className="problem-study-entries" role="toolbar">
       {label && <span className="me-1 shrink-0 text-xs text-muted">卡住了？</span>}
@@ -754,6 +763,20 @@ function StudyBar({ entries, open, onOpen, label = true }: { entries: StudyEntry
           {e.count ? <span className="problem-study-count">{e.count}</span> : null}
         </Button>
       ))}
+      {companionMode !== "off" && (
+        <Button
+          className="problem-study-entry problem-study-entry--mine text-accent"
+          onPress={() => {
+            onOpen(null);
+            openCompanion("hint");
+          }}
+          size="sm"
+          variant="ghost"
+        >
+          <BulbIcon aria-hidden />
+          AI 助教
+        </Button>
+      )}
     </div>
   );
 }
@@ -987,6 +1010,17 @@ function ProblemPage({ id }: { id: number }) {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
+            {!coding && (
+              <Button
+                className="hidden min-[1200px]:inline-flex"
+                onPress={() => setPracticeDocked(true)}
+                size="sm"
+                variant="primary"
+              >
+                <CodeIcon />
+                写代码
+              </Button>
+            )}
             {coding ? (
               <Button onPress={() => openSheet("demo")} size="sm" variant="secondary">
                 <PlayIcon />
@@ -1023,7 +1057,7 @@ function ProblemPage({ id }: { id: number }) {
       <div className="problem-original-sections">
         <div className={clsx("flex min-w-0 flex-col", coding ? "gap-8" : "gap-12")}>
           <section className="flex flex-col gap-4">
-            <SectionTitle id="statement">题目描述</SectionTitle>
+            <SectionTitle extra={<PracticeModeSwitch showGuide />} id="statement">题目描述</SectionTitle>
             <Card className="p-5 sm:p-7">
               <PracticeStatement />
             </Card>

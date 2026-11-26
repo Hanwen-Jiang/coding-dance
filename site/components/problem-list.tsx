@@ -4,10 +4,11 @@ import { Card, Chip, SearchField } from "@heroui/react";
 import { EmptyState, KPIGroup, Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import NextLink from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { HistoryIcon, PlayIcon, SearchOffIcon } from "@/components/icons";
 import { LevelPixels, PixelTitle, ProgressMatrix, Skel, StatusPixel, TYPING_WORDS, TypingPixels } from "@/components/pixel";
+import { BuddyAvatar } from "@/components/practice/companion";
 import { TierChip, TopicChip, langShort } from "@/components/tags";
 import { LoginHint } from "@/components/account";
 import { SetupReminder } from "@/components/onboarding";
@@ -148,6 +149,20 @@ export function ProblemList() {
   const [groupBy, setGroupBy] = usePersisted<GroupBy>("lc.groupBy", "tier");
   const [filter, setFilter] = usePersisted<StatusFilter>("lc.status", "all");
   const [query, setQuery] = useState("");
+  const [pickSeed, setPickSeed] = useState(0);
+  const searchBoxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.key !== "/") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || t.closest("input, textarea, select, [contenteditable]"))) return;
+      e.preventDefault();
+      searchBoxRef.current?.querySelector("input")?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   // 题目资源对所有人一样；状态和题解来自当前用户的进度仓（没登录就是 0 进度）
   const { loading: sessionLoading, session, statusOf, langsOf } = useProgress();
@@ -192,6 +207,24 @@ export function ProblemList() {
   ];
   const total = problems.length || 100;
   const shownCount = groups.reduce((s, g) => s + g.items.length, 0);
+
+  // 智能导学推荐：优先巩固「尝试过」未过题 → 再复盘 Hot 20/P0「曾通过」→ 再推荐下一道重要度最高「未开始」
+  const recommendation = useMemo(() => {
+    if (!ready || !problems.length) return null;
+    const tried = problems.filter((p) => p.status === "尝试过").sort(byImportance);
+    const revisit = problems.filter((p) => p.status === "曾通过").sort(byImportance);
+    const todo = problems.filter((p) => p.status === "未开始").sort(byImportance);
+    const pool = tried.length ? tried : todo.length ? todo : revisit;
+    if (!pool.length) return null;
+    const item = pool[pickSeed % Math.min(pool.length, 6)];
+    const reason =
+      item.status === "尝试过"
+        ? "上次试过还没完全通过，今天一鼓作气拿下它"
+        : item.status === "曾通过"
+          ? `曾通过的 ${item.tier} 重点题，适合再复习一遍加深肌肉记忆`
+          : `${item.tier} 优先级 · ${item.topic}经典题，最适合作为下一站`;
+    return { item, reason };
+  }, [ready, problems, pickSeed]);
 
   return (
     <div className="flex flex-col gap-10">
@@ -247,6 +280,39 @@ export function ProblemList() {
             <ProgressMatrix cellProps={preview.cellProps} problems={ready ? problems.slice().sort(byImportance) : null} />
             {preview.layer}
           </Card>
+          {/* 智能下一步导学 */}
+          {recommendation && (
+            <Card className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5">
+              <div className="flex min-w-0 items-center gap-3">
+                <BuddyAvatar mood={recommendation.item.status === "尝试过" ? "curious" : "idle"} size={22} />
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-pixel text-[10px] tracking-wider text-accent">NEXT STEP</span>
+                    <NextLink className="font-semibold text-foreground no-underline hover:text-accent" href={`/p/${recommendation.item.id}/`}>
+                      {recommendation.item.id}. {recommendation.item.name}
+                    </NextLink>
+                    <TierChip tier={recommendation.item.tier} />
+                  </div>
+                  <p className="m-0 text-xs text-muted">{recommendation.reason}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className="rounded-lg px-2 py-1 text-xs text-muted transition-colors hover:bg-surface-secondary hover:text-foreground"
+                  onClick={() => setPickSeed((s) => s + 1)}
+                  type="button"
+                >
+                  换一道
+                </button>
+                <NextLink
+                  className="inline-flex h-7 items-center gap-1 rounded-lg bg-accent/12 px-3 text-xs font-medium text-accent no-underline transition-colors hover:bg-accent/20"
+                  href={`/p/${recommendation.item.id}/`}
+                >
+                  去挑战 →
+                </NextLink>
+              </div>
+            </Card>
+          )}
           {/* 开通进度仓在登录后的开通页（/welcome/）里做；这里只给跳过了的人留一行提醒 */}
           <SetupReminder />
           <LoginHint />
@@ -281,13 +347,15 @@ export function ProblemList() {
               ))}
             </Segment>
           </div>
-          <SearchField aria-label="搜索题目" className="md:w-64" value={query} onChange={setQuery}>
-            <SearchField.Group>
-              <SearchField.SearchIcon />
-              <SearchField.Input placeholder="题号、题名或题型" />
-              <SearchField.ClearButton />
-            </SearchField.Group>
-          </SearchField>
+          <div className="md:w-64" ref={searchBoxRef}>
+            <SearchField aria-label="搜索题目" className="w-full" value={query} onChange={setQuery}>
+              <SearchField.Group>
+                <SearchField.SearchIcon />
+                <SearchField.Input placeholder="题号、题名或题型（按 / 搜索）" />
+                <SearchField.ClearButton />
+              </SearchField.Group>
+            </SearchField>
+          </div>
         </div>
 
         {error && !data ? (

@@ -204,4 +204,120 @@ await test("EdgeOne 反向代理回源 lc-hot100.pages.dev 时允许 SITE_ORIGIN
   assert.equal(rEvil.status, 403);
 });
 
-console.log("全部 7 项通过");
+await test("上游返回通用 companion_fast 模板且带题目上下文时，升级为题目语义+代码诊断回复", async () => {
+  const mockFetch: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        hint_level: "L1",
+        source: "companion_fast",
+        title: "L1 · 方向引导问题",
+        hint: "先不要看答案，检查输入为空、长度为 1 时是否成立。",
+      }),
+      { status: 200 },
+    );
+
+  const res = await forwardCompanion(
+    postReq("/api/companion/hint-reveal", {
+      consent_mode: "proactive_consent",
+      user_consented: true,
+      hint_level: "L1",
+      problem_id: "1",
+      problem_title: "两数之和",
+      language: "python",
+      code: "class Solution:\n    def twoSum(self, nums, target):\n        for i in range(len(nums)):\n            for j in range(len(nums)):\n                if nums[i] + nums[j] == target: return [i, j]",
+      problem_context: {
+        lede: "用哈希表把走过的数记下来，一遍就够了。",
+        hints: [{ t: "把找一对数变成找一个数", body: "固定当前的数 x，要找 target - x" }],
+        points: [{ t: "先查再存", body: "避免同一个元素使用两次" }],
+      },
+    }),
+    makeEnv(),
+    "hint-reveal",
+    { fetchImpl: mockFetch },
+  );
+  assert.equal(res.status, 200);
+  const json = (await res.json()) as { source: string; engine: string; hint: string };
+  assert.equal(json.source, "context_coach");
+  assert.equal(json.engine, "context_coach");
+  assert.match(json.hint, /把找一对数变成找一个数/);
+  assert.match(json.hint, /同一个元素重复使用两次/);
+});
+
+await test("chat 接口校验 Consent-First 并支持无 LLM 时的 ACM / 调试智能问答", async () => {
+  const rDenied = await forwardCompanion(
+    postReq("/api/companion/chat", { consent_mode: "on_demand", user_consented: false, question: "为什么报错？" }),
+    makeEnv({ CODING_AGENT_URL: "", CODING_DANCE_API_TOKEN: "" }),
+    "chat",
+  );
+  assert.equal(rDenied.status, 403);
+
+  const rOk = await forwardCompanion(
+    postReq("/api/companion/chat", {
+      consent_mode: "on_demand",
+      user_consented: true,
+      mode: "acm",
+      language: "python",
+      problem_id: "1",
+      problem_title: "两数之和",
+      code: "class Solution:\n    pass",
+      question: "这题 ACM 输入输出怎么写？",
+      problem_context: { acm_io: "依次读取 nums（先长度 n 后元素）和 target" },
+    }),
+    makeEnv({ CODING_AGENT_URL: "", CODING_DANCE_API_TOKEN: "" }),
+    "chat",
+  );
+  assert.equal(rOk.status, 200);
+  const json = (await rOk.json()) as { source: string; hint: string };
+  assert.equal(json.source, "context_coach");
+  assert.match(json.hint, /ACM/);
+  assert.match(json.hint, /stdin|标准输入/);
+});
+
+await test("配置 LLM_API_KEY 时直接走 OpenAI 兼容接口并解析结构化回复", async () => {
+  let calledUrl = "";
+  let calledAuth = "";
+  const mockFetch: typeof fetch = async (url, init) => {
+    calledUrl = String(url);
+    calledAuth = (init?.headers as Record<string, string>).Authorization;
+    return new Response(
+      JSON.stringify({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                title: "小舞提示 · 哈希下标",
+                hint: "检查第 4 行：内层循环没有跳过 `i == j`，会重复使用同一个元素。",
+                next_steps: ["把内层起始下标改成 i + 1，或改用哈希表一边遍历一边存"],
+                quick_replies: ["哈希表做法的时间复杂度是多少？"],
+              }),
+            },
+          },
+        ],
+      }),
+      { status: 200 },
+    );
+  };
+
+  const res = await forwardCompanion(
+    postReq("/api/companion/chat", {
+      consent_mode: "proactive_consent",
+      user_consented: true,
+      problem_id: "1",
+      problem_title: "两数之和",
+      language: "python",
+      code: "for i in range(len(nums)): pass",
+      question: "为什么用例 2 没过？",
+    }),
+    makeEnv({ LLM_API_KEY: "sk-test-key", LLM_API_BASE: "https://llm.example/v1", LLM_MODEL: "gpt-4o-mini" }),
+    "chat",
+    { fetchImpl: mockFetch },
+  );
+  assert.equal(res.status, 200);
+  const json = (await res.json()) as { engine: string; title: string; hint: string };
+  assert.equal(calledUrl, "https://llm.example/v1/chat/completions");
+  assert.equal(calledAuth, "Bearer sk-test-key");
+  assert.equal(json.engine, "llm");
+  assert.match(json.hint, /i == j/);
+});
+
+console.log("全部 10 项通过");

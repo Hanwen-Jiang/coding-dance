@@ -1,6 +1,14 @@
+import {
+  type CoachLlmEnv,
+  type CoachRequestBody,
+  callCompanionLlm,
+  hasCoachContext,
+  llmConfigured,
+  synthesizeContextCoach,
+} from "./companion-coach.ts";
 import { type AuthEnv, clean, getSession, privateJson, sameOrigin } from "./session.ts";
 
-export interface CompanionEnv extends AuthEnv {
+export interface CompanionEnv extends AuthEnv, CoachLlmEnv {
   /** coding-agent 服务根地址，如 https://code.cgent.link */
   CODING_AGENT_URL?: string;
   /** coding-agent 上配置的 CODING_DANCE_API_TOKEN（只放 Pages 加密环境变量） */
@@ -10,7 +18,7 @@ export interface CompanionEnv extends AuthEnv {
   CODING_DANCE_WEBHOOK_SECRET?: string;
 }
 
-export type CompanionEndpoint = "hint-check" | "hint-reveal" | "history-analyze";
+export type CompanionEndpoint = "hint-check" | "hint-reveal" | "history-analyze" | "chat";
 
 const MAX_BODY = 131_072; // 128 KiB
 const RATE_WINDOW_MS = 60_000;
@@ -22,7 +30,7 @@ export function clearCompanionRateMemory() {
 }
 
 export function companionConfigured(env: CompanionEnv): boolean {
-  return !!(clean(env.CODING_AGENT_URL) && clean(env.CODING_DANCE_API_TOKEN));
+  return !!(clean(env.CODING_AGENT_URL) && clean(env.CODING_DANCE_API_TOKEN)) || llmConfigured(env);
 }
 
 /** 将 GitHub 用户名规范成 coding-agent 租户/用户 slug（^[a-z0-9][a-z0-9_-]{0,62}$） */
@@ -49,7 +57,7 @@ export function admitCompanionCall(actorKey: string, limitPerMin = RATE_LIMIT_PE
   return true;
 }
 
-/** Edge-side Consent-First proxy for /api/integrations/coding-dance/v1/*. */
+/** Edge-side Consent-First proxy + 3-tier AI coach router for /api/companion/*. */
 export async function forwardCompanion(
   request: Request,
   env: CompanionEnv,
@@ -59,7 +67,7 @@ export async function forwardCompanion(
   if (!sameOrigin(request, env)) {
     return privateJson({ error: "不接受跨站请求" }, 403);
   }
-  if (!companionConfigured(env)) {
+  if (endpoint !== "chat" && !companionConfigured(env)) {
     return privateJson({ error: "伴学服务暂未配置" }, 503);
   }
 
@@ -88,8 +96,8 @@ export async function forwardCompanion(
     return privateJson({ error: "伴学请求过于频繁，请稍后再试" }, 429, [cookie]);
   }
 
-  // Defense-in-depth Consent-First validation before forwarding to coding-agent
-  if (endpoint === "hint-reveal" || endpoint === "history-analyze") {
+  // Defense-in-depth Consent-First validation
+  if (endpoint === "hint-reveal" || endpoint === "history-analyze" || endpoint === "chat") {
     if (body.consent_mode === "off") {
       return privateJson({ error: "当前处于隐私静默模式（off），已阻止生成提示或分析" }, 403, [cookie]);
     }
@@ -99,6 +107,42 @@ export async function forwardCompanion(
   }
   if (endpoint === "hint-reveal" && !session && body.mode === "runtime") {
     body.mode = "fast";
+  }
+
+  const doFetch = opts.fetchImpl ?? fetch;
+
+  // Tier 1: 若配置了真实大模型（LLM_API_KEY 或 Workers AI），直接走 LLM 伴学对话/诊断（支持优雅回退）
+  if ((endpoint === "hint-reveal" || endpoint === "chat") && llmConfigured(env)) {
+    const out = await callCompanionLlm(env, body as unknown as CoachRequestBody, doFetch);
+    return privateJson(out, 200, [cookie]);
+  }
+
+  // Tier 2 (chat): 对话与追问接口若未配外部 LLM，使用结合题目语义与代码扫描的上下文助教
+  if (endpoint === "chat") {
+    const out = synthesizeContextCoach({ ...(body as unknown as CoachRequestBody), intent: (body.intent as CoachRequestBody["intent"]) || "chat" });
+    return privateJson(out, 200, [cookie]);
+  }
+
+  // 如果仅配置了 LLM（未配置 coding-agent）：hint-check 可直接本地判定，history-analyze 提示需上游
+  const hasUpstream = !!(clean(env.CODING_AGENT_URL) && clean(env.CODING_DANCE_API_TOKEN));
+  if (!hasUpstream) {
+    if (endpoint === "hint-check") {
+      const shouldPrompt = body.consent_mode === "proactive_consent" && Number(body.attempt_count || 0) >= 2;
+      return privateJson(
+        {
+          consent_mode: body.consent_mode || "proactive_consent",
+          action: shouldPrompt ? "ask_consent" : "standby",
+          should_prompt: shouldPrompt,
+          spoiler_free: true,
+          recommended_level: "L1",
+          available_levels: ["L1", "L2", "L3", "L4"],
+          prompt_text: "小舞注意到这里有点卡住，要不要看一条不剧透的切入提示？",
+        },
+        200,
+        [cookie],
+      );
+    }
+    return privateJson({ error: "伴学服务暂未配置" }, 503, [cookie]);
   }
 
   const slug = sanitizeCompanionUser(session?.l);
@@ -113,7 +157,6 @@ export async function forwardCompanion(
     headers["X-Coding-Dance-Tenant"] = slug;
   }
 
-  const doFetch = opts.fetchImpl ?? fetch;
   let upstream: Response;
   try {
     upstream = await doFetch(targetURL, {
@@ -122,6 +165,9 @@ export async function forwardCompanion(
       body: JSON.stringify(body),
     });
   } catch {
+    if (endpoint === "hint-reveal" && hasCoachContext(body)) {
+      return privateJson(synthesizeContextCoach(body as unknown as CoachRequestBody), 200, [cookie]);
+    }
     return privateJson({ error: "伴学网关暂时不可达，请稍后再试" }, 502, [cookie]);
   }
 
@@ -132,7 +178,25 @@ export async function forwardCompanion(
   } catch {
     payload = { error: upstream.ok ? "伴学服务返回了无法解析的响应" : "伴学服务暂时不可用" };
   }
-  return privateJson(payload, upstream.ok ? upstream.status : upstream.status >= 400 && upstream.status < 500 ? upstream.status : 502, [cookie]);
+
+  // Tier 2 fallback: 上游返回通用的静态模板（source === "companion_fast"）且前端传入了题目/代码上下文时，
+  // 用问题语义 + 代码静态诊断生成真正贴合本题的引导，替代千篇一律的通用套话。
+  if (
+    upstream.ok &&
+    endpoint === "hint-reveal" &&
+    payload &&
+    typeof payload === "object" &&
+    (payload as { source?: string }).source === "companion_fast" &&
+    hasCoachContext(body)
+  ) {
+    return privateJson(synthesizeContextCoach(body as unknown as CoachRequestBody), 200, [cookie]);
+  }
+
+  return privateJson(
+    payload,
+    upstream.ok ? upstream.status : upstream.status >= 400 && upstream.status < 500 ? upstream.status : 502,
+    [cookie],
+  );
 }
 
 /** Optional fire-and-forget async webhook delivery to coding-agent coding_dance entry point. */
