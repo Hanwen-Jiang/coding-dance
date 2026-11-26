@@ -157,6 +157,10 @@ body:has(.practice-shell--focus) .problem-bubble { display: none; }
 button.practice-status-where:hover:not(:disabled) { background: color-mix(in oklch, var(--foreground) 6%, transparent); color: var(--foreground); }
 button.practice-status-where:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 button.practice-status-where:disabled { opacity: 0.6; }
+.practice-quota-track { display: inline-block; width: 26px; height: 4px; overflow: hidden; border-radius: 999px; background: color-mix(in oklch, var(--foreground) 14%, transparent); }
+.practice-quota-fill { display: block; height: 100%; border-radius: 999px; background: var(--success); transition: width 240ms ease; }
+.practice-quota-fill.is-low { background: var(--warning); }
+.practice-quota-fill.is-empty { background: var(--danger); }
 /* 云端运行要先登录：控制台里的提示，带登录按钮（能在浏览器里跑的语言还有「改在浏览器里运行」） */
 .practice-login-prompt { display: flex; flex-direction: column; gap: 8px; padding: 10px 12px; border: 1px solid var(--separator); border-radius: 8px; background: color-mix(in oklch, var(--accent) 5%, transparent); }
 .practice-notice-link { color: var(--accent); white-space: nowrap; }

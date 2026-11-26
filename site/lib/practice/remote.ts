@@ -3,7 +3,7 @@
 // 运行器只负责编译运行、给出每组的返回值和输出；对答案和浏览器里运行一样在这里做（comparePracticeOutput / parseAcmOutput）。
 import { parseAcmOutput } from "./acm";
 import { comparePracticeOutput } from "./compare";
-import type { CloudQuotaInfo, PracticeCaseResult, PracticeLanguage, PracticeRunRequest, PracticeRunResult, PracticeTarget, PracticeTrace } from "./types";
+import type { CloudQuotaInfo, PracticeCaseResult, PracticeLanguage, PracticeRunProgress, PracticeRunRequest, PracticeRunResult, PracticeTarget, PracticeTrace } from "./types";
 
 /** 只能在云端运行的语言 */
 export const REMOTE_LANGUAGES: PracticeLanguage[] = ["java", "cpp", "go", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
@@ -89,7 +89,10 @@ function patchCachedQuota(quota?: CloudQuotaInfo) {
   statusCache = { at: statusCache.at, value: prev.then((s) => ({ ...s, quota })) };
 }
 
-export async function runRemote(request: PracticeRunRequest, options: { signal?: AbortSignal; onStatus?: (s: string) => void } = {}): Promise<PracticeRunResult> {
+export async function runRemote(
+  request: PracticeRunRequest,
+  options: { signal?: AbortSignal; onStatus?: (s: string) => void; onProgress?: (p: PracticeRunProgress) => void } = {},
+): Promise<PracticeRunResult> {
   if (!request.cases.length) throw new Error("请先添加测试用例");
   if (request.code.length > 100000) throw new Error("代码长度不能超过 100 KB");
   if (request.cases.length > 100) throw new Error("一次最多运行 100 个测试用例");
@@ -99,7 +102,20 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
   if (lastStatus && remoteLacks(lastStatus, request.language)) throw new Error(`云端运行器还没装上这门语言（节点正在更新），暂时不能运行，${isRemote(request.language) ? "稍后再试" : "可以先换回浏览器运行"}`);
   if (!statusCache || Date.now() - statusCache.at >= 60000) void remoteStatus();
   const started = performance.now();
-  options.onStatus?.(request.debug ? "正在云端调试：编译、在调试器里一步步记下来…" : isRemote(request.language) ? "正在云端编译运行…" : "正在云端运行…");
+  const compileStepLabel = isRemote(request.language) ? "云端编译" : "加载运行时";
+  const stageLabels = [
+    "核对云端额度与节点",
+    "拉起隔离沙箱容器",
+    `${compileStepLabel}与准备用例`,
+    request.debug ? "单步录制变量轨迹" : `执行 ${request.cases.length} 组测试`,
+  ];
+  const emitStage = (elapsedMs: number) => {
+    const step = elapsedMs < 450 ? 0 : elapsedMs < 1300 ? 1 : elapsedMs < 2400 ? 2 : 3;
+    options.onStatus?.(`${stageLabels[step]}（${(elapsedMs / 1000).toFixed(1)}s）…`);
+    options.onProgress?.({ step, totalSteps: 4, label: stageLabels[step], elapsedMs, cloud: true });
+  };
+  emitStage(0);
+  const timer = setInterval(() => emitStage(performance.now() - started), 150);
   const body = {
     lang: request.language,
     mode: request.mode,
@@ -111,10 +127,12 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
   let res: Response;
   try {
     res = await fetch("/api/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: options.signal });
-  } catch (e) {
+  } catch {
+    clearInterval(timer);
     if (options.signal?.aborted) return { results: [], duration: performance.now() - started, cancelled: true };
     throw new Error("连不上云端运行器，检查一下网络再试");
   }
+  clearInterval(timer);
   const reply = (await res.json().catch(() => ({}))) as RemoteReply;
   if (reply.quota) patchCachedQuota(reply.quota);
   if (res.status === 401) throw new RemoteLoginError(reply.error);
@@ -145,5 +163,15 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
       passed: checked && !error && comparePracticeOutput(request.problem, test, actual),
     };
   });
-  return { results, duration: performance.now() - started, ...(reply.quota ? { quota: reply.quota } : {}) };
+  const timing =
+    reply.bootMs != null || reply.compileMs != null || reply.runMs != null || reply.queueMs != null || reply.totalMs != null
+      ? {
+          ...(reply.queueMs != null ? { queueMs: reply.queueMs } : {}),
+          ...(reply.bootMs != null ? { bootMs: reply.bootMs } : {}),
+          ...(reply.compileMs != null ? { compileMs: reply.compileMs } : {}),
+          ...(reply.runMs != null ? { runMs: reply.runMs } : {}),
+          ...(reply.totalMs != null ? { totalMs: reply.totalMs } : {}),
+        }
+      : undefined;
+  return { results, duration: performance.now() - started, ...(reply.quota ? { quota: reply.quota } : {}), ...(timing ? { timing } : {}) };
 }

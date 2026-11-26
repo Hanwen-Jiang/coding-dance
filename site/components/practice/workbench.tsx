@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, ButtonGroup, Card, Dropdown, Header, ListBox, Modal, Select, Separator, TextArea, Tooltip } from "@heroui/react";
+import { Button, ButtonGroup, Card, Dropdown, Header, ListBox, Modal, Popover, Select, Separator, TextArea, Tooltip } from "@heroui/react";
 import { Segment } from "@heroui-pro/react";
 import clsx from "clsx";
 import dynamic from "next/dynamic";
@@ -37,7 +37,7 @@ import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
 import { isRemote, readTarget, remoteLacks, RemoteLoginError, RemoteQuotaError, remoteStatus, REMOTE_DEBUG_LANGUAGES, writeTarget, type RemoteStatus } from "@/lib/practice/remote";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
-import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunResult, PracticeTarget } from "@/lib/practice/types";
+import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunProgress, PracticeRunResult, PracticeTarget } from "@/lib/practice/types";
 import type { RunScope, SolutionLabel } from "@/lib/practice/record";
 import { practiceVerdict } from "@/lib/practice/verdict";
 import { formatPracticeInput, formatPracticeResult, formatPracticeValue, parsePracticeFields, practiceInputFields, starterHash, type PracticeInputField } from "@/lib/practice/format";
@@ -328,6 +328,7 @@ export function PracticeWorkbench() {
         <div className="practice-focus-statement-heading">
           <span className="practice-statement-id font-mono text-xs text-muted">{detail.summary.id}.</span>
           <h2 className="practice-statement-title min-w-0 flex-1 truncate text-base font-bold">{detail.summary.name}</h2>
+          {!folded && <PracticeModeSwitch showGuide />}
           <div className="practice-statement-actions flex shrink-0 items-center gap-1">
             {statementView === "only" ? (
               <Button onPress={() => setStatementView("split")} size="sm" variant="ghost"><CodeIcon />返回代码</Button>
@@ -449,6 +450,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   const [customExpected, setCustomExpected] = useState(mode === "leetcode" ? formatPracticeValue(samples[0].expected) : samples[0].stdout);
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState("");
+  const [runProgress, setRunProgress] = useState<PracticeRunProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** 最近一次运行：结果、跑的是哪组用例（scope）、当时的代码；手动保存时按它判断记什么 */
   const [report, setReport] = useState<RunReport | null>(null);
@@ -469,6 +471,25 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   };
   // 在云端运行：看一眼运行器在不在线（缓存一分钟），不在线就在编辑器下面说一声
   const [cloud, setCloud] = useState<RemoteStatus | null>(null);
+  const [cloudPopOpen, setCloudPopOpen] = useState(false);
+  const cloudPopTimerRef = useRef<number | null>(null);
+  const openCloudPop = () => {
+    if (cloudPopTimerRef.current !== null) {
+      window.clearTimeout(cloudPopTimerRef.current);
+      cloudPopTimerRef.current = null;
+    }
+    setCloudPopOpen(true);
+  };
+  const scheduleCloseCloudPop = () => {
+    if (cloudPopTimerRef.current !== null) window.clearTimeout(cloudPopTimerRef.current);
+    cloudPopTimerRef.current = window.setTimeout(() => {
+      cloudPopTimerRef.current = null;
+      setCloudPopOpen(false);
+    }, 160);
+  };
+  useEffect(() => () => {
+    if (cloudPopTimerRef.current !== null) window.clearTimeout(cloudPopTimerRef.current);
+  }, []);
   useEffect(() => {
     if (!inCloud) return;
     let alive = true;
@@ -859,6 +880,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     const snapshot = codeRef.current;
     setError(null);
     setReport(null);
+    setRunProgress(null);
     setStatus(inCloud ? (cloudOnly ? "正在云端编译运行…" : "正在云端运行…") : language === "python" ? "正在准备 Python 运行环境，首次运行请稍候…" : "正在运行测试…");
     setPanelOpen(true);
     setRunning(true);
@@ -867,6 +889,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       const result = await runPractice({ problem, language, mode, code: snapshot, cases, target }, {
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
+        onProgress: (progress) => { if (sequenceRef.current === token) setRunProgress(progress); },
       });
       if (result.quota) setCloud((prev) => (prev ? { ...prev, quota: result.quota } : prev));
       const rep: RunReport = { result, cases, code: snapshot, unchecked, scope };
@@ -908,7 +931,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         } else setError(e instanceof Error ? e.message : String(e));
       }
     } finally {
-      if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
+      if (sequenceRef.current === token) { setRunning(false); setRunProgress(null); abortRef.current = null; }
     }
   }, [cloudOnly, companionDismissed, companionMode, inCloud, language, mode, problem, ready, running, signedOut, starter, target]);
 
@@ -1010,6 +1033,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     const label = test.label || (caseTab.current === "custom" ? "自定义用例" : `示例 ${sample + 1}`);
     const desiredMode = overrideMode ?? cloudDebugMode;
     setError(null);
+    setRunProgress(null);
     setPanelOpen(true);
     setTab("debug");
 
@@ -1038,6 +1062,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         await client.readyPromise;
         if (sequenceRef.current === token) {
           setRunning(false);
+          setRunProgress(null);
           abortRef.current = null;
         }
         return;
@@ -1047,11 +1072,13 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         dapClientRef.current = null;
         if (controller.signal.aborted) {
           setRunning(false);
+          setRunProgress(null);
           abortRef.current = null;
           return;
         }
         if (e instanceof DapConnectError && e.compileError) {
           setRunning(false);
+          setRunProgress(null);
           abortRef.current = null;
           return;
         }
@@ -1068,6 +1095,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       const result = await runPractice({ problem, language, mode, code: snapshot, cases: [test], debug: true, target, watch }, {
         signal: controller.signal,
         onStatus: (value) => { if (sequenceRef.current === token) setStatus(value); },
+        onProgress: (progress) => { if (sequenceRef.current === token) setRunProgress(progress); },
       });
       if (result.quota) setCloud((prev) => (prev ? { ...prev, quota: result.quota } : prev));
       if (sequenceRef.current !== token) return;
@@ -1086,7 +1114,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         } else setError(e instanceof Error ? e.message : String(e));
       }
     } finally {
-      if (sequenceRef.current === token) { setRunning(false); abortRef.current = null; }
+      if (sequenceRef.current === token) { setRunning(false); setRunProgress(null); abortRef.current = null; }
     }
   };
   const liveDebugging = tab === "debug" && !!dapSnap && dapSnap.code === code;
@@ -1103,7 +1131,54 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   const lastPassed = report && !report.unchecked ? report.result.results.filter((r) => r.passed && !r.error).length : null;
   const lastTotal = report?.cases.length ?? 0;
   const runCurrent = () => { if (tab === "custom") runCustom(); else void execute(samples, "sample"); };
-  const busyNote = <div className="flex items-center gap-3 px-1 py-4" role="status"><span aria-hidden className="bullet-blink size-2 shrink-0 rounded-[2px] bg-accent" /><p className="text-xs leading-5 text-muted">{status}</p></div>;
+  const cloudStages = ["额度/节点", "启动沙箱", "编译/加载", "执行测试"];
+  const progressPct = runProgress
+    ? Math.min(100, Math.max(12, Math.round(((runProgress.step + 1) / Math.max(1, runProgress.totalSteps)) * 100)))
+    : 18;
+  const busyNote = (
+    <div className="flex flex-col gap-2.5 rounded-lg border border-separator bg-foreground/[0.02] px-3 py-3" role="status">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-foreground">
+          <span aria-hidden className="bullet-blink size-2 shrink-0 rounded-[2px] bg-accent" />
+          <span className="truncate">{runProgress?.label || status}</span>
+        </span>
+        {runProgress && (
+          <span className="shrink-0 font-mono text-[11px] text-muted">
+            {(runProgress.elapsedMs / 1000).toFixed(1)}s
+          </span>
+        )}
+      </div>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/10">
+        <div
+          className="h-full rounded-full bg-accent transition-[width] duration-200 ease-out"
+          style={{ width: `${progressPct}%` }}
+        />
+      </div>
+      {runProgress?.cloud && (
+        <div className="grid grid-cols-4 gap-1.5 text-[10px]">
+          {cloudStages.map((stageLabel, idx) => {
+            const done = idx < runProgress.step;
+            const current = idx === runProgress.step;
+            return (
+              <div
+                className={clsx(
+                  "truncate rounded px-1.5 py-0.5 text-center",
+                  current
+                    ? "bg-accent/12 font-medium text-accent"
+                    : done
+                    ? "bg-success/10 text-success"
+                    : "text-muted/60",
+                )}
+                key={stageLabel}
+              >
+                {done ? "✓ " : current ? "▸ " : ""}{stageLabel}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 
   /*
    * 像一个代码编辑器那样排：
@@ -1134,15 +1209,12 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             <Select.Value>{({ selectedText }) => <><span className="practice-file-name">{fileName}</span><span className="sr-only">{selectedText}</span></>}</Select.Value>
             <Select.Indicator />
           </Select.Trigger>
-          <Select.Popover className="min-w-36" style={{ zIndex: 120 }}><ListBox aria-label="可选练习语言">{LANGUAGES.map((entry) => {
+          <Select.Popover className="w-[min(272px,calc(100vw-24px))]" style={{ zIndex: 120 }}><ListBox aria-label="可选练习语言" className="grid max-h-[min(320px,55vh)] grid-cols-2 gap-0.5 overflow-y-auto p-1">{LANGUAGES.map((entry) => {
             // 只能在云端跑的语言、和选了云端的 Python / JavaScript / TypeScript 都标「云端」
             const cloudTag = entry.remote || (entry.id === language ? target : readTarget(entry.id)) === "cloud";
             return <ListBox.Item id={entry.id} key={entry.id} textValue={entry.label}>{entry.label}{cloudTag && <span className="practice-cloud-tag" title={entry.remote ? "在云端编译运行，要登录" : "选了在云端运行，要登录"}>云端</span>}<ListBox.ItemIndicator /></ListBox.Item>;
           })}</ListBox></Select.Popover>
         </Select>
-        <div className="practice-tabbar-scroll">
-          <PracticeModeSwitch showGuide />
-        </div>
         <span className="flex-1" />
         <div className="practice-run-controls">
           {running ? <Button className="practice-tb-btn" onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止</Button> : <>
@@ -1161,7 +1233,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
               </Button>
               <Dropdown>
                 <Button aria-label="选择测试档位" className="practice-tb-caret" isDisabled={!ready} isIconOnly size="sm" variant="ghost"><span className="inline-flex" title="切换测试档位"><ChevronDown height={12} width={12} /></span></Button>
-                <Dropdown.Popover className="max-w-[300px]" placement="bottom end">
+                <Dropdown.Popover className="w-60 max-w-[min(260px,calc(100vw-24px))]" placement="bottom end" style={{ zIndex: 120 }}>
                   <Dropdown.Menu aria-label="测试档位" disallowEmptySelection onSelectionChange={(keys) => { const next = [...(keys as Set<string>)][0]; if (next === "quick" || next === "full") changeLevel(next); }} selectedKeys={new Set([level])} selectionMode="single">
                     <Dropdown.Item className="flex flex-col items-start gap-0.5" id="quick" textValue="精简边界测试">
                       <span className="flex w-full items-center justify-between gap-3 text-sm font-medium">精简边界测试<span className="font-mono text-xs text-muted">{quickCases.length} 组</span></span>
@@ -1179,7 +1251,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             {/* 保存：手动记成尝试记录、存成我的题解（没通过也行） */}
             <Dropdown>
               <Button aria-label="保存到进度仓" className="practice-tb-icon" isDisabled={!ready} isIconOnly size="sm" variant="ghost"><span className="inline-flex" title="保存到进度仓 (Ctrl/⌘+S 存草稿)"><SaveIcon /></span></Button>
-              <Dropdown.Popover className="max-w-[300px]" placement="bottom end">
+              <Dropdown.Popover className="w-60 max-w-[min(260px,calc(100vw-24px))]" placement="bottom end" style={{ zIndex: 120 }}>
                 <Dropdown.Menu aria-label="保存到进度仓" disabledKeys={repoReady ? [] : ["attempt", "solution"]} onAction={(key) => { if (key === "attempt") saveAttempt(); else if (key === "solution") saveSolution(); }}>
                   <Dropdown.Item className="flex flex-col items-start gap-0.5" id="attempt" textValue="存为尝试记录">
                     <span className="text-sm font-medium">存为尝试记录</span>
@@ -1215,8 +1287,8 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         {/* 「⋯」：分组后的编辑器设置 */}
         <Dropdown>
           <Button aria-label="编辑器设置" className="practice-tb-icon" isIconOnly size="sm" variant="ghost"><span className="inline-flex" title="编辑器与助教设置"><MoreIcon /></span></Button>
-          <Dropdown.Popover className="min-w-60 max-w-[320px]" placement="bottom end">
-            <Dropdown.Menu aria-label="编辑器设置" disabledKeys={["target:only", ...(running ? ["target:browser", "target:cloud"] : []), ...(running || !ready ? ["reset"] : [])]} onAction={(key) => {
+          <Dropdown.Popover className="w-64 max-w-[min(272px,calc(100vw-24px))]" placement="bottom end" style={{ zIndex: 120 }}>
+            <Dropdown.Menu aria-label="编辑器设置" className="max-h-[min(380px,62vh)] overflow-y-auto" disabledKeys={["target:only", ...(running ? ["target:browser", "target:cloud"] : []), ...(running || !ready ? ["reset"] : [])]} onAction={(key) => {
               if (key === "wrap") toggleWrap();
               else if (key === "reset") setConfirmReset(true);
               else if (key === "target:browser" || key === "target:cloud") changeTarget(key.slice(7) as PracticeTarget);
@@ -1301,7 +1373,14 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       <CodeEditor code={code} debugLine={debugLine} hints={hints} language={language} onBreakpoints={setBreakpoints} onChange={changeCode} ready={ready} wrap={wrap} />
       {/* 浏览器里的 TypeScript 只转译、不做类型检查（ROADMAP 阶段 0）。真做类型检查要带上 lib.*.d.ts，以后再加 */}
       {language === "typescript" && <p className="practice-notice text-muted" data-testid="practice-ts-note">TypeScript 在这里只转成 JavaScript 运行，不做类型检查：类型写错不会报错，提交到力扣时会报编译错误。</p>}
-      {inCloud && <p className="practice-notice text-muted" data-testid="practice-cloud-note"><span className="min-w-0">{cloudNote(LANGUAGES.find((entry) => entry.id === language)?.label ?? language, language, mode, problem, cloud)}{signedOut && <> <a className="practice-notice-link" href={loginHref()}>用 GitHub 登录</a></>}</span></p>}
+      {inCloud && (signedOut || (cloud !== null && !cloud.available) || remoteLacks(cloud, language) || !!(mode === "leetcode" && problem.leetcodeUnavailable?.[language]) || !!cloud?.quota?.blockedReason) && (
+        <p className="practice-notice text-muted" data-testid="practice-cloud-note">
+          <span className="min-w-0">
+            {cloudNote(LANGUAGES.find((entry) => entry.id === language)?.label ?? language, language, mode, problem, cloud)}
+            {signedOut && <> <a className="practice-notice-link" href={loginHref()}>用 GitHub 登录</a></>}
+          </span>
+        </p>
+      )}
       {companionMode === "proactive_consent" && companionPrompt?.should_prompt && !companionDismissed && (
         <CompanionPromptBanner
           loading={companionBusy}
@@ -1457,10 +1536,112 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       </div>}
       <div className="practice-statusbar">
         <span className="practice-status-lang">{LANGUAGES.find((entry) => entry.id === language)?.label} · {mode === "acm" ? "ACM" : "LeetCode"}</span>
-        {/* 在哪里运行：Python、JavaScript、TypeScript 点一下在浏览器 / 云端之间换；只能在云端跑的语言只显示「云端」 */}
-        {cloudOnly
-          ? <span className="practice-status-where" data-testid="practice-run-target" title="这门语言在云端编译运行（要登录）"><CloudIcon />云端</span>
-          : <button aria-label={`运行位置：${target === "cloud" ? "云端" : "浏览器"}（点一下换到${target === "cloud" ? "浏览器" : "云端"}）`} className="practice-status-where" data-testid="practice-run-target" disabled={running} onClick={() => changeTarget(target === "cloud" ? "browser" : "cloud")} title={target === "cloud" ? "在云端运行（要登录）；调试仍在浏览器里。点一下换回浏览器" : "在浏览器里运行（不用登录）。点一下换到云端"} type="button">{target === "cloud" ? <CloudIcon /> : <BrowserIcon />}{target === "cloud" ? "云端" : "浏览器"}</button>}
+        {/* 在哪里运行：在云端时显示精简额度进度条 + 悬停/点击弹出详情；浏览器模式下点一下切到云端 */}
+        {inCloud ? (() => {
+          const langLabel = LANGUAGES.find((entry) => entry.id === language)?.label ?? language;
+          const q = cloud?.quota;
+          const pct = q && q.limit > 0 ? q.remaining / q.limit : 0;
+          const tone = pct <= 0.15 ? "is-empty" : pct <= 0.35 ? "is-low" : "";
+          const debugNote = REMOTE_DEBUG_LANGUAGES.includes(language)
+            ? "支持云端真调试器（断点、实时求值、单步轨迹）。"
+            : !cloudOnly
+            ? "调试仍在浏览器里进行（云端只调试 Java、C++、Go）。"
+            : "这门语言暂不支持单步调试。";
+          return (
+            <Popover isOpen={cloudPopOpen} onOpenChange={setCloudPopOpen}>
+              <Button
+                aria-label={`云端运行${q ? `，今日剩余 ${q.remaining}/${q.limit} 次` : ""}（点击或悬停查看详情）`}
+                className="practice-status-where !h-5 !min-h-5 !gap-1.5 !rounded !px-1.5 !text-[11px] !font-normal text-muted hover:!text-foreground"
+                data-testid="practice-run-target"
+                onMouseEnter={openCloudPop}
+                onMouseLeave={scheduleCloseCloudPop}
+                size="sm"
+                variant="ghost"
+              >
+                <CloudIcon />
+                <span>云端</span>
+                {q && !q.blockedReason && (
+                  <>
+                    <span aria-hidden className="practice-quota-track">
+                      <span className={clsx("practice-quota-fill", tone)} style={{ width: `${Math.max(4, Math.min(100, Math.round(pct * 100)))}%` }} />
+                    </span>
+                    <span className="font-mono text-[10px] opacity-80">{q.remaining}/{q.limit}</span>
+                  </>
+                )}
+              </Button>
+              <Popover.Content
+                className="w-72 max-w-[calc(100vw-24px)]"
+                onMouseEnter={openCloudPop}
+                onMouseLeave={scheduleCloseCloudPop}
+                placement="top start"
+                style={{ zIndex: 120 }}
+              >
+                <Popover.Dialog className="flex flex-col gap-2.5 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <Popover.Heading className="text-xs font-semibold text-foreground">{langLabel} · 云端沙箱</Popover.Heading>
+                    {q && <span className="rounded bg-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-accent">{q.founder ? "首批用户" : "免费版"}</span>}
+                  </div>
+                  {q ? (
+                    q.blockedReason ? (
+                      <p className="text-xs leading-5 text-warning">
+                        {q.blockedReason === "free_paused"
+                          ? "免费云端因月度预算暂时暂停。"
+                          : q.blockedReason === "account_too_new"
+                          ? "免费云端需 GitHub 注册满 30 天。"
+                          : `今日额度已用完（${q.used}/${q.limit}），北京时间 0 点重置。`}
+                      </p>
+                    ) : (
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-[11px] text-muted">
+                          <span>今日剩余额度</span>
+                          <span className="font-mono font-medium text-foreground">{q.remaining} / {q.limit} 次</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-foreground/12">
+                          <div
+                            className={clsx("h-full rounded-full transition-[width] duration-200", pct <= 0.15 ? "bg-danger" : pct <= 0.35 ? "bg-warning" : "bg-success")}
+                            style={{ width: `${Math.max(2, Math.min(100, Math.round(pct * 100)))}%` }}
+                          />
+                        </div>
+                        <p className="text-[11px] text-muted">北京时间 0 点重置；点击右上角菜单可随时调整偏好。</p>
+                      </div>
+                    )
+                  ) : signedOut ? (
+                    <div className="flex items-center justify-between gap-2 text-xs">
+                      <span className="text-muted">登录后即可使用云端沙箱</span>
+                      <a className="font-medium text-accent hover:underline" href={loginHref()}>GitHub 登录 →</a>
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted">{cloud ? (cloud.available ? "云端运行节点在线。" : cloud.reason || "云端运行节点暂时离线。") : "正在获取云端状态…"}</p>
+                  )}
+                  <p className="border-t border-separator pt-2 text-[11px] leading-4 text-muted">{debugNote}</p>
+                  {!cloudOnly && (
+                    <Button
+                      className="h-7 w-full text-xs"
+                      isDisabled={running}
+                      onPress={() => { setCloudPopOpen(false); changeTarget("browser"); }}
+                      size="sm"
+                      variant="secondary"
+                    >
+                      改在浏览器里运行
+                    </Button>
+                  )}
+                </Popover.Dialog>
+              </Popover.Content>
+            </Popover>
+          );
+        })() : (
+          <button
+            aria-label="运行位置：浏览器（点一下换到云端）"
+            className="practice-status-where"
+            data-testid="practice-run-target"
+            disabled={running}
+            onClick={() => changeTarget("cloud")}
+            title="在浏览器里运行（不用登录）。点一下换到云端"
+            type="button"
+          >
+            <BrowserIcon />浏览器
+          </button>
+        )}
         <SaveStatus draft={draftState} flash={flash} repoReady={repoReady} run={runState} solution={solutionState} />
         {lastPassed !== null && <span className={clsx("practice-status-result", lastPassed === lastTotal ? "text-success" : "text-danger")} title="上次运行的结果">{lastPassed === lastTotal ? "✓" : "✗"} {lastPassed}/{lastTotal}</span>}
         <div className="practice-status-actions">

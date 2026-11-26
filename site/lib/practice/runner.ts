@@ -1,7 +1,7 @@
 import { parseAcmOutput } from "./acm";
 import { comparePracticeOutput } from "./compare";
 import { runRemote, runsInCloud } from "./remote";
-import type { PracticeCaseResult, PracticeRunRequest, PracticeRunResult } from "./types";
+import type { PracticeCaseResult, PracticeRunProgress, PracticeRunRequest, PracticeRunResult } from "./types";
 
 export type { PracticeCaseResult, PracticeRunResult } from "./types";
 export type RunCaseResult = PracticeCaseResult;
@@ -10,6 +10,7 @@ export type RuntimeStatus = string;
 export interface PracticeRunOptions {
   signal?: AbortSignal;
   onStatus?: (status: RuntimeStatus) => void;
+  onProgress?: (progress: PracticeRunProgress) => void;
   /** Test override; normal runs allow three seconds for each test after initialization. */
   timeoutMs?: number;
 }
@@ -62,15 +63,20 @@ export async function runPractice(request: PracticeRunRequest, options: Practice
       if (done) return;
       const message = event.data;
       if (message.type === "connected") channel.port1.postMessage({ type: "init", base, vendor: VENDOR, language: request.language, debug: !!request.debug });
-      else if (message.type === "status") options.onStatus?.(message.text);
-      else if (message.type === "ready") {
+      else if (message.type === "status") {
+        options.onStatus?.(message.text);
+        options.onProgress?.({ step: 0, totalSteps: 2, label: String(message.text || "准备运行环境"), elapsedMs: performance.now() - started, cloud: false });
+      } else if (message.type === "ready") {
         options.onStatus?.("正在运行测试…");
+        options.onProgress?.({ step: 1, totalSteps: 2, label: "正在执行测试用例…", elapsedMs: performance.now() - started, cloud: false });
         channel.port1.postMessage({ type: "run", code: request.code, mode: request.mode, signature: request.problem.signature, cases: request.cases.map(({ input, stdin }) => ({ input, stdin })), debug: !!request.debug, ...(request.debug && request.watch?.length ? { watch: request.watch } : {}) });
         timeout(caseLimit, "运行超时，请检查是否存在死循环或复杂度过高");
       } else if (message.type === "case-start") {
         index = message.index;
         timeout(caseLimit, "运行超时，请检查是否存在死循环或复杂度过高");
-        options.onStatus?.(`正在运行测试 ${index + 1} / ${request.cases.length}…`);
+        const label = `正在运行用例 ${index + 1} / ${request.cases.length}…`;
+        options.onStatus?.(label);
+        options.onProgress?.({ step: 1, totalSteps: 2, label, elapsedMs: performance.now() - started, cloud: false });
       } else if (message.type === "case-result") {
         const test = request.cases[message.index]; if (!test) return;
         let actual: unknown = message.actual, error: string | undefined = message.error;

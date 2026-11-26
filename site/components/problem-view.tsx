@@ -12,6 +12,7 @@ import { CodePanel } from "@/components/code-panel";
 import { AttemptsCompanionReview } from "@/components/practice/companion";
 import { PracticeModeSwitch, PracticeProvider, PracticeStatement, prefetchPractice, usePractice } from "@/components/practice/context";
 import { PracticeWorkbench } from "@/components/practice/workbench";
+import { ProblemDrawer } from "@/components/problem-drawer";
 import { DemoPlayer } from "@/components/demo/demo-player";
 import { AlertIcon, BulbIcon, ChevronDown, ChevronLeft, ChevronRight, CodeIcon, ExternalIcon, EyeIcon, HistoryIcon, PlayIcon } from "@/components/icons";
 import { StatusPicker } from "@/components/account";
@@ -988,7 +989,10 @@ function ProblemPage({ id }: { id: number }) {
             </Breadcrumbs.Item>
             <Breadcrumbs.Item>{TIER_INFO[s.tier].label}</Breadcrumbs.Item>
           </Breadcrumbs>
-          <ProblemPager d={d} nav={nav} />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <ProblemDrawer currentId={s.id} onSelectProblem={nav.go} />
+            <ProblemPager d={d} nav={nav} />
+          </div>
         </div>
         <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div className="flex items-center gap-5">

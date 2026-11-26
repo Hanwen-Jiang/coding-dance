@@ -54,6 +54,15 @@ export function PracticeResults({
               让小舞点评复杂度
             </Button>
           )}
+          {result.timing && (
+            <span className="font-mono text-[10px] text-muted">
+              {[
+                result.timing.bootMs ? `沙箱 ${Math.round(result.timing.bootMs)}ms` : "",
+                result.timing.compileMs ? `编译 ${Math.round(result.timing.compileMs)}ms` : "",
+                result.timing.runMs ? `运行 ${Math.round(result.timing.runMs)}ms` : "",
+              ].filter(Boolean).join(" · ")}
+            </span>
+          )}
           <span className="font-mono text-[11px] text-muted">{Math.round(result.duration)} ms</span>
         </div>
       </div>

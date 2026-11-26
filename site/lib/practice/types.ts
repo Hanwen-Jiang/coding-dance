@@ -119,9 +119,24 @@ export interface CloudQuotaInfo {
   resetAt: string;
   blockedReason?: "free_paused" | "account_too_new" | "quota_exceeded";
 }
+export interface PracticeRunTiming {
+  queueMs?: number;
+  bootMs?: number;
+  compileMs?: number;
+  runMs?: number;
+  totalMs?: number;
+}
+export interface PracticeRunProgress {
+  step: number;
+  totalSteps: number;
+  label: string;
+  elapsedMs: number;
+  cloud?: boolean;
+}
 export interface PracticeRunResult {
   results: PracticeCaseResult[];
   duration: number;
   cancelled?: boolean;
   quota?: CloudQuotaInfo;
+  timing?: PracticeRunTiming;
 }
