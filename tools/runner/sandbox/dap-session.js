@@ -53,6 +53,8 @@ async function ensureJdiDir(workDir) {
 }
 
 async function prepareAndSpawnAdapter(spec, workDir) {
+  fs.mkdirSync(workDir, { recursive: true });
+  workDir = fs.realpathSync(workDir);
   if (!spec || !DEBUG_LANGS.includes(spec.lang)) throw new Error("不支持的调试语言：" + (spec && spec.lang));
   const mode = spec.mode === "leetcode" ? "leetcode" : "acm";
   const cases = Array.isArray(spec.cases) && spec.cases.length ? [spec.cases[0]] : [mode === "acm" ? { stdin: String(spec.stdin || "") } : { input: [] }];
@@ -136,13 +138,17 @@ async function prepareAndSpawnAdapter(spec, workDir) {
     outStream,
     kill: killFn,
     onClose: onCloseFn,
-    meta: { lang: spec.lang, mode, userFile: prog.user, userFullPath, off: prog.off, n: prog.n, exe: built.cmd.exe, progArgs, stdinFile, workDir, tok, cppFlavor, needsLineShift },
+    meta: {
+      lang: spec.lang, mode, userFile: prog.user, userFullPath, off: prog.off, n: prog.n,
+      exe: built.cmd.exe, progArgs, stdinFile, workDir, tok, cppFlavor, needsLineShift,
+      gdbConfigDone: false, pendingGdbLaunch: null, suppressGdbLaunchSeq: null,
+    },
   };
 }
 
-function rewriteClientToAdapter(rawJson, meta) {
+function processClientFrame(rawJson, meta, sendToAdapter, sendToClient) {
   let msg;
-  try { msg = JSON.parse(rawJson); } catch { return rawJson; }
+  try { msg = JSON.parse(rawJson); } catch { sendToAdapter(rawJson); return; }
   if (msg.type === "request" && msg.command === "launch") {
     const a = msg.arguments || {};
     if (meta.lang === "go") {
@@ -152,21 +158,45 @@ function rewriteClientToAdapter(rawJson, meta) {
         ? { program: meta.exe, args: meta.progArgs, cwd: meta.workDir, ...(a.stopAtBeginningOfMainSubprogram ? { stopAtBeginningOfMainSubprogram: true } : {}) }
         : { program: meta.exe, args: meta.progArgs, cwd: meta.workDir, ...(a.stopOnEntry ? { stopOnEntry: true } : {}) };
     }
-    return JSON.stringify(msg);
+    // GDB 15+ 的原生 DAP 在 launch 里就会立刻执行 run；先暂存 launch 并回 ACK，等 setBreakpoints 完成且收到 configurationDone 后再放行给 GDB。
+    if (meta.cppFlavor === "gdb" && !meta.gdbConfigDone) {
+      meta.pendingGdbLaunch = JSON.stringify(msg);
+      meta.suppressGdbLaunchSeq = msg.seq;
+      sendToClient(JSON.stringify({ seq: 0, type: "response", request_seq: msg.seq, success: true, command: "launch" }));
+      return;
+    }
+    sendToAdapter(JSON.stringify(msg));
+    return;
+  }
+  if (meta.cppFlavor === "gdb" && msg.type === "request" && msg.command === "configurationDone") {
+    meta.gdbConfigDone = true;
+    if (meta.pendingGdbLaunch !== null) {
+      const deferred = meta.pendingGdbLaunch;
+      meta.pendingGdbLaunch = null;
+      sendToAdapter(deferred);
+    }
+    sendToAdapter(rawJson);
+    return;
   }
   if (meta.needsLineShift && msg.type === "request" && msg.command === "setBreakpoints" && msg.arguments) {
     msg.arguments.source = { ...(msg.arguments.source || {}), name: meta.userFile, path: meta.userFullPath };
     if (Array.isArray(msg.arguments.breakpoints)) {
       msg.arguments.breakpoints = msg.arguments.breakpoints.map((bp) => ({ ...bp, line: Number(bp.line) + meta.off }));
     }
-    return JSON.stringify(msg);
+    sendToAdapter(JSON.stringify(msg));
+    return;
   }
-  return rawJson;
+  sendToAdapter(rawJson);
 }
 
 function rewriteAdapterToClient(rawJson, meta) {
   let msg;
   try { msg = JSON.parse(rawJson); } catch { return rawJson; }
+  if (meta.cppFlavor === "gdb" && meta.suppressGdbLaunchSeq !== null && msg.type === "response" && msg.command === "launch" && msg.request_seq === meta.suppressGdbLaunchSeq) {
+    meta.suppressGdbLaunchSeq = null;
+    if (msg.success !== false) return null;
+    return JSON.stringify({ seq: 0, type: "event", event: "terminated", body: { error: msg.message || "gdb launch failed" } });
+  }
   if (meta.tok && msg.type === "event" && msg.event === "output" && msg.body && typeof msg.body.output === "string") {
     const re = new RegExp("\\x01" + meta.tok.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ":[SR]:[^\\x02]*\\x02", "g");
     msg.body.output = msg.body.output.replace(re, "");
@@ -221,13 +251,19 @@ async function runStdioMode() {
     process.stdout.write(JSON.stringify({ ok: true, lang: meta.lang, mode: meta.mode, userFile: meta.userFile, lines: meta.n }) + "\n");
 
     const fromAdapter = new DapFrameParser((frame) => {
-      process.stdout.write(frameBuf(rewriteAdapterToClient(frame, meta)));
+      const out = rewriteAdapterToClient(frame, meta);
+      if (out !== null) process.stdout.write(frameBuf(out));
     });
     outStream.on("data", (c) => fromAdapter.push(c));
     onClose(() => { cleanup(); process.exit(0); });
 
     const fromClient = new DapFrameParser((frame) => {
-      inStream.write(frameBuf(rewriteClientToAdapter(frame, meta)));
+      processClientFrame(
+        frame,
+        meta,
+        (raw) => inStream.write(frameBuf(raw)),
+        (raw) => process.stdout.write(frameBuf(raw)),
+      );
     });
     if (rest.length) fromClient.push(rest);
     process.stdin.on("data", (c) => fromClient.push(c));
@@ -294,8 +330,11 @@ async function runDaemonWorker(stateDir) {
 
     const notify = () => { if (waiter) { const w = waiter; waiter = null; w(); } };
     const fromAdapter = new DapFrameParser((frame) => {
-      outQueue.push(rewriteAdapterToClient(frame, meta));
-      notify();
+      const out = rewriteAdapterToClient(frame, meta);
+      if (out !== null) {
+        outQueue.push(out);
+        notify();
+      }
     });
     outStream.on("data", (c) => fromAdapter.push(c));
     onClose(() => { exited = true; notify(); setTimeout(() => process.exit(0), 2000); });
@@ -308,7 +347,12 @@ async function runDaemonWorker(stateDir) {
         try {
           const req = JSON.parse(reqBuf || "{}");
           for (const f of req.frames || []) {
-            inStream.write(frameBuf(rewriteClientToAdapter(f, meta)));
+            processClientFrame(
+              f,
+              meta,
+              (raw) => inStream.write(frameBuf(raw)),
+              (raw) => { outQueue.push(raw); notify(); },
+            );
           }
           const rawWait = Number(req.waitMs);
           const waitMs = Number.isFinite(rawWait) ? Math.min(5000, Math.max(0, rawWait)) : 0;

@@ -739,3 +739,292 @@ func TestLiveJavaDAPViaDaemonAndPollProtocol(t *testing.T) {
 	}
 	t.Fatalf("expected microVM env to be deleted on close")
 }
+
+func TestCppGdbDAPDefersLaunchUntilConfigurationDone(t *testing.T) {
+	nodeBin, err := exec.LookPath("node")
+	if err != nil {
+		t.Skip("node not installed locally")
+	}
+
+	dapScript, err := filepath.Abs(filepath.Join("..", "..", "tools", "runner", "sandbox", "dap-session.js"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Keep Unix domain socket path well below macOS 104-byte SUN_LEN limit.
+	shortBase, err := os.MkdirTemp("", "fc-gdb-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(shortBase)
+
+	mockBin := filepath.Join(shortBase, "bin")
+	workDir := filepath.Join(shortBase, "work")
+	if err := os.MkdirAll(mockBin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	// Mock g++ just materializes the -o output binary.
+	gppScript := `#!/bin/sh
+out="prog"
+while [ $# -gt 0 ]; do
+  if [ "$1" = "-o" ] && [ $# -gt 1 ]; then
+    out="$2"
+    shift 2
+    continue
+  fi
+  shift
+done
+printf '#!/bin/sh\nexit 0\n' > "$out"
+chmod +x "$out"
+`
+	if err := os.WriteFile(filepath.Join(mockBin, "g++"), []byte(gppScript), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	cmdLogPath := filepath.Join(shortBase, "commands.json")
+	mockGdbJS := fmt.Sprintf(`#!%s
+const fs = require("fs");
+let buf = Buffer.alloc(0);
+let seq = 1;
+let bpLine = null;
+const commands = [];
+const writeFrame = (obj) => {
+  const b = Buffer.from(JSON.stringify(obj), "utf8");
+  process.stdout.write("Content-Length: " + b.length + "\r\n\r\n");
+  process.stdout.write(b);
+};
+const handle = (msg) => {
+  if (msg.type !== "request") return;
+  commands.push(msg.command);
+  fs.writeFileSync(%q, JSON.stringify(commands));
+  if (msg.command === "initialize") {
+    writeFrame({ seq: seq++, type: "response", request_seq: msg.seq, success: true, command: "initialize" });
+    writeFrame({ seq: seq++, type: "event", event: "initialized" });
+  } else if (msg.command === "setBreakpoints") {
+    const bps = (msg.arguments && msg.arguments.breakpoints) || [];
+    bpLine = bps[0] ? bps[0].line : null;
+    writeFrame({ seq: seq++, type: "response", request_seq: msg.seq, success: true, command: "setBreakpoints", body: { breakpoints: [{ verified: bpLine !== null, line: bpLine }] } });
+  } else if (msg.command === "launch") {
+    writeFrame({ seq: seq++, type: "response", request_seq: msg.seq, success: true, command: "launch" });
+    if (bpLine !== null) {
+      writeFrame({ seq: seq++, type: "event", event: "stopped", body: { reason: "breakpoint", threadId: 1 } });
+    } else {
+      // Simulate GDB 15 launching and exiting before breakpoints arrive.
+      writeFrame({ seq: seq++, type: "event", event: "exited", body: { exitCode: 0 } });
+      writeFrame({ seq: seq++, type: "event", event: "terminated" });
+    }
+  } else if (msg.command === "configurationDone") {
+    writeFrame({ seq: seq++, type: "response", request_seq: msg.seq, success: true, command: "configurationDone" });
+  } else if (msg.command === "stackTrace") {
+    writeFrame({ seq: seq++, type: "response", request_seq: msg.seq, success: true, command: "stackTrace", body: { stackFrames: [{ id: 1, name: "twoSum", line: bpLine || 1, source: { name: "main.cpp", path: "main.cpp" } }] } });
+  } else if (msg.command === "disconnect") {
+    writeFrame({ seq: seq++, type: "response", request_seq: msg.seq, success: true, command: "disconnect" });
+    process.exit(0);
+  }
+};
+process.stdin.on("data", (chunk) => {
+  buf = Buffer.concat([buf, chunk]);
+  for (;;) {
+    const sep = buf.indexOf("\r\n\r\n");
+    if (sep < 0) break;
+    const m = buf.slice(0, sep).toString("ascii").match(/Content-Length:\s*(\d+)/i);
+    if (!m) { buf = buf.slice(sep + 4); continue; }
+    const len = Number(m[1]);
+    if (buf.length < sep + 4 + len) break;
+    const body = buf.slice(sep + 4, sep + 4 + len).toString("utf8");
+    buf = buf.slice(sep + 4 + len);
+    handle(JSON.parse(body));
+  }
+});
+`, nodeBin, cmdLogPath)
+	if err := os.WriteFile(filepath.Join(mockBin, "gdb"), []byte(mockGdbJS), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	const fcToken = "fc-gdb-token-012345678901234567890"
+	var mu sync.Mutex
+	envs := map[string]struct{}{}
+	mapStateDir := func(guestDir string) string {
+		return filepath.Join(shortBase, filepath.Base(guestDir))
+	}
+
+	fakeFC := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/healthz" {
+			writeJSON(w, http.StatusOK, map[string]any{"ok": true}, nil)
+			return
+		}
+		if r.URL.Path == "/v1/envs" && r.Method == http.MethodPost {
+			mu.Lock()
+			envs["vm-gdb"] = struct{}{}
+			mu.Unlock()
+			writeJSON(w, http.StatusCreated, map[string]any{"env_id": "vm-gdb", "runtime": "lc-runner"}, nil)
+			return
+		}
+		parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+		if len(parts) >= 3 && parts[0] == "v1" && parts[1] == "envs" {
+			id := parts[2]
+			if r.Method == http.MethodDelete && len(parts) == 3 {
+				mu.Lock()
+				delete(envs, id)
+				mu.Unlock()
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/agent/v1/exec") {
+				var req struct {
+					Argv  []string `json:"argv"`
+					Stdin string   `json:"stdin"`
+				}
+				_ = json.NewDecoder(r.Body).Decode(&req)
+				stdinRaw, _ := base64.StdEncoding.DecodeString(req.Stdin)
+				args := append([]string(nil), req.Argv...)
+				if len(args) >= 4 {
+					args[3] = mapStateDir(args[3])
+				}
+				cmd := exec.CommandContext(r.Context(), args[0], args[1:]...)
+				cmd.Env = append(os.Environ(),
+					"RUNNER_WORK="+workDir,
+					"PATH="+mockBin+string(os.PathListSeparator)+os.Getenv("PATH"),
+				)
+				cmd.Stdin = bytes.NewReader(stdinRaw)
+				var stdout, stderr bytes.Buffer
+				cmd.Stdout = &stdout
+				cmd.Stderr = &stderr
+				code := 0
+				if cmd.Run() != nil {
+					code = 1
+				}
+				writeJSON(w, http.StatusOK, map[string]any{
+					"exit_code": code,
+					"timed_out": false,
+					"stdout":    base64.StdEncoding.EncodeToString(stdout.Bytes()),
+					"stderr":    base64.StdEncoding.EncodeToString(stderr.Bytes()),
+				}, nil)
+				return
+			}
+		}
+		writeJSON(w, http.StatusNotFound, map[string]any{"code": "not_found"}, nil)
+	}))
+	defer fakeFC.Close()
+
+	drv := NewFirecrackerDriver(FirecrackerConfig{
+		URL:            fakeFC.URL,
+		Token:          fcToken,
+		DAPSessionPath: dapScript,
+	})
+	if err := drv.Init(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	secret := strings.Repeat("g", 40)
+	srv := NewServer(Config{Node: "lou1", Secret: secret, DAPIdleMs: 15000, DAPMaxMs: 60000, DAPMaxActive: 4}, drv, func(map[string]any) {})
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	hdrs := SignedHeaders(secret, "GET", "/v1/dap", "lou1", "fc-cpp-user", nil, time.Now())
+	q := url.Values{}
+	q.Set("time", hdrs["x-runner-time"])
+	q.Set("nonce", hdrs["x-runner-nonce"])
+	q.Set("user", hdrs["x-runner-user"])
+	q.Set("node", hdrs["x-runner-node"])
+	q.Set("sig", hdrs["x-runner-signature"])
+
+	conn, err := ws.Dial(context.Background(), "ws"+strings.TrimPrefix(ts.URL, "http")+"/v1/dap?"+q.Encode(), nil)
+	if err != nil {
+		t.Fatalf("ws dial failed: %v", err)
+	}
+	defer conn.Close()
+
+	cppCode := strings.Join([]string{
+		"class Solution {",
+		"public:",
+		"    vector<int> twoSum(vector<int>& nums, int target) {",
+		"        unordered_map<int, int> seen;",
+		"        for (int i = 0; i < (int)nums.size(); i++) {",
+		"            int need = target - nums[i];",
+		"            if (seen.count(need)) return {seen[need], i};",
+		"            seen[nums[i]] = i;",
+		"        }",
+		"        return {};",
+		"    }",
+		"};",
+	}, "\n")
+	if err := conn.WriteJSON(DAPInitRequest{
+		Type:  "init",
+		Lang:  "cpp",
+		Mode:  "leetcode",
+		Code:  cppCode,
+		Sig:   json.RawMessage(`{"fn":"twoSum","params":["int[]","int"],"ret":"int[]"}`),
+		Cases: []JobCase{{Input: json.RawMessage(`[[3, 2, 4], 6]`)}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	launchRespCount := 0
+	readUntil := func(label string, match func(map[string]any) bool) map[string]any {
+		_ = conn.SetReadDeadline(time.Now().Add(20 * time.Second))
+		for {
+			_, raw, rErr := conn.ReadMessage()
+			if rErr != nil {
+				t.Fatalf("ws read failed waiting for %s: %v", label, rErr)
+			}
+			var m map[string]any
+			if json.Unmarshal(raw, &m) == nil {
+				if m["type"] == "response" && m["command"] == "launch" {
+					launchRespCount++
+				}
+				if match(m) {
+					return m
+				}
+			}
+		}
+	}
+
+	ready := readUntil("ready", func(m map[string]any) bool { return m["type"] == "ready" || m["type"] == "error" || m["type"] == "compile_error" })
+	if ready["type"] != "ready" {
+		t.Fatalf("expected ready, got %#v", ready)
+	}
+	// Mirror sandbox.test.mjs sequence where initialize + launch precede setBreakpoints + configurationDone.
+	_ = conn.WriteJSON(map[string]any{"seq": 1, "type": "request", "command": "initialize"})
+	readUntil("initialize", func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "initialize" })
+	_ = conn.WriteJSON(map[string]any{"seq": 2, "type": "request", "command": "launch", "arguments": map[string]any{}})
+	readUntil("initialized", func(m map[string]any) bool { return m["type"] == "event" && m["event"] == "initialized" })
+	_ = conn.WriteJSON(map[string]any{"seq": 3, "type": "request", "command": "setBreakpoints", "arguments": map[string]any{"breakpoints": []map[string]any{{"line": 6}}}})
+	readUntil("setBreakpoints", func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "setBreakpoints" })
+	_ = conn.WriteJSON(map[string]any{"seq": 4, "type": "request", "command": "configurationDone", "arguments": map[string]any{}})
+
+	stopped := readUntil("stopped", func(m map[string]any) bool { return m["type"] == "event" && m["event"] == "stopped" })
+	tid := int64(stopped["body"].(map[string]any)["threadId"].(float64))
+	_ = conn.WriteJSON(map[string]any{"seq": 5, "type": "request", "command": "stackTrace", "arguments": map[string]any{"threadId": tid}})
+	stResp := readUntil("stackTrace", func(m map[string]any) bool { return m["type"] == "response" && m["command"] == "stackTrace" })
+	frames := stResp["body"].(map[string]any)["stackFrames"].([]any)
+	if len(frames) == 0 || int(frames[0].(map[string]any)["line"].(float64)) != 6 {
+		t.Fatalf("expected stackTrace mapped back to line 6, got %#v", stResp)
+	}
+	_ = conn.WriteJSON(map[string]any{"seq": 6, "type": "request", "command": "disconnect"})
+	_ = conn.Close()
+
+	if launchRespCount != 1 {
+		t.Fatalf("expected exactly 1 launch response delivered to client, got %d", launchRespCount)
+	}
+	rawCmds, err := os.ReadFile(cmdLogPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var gotCmds []string
+	if err := json.Unmarshal(rawCmds, &gotCmds); err != nil {
+		t.Fatal(err)
+	}
+	// Verify GDB received setBreakpoints BEFORE deferred launch + configurationDone.
+	wantPrefix := []string{"initialize", "setBreakpoints", "launch", "configurationDone"}
+	if len(gotCmds) < len(wantPrefix) {
+		t.Fatalf("unexpected command order: %v", gotCmds)
+	}
+	for i, w := range wantPrefix {
+		if gotCmds[i] != w {
+			t.Fatalf("command[%d] = %q, want %q (all: %v)", i, gotCmds[i], w, gotCmds)
+		}
+	}
+}
