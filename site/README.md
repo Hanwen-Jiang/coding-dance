@@ -21,11 +21,11 @@
 
 登录并开通进度仓后，练习区会写进用户自己的进度仓（`lib/practice/record.ts` 按进度仓的规则生成文件，`/api/progress/practice` 写入）：Ctrl+S 和停下 60 秒后自动存草稿（`drafts/`）；全量测试跑完自动记一条尝试记录，全部通过再存成题解；「保存」菜单可以手动「存为尝试记录」（示例、精简、自定义用例没通过的那次也能记，写明是哪组用例；全部通过但不是全量的会先跑全量——「通过」只能来自全量测试）和「存为我的题解」（不管通没通过都存，没全量通过的写法名标「未通过」或「未验证」，在「我的历史题解」里看得出来；同一份代码不重复存）。没登录时草稿只存在浏览器里。
 
-练习数据在仓库根目录运行 `node tools/practice/build.cjs` 重新生成。修改题面格式、代码模板或用例后，需要重新构建网站。开发验证时，先启动本地预览，再运行 `node tools/practice-ui/test.mjs`；浏览器回归默认使用本机 Chrome，可通过 `CHROME_PATH` 和 `PRACTICE_BASE_URL` 指定其他浏览器路径与预览地址。
+练习数据在仓库根目录运行 `go run ./cmd/cd-build build --root . [--bundle site/public/_r2]` 并发生成（由声明式契约 `contracts/practice-meta.json`、spec、判题用例和题面生成；派生 JSON 自 Phase 3 起不再提交 Git）。开发验证时，先启动本地预览，再运行 `node tools/practice-ui/test.mjs`；浏览器回归默认使用本机 Chrome，可通过 `CHROME_PATH` 和 `PRACTICE_BASE_URL` 指定其他浏览器路径与预览地址。
 
 ## 数据从哪来
 
-网站本身是静态页面。原题、提示和用户进度等数据在运行时由 `functions/`（Cloudflare Pages Functions）通过 GitHub API 读取；练习模板、ACM 题面和练习测试用例则随网站构建发布：
+网站本身是静态页面。原题、用户进度等数据在运行时由 `functions/`（Cloudflare Pages Functions）经 GitHub / `cd-api` 读取；派生题库（`illustrations/data` 与 `practice/data`）则由 `cd-build` 打包为内容寻址清单并按三层顺序读取（`R2_ASSETS_BASE_URL` → Pages 静态资产 `/_r2/v1/manifest.json` → GitHub 仓库回退）：
 
 | 网站上的内容 | 仓库里的来源 |
 | --- | --- |
@@ -33,9 +33,9 @@
 | 每道题的状态 | 登录用户自己的进度仓里的 `progress.json` |
 | 重要程度（Hot 20 / P0 / P1 / P2 / P3） | `studyplan/优先级清单.md` |
 | 原题 | `problems/<编号>.<题名>.md` 的「题目描述」一节，图片在 `problems/images/` |
-| 练习模板、ACM 题面、练习测试用例（`/api/practice/<题号>`） | 资源仓的 `tools/practice/data/<四位编号>.json`，由 `node tools/practice/build.cjs` 从 spec 和判题用例生成；和其他题目资源一样运行时读，push 后一分钟内生效 |
-| 分层提示、简洁写法、标准题解（六种语言）、注意点、动画演示（有几种解法就有几个演示，可以切换；每一步高亮对应的代码行） | `tools/illustrations/data/<编号>.json`（由 `tools/illustrations/build.js` 从 spec 和 `code/` 导出） |
-| 基础专题的目录和内容（`/api/topics`、`/api/topic/<slug>`；题目页的「相关基础」按专题的 `related` 反查） | `tools/illustrations/data/topics/index.json`、`data/topics/<slug>.json`（由 `build.js` 从 `tools/illustrations/topics/` 和 `code/topics/` 导出）。`/learn/<slug>/` 的页面外壳是静态导出的，slug 列表在 `lib/topic-slugs.ts`：加专题要改它并重新部署，只改内容不用 |
+| 练习模板、ACM 题面、练习测试用例（`/api/practice/<题号>`） | 由 `cd-build build` 从声明式契约 `contracts/practice-meta.json`、spec 和题面并发生成，打包至内容寻址 R2 / `/_r2/` 资产目录 |
+| 分层提示、简洁写法、标准题解（六种语言）、注意点、动画演示（有几种解法就有几个演示，可以切换；每一步高亮对应的代码行） | 由 `cd-build build` 从 `tools/illustrations/specs/` 和 `code/` 并发导出至内容寻址 R2 / `/_r2/` 资产目录 |
+| 基础专题的目录和内容（`/api/topics`、`/api/topic/<slug>`；题目页的「相关基础」按专题的 `related` 反查） | 由 `cd-build build` 从 `tools/illustrations/topics/` 和 `code/topics/` 并发导出 `index.json` 与 `<slug>.json` 至内容寻址 R2 / `/_r2/`。`/learn/<slug>/` 的页面外壳是静态导出的，slug 列表在 `lib/topic-slugs.ts`：加专题要改它并重新部署 |
 | 用户的常用语言（题解和演示里的代码按它显示） | 登录用户自己的进度仓里的 `settings.json`；没登录时存在浏览器里 |
 | 我的历史题解 | 登录用户自己的进度仓里的 `solutions/<语言>/<编号>.*`（Java 文件只取 submit region 里的代码） |
 | 尝试记录（每次提交的原样代码、结果和分析，按时间排） | 登录用户自己的进度仓里的 `attempts/<编号>.<题名>/<日期>.<序号>.<结果>.md` |
@@ -129,7 +129,7 @@ wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 - **字体自托管**：Inter、JetBrains Mono、Silkscreen 的 latin 子集放在 `app/fonts/`（取自 fontsource，附 OFL 许可证），由 `app/fonts.ts` 用 `next/font/local` 输出到 `/_next/static/media/`。页面不请求 Google Fonts。正文和像素字体预加载，等宽字体用到才下载；都是 `font-display: swap`，等待期间用按字宽缩放过的后备字体，换上来时文字不跳。
 - **HeroUI 样式按组件引入**：`styles/heroui.css` 只引入用到的组件（OSS 和 Pro），整包有 680 KB。**用到新的 HeroUI 组件时，要在这个文件里加上它的样式**，否则组件没有样式；组件内部用到的组件也要有（比如 Select 要 list-box、popover）。
 - 首页的统计卡片没有用 Pro 的 `KPI` 组件（从 `@heroui-pro/react/kpi` 引入会连带 recharts，首页多 390 KB JS），而是在 `components/problem-list.tsx` 里按它的结构写了一样的标记，样式还是 Pro 的 `kpi.css`。
-- **缓存**（`public/_headers`）：`/_next/static/*`（文件名带内容哈希）和 `/practice-runtime/vendor/*` 缓存一年（`immutable`）；HTML 每次回源确认。Pyodide 和 TypeScript 由 `npm run prepare:practice` 复制到带版本号的目录 `public/practice-runtime/vendor/pyodide/<版本>/`、`vendor/typescript/<版本>/`，版本号由 `next.config.mjs` 从 `node_modules` 读出来写进 `lib/practice/runner.ts`，升级依赖后路径自动变，不会用到旧缓存。
+- **缓存**（`public/_headers`）：`/_next/static/*`（文件名带内容哈希）和 `/practice-runtime/vendor/*` 缓存一年（`immutable`）；HTML 每次回源确认。Pyodide 和 TypeScript 的版本、文件列表及 SHA-256 摘要统一声明在 `public/practice-runtime/manifest.json`（由 `lib/practice/runtime-manifest.ts` 解析，支持设置 `NEXT_PUBLIC_RUNTIME_BASE_URL` 指向 R2 CDN，未设置时默认回退本地 `vendor/`）。离线开发或打包本地镜像前按需运行 `npm run prepare:practice`（支持 `--verify` 校验 SHA-256），不再阻塞 `npm run build`。
 
 ### 静态资源放到别的域名（可选，目前没用）
 
@@ -145,12 +145,13 @@ wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 
 ## 本地开发和部署
 
-@heroui-pro/react 需要授权；首次安装或缺包时按 [HeroUI Pro 官方安装文档](https://heroui.pro/docs/react/getting-started/installation) 完成授权。
+站点已内置 `@heroui-pro/react` 预编译样式（`styles/heroui-pro.prebuilt.css`）与零私有源兼容层（`lib/ui/heroui-pro-shim/`），无需任何私有源 Token 即可直接安装并构建（CI 已同步运行纯无头浏览器测试 `tools/practice-ui/test.mjs`）：
 
 ```bash
 npm install
-npm run build        # 静态导出到 out/
-npm run preview:local # 推荐：读取本地仓库资源，预览尚未 push 的改动
+npm run prepare:practice   # 可选：离线本地预览前同步并校验 Pyodide / TypeScript 运行时；若构建时设置了 NEXT_PUBLIC_RUNTIME_BASE_URL 可跳过
+npm run build              # 静态导出到 out/
+npm run preview:local      # 推荐：读取本地仓库资源，预览尚未 push 的改动
 # npx wrangler pages dev out   # 可选：通过 GitHub API 读取远端资源，带 Functions
 npx wrangler pages deploy out --project-name lc-hot100 --branch main
 ```

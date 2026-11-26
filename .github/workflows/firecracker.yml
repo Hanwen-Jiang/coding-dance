@@ -5,10 +5,10 @@ name: firecracker
 # 要编 Rust、编内核（有缓存），比较慢，所以只在运行器相关的文件变了时跑。
 on:
   push:
-    branches: [main]
-    paths: ["tools/runner/**", "tools/illustrations/judge/**", ".github/workflows/firecracker.yml"]
+    branches: [main, feat/go-modernization]
+    paths: ["cmd/cd-runner/**", "internal/runner/**", "internal/ws/**", "internal/otel/**", "tools/runner/**", "tools/illustrations/judge/**", ".github/workflows/firecracker.yml"]
   pull_request:
-    paths: ["tools/runner/**", "tools/illustrations/judge/**", ".github/workflows/firecracker.yml"]
+    paths: ["cmd/cd-runner/**", "internal/runner/**", "internal/ws/**", "internal/otel/**", "tools/runner/**", "tools/illustrations/judge/**", ".github/workflows/firecracker.yml"]
   workflow_dispatch:
 
 jobs:
@@ -25,9 +25,17 @@ jobs:
           repository: Hanwen-Jiang/agent-runtime
           ref: ${{ env.AGENT_RUNTIME_REF }}
           path: agent-runtime
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: 编译静态 cd-runner 与 cd-build 二进制
+        run: |
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-runner ./cmd/cd-runner
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-build ./cmd/cd-build
       - name: 腾出磁盘空间（镜像好几 GB，还要再转成一份 ext4 根文件系统）
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium
@@ -75,11 +83,12 @@ jobs:
           sudo chown -R "$(id -u):$(id -g)" fc-target "$HOME/.cargo" || true
           mkdir -p fc-kernel
           sudo install -m 0644 -o "$(id -u)" /var/lib/agentruntime/fc/images/vmlinux /var/lib/agentruntime/fc/images/vmlinux.key fc-kernel/
-      - name: microVM 里跑整套沙箱测试
+      - name: 经 cd-runner 在真 Firecracker microVM 里跑全套沙箱与 WebSocket DAP 测试
         run: |
+          /tmp/cd-build build --root . --quick
           token="$(sudo sed -n 's/.*"sandbox\/fc-manager-token":"\([^"]*\)".*/\1/p' /etc/agentruntime/fc-manager-secrets.json)"
           echo "::add-mask::$token"
-          RUNNER_TEST_FC_URL=http://127.0.0.1:8097 RUNNER_TEST_FC_TOKEN="$token" node tools/runner/test/sandbox.test.mjs
+          CD_RUNNER_BIN=/tmp/cd-runner RUNNER_TEST_FC_URL=http://127.0.0.1:8097 RUNNER_TEST_FC_TOKEN="$token" node tools/runner/test/sandbox.test.mjs
       - name: fc-manager 的日志
         if: always()
         run: sudo journalctl -u fc-manager --no-pager -n 200 || true

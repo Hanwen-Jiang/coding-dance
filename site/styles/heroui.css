@@ -94,8 +94,5 @@
 /* —— Pro 组件 ——
    整包 @heroui-pro/react/css 把组件样式放在 components 层里；单个组件的文件没有分层，引入时补上 layer(components)，层叠顺序和整包一样。
    KPI 的样式在用：首页的统计卡片按 KPI 的结构自己写了标记（components/problem-list.tsx 的 Kpi），没有引入 KPI 组件本身。 */
-@import "@heroui-pro/react/css/components/segment.css" layer(components);
-@import "@heroui-pro/react/css/components/empty-state.css" layer(components);
-@import "@heroui-pro/react/css/components/kpi-group.css" layer(components);
-@import "@heroui-pro/react/css/components/kpi.css" layer(components);
-@import "@heroui-pro/react/css/components/code-block.css" layer(components);
+/* —— Pro 组件（预编译工件入库，使公开 GitHub Actions 无需私有源授权即可执行静态构建） —— */
+@import "./heroui-pro.prebuilt.css" layer(components);

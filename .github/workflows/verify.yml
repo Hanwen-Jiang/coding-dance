@@ -4,11 +4,66 @@ name: verify
 # 再把六种语言的每段题解编译、运行，和 Python 标准解法的答案比对。
 on:
   push:
-    branches: [main, multilang]
+    branches: [main, multilang, feat/go-modernization]
   pull_request:
   workflow_dispatch:
 
 jobs:
+  go-modernization:
+    name: Go 控制面与零私有源构建
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: codingdance_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d codingdance_test"
+          --health-interval=3s
+          --health-timeout=3s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 编译纯静态三二进制并执行 Phase 3 并发构建、校验、契约导出与 R2 打包
+        run: |
+          mkdir -p /tmp/cd-bin
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-bin/cd-runner ./cmd/cd-runner
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-bin/cd-api ./cmd/cd-api
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-bin/cd-build ./cmd/cd-build
+          /tmp/cd-bin/cd-build build --root . --strict --bundle site/public/_r2
+          git diff --exit-code -- illustrations
+          /tmp/cd-bin/cd-build verify --root .
+          /tmp/cd-bin/cd-build export-contracts --root . --out /tmp/contracts
+      - name: Go 静态检查与竞态单测（cd-runner / cd-api / cd-build）
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/codingdance_test?sslmode=disable
+        run: |
+          go vet ./...
+          go test -race ./...
+      - name: 零私有源 Token 静态前端构建验证（内置开放兼容层 + R2 Runtime Manifest + Content-Addressed Manifest）
+        working-directory: site
+        run: |
+          npm install --no-audit --no-fund
+          node ../tools/practice-runtime/prepare.mjs --verify
+          NEXT_PUBLIC_RUNTIME_BASE_URL=https://assets.codingdance.cn/practice-runtime/vendor npm run build
+          test -f out/index.html
+          test -f out/_r2/v1/manifest.json
+          test ! -d out/practice-runtime/vendor
+
   build:
     name: 生成器和网站测试
     runs-on: ubuntu-latest
@@ -17,52 +72,109 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: 生成数据和图解页面
-        run: node tools/illustrations/build.js --strict
-      - name: 生成的文件要和提交的一致
-        run: git diff --exit-code -- tools/illustrations/data tools/illustrations/cases illustrations
-      - name: 同步逻辑、练习区写进度仓的测试
+      - name: Go 并发构建派生数据与图解页一致性检查
+        run: |
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-build ./cmd/cd-build
+          /tmp/cd-build build --root . --quick
+          git diff --exit-code -- illustrations
+      - name: 本地开发资源接口测试
+        run: node tools/dev/resource-api.test.mjs
+      - name: 同步逻辑、练习区写进度仓、WASM 清单、R2 三级清单、额度限流与 cd-runner 集群测试
         working-directory: site
         run: |
           node lib/sync/test/sync.test.ts
           node lib/practice/test/record.test.ts
           node lib/practice/test/save-queue.test.ts
+          node lib/practice/test/runtime-manifest.test.ts
           node functions/_lib/test/runner.test.ts
-      - name: 多域名登录的测试
-        working-directory: site
-        run: node functions/_lib/test/sso.test.ts
+          node functions/_lib/test/bff.test.ts
+          node functions/_lib/test/r2.test.ts
+          node functions/_lib/test/quota.test.ts
+          node functions/_lib/test/companion.test.ts
 
   practice:
     name: 练习数据和运行器
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
       - uses: actions/setup-node@v4
         with:
           node-version: 24
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: 练习数据要和提交的一致
+      - name: 并发重建派生题库与练习数据
         run: |
-          node tools/practice/build.cjs
-          git diff --exit-code -- tools/practice/data
-          # 新生成、还没提交的文件（比如新加了一题）git diff 看不到，用 status 再查一遍
-          test -z "$(git status --porcelain -- tools/practice/data)" || { git status --short -- tools/practice/data; exit 1; }
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-build ./cmd/cd-build
+          /tmp/cd-build build --root . --quick
       - name: 练习数据和输入输出的测试
-        run: node tools/practice/test.cjs
-      # 网站的其他依赖（HeroUI Pro）要授权，CI 里装不了，所以网站本身不在 CI 里构建；这里只单独装运行器测试用到的两个包
-      - name: 装运行器测试要的包
+        env:
+          CD_BUILD_BIN: /tmp/cd-build
         run: |
-          mkdir -p /tmp/rt && cd /tmp/rt && npm init -y > /dev/null && npm install --no-audit --no-fund pyodide@314.0.8 typescript@5.6.3
-          mkdir -p "$GITHUB_WORKSPACE/site/node_modules" && cp -r /tmp/rt/node_modules/. "$GITHUB_WORKSPACE/site/node_modules/"
+          node tools/practice/test.cjs
+          python3 tools/practice-runtime/audit-examples.py
+      - name: 零私有源安装前端依赖并校验 WASM 运行时 SHA-256 清单
+        working-directory: site
+        run: |
+          npm install --no-audit --no-fund
+          node ../tools/practice-runtime/prepare.mjs --verify
       - name: 运行器的测试（Python、JavaScript、TypeScript）
         run: node tools/practice-runtime/test.mjs
       - name: 调试（执行记录）的测试
         run: node tools/practice-runtime/debug.test.mjs
+
+  practice-ui:
+    name: 界面与浏览器端到端测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 并发构建派生题库与站点内容寻址资产包
+        run: |
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-build ./cmd/cd-build
+          /tmp/cd-build build --root . --quick --bundle site/public/_r2
+      - name: 零私有源构建静态站点（含离线 WASM 运行时与预编译样式）
+        working-directory: site
+        run: |
+          npm install --no-audit --no-fund
+          npm run prepare:practice
+          npm run build
+          test -f out/index.html
+          test -f out/_r2/v1/manifest.json
+      - name: 运行真实浏览器练习区端到端回归
+        run: |
+          if [ ! -x /usr/bin/google-chrome ] && [ ! -x /usr/bin/chromium ]; then
+            npx --prefix site playwright install chromium
+          fi
+          node tools/dev/preview.mjs > /tmp/cd-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill $PREVIEW_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8788/api/problems >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8788/api/problems >/dev/null || { cat /tmp/cd-preview.log; exit 1; }
+          PRACTICE_SCREENSHOT_DIR=/tmp/practice-ui-screenshots node tools/practice-ui/test.mjs
 
   judge:
     name: 判题 ${{ matrix.lang }}
@@ -73,11 +185,14 @@ jobs:
         lang: [python, java, cpp, go, javascript, typescript]
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - if: matrix.lang == 'python'
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - if: matrix.lang == 'java'
@@ -85,15 +200,13 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - if: matrix.lang == 'go'
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.22"
-          cache: false
       - if: matrix.lang == 'typescript'
         run: npm install -g typescript@5.6
-      - name: 判题
-        run: node tools/illustrations/judge/run.js --require --lang ${{ matrix.lang }}
+      - name: 构建派生题库并执行 Go 并发判题
+        run: |
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-build ./cmd/cd-build
+          /tmp/cd-build build --root . --quick
+          /tmp/cd-build judge --root . --require --lang ${{ matrix.lang }}
 
   # 远端运行器（tools/runner）：构建沙箱镜像，在新容器里跑十五种语言的练习、调试和安全检查，
   # 九种只在云端的语言再把 100 道题的起始代码都编译一遍，最后经服务完整跑一遍
@@ -102,9 +215,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - name: 编译静态 cd-runner 与 cd-build 二进制
+        run: |
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-runner ./cmd/cd-runner
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-build ./cmd/cd-build
       - name: 腾出磁盘空间（镜像里有十几种语言的工具链，好几 GB）
         run: |
           sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift /usr/local/share/powershell /usr/local/share/chromium
@@ -120,11 +241,9 @@ jobs:
           load: true
           cache-from: type=gha,scope=lc-runner
           cache-to: type=gha,mode=max,scope=lc-runner
-      - name: 沙箱（十五种语言、调试、容器限制）
-        run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/sandbox.test.mjs
+      - name: 生成派生题库供沙箱与起始代码回归测试
+        run: /tmp/cd-build build --root . --quick
+      - name: cd-runner + Docker 沙箱（十五种语言、执行记录、WebSocket DAP 真调试器、容器隔离限制）
+        run: CD_RUNNER_BIN=/tmp/cd-runner RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/sandbox.test.mjs
       - name: 起始代码和判题程序对得上（C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart × 100 题）
         run: docker run --rm -v "$PWD:/src:ro" -w /src -e RUNNER_WORK=/tmp/work lc-runner:ci node tools/runner/test/starters.test.mjs
-      - name: 服务（签名、限流、容器池）
-        run: RUNNER_TEST_IMAGE=lc-runner:ci node tools/runner/test/server.test.mjs
-      - name: Firecracker 驱动的协议（假 fc-manager；真 microVM 见 firecracker.yml）
-        run: node tools/runner/test/firecracker.test.mjs

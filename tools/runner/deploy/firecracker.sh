@@ -93,7 +93,7 @@ fi
 chmod 0600 "$SECRETS"
 cat > /etc/agentruntime/fc-manager.env <<EOF
 # setup 生成（tools/runner/deploy/firecracker.sh），重跑会覆盖。各项的意思见 agent-runtime 的 services/rs-fc-manager/src/config.rs。
-# 只听本机：只有同一台机器上的运行器（server.mjs）调它。客户机没有网卡，也不配出网目标（AR_FC_EGRESS_TARGET）。
+# 只听本机：只有同一台机器上的 Go 运行器（cd-runner）调它。客户机没有网卡，也不配出网目标（AR_FC_EGRESS_TARGET）。
 AR_FC_LISTEN=127.0.0.1:8097
 AR_SECRETS_FILE=$SECRETS
 AR_FC_STATE_DIR=/var/lib/agentruntime/fc/state

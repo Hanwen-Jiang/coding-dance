@@ -8,11 +8,17 @@ export interface Env {
   GITHUB_BRANCH: string;
   /** 本地调试时可以指向一个模拟的 API 地址 */
   GITHUB_API?: string;
+  /** R2 公共域名或 CDN 根路径（如 https://assets.codingdance.cn/r2），下挂 v1/manifest.json */
+  R2_ASSETS_BASE_URL?: string;
+  /** Cloudflare Pages 静态资源绑定（回退读取随站发布的 /_r2/v1/...） */
+  ASSETS?: { fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response> };
 }
 
 export class HttpError extends Error {
-  constructor(public status: number, message: string) {
+  status: number;
+  constructor(status: number, message: string) {
     super(message);
+    this.status = status;
   }
 }
 
@@ -44,9 +50,11 @@ function headers(env: Env, accept: string): HeadersInit {
   return h;
 }
 
+const cacheScope = (env: Env) => `${base(env)}|${env.GITHUB_REPO}|${env.GITHUB_BRANCH}|`;
+
 /** 仓库里所有文件的路径 */
 export function listFiles(env: Env): Promise<string[]> {
-  return cached("tree", async () => {
+  return cached(cacheScope(env) + "tree", async () => {
     const url = `${base(env)}/repos/${env.GITHUB_REPO}/git/trees/${encodeURIComponent(env.GITHUB_BRANCH)}?recursive=1`;
     const r = await fetch(url, { headers: headers(env, "application/vnd.github+json") });
     if (!r.ok) throw new HttpError(502, `读取仓库目录失败（GitHub ${r.status}）`);
@@ -62,7 +70,7 @@ function fetchRaw(env: Env, path: string): Promise<Response> {
 
 /** 读一个文本文件，不存在时返回 null */
 export function readText(env: Env, path: string): Promise<string | null> {
-  return cached("text:" + path, async () => {
+  return cached(cacheScope(env) + "text:" + path, async () => {
     const r = await fetchRaw(env, path);
     if (r.status === 404) return null;
     if (!r.ok) throw new HttpError(502, `读取 ${path} 失败（GitHub ${r.status}）`);

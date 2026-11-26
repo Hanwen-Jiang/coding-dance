@@ -1,6 +1,6 @@
 # 远端运行器的沙箱镜像：十五种语言的工具链 + 调试器（gdb、dlv、JDI）+ 沙箱程序。
 # 在仓库根目录构建：docker build -f tools/runner/image/Dockerfile -t lc-runner:latest .
-# 每次运行都在这个镜像起的一个新容器里（不能上网、根文件系统只读、普通用户），参数见 tools/runner/lib/sandbox.mjs。
+# 每次运行都在这个镜像起的一个新容器 / Firecracker microVM 里（不能上网、根文件系统只读、普通用户），参数见 internal/runner/driver.go。
 # 各语言一层，改了沙箱程序只重做最后几层；版本尽量和力扣的运行环境接近（力扣「语言环境」说明）。
 FROM ubuntu:24.04
 

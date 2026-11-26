@@ -1,6 +1,7 @@
 // 云端运行：交给远端运行器（tools/runner，集群节点经 Cloudflare Tunnel 接进来），经网站的 /api/run 转过去。
 // 只能在云端跑的语言（Java、C++、Go 和后加的九种）总走这里；Python、JavaScript、TypeScript 默认在浏览器里跑，用户选了云端才走这里。
 // 运行器只负责编译运行、给出每组的返回值和输出；对答案和浏览器里运行一样在这里做（comparePracticeOutput / parseAcmOutput）。
+import { apiFetch } from "../api-base";
 import { parseAcmOutput } from "./acm";
 import { comparePracticeOutput } from "./compare";
 import type { CloudQuotaInfo, PracticeCaseResult, PracticeLanguage, PracticeRunRequest, PracticeRunResult, PracticeTarget, PracticeTrace } from "./types";
@@ -69,7 +70,7 @@ export interface RemoteStatus { available: boolean; reason?: string; langs?: str
 let statusCache: { at: number; value: Promise<RemoteStatus> } | null = null;
 export function remoteStatus(): Promise<RemoteStatus> {
   if (statusCache && Date.now() - statusCache.at < 60000) return statusCache.value;
-  const value = fetch("/api/run", { cache: "no-store" })
+  const value = apiFetch("/api/run", { cache: "no-store" })
     .then((r) => r.json() as Promise<RemoteStatus>)
     .catch(() => ({ available: false, reason: "连不上网站的接口" }));
   statusCache = { at: Date.now(), value };
@@ -102,7 +103,7 @@ export async function runRemote(request: PracticeRunRequest, options: { signal?:
   };
   let res: Response;
   try {
-    res = await fetch("/api/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: options.signal });
+    res = await apiFetch("/api/run", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: options.signal });
   } catch (e) {
     if (options.signal?.aborted) return { results: [], duration: performance.now() - started, cancelled: true };
     throw new Error("连不上云端运行器，检查一下网络再试");
