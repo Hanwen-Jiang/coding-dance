@@ -320,4 +320,63 @@ await test("配置 LLM_API_KEY 时直接走 OpenAI 兼容接口并解析结构�
   assert.match(json.hint, /i == j/);
 });
 
-console.log("全部 10 项通过");
+await test("未配 LLM_API_KEY 但配置了 CODING_AGENT_URL 时，chat 经 coding-agent 走集群大模型并支持回退", async () => {
+  let calledUrl = "";
+  const mockGatewayOk: typeof fetch = async (url) => {
+    calledUrl = String(url);
+    return new Response(
+      JSON.stringify({
+        hint_level: "L2",
+        source: "agent_runtime_gateway",
+        engine: "llm",
+        model: "a6api/deepseek-v4-flash@2026-10",
+        title: "小舞点拨 · 集群模型",
+        hint: "检查输入切片边界，注意空数组场景。",
+        next_steps: ["补充空数组判空"],
+      }),
+      { status: 200 },
+    );
+  };
+
+  const rOk = await forwardCompanion(
+    postReq("/api/companion/chat", {
+      consent_mode: "on_demand",
+      user_consented: true,
+      problem_id: "1",
+      problem_title: "两数之和",
+      language: "python",
+      question: "为什么边界错了？",
+    }),
+    makeEnv(),
+    "chat",
+    { fetchImpl: mockGatewayOk },
+  );
+  assert.equal(rOk.status, 200);
+  const okJson = (await rOk.json()) as { source: string; engine: string; hint: string };
+  assert.equal(calledUrl, "https://code.cgent.link/api/integrations/coding-dance/v1/chat");
+  assert.equal(okJson.source, "agent_runtime_gateway");
+  assert.equal(okJson.engine, "llm");
+
+  const mockGatewayErr: typeof fetch = async () => new Response("Not Found", { status: 404 });
+  const rFallback = await forwardCompanion(
+    postReq("/api/companion/chat", {
+      consent_mode: "on_demand",
+      user_consented: true,
+      mode: "acm",
+      problem_id: "1",
+      problem_title: "两数之和",
+      language: "python",
+      question: "ACM 输入怎么读？",
+      problem_context: { acm_io: "stdin 读 nums 和 target" },
+    }),
+    makeEnv(),
+    "chat",
+    { fetchImpl: mockGatewayErr },
+  );
+  assert.equal(rFallback.status, 200);
+  const fbJson = (await rFallback.json()) as { source: string; hint: string };
+  assert.equal(fbJson.source, "context_coach");
+  assert.match(fbJson.hint, /ACM/);
+});
+
+console.log("全部 11 项通过");

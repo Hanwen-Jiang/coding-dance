@@ -111,21 +111,19 @@ export async function forwardCompanion(
 
   const doFetch = opts.fetchImpl ?? fetch;
 
-  // Tier 1: 若配置了真实大模型（LLM_API_KEY 或 Workers AI），直接走 LLM 伴学对话/诊断（支持优雅回退）
+  // Tier 1: 若站点显式配置了 LLM_API_KEY 或 Workers AI，直接走独立大模型接口（支持优雅回退）
   if ((endpoint === "hint-reveal" || endpoint === "chat") && llmConfigured(env)) {
     const out = await callCompanionLlm(env, body as unknown as CoachRequestBody, doFetch);
     return privateJson(out, 200, [cookie]);
   }
 
-  // Tier 2 (chat): 对话与追问接口若未配外部 LLM，使用结合题目语义与代码扫描的上下文助教
-  if (endpoint === "chat") {
-    const out = synthesizeContextCoach({ ...(body as unknown as CoachRequestBody), intent: (body.intent as CoachRequestBody["intent"]) || "chat" });
-    return privateJson(out, 200, [cookie]);
-  }
-
-  // 如果仅配置了 LLM（未配置 coding-agent）：hint-check 可直接本地判定，history-analyze 提示需上游
+  // 未配置 coding-agent 网关时：chat 直接使用本地上下文诊断助教；hint-check 返回本地判定
   const hasUpstream = !!(clean(env.CODING_AGENT_URL) && clean(env.CODING_DANCE_API_TOKEN));
   if (!hasUpstream) {
+    if (endpoint === "chat") {
+      const out = synthesizeContextCoach({ ...(body as unknown as CoachRequestBody), intent: (body.intent as CoachRequestBody["intent"]) || "chat" });
+      return privateJson(out, 200, [cookie]);
+    }
     if (endpoint === "hint-check") {
       const shouldPrompt = body.consent_mode === "proactive_consent" && Number(body.attempt_count || 0) >= 2;
       return privateJson(
@@ -165,7 +163,7 @@ export async function forwardCompanion(
       body: JSON.stringify(body),
     });
   } catch {
-    if (endpoint === "hint-reveal" && hasCoachContext(body)) {
+    if ((endpoint === "hint-reveal" || endpoint === "chat") && hasCoachContext(body)) {
       return privateJson(synthesizeContextCoach(body as unknown as CoachRequestBody), 200, [cookie]);
     }
     return privateJson({ error: "伴学网关暂时不可达，请稍后再试" }, 502, [cookie]);
@@ -179,15 +177,12 @@ export async function forwardCompanion(
     payload = { error: upstream.ok ? "伴学服务返回了无法解析的响应" : "伴学服务暂时不可用" };
   }
 
-  // Tier 2 fallback: 上游返回通用的静态模板（source === "companion_fast"）且前端传入了题目/代码上下文时，
+  // Tier 2 fallback: 上游返回通用的静态模板（source === "companion_fast"）或暂不支持该端点，且前端传入了题目/代码上下文时，
   // 用问题语义 + 代码静态诊断生成真正贴合本题的引导，替代千篇一律的通用套话。
   if (
-    upstream.ok &&
-    endpoint === "hint-reveal" &&
-    payload &&
-    typeof payload === "object" &&
-    (payload as { source?: string }).source === "companion_fast" &&
-    hasCoachContext(body)
+    (endpoint === "hint-reveal" || endpoint === "chat") &&
+    hasCoachContext(body) &&
+    (!upstream.ok || (payload && typeof payload === "object" && (payload as { source?: string }).source === "companion_fast"))
   ) {
     return privateJson(synthesizeContextCoach(body as unknown as CoachRequestBody), 200, [cookie]);
   }
