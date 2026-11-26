@@ -1,3 +1,5 @@
+import { requestOrigin } from "./session.ts";
+
 // Cloudflare Pages 边缘 BFF 反向代理：将认证、进度、设置、题解、同步、运行与伴学路由透明转发至 Go 统一后端 cd-api。
 export interface BffEnv {
   CD_API_UPSTREAM?: string;
@@ -5,6 +7,8 @@ export interface BffEnv {
   CD_API_ACCESS_SECRET?: string;
   TEMPLATE_REPO?: string;
   PROGRESS_REPO?: string;
+  SITE_ORIGINS?: string;
+  EDGE_PROXY_KEY?: string;
 }
 
 const BFF_EXACT_PATHS = new Set(["/api/session", "/api/progress", "/api/settings", "/api/run", "/api/dap", "/api/admin/runner"]);
@@ -33,14 +37,15 @@ const FORWARD_HEADERS = [
   "sec-websocket-extensions",
 ];
 
-function buildForwardHeaders(request: Request, url: URL, env: BffEnv): Headers {
+function buildForwardHeaders(request: Request, _url: URL, env: BffEnv): Headers {
   const headers = new Headers();
   for (const name of FORWARD_HEADERS) {
     const val = request.headers.get(name);
     if (val) headers.set(name, val);
   }
-  headers.set("X-Forwarded-Host", url.host);
-  headers.set("X-Forwarded-Proto", url.protocol.replace(":", ""));
+  const publicOrigin = new URL(requestOrigin(request, env));
+  headers.set("X-Forwarded-Host", publicOrigin.host);
+  headers.set("X-Forwarded-Proto", publicOrigin.protocol.replace(":", ""));
   const clientIP = request.headers.get("CF-Connecting-IP") || request.headers.get("X-Forwarded-For");
   if (clientIP) headers.set("X-Forwarded-For", clientIP);
   const accessId = (env.CD_API_ACCESS_ID || "").trim();

@@ -27,7 +27,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: En
 };
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: Env }) => {
-  if (!sameOrigin(request)) return privateJson({ error: "不接受跨站请求" }, 403);
+  if (!sameOrigin(request, env)) return privateJson({ error: "不接受跨站请求" }, 403);
   if (!runnerConfigured(env)) return privateJson({ error: "云端运行还没有部署，暂时不能在云端运行" }, 503);
   const { session, cookie } = await getSession(request, env);
   if (!session) return privateJson({ error: "云端运行要先登录（右上角用 GitHub 登录）" }, 401, [cookie]);

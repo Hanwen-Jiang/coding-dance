@@ -22,6 +22,8 @@ export interface AuthEnv {
    * 登录、授权都在它上面走，再把会话同步到其余域名（见 sso.ts）。不设或只有一个时，各域名各管各的。
    */
   SITE_ORIGINS?: string;
+  /** 可选：EdgeOne / 反向代理回源时附带的共享校验密钥（X-Edge-Proxy-Key） */
+  EDGE_PROXY_KEY?: string;
   /** 同一次登录在几个域名上共用一套令牌，令牌换新后存一份在这里，别的域名来取（见 getSession） */
   SESSIONS?: Kv;
 }
@@ -213,10 +215,44 @@ export async function getSession(request: Request, env: AuthEnv): Promise<{ sess
   return { session: null, cookie: setCookie(SESSION_COOKIE, "", 0) };
 }
 
-/** 写操作只接受本站页面发起的请求，挡住别的网站借用户的 Cookie 发请求 */
-export function sameOrigin(request: Request): boolean {
-  const origin = request.headers.get("Origin");
-  return !!origin && origin === new URL(request.url).origin;
+/** 解析 SITE_ORIGINS：只认 http(s)://主机[:端口]，去掉末尾斜杠并去重 */
+export function allowedSiteOrigins(env?: Pick<AuthEnv, "SITE_ORIGINS">): string[] {
+  const out: string[] = [];
+  for (const raw of (env?.SITE_ORIGINS || "").split(",")) {
+    const v = raw.trim().replace(/\/+$/, "");
+    if (/^https?:\/\/[\w.-]+(:\d+)?$/.test(v) && !out.includes(v)) out.push(v);
+  }
+  return out;
+}
+
+/**
+ * 解析当前请求的真实对外 Origin：
+ * 若经由可信边缘/反向代理（如 EdgeOne 回源 lc-hot100.pages.dev），仅当 X-Edge-Origin-Host / X-Forwarded-Host
+ * 落在 SITE_ORIGINS 白名单内（且若配置了 EDGE_PROXY_KEY，X-Edge-Proxy-Key 必须匹配）时才采信。
+ */
+export function requestOrigin(request: Request, env?: Pick<AuthEnv, "SITE_ORIGINS" | "EDGE_PROXY_KEY">): string {
+  const allowed = allowedSiteOrigins(env);
+  const rawHost = (request.headers.get("X-Edge-Origin-Host") || request.headers.get("X-Forwarded-Host") || "")
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+  if (rawHost && allowed.length > 0) {
+    const proxyKey = (env?.EDGE_PROXY_KEY || "").trim();
+    if (!proxyKey || request.headers.get("X-Edge-Proxy-Key") === proxyKey) {
+      const xfProto = (request.headers.get("X-Forwarded-Proto") || "").split(",")[0].trim().toLowerCase();
+      const proto = xfProto === "http" ? "http" : "https";
+      const candidate = `${proto}://${rawHost}`;
+      if (allowed.includes(candidate)) return candidate;
+    }
+  }
+  return new URL(request.url).origin;
+}
+
+/** 写操作只接受本站页面或 SITE_ORIGINS 白名单域名发起的请求，挡住别的网站借用户的 Cookie 发请求 */
+export function sameOrigin(request: Request, env?: Pick<AuthEnv, "SITE_ORIGINS" | "EDGE_PROXY_KEY">): boolean {
+  const origin = (request.headers.get("Origin") || "").trim().replace(/\/+$/, "");
+  if (!origin) return false;
+  return origin === requestOrigin(request, env) || allowedSiteOrigins(env).includes(origin);
 }
 
 /** 登录后跳回的地址只允许本站的相对路径 */

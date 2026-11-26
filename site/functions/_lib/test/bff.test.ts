@@ -288,6 +288,46 @@ try {
     assert.ok(!cookieMap.has("hot100_session"), "logout must clear hot100_session");
   });
 
+  await test("EdgeOne 代理回源 lc-hot100.pages.dev 时识别 X-Forwarded-Host / X-Edge-Origin-Host 并校验 EDGE_PROXY_KEY", async () => {
+    const baseEnv = {
+      CD_API_UPSTREAM: upstream,
+      SITE_ORIGINS: "https://codingdance.cn,https://codexdance.cn",
+    };
+
+    const rXf = await callEdge(
+      "https://lc-hot100.pages.dev/api/auth/login?return=%2Fp%2F1%2F",
+      { method: "GET", headers: { "X-Forwarded-Host": "codingdance.cn" } },
+      baseEnv,
+    );
+    assert.equal(rXf.status, 302);
+    const uXf = new URL(rXf.headers.get("Location") || "");
+    assert.equal(uXf.searchParams.get("redirect_uri"), "https://codingdance.cn/api/auth/callback");
+
+    const rEvil = await callEdge(
+      "https://lc-hot100.pages.dev/api/auth/login?return=%2Fp%2F1%2F",
+      { method: "GET", headers: { "X-Forwarded-Host": "evil.example" } },
+      baseEnv,
+    );
+    assert.equal(rEvil.status, 302);
+    const uEvil = new URL(rEvil.headers.get("Location") || "");
+    assert.equal(uEvil.searchParams.get("redirect_uri"), `https://127.0.0.1:${apiPort}/api/auth/callback`);
+
+    const keyedEnv = { ...baseEnv, EDGE_PROXY_KEY: "edge-secret-key" };
+    const rBadKey = await callEdge(
+      "https://lc-hot100.pages.dev/api/auth/login?return=%2Fp%2F1%2F",
+      { method: "GET", headers: { "X-Edge-Origin-Host": "codingdance.cn", "X-Edge-Proxy-Key": "wrong" } },
+      keyedEnv,
+    );
+    assert.equal(new URL(rBadKey.headers.get("Location") || "").searchParams.get("redirect_uri"), `https://127.0.0.1:${apiPort}/api/auth/callback`);
+
+    const rGoodKey = await callEdge(
+      "https://lc-hot100.pages.dev/api/auth/login?return=%2Fp%2F1%2F",
+      { method: "GET", headers: { "X-Edge-Origin-Host": "codingdance.cn", "X-Edge-Proxy-Key": "edge-secret-key" } },
+      keyedEnv,
+    );
+    assert.equal(new URL(rGoodKey.headers.get("Location") || "").searchParams.get("redirect_uri"), "https://codingdance.cn/api/auth/callback");
+  });
+
   console.log(`\n${passed} 项全部通过`);
 } finally {
   if (child && child.exitCode === null && child.signalCode === null) {
