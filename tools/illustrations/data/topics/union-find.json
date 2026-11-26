@@ -1,0 +1,572 @@
+{
+ "slug": "union-find",
+ "name": "并查集",
+ "kind": "ds",
+ "order": 9,
+ "lede": "并查集维护「哪些点已经连在一起」：每个集合是一棵树，用根节点代表整个集合。合并两个集合就是把一个根挂到另一个根下面；判断两个点是否连通就看它们的根是不是同一个。加上路径压缩和按大小合并后，每次操作几乎是 O(1)。",
+ "related": [
+  200,
+  128
+ ],
+ "sections": [
+  {
+   "key": "basic",
+   "t": "查找和合并",
+   "body": [
+    "只用一个数组 <code>parent</code>：<code>parent[x]</code> 是 x 的父节点，根节点的父节点是它自己。一开始每个点自成一个集合。",
+    "<b>查找</b> <code>find(x)</code>：沿着 parent 一直往上走到根。<b>合并</b> <code>unite(a, b)</code>：先找到两边的根，根相同说明已经在一个集合里；不同就把一个根的 parent 指向另一个根。",
+    "两个优化让树一直很矮：<b>路径压缩</b>——查找时顺手让节点直接指向更高的祖先（这里用「隔一个跳一个」的写法，不用递归）；<b>按大小合并</b>——小树挂到大树下面。"
+   ],
+   "points": [
+    {
+     "t": "unite 返回布尔值",
+     "body": "返回「这次有没有真的合并」很有用：返回 false 就说明两点本来就连通，比如加这条边会形成环。"
+    },
+    {
+     "t": "集合个数",
+     "body": "初始有 n 个集合，每次成功合并少一个。连通分量的个数不用再数一遍。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "路径压缩 + 按大小合并",
+     "kind": null,
+     "note": null,
+     "key": "basic",
+     "code": "class UnionFind:\n    def __init__(self, n: int):\n        self.parent = list(range(n))        # 一开始每个点自己是根\n        self.size = [1] * n\n        self.parts = n                      # 集合的个数\n\n    def find(self, x: int) -> int:\n        while self.parent[x] != x:          # 往上走到根\n            self.parent[x] = self.parent[self.parent[x]]    # 路径压缩：指向爷爷\n            x = self.parent[x]\n        return x\n\n    def unite(self, a: int, b: int) -> bool:\n        ra, rb = self.find(a), self.find(b)\n        if ra == rb:                        # 已经在一个集合里\n            return False\n        if self.size[ra] < self.size[rb]:   # 小树挂到大树下面\n            ra, rb = rb, ra\n        self.parent[rb] = ra\n        self.size[ra] += self.size[rb]\n        self.parts -= 1\n        return True\n\n    def connected(self, a: int, b: int) -> bool:\n        return self.find(a) == self.find(b)\n\n    def count(self) -> int:\n        return self.parts",
+     "marks": {
+      "init": [
+       3,
+       4,
+       5
+      ],
+      "find": [
+       8,
+       9,
+       10,
+       11
+      ],
+      "roots": [
+       14
+      ],
+      "same": [
+       15,
+       16
+      ],
+      "merge": [
+       17,
+       18,
+       19,
+       20,
+       21,
+       22
+      ],
+      "ask": [
+       25
+      ],
+      "count": [
+       28
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class UnionFind {\n    private final int[] parent, size;\n    private int parts;                          // 集合的个数\n\n    public UnionFind(int n) {\n        parent = new int[n];\n        size = new int[n];\n        for (int i = 0; i < n; i++) {\n            parent[i] = i;                      // 一开始每个点自己是根\n            size[i] = 1;\n        }\n        parts = n;\n    }\n\n    public int find(int x) {\n        while (parent[x] != x) {                // 往上走到根\n            parent[x] = parent[parent[x]];      // 路径压缩：指向爷爷\n            x = parent[x];\n        }\n        return x;\n    }\n\n    public boolean unite(int a, int b) {\n        int ra = find(a), rb = find(b);\n        if (ra == rb) {                         // 已经在一个集合里\n            return false;\n        }\n        if (size[ra] < size[rb]) {              // 小树挂到大树下面\n            int t = ra; ra = rb; rb = t;\n        }\n        parent[rb] = ra;\n        size[ra] += size[rb];\n        parts--;\n        return true;\n    }\n\n    public boolean connected(int a, int b) {\n        return find(a) == find(b);\n    }\n\n    public int count() {\n        return parts;\n    }\n}",
+       "marks": {
+        "init": [
+         6,
+         7,
+         8,
+         9,
+         10,
+         12
+        ],
+        "find": [
+         16,
+         17,
+         18,
+         20
+        ],
+        "roots": [
+         24
+        ],
+        "same": [
+         25,
+         26
+        ],
+        "merge": [
+         28,
+         29,
+         31,
+         32,
+         33,
+         34
+        ],
+        "ask": [
+         38
+        ],
+        "count": [
+         42
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class UnionFind {\n    vector<int> parent, size;\n    int parts;                                  // 集合的个数\n\npublic:\n    UnionFind(int n) : parent(n), size(n, 1), parts(n) {\n        iota(parent.begin(), parent.end(), 0);  // 一开始每个点自己是根\n    }\n\n    int find(int x) {\n        while (parent[x] != x) {                // 往上走到根\n            parent[x] = parent[parent[x]];      // 路径压缩：指向爷爷\n            x = parent[x];\n        }\n        return x;\n    }\n\n    bool unite(int a, int b) {\n        int ra = find(a), rb = find(b);\n        if (ra == rb) {                         // 已经在一个集合里\n            return false;\n        }\n        if (size[ra] < size[rb]) {              // 小树挂到大树下面\n            swap(ra, rb);\n        }\n        parent[rb] = ra;\n        size[ra] += size[rb];\n        parts--;\n        return true;\n    }\n\n    bool connected(int a, int b) {\n        return find(a) == find(b);\n    }\n\n    int count() {\n        return parts;\n    }\n};",
+       "marks": {
+        "init": [
+         6,
+         7
+        ],
+        "find": [
+         11,
+         12,
+         13,
+         15
+        ],
+        "roots": [
+         19
+        ],
+        "same": [
+         20,
+         21
+        ],
+        "merge": [
+         23,
+         24,
+         26,
+         27,
+         28,
+         29
+        ],
+        "ask": [
+         33
+        ],
+        "count": [
+         37
+        ]
+       }
+      },
+      "go": {
+       "code": "type UnionFind struct {\n\tparent, size []int\n\tparts        int // 集合的个数\n}\n\nfunc Constructor(n int) UnionFind {\n\tparent, size := make([]int, n), make([]int, n)\n\tfor i := range parent {\n\t\tparent[i] = i // 一开始每个点自己是根\n\t\tsize[i] = 1\n\t}\n\treturn UnionFind{parent, size, n}\n}\n\nfunc (u *UnionFind) Find(x int) int {\n\tfor u.parent[x] != x { // 往上走到根\n\t\tu.parent[x] = u.parent[u.parent[x]] // 路径压缩：指向爷爷\n\t\tx = u.parent[x]\n\t}\n\treturn x\n}\n\nfunc (u *UnionFind) Unite(a, b int) bool {\n\tra, rb := u.Find(a), u.Find(b)\n\tif ra == rb { // 已经在一个集合里\n\t\treturn false\n\t}\n\tif u.size[ra] < u.size[rb] { // 小树挂到大树下面\n\t\tra, rb = rb, ra\n\t}\n\tu.parent[rb] = ra\n\tu.size[ra] += u.size[rb]\n\tu.parts--\n\treturn true\n}\n\nfunc (u *UnionFind) Connected(a, b int) bool {\n\treturn u.Find(a) == u.Find(b)\n}\n\nfunc (u *UnionFind) Count() int {\n\treturn u.parts\n}",
+       "marks": {
+        "init": [
+         7,
+         8,
+         9,
+         10,
+         12
+        ],
+        "find": [
+         16,
+         17,
+         18,
+         20
+        ],
+        "roots": [
+         24
+        ],
+        "same": [
+         25,
+         26
+        ],
+        "merge": [
+         28,
+         29,
+         31,
+         32,
+         33,
+         34
+        ],
+        "ask": [
+         38
+        ],
+        "count": [
+         42
+        ]
+       }
+      },
+      "javascript": {
+       "code": "class UnionFind {\n    constructor(n) {\n        this.parent = Array.from({ length: n }, (_, i) => i);   // 一开始每个点自己是根\n        this.size = new Array(n).fill(1);\n        this.parts = n;                         // 集合的个数\n    }\n\n    find(x) {\n        while (this.parent[x] !== x) {          // 往上走到根\n            this.parent[x] = this.parent[this.parent[x]];   // 路径压缩：指向爷爷\n            x = this.parent[x];\n        }\n        return x;\n    }\n\n    unite(a, b) {\n        let ra = this.find(a), rb = this.find(b);\n        if (ra === rb) {                        // 已经在一个集合里\n            return false;\n        }\n        if (this.size[ra] < this.size[rb]) {    // 小树挂到大树下面\n            [ra, rb] = [rb, ra];\n        }\n        this.parent[rb] = ra;\n        this.size[ra] += this.size[rb];\n        this.parts--;\n        return true;\n    }\n\n    connected(a, b) {\n        return this.find(a) === this.find(b);\n    }\n\n    count() {\n        return this.parts;\n    }\n}",
+       "marks": {
+        "init": [
+         3,
+         4,
+         5
+        ],
+        "find": [
+         9,
+         10,
+         11,
+         13
+        ],
+        "roots": [
+         17
+        ],
+        "same": [
+         18,
+         19
+        ],
+        "merge": [
+         21,
+         22,
+         24,
+         25,
+         26,
+         27
+        ],
+        "ask": [
+         31
+        ],
+        "count": [
+         35
+        ]
+       }
+      },
+      "typescript": {
+       "code": "class UnionFind {\n    private parent: number[];\n    private size: number[];\n    private parts: number;                      // 集合的个数\n\n    constructor(n: number) {\n        this.parent = Array.from({ length: n }, (_, i) => i);   // 一开始每个点自己是根\n        this.size = new Array(n).fill(1);\n        this.parts = n;\n    }\n\n    find(x: number): number {\n        while (this.parent[x] !== x) {          // 往上走到根\n            this.parent[x] = this.parent[this.parent[x]];   // 路径压缩：指向爷爷\n            x = this.parent[x];\n        }\n        return x;\n    }\n\n    unite(a: number, b: number): boolean {\n        let ra = this.find(a), rb = this.find(b);\n        if (ra === rb) {                        // 已经在一个集合里\n            return false;\n        }\n        if (this.size[ra] < this.size[rb]) {    // 小树挂到大树下面\n            [ra, rb] = [rb, ra];\n        }\n        this.parent[rb] = ra;\n        this.size[ra] += this.size[rb];\n        this.parts--;\n        return true;\n    }\n\n    connected(a: number, b: number): boolean {\n        return this.find(a) === this.find(b);\n    }\n\n    count(): number {\n        return this.parts;\n    }\n}",
+       "marks": {
+        "init": [
+         7,
+         8,
+         9
+        ],
+        "find": [
+         13,
+         14,
+         15,
+         17
+        ],
+        "roots": [
+         21
+        ],
+        "same": [
+         22,
+         23
+        ],
+        "merge": [
+         25,
+         26,
+         28,
+         29,
+         30,
+         31
+        ],
+        "ask": [
+         35
+        ],
+        "count": [
+         39
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "查找和合并",
+    "legend": [
+     [
+      "a",
+      "正在查找的点"
+     ],
+     [
+      "b",
+      "根"
+     ],
+     [
+      "c",
+      "这次合并的两棵树"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例",
+      "args": {
+       "n": 6,
+       "ops": [
+        [
+         "unite",
+         0,
+         1
+        ],
+        [
+         "unite",
+         2,
+         3
+        ],
+        [
+         "unite",
+         1,
+         3
+        ],
+        [
+         "unite",
+         4,
+         5
+        ],
+        [
+         "connected",
+         0,
+         2
+        ],
+        [
+         "connected",
+         0,
+         4
+        ],
+        [
+         "unite",
+         2,
+         0
+        ],
+        [
+         "count"
+        ]
+       ]
+      },
+      "note": "n = 6：unite(0, 1) unite(2, 3) unite(1, 3) unite(4, 5) connected(0, 2) connected(0, 4) unite(2, 0) count()"
+     }
+    ],
+    "build": "build(a, snap) {\n        const n = a.n, parent = Array.from({ length: n }, (_, i) => i), size = new Array(n).fill(1), out = [null];\n        let parts = n, hot = [], roots = [], newEdges = new Set();\n        // 每个点画在第 i 列、第「到根的距离」行，根都在最上面一行\n        const depth = (i) => { let d = 0; for (let y = i; parent[y] !== y; y = parent[y]) d++; return d; };\n        const view = (opts = {}) => {\n          const prevParent = opts.prevParent || {};\n          return [\n            {\n              t: \"net\",\n              label: \"森林（箭头指向父节点）\",\n              directed: true,\n              pos: parent.map((_, i) => [i, depth(i)]),\n              nodes: parent.map((p, i) => ({ v: i, cls: hot.includes(i) ? \"a\" : roots.includes(i) ? \"c\" : p === i ? \"b\" : \"\" })),\n              edges: parent.map((p, i) => [i, p, newEdges.has(i) ? \"on draw\" : hot.includes(i) ? \"on\" : \"\"]).filter(([i, p]) => i !== p),\n              badges: parent.map((p, i) => (p === i ? `大小 ${size[i]}` : \"\")),\n            },\n            {\n              t: \"array\",\n              label: \"parent\",\n              items: parent.map((p, i) => ({\n                v: p,\n                ...(prevParent[i] !== undefined ? { prev: prevParent[i] } : {}),\n                cls: hot.includes(i) ? \"a\" : roots.includes(i) ? \"c\" : \"\",\n              })),\n              ptrs: opts.ptrs || {},\n            },\n            { t: \"chips\", label: \"返回值\", items: out.map((x) => (x === null ? \"null\" : String(x))) },\n          ];\n        };\n        // 和代码一样：查找时让节点指向爷爷（隔一个跳一个）\n        const find = (x, prevParent) => {\n          const path = [x];\n          while (parent[x] !== x) {\n            const gp = parent[parent[x]];\n            if (gp !== parent[x] && prevParent[x] === undefined) prevParent[x] = parent[x];\n            parent[x] = gp;\n            x = parent[x];\n            path.push(x);\n          }\n          return { r: x, path };\n        };\n        snap(\"开始\", `${n} 个点各自是一个集合，parent[i] = i。`, view(), {\n          at: \"init\",\n          facts: [[\"当前操作\", \"初始化\"], [\"集合个数\", parts], [\"返回值数\", 1]],\n        });\n        let prevOp = \"初始化\";\n        for (const [op, x, y] of a.ops) {\n          hot = []; roots = []; newEdges = new Set();\n          if (op === \"count\") {\n            out.push(parts);\n            snap(\"count()\", `现在有 ${parts} 个集合。`, view(), {\n              at: \"count\",\n              facts: [[\"当前操作\", \"count()\", prevOp], [\"集合个数\", parts], [\"返回值\", parts]],\n            });\n            prevOp = \"count()\";\n            continue;\n          }\n          const prevParent = {};\n          const A = find(x, prevParent), B = find(y, prevParent);\n          hot = [...new Set([...A.path, ...B.path])];\n          newEdges = new Set(Object.keys(prevParent).map(Number));\n          const opName = `${op}(${x}, ${y})`;\n          if (op === \"connected\") {\n            out.push(A.r === B.r);\n            snap(opName, `${x} 的根是 ${A.r}，${y} 的根是 ${B.r}，${A.r === B.r ? \"相同：连通，返回 true\" : \"不同：不连通，返回 false\"}。`, view({ prevParent, ptrs: { a: x, b: y } }), {\n              at: [\"ask\", \"find\"],\n              facts: [[\"当前操作\", opName, prevOp], [\"两边的根\", `${A.r} vs ${B.r}`], [\"集合个数\", parts]],\n            });\n            prevOp = opName;\n            continue;\n          }\n          snap(opName, `先找根：${x} 一路往上是 ${A.path.join(\" → \")}，${y} 一路往上是 ${B.path.join(\" → \")}。`, view({ prevParent, ptrs: { a: x, b: y } }), {\n            at: [\"roots\", \"find\"],\n            facts: [[\"当前操作\", opName, prevOp], [\"两边的根\", `${A.r} 和 ${B.r}`], [\"集合个数\", parts]],\n          });\n          prevOp = opName;\n          if (A.r === B.r) {\n            out.push(false); hot = []; newEdges = new Set();\n            snap(\"已经连通\", `两个根都是 ${A.r}，已经在一个集合里，返回 false。`, view({ ptrs: { ra: A.r } }), {\n              at: \"same\",\n              facts: [[\"当前操作\", opName], [\"结果\", \"已连通 (false)\"], [\"集合个数\", parts]],\n            });\n            continue;\n          }\n          let ra = A.r, rb = B.r;\n          if (size[ra] < size[rb]) [ra, rb] = [rb, ra];\n          const mergePrev = { [rb]: rb };\n          parent[rb] = ra; size[ra] += size[rb]; parts--; out.push(true);\n          hot = []; roots = [ra, rb]; newEdges = new Set([rb]);\n          snap(\"合并\", `根 ${A.r} 的树有 ${A.r === ra ? size[ra] - size[rb] : size[rb]} 个点，根 ${B.r} 的有 ${B.r === ra ? size[ra] - size[rb] : size[rb]} 个。把小的根 ${rb} 挂到 ${ra} 下面，现在有 ${parts} 个集合。`, view({ prevParent: mergePrev, ptrs: { ra, rb } }), {\n            at: \"merge\",\n            kind: \"ok\",\n            facts: [[\"当前操作\", opName], [\"合并方向\", `${rb} → ${ra}`], [\"集合个数\", parts, parts + 1]],\n          });\n        }\n        hot = []; roots = []; newEdges = new Set();\n        snap(\"完成\", \"每棵树是一个集合，根代表整个集合。\", view(), {\n          at: [],\n          kind: \"ok\",\n          ans: out,\n          facts: [[\"当前操作\", \"完成\", prevOp], [\"最终集合数\", parts], [\"返回值数\", out.length]],\n        });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "正在查找的点"
+       ],
+       [
+        "b",
+        "根"
+       ],
+       [
+        "c",
+        "这次合并的两棵树"
+       ]
+      ],
+      "code": "basic",
+      "build": "build(a, snap) {\n        const n = a.n, parent = Array.from({ length: n }, (_, i) => i), size = new Array(n).fill(1), out = [null];\n        let parts = n, hot = [], roots = [], newEdges = new Set();\n        // 每个点画在第 i 列、第「到根的距离」行，根都在最上面一行\n        const depth = (i) => { let d = 0; for (let y = i; parent[y] !== y; y = parent[y]) d++; return d; };\n        const view = (opts = {}) => {\n          const prevParent = opts.prevParent || {};\n          return [\n            {\n              t: \"net\",\n              label: \"森林（箭头指向父节点）\",\n              directed: true,\n              pos: parent.map((_, i) => [i, depth(i)]),\n              nodes: parent.map((p, i) => ({ v: i, cls: hot.includes(i) ? \"a\" : roots.includes(i) ? \"c\" : p === i ? \"b\" : \"\" })),\n              edges: parent.map((p, i) => [i, p, newEdges.has(i) ? \"on draw\" : hot.includes(i) ? \"on\" : \"\"]).filter(([i, p]) => i !== p),\n              badges: parent.map((p, i) => (p === i ? `大小 ${size[i]}` : \"\")),\n            },\n            {\n              t: \"array\",\n              label: \"parent\",\n              items: parent.map((p, i) => ({\n                v: p,\n                ...(prevParent[i] !== undefined ? { prev: prevParent[i] } : {}),\n                cls: hot.includes(i) ? \"a\" : roots.includes(i) ? \"c\" : \"\",\n              })),\n              ptrs: opts.ptrs || {},\n            },\n            { t: \"chips\", label: \"返回值\", items: out.map((x) => (x === null ? \"null\" : String(x))) },\n          ];\n        };\n        // 和代码一样：查找时让节点指向爷爷（隔一个跳一个）\n        const find = (x, prevParent) => {\n          const path = [x];\n          while (parent[x] !== x) {\n            const gp = parent[parent[x]];\n            if (gp !== parent[x] && prevParent[x] === undefined) prevParent[x] = parent[x];\n            parent[x] = gp;\n            x = parent[x];\n            path.push(x);\n          }\n          return { r: x, path };\n        };\n        snap(\"开始\", `${n} 个点各自是一个集合，parent[i] = i。`, view(), {\n          at: \"init\",\n          facts: [[\"当前操作\", \"初始化\"], [\"集合个数\", parts], [\"返回值数\", 1]],\n        });\n        let prevOp = \"初始化\";\n        for (const [op, x, y] of a.ops) {\n          hot = []; roots = []; newEdges = new Set();\n          if (op === \"count\") {\n            out.push(parts);\n            snap(\"count()\", `现在有 ${parts} 个集合。`, view(), {\n              at: \"count\",\n              facts: [[\"当前操作\", \"count()\", prevOp], [\"集合个数\", parts], [\"返回值\", parts]],\n            });\n            prevOp = \"count()\";\n            continue;\n          }\n          const prevParent = {};\n          const A = find(x, prevParent), B = find(y, prevParent);\n          hot = [...new Set([...A.path, ...B.path])];\n          newEdges = new Set(Object.keys(prevParent).map(Number));\n          const opName = `${op}(${x}, ${y})`;\n          if (op === \"connected\") {\n            out.push(A.r === B.r);\n            snap(opName, `${x} 的根是 ${A.r}，${y} 的根是 ${B.r}，${A.r === B.r ? \"相同：连通，返回 true\" : \"不同：不连通，返回 false\"}。`, view({ prevParent, ptrs: { a: x, b: y } }), {\n              at: [\"ask\", \"find\"],\n              facts: [[\"当前操作\", opName, prevOp], [\"两边的根\", `${A.r} vs ${B.r}`], [\"集合个数\", parts]],\n            });\n            prevOp = opName;\n            continue;\n          }\n          snap(opName, `先找根：${x} 一路往上是 ${A.path.join(\" → \")}，${y} 一路往上是 ${B.path.join(\" → \")}。`, view({ prevParent, ptrs: { a: x, b: y } }), {\n            at: [\"roots\", \"find\"],\n            facts: [[\"当前操作\", opName, prevOp], [\"两边的根\", `${A.r} 和 ${B.r}`], [\"集合个数\", parts]],\n          });\n          prevOp = opName;\n          if (A.r === B.r) {\n            out.push(false); hot = []; newEdges = new Set();\n            snap(\"已经连通\", `两个根都是 ${A.r}，已经在一个集合里，返回 false。`, view({ ptrs: { ra: A.r } }), {\n              at: \"same\",\n              facts: [[\"当前操作\", opName], [\"结果\", \"已连通 (false)\"], [\"集合个数\", parts]],\n            });\n            continue;\n          }\n          let ra = A.r, rb = B.r;\n          if (size[ra] < size[rb]) [ra, rb] = [rb, ra];\n          const mergePrev = { [rb]: rb };\n          parent[rb] = ra; size[ra] += size[rb]; parts--; out.push(true);\n          hot = []; roots = [ra, rb]; newEdges = new Set([rb]);\n          snap(\"合并\", `根 ${A.r} 的树有 ${A.r === ra ? size[ra] - size[rb] : size[rb]} 个点，根 ${B.r} 的有 ${B.r === ra ? size[ra] - size[rb] : size[rb]} 个。把小的根 ${rb} 挂到 ${ra} 下面，现在有 ${parts} 个集合。`, view({ prevParent: mergePrev, ptrs: { ra, rb } }), {\n            at: \"merge\",\n            kind: \"ok\",\n            facts: [[\"当前操作\", opName], [\"合并方向\", `${rb} → ${ra}`], [\"集合个数\", parts, parts + 1]],\n          });\n        }\n        hot = []; roots = []; newEdges = new Set();\n        snap(\"完成\", \"每棵树是一个集合，根代表整个集合。\", view(), {\n          at: [],\n          kind: \"ok\",\n          ans: out,\n          facts: [[\"当前操作\", \"完成\", prevOp], [\"最终集合数\", parts], [\"返回值数\", out.length]],\n        });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n      const n = R.int(4, 7), ops = [];\n      for (let k = R.int(6, 9); k > 0; k--) {\n        const o = R.pick([\"unite\", \"unite\", \"unite\", \"connected\", \"count\"]);\n        ops.push(o === \"count\" ? [o] : [o, R.int(0, n - 1), R.int(0, n - 1)]);\n      }\n      return { args: { n, ops }, note: `n = ${n}：` + ops.map((o) => `${o[0]}(${o.slice(1).join(\", \")})`).join(\" \") };\n    })(R); return { args: r.args, note: r.note }; }"
+   }
+  },
+  {
+   "key": "redundant",
+   "t": "应用：找多余的边",
+   "body": [
+    "一棵树加了一条边，变成有一个环的图，找出这条多余的边（有多条时返回最后出现的）。按顺序把边一条条加进并查集：如果某条边的两个端点<b>已经连通</b>，再连上它就成环了，它就是答案。",
+    "这比每加一条边就 DFS 检查一次连通性快得多：总共 O(n·α(n))，α 是增长极慢的反阿克曼函数，实际上就当成常数。"
+   ],
+   "points": [
+    {
+     "t": "点的编号从 1 开始",
+     "body": "parent 开 n + 1 格，下标 0 不用。"
+    },
+    {
+     "t": "为什么是最后出现的",
+     "body": "按顺序加边，第一条让两个已经连通的点再连上的边就是答案。题目保证只多一条边，所以它也是环上最后出现的。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "并查集",
+     "kind": null,
+     "note": null,
+     "key": "redundant",
+     "code": "class Solution:\n    def findRedundantConnection(self, edges: List[List[int]]) -> List[int]:\n        parent = list(range(len(edges) + 1))    # 点的编号是 1 到 n\n\n        def find(x: int) -> int:\n            while parent[x] != x:\n                parent[x] = parent[parent[x]]\n                x = parent[x]\n            return x\n\n        for u, v in edges:\n            ru, rv = find(u), find(v)\n            if ru == rv:                        # 已经连通，再连就成环了\n                return [u, v]\n            parent[ru] = rv\n        return []",
+     "marks": {
+      "init": [
+       3
+      ],
+      "edge": [
+       11,
+       12
+      ],
+      "found": [
+       13,
+       14
+      ],
+      "union": [
+       15
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    private int[] parent;\n\n    private int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n\n    public int[] findRedundantConnection(int[][] edges) {\n        parent = new int[edges.length + 1];         // 点的编号是 1 到 n\n        for (int i = 0; i < parent.length; i++) {\n            parent[i] = i;\n        }\n        for (int[] e : edges) {\n            int ru = find(e[0]), rv = find(e[1]);\n            if (ru == rv) {                         // 已经连通，再连就成环了\n                return e;\n            }\n            parent[ru] = rv;\n        }\n        return new int[0];\n    }\n}",
+       "marks": {
+        "init": [
+         13,
+         14,
+         15
+        ],
+        "edge": [
+         17,
+         18
+        ],
+        "found": [
+         19,
+         20
+        ],
+        "union": [
+         22
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\n    vector<int> parent;\n\n    int find(int x) {\n        while (parent[x] != x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    }\n\npublic:\n    vector<int> findRedundantConnection(vector<vector<int>>& edges) {\n        parent.resize(edges.size() + 1);            // 点的编号是 1 到 n\n        iota(parent.begin(), parent.end(), 0);\n        for (auto& e : edges) {\n            int ru = find(e[0]), rv = find(e[1]);\n            if (ru == rv) {                         // 已经连通，再连就成环了\n                return e;\n            }\n            parent[ru] = rv;\n        }\n        return {};\n    }\n};",
+       "marks": {
+        "init": [
+         14,
+         15
+        ],
+        "edge": [
+         16,
+         17
+        ],
+        "found": [
+         18,
+         19
+        ],
+        "union": [
+         21
+        ]
+       }
+      },
+      "go": {
+       "code": "func findRedundantConnection(edges [][]int) []int {\n\tparent := make([]int, len(edges)+1) // 点的编号是 1 到 n\n\tfor i := range parent {\n\t\tparent[i] = i\n\t}\n\tfind := func(x int) int {\n\t\tfor parent[x] != x {\n\t\t\tparent[x] = parent[parent[x]]\n\t\t\tx = parent[x]\n\t\t}\n\t\treturn x\n\t}\n\tfor _, e := range edges {\n\t\tru, rv := find(e[0]), find(e[1])\n\t\tif ru == rv { // 已经连通，再连就成环了\n\t\t\treturn e\n\t\t}\n\t\tparent[ru] = rv\n\t}\n\treturn nil\n}",
+       "marks": {
+        "init": [
+         2,
+         3,
+         4
+        ],
+        "edge": [
+         13,
+         14
+        ],
+        "found": [
+         15,
+         16
+        ],
+        "union": [
+         18
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var findRedundantConnection = function(edges) {\n    const parent = Array.from({ length: edges.length + 1 }, (_, i) => i);   // 点的编号是 1 到 n\n    const find = (x) => {\n        while (parent[x] !== x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    };\n    for (const [u, v] of edges) {\n        const ru = find(u), rv = find(v);\n        if (ru === rv) {                        // 已经连通，再连就成环了\n            return [u, v];\n        }\n        parent[ru] = rv;\n    }\n    return [];\n};",
+       "marks": {
+        "init": [
+         2
+        ],
+        "edge": [
+         10,
+         11
+        ],
+        "found": [
+         12,
+         13
+        ],
+        "union": [
+         15
+        ]
+       }
+      },
+      "typescript": {
+       "code": "function findRedundantConnection(edges: number[][]): number[] {\n    const parent = Array.from({ length: edges.length + 1 }, (_, i) => i);   // 点的编号是 1 到 n\n    const find = (x: number): number => {\n        while (parent[x] !== x) {\n            parent[x] = parent[parent[x]];\n            x = parent[x];\n        }\n        return x;\n    };\n    for (const [u, v] of edges) {\n        const ru = find(u), rv = find(v);\n        if (ru === rv) {                        // 已经连通，再连就成环了\n            return [u, v];\n        }\n        parent[ru] = rv;\n    }\n    return [];\n}",
+       "marks": {
+        "init": [
+         2
+        ],
+        "edge": [
+         10,
+         11
+        ],
+        "found": [
+         12,
+         13
+        ],
+        "union": [
+         15
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "应用：找多余的边",
+    "legend": [
+     [
+      "a",
+      "这条边的两个端点"
+     ],
+     [
+      "c",
+      "已经连通的点"
+     ],
+     [
+      "w",
+      "多余的边（成环）"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例 2",
+      "args": {
+       "edges": [
+        [
+         1,
+         2
+        ],
+        [
+         2,
+         3
+        ],
+        [
+         3,
+         4
+        ],
+        [
+         1,
+         4
+        ],
+        [
+         1,
+         5
+        ]
+       ]
+      },
+      "note": "edges = [[1,2],[2,3],[3,4],[1,4],[1,5]]"
+     }
+    ],
+    "build": "build(a, snap) {\n        const E = a.edges, n = E.length, parent = Array.from({ length: n + 1 }, (_, i) => i);\n        const find = (x, prevParent) => {\n          while (parent[x] !== x) {\n            const gp = parent[parent[x]];\n            if (gp !== parent[x] && prevParent[x] === undefined) prevParent[x] = parent[x];\n            parent[x] = gp;\n            x = parent[x];\n          }\n          return x;\n        };\n        let added = 0, hot = [], bad = -1, newEdge = -1, comps = n;\n        const view = (opts = {}) => {\n          const prevParent = opts.prevParent || {};\n          const comp = {};\n          for (let i = 1; i <= n; i++) { let x = i; while (parent[x] !== x) x = parent[x]; comp[i] = x; }\n          return [\n            {\n              t: \"net\",\n              label: \"图（实线是已经加进来的边，虚线×是多余的边）\",\n              nodes: Array.from({ length: n }, (_, i) => ({ v: i + 1, cls: hot.includes(i + 1) ? (bad >= 0 ? \"w\" : \"a\") : \"\" })),\n              edges: E.map(([u, v], k) => [u - 1, v - 1, k === bad ? \"cut\" : k === newEdge ? \"on draw\" : k < added ? \"on\" : \"dim\"]),\n              badges: Array.from({ length: n }, (_, i) => `根 ${comp[i + 1]}`),\n            },\n            {\n              t: \"array\",\n              label: \"parent（下标从 1 开始）\",\n              items: parent.slice(1).map((p, i) => ({\n                v: p,\n                ...(prevParent[i + 1] !== undefined ? { prev: prevParent[i + 1] } : {}),\n                cls: hot.includes(i + 1) ? (bad >= 0 ? \"w\" : \"a\") : \"\",\n              })),\n              labels: parent.slice(1).map((_, i) => i + 1),\n              ptrs: opts.ptrs || {},\n            },\n          ];\n        };\n        snap(\"开始\", `${n} 个点各自是一个集合。按顺序把边加进去。`, view(), {\n          at: \"init\",\n          facts: [[\"当前边\", \"—\"], [\"已加边数\", `0 / ${n}`], [\"集合个数\", n]],\n        });\n        let prevEdge = \"—\";\n        for (let k = 0; k < n; k++) {\n          const [u, v] = E[k], prevParent = {}, ru = find(u, prevParent), rv = find(v, prevParent);\n          hot = [u, v];\n          const edgeStr = `[${u}, ${v}]`;\n          if (ru === rv) {\n            bad = k; newEdge = -1;\n            snap(\"成环了\", `边 [${u}, ${v}]：${u} 和 ${v} 的根都是 ${ru}，已经连通了。再连这条边就成环，它就是多余的。`, view({ prevParent, ptrs: { u: u - 1, v: v - 1 } }), {\n              at: [\"edge\", \"found\"],\n              kind: \"ok\",\n              ans: [u, v],\n              facts: [[\"当前边\", edgeStr, prevEdge], [\"两边的根\", `都是 ${ru}`], [\"多余边\", edgeStr]],\n            });\n            return;\n          }\n          if (prevParent[ru] === undefined) prevParent[ru] = ru;\n          parent[ru] = rv; added = k + 1; newEdge = k; comps--;\n          snap(\"合并\", `边 [${u}, ${v}]：${u} 的根是 ${ru}，${v} 的根是 ${rv}，不同。把 ${ru} 挂到 ${rv} 下面。`, view({ prevParent, ptrs: { u: u - 1, v: v - 1 } }), {\n            at: [\"edge\", \"union\"],\n            facts: [[\"当前边\", edgeStr, prevEdge], [\"合并根\", `${ru} → ${rv}`], [\"集合个数\", comps, comps + 1]],\n          });\n          prevEdge = edgeStr;\n        }\n        snap(\"完成\", \"没有多余的边。\", view(), {\n          at: [],\n          kind: \"ok\",\n          ans: [],\n          facts: [[\"当前边\", \"—\", prevEdge], [\"结果\", \"[]\"]],\n        });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "这条边的两个端点"
+       ],
+       [
+        "c",
+        "已经连通的点"
+       ],
+       [
+        "w",
+        "多余的边（成环）"
+       ]
+      ],
+      "code": "redundant",
+      "build": "build(a, snap) {\n        const E = a.edges, n = E.length, parent = Array.from({ length: n + 1 }, (_, i) => i);\n        const find = (x, prevParent) => {\n          while (parent[x] !== x) {\n            const gp = parent[parent[x]];\n            if (gp !== parent[x] && prevParent[x] === undefined) prevParent[x] = parent[x];\n            parent[x] = gp;\n            x = parent[x];\n          }\n          return x;\n        };\n        let added = 0, hot = [], bad = -1, newEdge = -1, comps = n;\n        const view = (opts = {}) => {\n          const prevParent = opts.prevParent || {};\n          const comp = {};\n          for (let i = 1; i <= n; i++) { let x = i; while (parent[x] !== x) x = parent[x]; comp[i] = x; }\n          return [\n            {\n              t: \"net\",\n              label: \"图（实线是已经加进来的边，虚线×是多余的边）\",\n              nodes: Array.from({ length: n }, (_, i) => ({ v: i + 1, cls: hot.includes(i + 1) ? (bad >= 0 ? \"w\" : \"a\") : \"\" })),\n              edges: E.map(([u, v], k) => [u - 1, v - 1, k === bad ? \"cut\" : k === newEdge ? \"on draw\" : k < added ? \"on\" : \"dim\"]),\n              badges: Array.from({ length: n }, (_, i) => `根 ${comp[i + 1]}`),\n            },\n            {\n              t: \"array\",\n              label: \"parent（下标从 1 开始）\",\n              items: parent.slice(1).map((p, i) => ({\n                v: p,\n                ...(prevParent[i + 1] !== undefined ? { prev: prevParent[i + 1] } : {}),\n                cls: hot.includes(i + 1) ? (bad >= 0 ? \"w\" : \"a\") : \"\",\n              })),\n              labels: parent.slice(1).map((_, i) => i + 1),\n              ptrs: opts.ptrs || {},\n            },\n          ];\n        };\n        snap(\"开始\", `${n} 个点各自是一个集合。按顺序把边加进去。`, view(), {\n          at: \"init\",\n          facts: [[\"当前边\", \"—\"], [\"已加边数\", `0 / ${n}`], [\"集合个数\", n]],\n        });\n        let prevEdge = \"—\";\n        for (let k = 0; k < n; k++) {\n          const [u, v] = E[k], prevParent = {}, ru = find(u, prevParent), rv = find(v, prevParent);\n          hot = [u, v];\n          const edgeStr = `[${u}, ${v}]`;\n          if (ru === rv) {\n            bad = k; newEdge = -1;\n            snap(\"成环了\", `边 [${u}, ${v}]：${u} 和 ${v} 的根都是 ${ru}，已经连通了。再连这条边就成环，它就是多余的。`, view({ prevParent, ptrs: { u: u - 1, v: v - 1 } }), {\n              at: [\"edge\", \"found\"],\n              kind: \"ok\",\n              ans: [u, v],\n              facts: [[\"当前边\", edgeStr, prevEdge], [\"两边的根\", `都是 ${ru}`], [\"多余边\", edgeStr]],\n            });\n            return;\n          }\n          if (prevParent[ru] === undefined) prevParent[ru] = ru;\n          parent[ru] = rv; added = k + 1; newEdge = k; comps--;\n          snap(\"合并\", `边 [${u}, ${v}]：${u} 的根是 ${ru}，${v} 的根是 ${rv}，不同。把 ${ru} 挂到 ${rv} 下面。`, view({ prevParent, ptrs: { u: u - 1, v: v - 1 } }), {\n            at: [\"edge\", \"union\"],\n            facts: [[\"当前边\", edgeStr, prevEdge], [\"合并根\", `${ru} → ${rv}`], [\"集合个数\", comps, comps + 1]],\n          });\n          prevEdge = edgeStr;\n        }\n        snap(\"完成\", \"没有多余的边。\", view(), {\n          at: [],\n          kind: \"ok\",\n          ans: [],\n          facts: [[\"当前边\", \"—\", prevEdge], [\"结果\", \"[]\"]],\n        });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n      const n = R.int(4, 7), edges = [], has = new Set();\n      for (let v = 2; v <= n; v++) { const u = R.int(1, v - 1); edges.push(R.chance(0.5) ? [u, v] : [v, u]); has.add(`${Math.min(u, v)},${Math.max(u, v)}`); }\n      for (;;) { const u = R.int(1, n), v = R.int(1, n); if (u !== v && !has.has(`${Math.min(u, v)},${Math.max(u, v)}`)) { edges.push([Math.min(u, v), Math.max(u, v)]); break; } }\n      const shuffled = R.shuffle(edges).map(([u, v]) => [Math.min(u, v), Math.max(u, v)]);\n      return { args: { edges: shuffled }, note: `edges = ${R.fmt(shuffled)}` };\n    })(R); return { args: r.args, note: r.note }; }"
+   }
+  }
+ ]
+}

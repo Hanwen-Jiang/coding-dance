@@ -1,0 +1,20 @@
+{
+ "sig": {"fn":"firstUniqChar","params":["string"],"ret":"int"},
+ "fixed": 4,
+ "cases": [
+  {"in":["loveleetcode"],"out":2},
+  {"in":["aabb"],"out":-1},
+  {"in":["leetcode"],"out":0},
+  {"in":["z"],"out":0},
+  {"in":["cdddcbdaa"],"out":5},
+  {"in":["abaaaabc"],"out":7},
+  {"in":["cbccaaba"],"out":-1},
+  {"in":["cbea"],"out":0},
+  {"in":["daad"],"out":-1},
+  {"in":["acba"],"out":1},
+  {"in":["bbeccb"],"out":2},
+  {"in":["deaecd"],"out":2},
+  {"in":["bbcaa"],"out":2},
+  {"in":["acbacc"],"out":2}
+ ]
+}

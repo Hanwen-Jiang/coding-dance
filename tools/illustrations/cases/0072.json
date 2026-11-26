@@ -1,0 +1,22 @@
+{
+ "sig": {"fn":"minDistance","params":["string","string"],"ret":"int"},
+ "fixed": 6,
+ "cases": [
+  {"in":["horse","ros"],"out":3},
+  {"in":["abc","yabd"],"out":2},
+  {"in":["",""],"out":0},
+  {"in":["","abc"],"out":3},
+  {"in":["abc",""],"out":3},
+  {"in":["intention","execution"],"out":5},
+  {"in":["ccedb","addeb"],"out":4},
+  {"in":["addbe","bec"],"out":4},
+  {"in":["edeae","ab"],"out":4},
+  {"in":["ea","db"],"out":2},
+  {"in":["ccbcb","eadc"],"out":4},
+  {"in":["bedc","cb"],"out":4},
+  {"in":["aca","cb"],"out":2},
+  {"in":["ba","cdc"],"out":3},
+  {"in":["caac","cd"],"out":3},
+  {"in":["dee","acbb"],"out":4}
+ ]
+}

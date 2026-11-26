@@ -3,8 +3,7 @@
 // - 同一份草稿还在排队时又存了一次，只留最新的那份（合并），记录不合并；
 // - 网络出错、服务端 5xx、分支刚被移动（409）都过一会儿重试，最多 3 次；没登录、参数不对这类不重试；
 // - 页面关掉或切到后台时，排队的草稿用 keepalive 发出去。
-// 服务端是 cd-api (POST /api/progress/practice)，写什么文件由 lib/practice/record.ts 决定。
-import { apiFetch } from "../api-base.ts";
+// 服务端是 functions/api/progress/practice.ts，写什么文件由 lib/practice/record.ts 决定。
 
 /** 练习区写好进度仓后发这个事件（detail: { id }），题目页的「我的历史题解」「尝试记录」会重新读 */
 export const PRACTICE_SAVED_EVENT = "hot100:practice-saved";
@@ -38,7 +37,7 @@ async function post(body: Record<string, unknown>): Promise<SaveResponse> {
   const text = JSON.stringify(body);
   try {
     // keepalive：发出去之后页面关掉，请求也会发完（浏览器只允许 64 KB 以内的请求这么发）
-    r = await apiFetch(ENDPOINT, { method: "POST", keepalive: text.length < 60_000, headers: { "Content-Type": "application/json" }, body: text });
+    r = await fetch(ENDPOINT, { method: "POST", keepalive: text.length < 60_000, headers: { "Content-Type": "application/json" }, body: text });
   } catch {
     throw new HttpFail("网络不通", true);
   }

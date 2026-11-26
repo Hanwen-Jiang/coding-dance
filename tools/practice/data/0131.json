@@ -1,0 +1,563 @@
+{
+  "id": 131,
+  "name": "分割回文串",
+  "signature": {
+    "fn": "partition",
+    "params": [
+      "string"
+    ],
+    "ret": "List<List<string>>",
+    "cmp": "unordered"
+  },
+  "parameterNames": [
+    "s"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Solution:\n    def partition(self, s: str) -> List[List[str]]:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @return {string[][]}\n */\nvar partition = function(s) {\n  \n};",
+      "typescript": "function partition(s: string): string[][] {\n  \n};",
+      "java": "class Solution {\n    public List<List<String>> partition(String s) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<vector<string>> partition(string s) {\n        \n    }\n};",
+      "go": "func partition(s string) [][]string {\n    \n}",
+      "c": "/**\n * Return an array of arrays of size *returnSize.\n * The sizes of the arrays are returned as *returnColumnSizes array.\n * Note: Both returned array and *columnSizes array must be malloced, assume caller calls free().\n */\nchar*** partition(char* s, int* returnSize, int** returnColumnSizes) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<IList<string>> Partition(string s) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun partition(s: String): List<List<String>> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func partition(_ s: String) -> [[String]] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn partition(s: String) -> Vec<Vec<String>> {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @return {String[][]}\ndef partition(s)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @return String[][]\n     */\n    function partition($s) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def partition(s: String): List[List[String]] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<List<String>> partition(String s) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "3e28ff9b",
+    "javascript": "c48fbaad",
+    "typescript": "c84af4e0"
+  },
+  "cases": [
+    {
+      "input": [
+        "aab"
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": [
+        [
+          "a",
+          "a",
+          "b"
+        ],
+        [
+          "aa",
+          "b"
+        ]
+      ],
+      "stdin": "aab\n",
+      "stdout": "2\n3\na\na\nb\n2\naa\nb\n",
+      "source": {
+        "path": "problems/0131.分割回文串.md",
+        "index": 1,
+        "input": "s = \"aab\"",
+        "output": "[[\"a\",\"a\",\"b\"],[\"aa\",\"b\"]]"
+      }
+    },
+    {
+      "input": [
+        "a"
+      ],
+      "label": "示例 2 · 边界",
+      "quick": true,
+      "expected": [
+        [
+          "a"
+        ]
+      ],
+      "stdin": "a\n",
+      "stdout": "1\n1\na\n",
+      "source": {
+        "path": "problems/0131.分割回文串.md",
+        "index": 2,
+        "input": "s = \"a\"",
+        "output": "[[\"a\"]]"
+      }
+    },
+    {
+      "input": [
+        "abba"
+      ],
+      "label": "仓库判题用例 2",
+      "quick": true,
+      "expected": [
+        [
+          "a",
+          "b",
+          "b",
+          "a"
+        ],
+        [
+          "a",
+          "bb",
+          "a"
+        ],
+        [
+          "abba"
+        ]
+      ],
+      "stdin": "abba\n",
+      "stdout": "3\n4\na\nb\nb\na\n3\na\nbb\na\n1\nabba\n"
+    },
+    {
+      "input": [
+        "ab"
+      ],
+      "label": "仓库判题用例 4",
+      "quick": true,
+      "expected": [
+        [
+          "a",
+          "b"
+        ]
+      ],
+      "stdin": "ab\n",
+      "stdout": "1\n2\na\nb\n"
+    },
+    {
+      "input": [
+        "aaaa"
+      ],
+      "label": "仓库判题用例 5",
+      "quick": true,
+      "expected": [
+        [
+          "a",
+          "a",
+          "a",
+          "a"
+        ],
+        [
+          "a",
+          "a",
+          "aa"
+        ],
+        [
+          "a",
+          "aa",
+          "a"
+        ],
+        [
+          "a",
+          "aaa"
+        ],
+        [
+          "aa",
+          "a",
+          "a"
+        ],
+        [
+          "aa",
+          "aa"
+        ],
+        [
+          "aaa",
+          "a"
+        ],
+        [
+          "aaaa"
+        ]
+      ],
+      "stdin": "aaaa\n",
+      "stdout": "8\n4\na\na\na\na\n3\na\na\naa\n3\na\naa\na\n2\na\naaa\n3\naa\na\na\n2\naa\naa\n2\naaa\na\n1\naaaa\n"
+    },
+    {
+      "input": [
+        "abcba"
+      ],
+      "label": "仓库判题用例 6",
+      "quick": true,
+      "expected": [
+        [
+          "a",
+          "b",
+          "c",
+          "b",
+          "a"
+        ],
+        [
+          "a",
+          "bcb",
+          "a"
+        ],
+        [
+          "abcba"
+        ]
+      ],
+      "stdin": "abcba\n",
+      "stdout": "3\n5\na\nb\nc\nb\na\n3\na\nbcb\na\n1\nabcba\n"
+    },
+    {
+      "input": [
+        "efe"
+      ],
+      "label": "仓库判题用例 7",
+      "quick": true,
+      "expected": [
+        [
+          "e",
+          "f",
+          "e"
+        ],
+        [
+          "efe"
+        ]
+      ],
+      "stdin": "efe\n",
+      "stdout": "2\n3\ne\nf\ne\n1\nefe\n"
+    },
+    {
+      "input": [
+        "aaaba"
+      ],
+      "label": "仓库判题用例 8",
+      "expected": [
+        [
+          "a",
+          "a",
+          "a",
+          "b",
+          "a"
+        ],
+        [
+          "a",
+          "a",
+          "aba"
+        ],
+        [
+          "a",
+          "aa",
+          "b",
+          "a"
+        ],
+        [
+          "aa",
+          "a",
+          "b",
+          "a"
+        ],
+        [
+          "aa",
+          "aba"
+        ],
+        [
+          "aaa",
+          "b",
+          "a"
+        ]
+      ],
+      "stdin": "aaaba\n",
+      "stdout": "6\n5\na\na\na\nb\na\n3\na\na\naba\n4\na\naa\nb\na\n4\naa\na\nb\na\n2\naa\naba\n3\naaa\nb\na\n"
+    },
+    {
+      "input": [
+        "abbba"
+      ],
+      "label": "仓库判题用例 9",
+      "expected": [
+        [
+          "a",
+          "b",
+          "b",
+          "b",
+          "a"
+        ],
+        [
+          "a",
+          "b",
+          "bb",
+          "a"
+        ],
+        [
+          "a",
+          "bb",
+          "b",
+          "a"
+        ],
+        [
+          "a",
+          "bbb",
+          "a"
+        ],
+        [
+          "abbba"
+        ]
+      ],
+      "stdin": "abbba\n",
+      "stdout": "5\n5\na\nb\nb\nb\na\n4\na\nb\nbb\na\n4\na\nbb\nb\na\n3\na\nbbb\na\n1\nabbba\n"
+    },
+    {
+      "input": [
+        "bbb"
+      ],
+      "label": "仓库判题用例 10",
+      "expected": [
+        [
+          "b",
+          "b",
+          "b"
+        ],
+        [
+          "b",
+          "bb"
+        ],
+        [
+          "bb",
+          "b"
+        ],
+        [
+          "bbb"
+        ]
+      ],
+      "stdin": "bbb\n",
+      "stdout": "4\n3\nb\nb\nb\n2\nb\nbb\n2\nbb\nb\n1\nbbb\n"
+    },
+    {
+      "input": [
+        "abaab"
+      ],
+      "label": "仓库判题用例 11",
+      "expected": [
+        [
+          "a",
+          "b",
+          "a",
+          "a",
+          "b"
+        ],
+        [
+          "a",
+          "b",
+          "aa",
+          "b"
+        ],
+        [
+          "a",
+          "baab"
+        ],
+        [
+          "aba",
+          "a",
+          "b"
+        ]
+      ],
+      "stdin": "abaab\n",
+      "stdout": "4\n5\na\nb\na\na\nb\n4\na\nb\naa\nb\n2\na\nbaab\n3\naba\na\nb\n"
+    },
+    {
+      "input": [
+        "bbcc"
+      ],
+      "label": "仓库判题用例 12",
+      "expected": [
+        [
+          "b",
+          "b",
+          "c",
+          "c"
+        ],
+        [
+          "b",
+          "b",
+          "cc"
+        ],
+        [
+          "bb",
+          "c",
+          "c"
+        ],
+        [
+          "bb",
+          "cc"
+        ]
+      ],
+      "stdin": "bbcc\n",
+      "stdout": "4\n4\nb\nb\nc\nc\n3\nb\nb\ncc\n3\nbb\nc\nc\n2\nbb\ncc\n"
+    },
+    {
+      "input": [
+        "bcc"
+      ],
+      "label": "仓库判题用例 13",
+      "expected": [
+        [
+          "b",
+          "c",
+          "c"
+        ],
+        [
+          "b",
+          "cc"
+        ]
+      ],
+      "stdin": "bcc\n",
+      "stdout": "2\n3\nb\nc\nc\n2\nb\ncc\n"
+    },
+    {
+      "input": [
+        "baa"
+      ],
+      "label": "仓库判题用例 14",
+      "expected": [
+        [
+          "b",
+          "a",
+          "a"
+        ],
+        [
+          "b",
+          "aa"
+        ]
+      ],
+      "stdin": "baa\n",
+      "stdout": "2\n3\nb\na\na\n2\nb\naa\n"
+    },
+    {
+      "input": [
+        "bccc"
+      ],
+      "label": "仓库判题用例 15",
+      "expected": [
+        [
+          "b",
+          "c",
+          "c",
+          "c"
+        ],
+        [
+          "b",
+          "c",
+          "cc"
+        ],
+        [
+          "b",
+          "cc",
+          "c"
+        ],
+        [
+          "b",
+          "ccc"
+        ]
+      ],
+      "stdin": "bccc\n",
+      "stdout": "4\n4\nb\nc\nc\nc\n3\nb\nc\ncc\n3\nb\ncc\nc\n2\nb\nccc\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "aab"
+      ],
+      "expected": [
+        [
+          "a",
+          "a",
+          "b"
+        ],
+        [
+          "aa",
+          "b"
+        ]
+      ],
+      "stdin": "aab\n",
+      "stdout": "2\n3\na\na\nb\n2\naa\nb\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0131.分割回文串.md",
+        "index": 1,
+        "input": "s = \"aab\"",
+        "output": "[[\"a\",\"a\",\"b\"],[\"aa\",\"b\"]]"
+      }
+    },
+    {
+      "input": [
+        "a"
+      ],
+      "expected": [
+        [
+          "a"
+        ]
+      ],
+      "stdin": "a\n",
+      "stdout": "1\n1\na\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0131.分割回文串.md",
+        "index": 2,
+        "input": "s = \"a\"",
+        "output": "[[\"a\"]]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "将给定字符串分割成若干个非空连续片段，要求每个片段都是回文。输出全部不同的分割方案，每个方案内片段保持原字符串中的顺序，方案间顺序不限。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. s：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：先一行外层序列的长度 r；之后依次给出 r 个子序列，每个子序列按以下规则独立编码：先一行字符串数量 n，之后 n 行每行一个字符串，不加引号；空字符串占一空行，n = 0 时没有字符串行。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= s.length <= 16",
+      "数据范围：s 仅由小写英文字母组成",
+      "分割方案之间的顺序不限，同一方案内片段顺序必须保持不变。"
+    ],
+    "examples": [
+      {
+        "input": "aab\n",
+        "output": "2\n3\na\na\nb\n2\naa\nb\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "a\n",
+        "output": "1\n1\na\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "ce8a8591"
+    ],
+    "javascript": [
+      "b1b8e479"
+    ],
+    "typescript": [
+      "ada57a27"
+    ]
+  }
+}

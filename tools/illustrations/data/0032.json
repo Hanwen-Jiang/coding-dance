@@ -1,0 +1,483 @@
+{
+ "id": 32,
+ "name": "最长有效括号",
+ "level": "困难",
+ "topic": "动态规划",
+ "h1": "最长有效括号，栈底放分界线",
+ "lede": "用栈存下标。左括号的下标入栈等待匹配；右括号来了就弹出一个。栈底始终放着「最后一个没被匹配的位置」，当前位置减去栈顶，就是以这里结尾的有效括号长度。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "栈里放下标",
+   "body": [
+    "遇到 <code>(</code> 把下标压栈；遇到 <code>)</code> 弹出栈顶，表示匹配了一对。",
+    "要算长度，所以存下标而不是字符。"
+   ]
+  },
+  {
+   "t": "栈底放一个分界线",
+   "body": [
+    "一开始压入 <code>-1</code>。弹出后栈不空，<code>i - stack[-1]</code> 就是以 <code>i</code> 结尾的有效长度。",
+    "弹出后栈空了，说明这个 <code>)</code> 没人匹配，它成了新的分界线，把 <code>i</code> 压进去。"
+   ]
+  },
+  {
+   "t": "也可以不用栈",
+   "body": [
+    "从左往右数左右括号个数，相等时更新答案，右括号多了就清零。",
+    "再从右往左数一遍，处理 <code>(()</code> 这种左括号一直多的情况。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "先弹再判空",
+   "body": "遇到 ) 先 pop。pop 之后栈空，说明弹出的是分界线，这个 ) 无法匹配。"
+  },
+  {
+   "t": "长度用栈顶算",
+   "body": "不是 i − 弹出的下标 + 1，而是 i − 新的栈顶。这样能把连在一起的几段有效括号一起算上。"
+  },
+  {
+   "t": "复杂度",
+   "body": "每个下标最多进出栈一次，时间 O(n)，空间 O(n)。双向扫描写法空间 O(1)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：栈",
+   "kind": null,
+   "note": null,
+   "key": "std",
+   "code": "class Solution:\n    def longestValidParentheses(self, s: str) -> int:\n        stack, best = [-1], 0               # 栈底：最后一个没匹配上的位置\n        for i, c in enumerate(s):\n            if c == \"(\":\n                stack.append(i)\n            else:\n                stack.pop()\n                if not stack:               # 这个 ) 没人匹配，成为新的分界线\n                    stack.append(i)\n                else:\n                    best = max(best, i - stack[-1])\n        return best",
+   "marks": {
+    "init": [
+     3
+    ],
+    "open": [
+     5,
+     6
+    ],
+    "lone": [
+     7,
+     8,
+     9,
+     10
+    ],
+    "match": [
+     7,
+     8,
+     9,
+     11,
+     12
+    ],
+    "done": [
+     13
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public int longestValidParentheses(String s) {\n        Deque<Integer> stack = new ArrayDeque<>();      // 栈底：最后一个没匹配上的位置\n        stack.push(-1);\n        int best = 0;\n        for (int i = 0; i < s.length(); i++) {\n            if (s.charAt(i) == '(') {\n                stack.push(i);\n            } else {\n                stack.pop();\n                if (stack.isEmpty()) {                  // 这个 ) 没人匹配，成为新的分界线\n                    stack.push(i);\n                } else {\n                    best = Math.max(best, i - stack.peek());\n                }\n            }\n        }\n        return best;\n    }\n}",
+     "marks": {
+      "init": [
+       3,
+       4,
+       5
+      ],
+      "open": [
+       7,
+       8
+      ],
+      "lone": [
+       9,
+       10,
+       11,
+       12
+      ],
+      "match": [
+       9,
+       10,
+       11,
+       13,
+       14
+      ],
+      "done": [
+       18
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        vector<int> stack{-1};                          // 栈底：最后一个没匹配上的位置\n        int best = 0;\n        for (int i = 0; i < (int)s.size(); i++) {\n            if (s[i] == '(') {\n                stack.push_back(i);\n            } else {\n                stack.pop_back();\n                if (stack.empty()) {                    // 这个 ) 没人匹配，成为新的分界线\n                    stack.push_back(i);\n                } else {\n                    best = max(best, i - stack.back());\n                }\n            }\n        }\n        return best;\n    }\n};",
+     "marks": {
+      "init": [
+       4,
+       5
+      ],
+      "open": [
+       7,
+       8
+      ],
+      "lone": [
+       9,
+       10,
+       11,
+       12
+      ],
+      "match": [
+       9,
+       10,
+       11,
+       13,
+       14
+      ],
+      "done": [
+       18
+      ]
+     }
+    },
+    "go": {
+     "code": "func longestValidParentheses(s string) int {\n\tstack, best := []int{-1}, 0 // 栈底：最后一个没匹配上的位置\n\tfor i := 0; i < len(s); i++ {\n\t\tif s[i] == '(' {\n\t\t\tstack = append(stack, i)\n\t\t} else {\n\t\t\tstack = stack[:len(stack)-1]\n\t\t\tif len(stack) == 0 { // 这个 ) 没人匹配，成为新的分界线\n\t\t\t\tstack = append(stack, i)\n\t\t\t} else {\n\t\t\t\tbest = max(best, i-stack[len(stack)-1])\n\t\t\t}\n\t\t}\n\t}\n\treturn best\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "open": [
+       4,
+       5
+      ],
+      "lone": [
+       6,
+       7,
+       8,
+       9
+      ],
+      "match": [
+       6,
+       7,
+       8,
+       10,
+       11
+      ],
+      "done": [
+       15
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var longestValidParentheses = function(s) {\n    const stack = [-1];                             // 栈底：最后一个没匹配上的位置\n    let best = 0;\n    for (let i = 0; i < s.length; i++) {\n        if (s[i] === \"(\") {\n            stack.push(i);\n        } else {\n            stack.pop();\n            if (!stack.length) {                    // 这个 ) 没人匹配，成为新的分界线\n                stack.push(i);\n            } else {\n                best = Math.max(best, i - stack[stack.length - 1]);\n            }\n        }\n    }\n    return best;\n};",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "open": [
+       5,
+       6
+      ],
+      "lone": [
+       7,
+       8,
+       9,
+       10
+      ],
+      "match": [
+       7,
+       8,
+       9,
+       11,
+       12
+      ],
+      "done": [
+       16
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function longestValidParentheses(s: string): number {\n    const stack: number[] = [-1];                   // 栈底：最后一个没匹配上的位置\n    let best = 0;\n    for (let i = 0; i < s.length; i++) {\n        if (s[i] === \"(\") {\n            stack.push(i);\n        } else {\n            stack.pop();\n            if (!stack.length) {                    // 这个 ) 没人匹配，成为新的分界线\n                stack.push(i);\n            } else {\n                best = Math.max(best, i - stack[stack.length - 1]);\n            }\n        }\n    }\n    return best;\n}",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "open": [
+       5,
+       6
+      ],
+      "lone": [
+       7,
+       8,
+       9,
+       10
+      ],
+      "match": [
+       7,
+       8,
+       9,
+       11,
+       12
+      ],
+      "done": [
+       16
+      ]
+     }
+    }
+   }
+  },
+  {
+   "t": "简洁写法：左右各数一遍",
+   "kind": "elegant",
+   "note": "反过来扫描时把 ) 当成开括号，逻辑完全一样。空间 O(1)。",
+   "key": "scan",
+   "code": "class Solution:\n    def longestValidParentheses(self, s: str) -> int:\n        def scan(s, opener):\n            best = l = r = 0\n            for c in s:\n                if c == opener:\n                    l += 1\n                else:\n                    r += 1\n                if l == r:\n                    best = max(best, 2 * r)\n                elif r > l:\n                    l = r = 0\n            return best\n        return max(scan(s, \"(\"), scan(s[::-1], \")\"))",
+   "marks": {
+    "fwd": [
+     4,
+     15
+    ],
+    "back": [
+     4,
+     15
+    ],
+    "count": [
+     6,
+     7,
+     9
+    ],
+    "eq": [
+     10,
+     11
+    ],
+    "reset": [
+     12,
+     13
+    ],
+    "done": [
+     15
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public int longestValidParentheses(String s) {\n        String rev = new StringBuilder(s).reverse().toString();\n        return Math.max(scan(s, '('), scan(rev, ')'));  // 反过来扫描时把 ) 当成开括号\n    }\n\n    private int scan(String s, char opener) {\n        int best = 0, l = 0, r = 0;\n        for (char c : s.toCharArray()) {\n            if (c == opener) l++;\n            else r++;\n            if (l == r) {\n                best = Math.max(best, 2 * r);\n            } else if (r > l) {\n                l = r = 0;\n            }\n        }\n        return best;\n    }\n}",
+     "marks": {
+      "fwd": [
+       4,
+       8
+      ],
+      "back": [
+       4,
+       8
+      ],
+      "done": [
+       4
+      ],
+      "count": [
+       10,
+       11
+      ],
+      "eq": [
+       12,
+       13
+      ],
+      "reset": [
+       14,
+       15
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    int longestValidParentheses(string s) {\n        string rev(s.rbegin(), s.rend());\n        return max(scan(s, '('), scan(rev, ')'));      // 反过来扫描时把 ) 当成开括号\n    }\n\nprivate:\n    int scan(const string& s, char opener) {\n        int best = 0, l = 0, r = 0;\n        for (char c : s) {\n            if (c == opener) l++;\n            else r++;\n            if (l == r) {\n                best = max(best, 2 * r);\n            } else if (r > l) {\n                l = r = 0;\n            }\n        }\n        return best;\n    }\n};",
+     "marks": {
+      "fwd": [
+       5,
+       10
+      ],
+      "back": [
+       5,
+       10
+      ],
+      "done": [
+       5
+      ],
+      "count": [
+       12,
+       13
+      ],
+      "eq": [
+       14,
+       15
+      ],
+      "reset": [
+       16,
+       17
+      ]
+     }
+    },
+    "go": {
+     "code": "func longestValidParentheses(s string) int {\n\tscan := func(s []byte, opener byte) int {\n\t\tbest, l, r := 0, 0, 0\n\t\tfor _, c := range s {\n\t\t\tif c == opener {\n\t\t\t\tl++\n\t\t\t} else {\n\t\t\t\tr++\n\t\t\t}\n\t\t\tif l == r {\n\t\t\t\tbest = max(best, 2*r)\n\t\t\t} else if r > l {\n\t\t\t\tl, r = 0, 0\n\t\t\t}\n\t\t}\n\t\treturn best\n\t}\n\trev := []byte(s)\n\tslices.Reverse(rev)\n\treturn max(scan([]byte(s), '('), scan(rev, ')')) // 反过来扫描时把 ) 当成开括号\n}",
+     "marks": {
+      "fwd": [
+       3,
+       20
+      ],
+      "back": [
+       3,
+       20
+      ],
+      "count": [
+       5,
+       6,
+       8
+      ],
+      "eq": [
+       10,
+       11
+      ],
+      "reset": [
+       12,
+       13
+      ],
+      "done": [
+       20
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var longestValidParentheses = function(s) {\n    const scan = (s, opener) => {\n        let best = 0, l = 0, r = 0;\n        for (const c of s) {\n            if (c === opener) l++;\n            else r++;\n            if (l === r) {\n                best = Math.max(best, 2 * r);\n            } else if (r > l) {\n                l = r = 0;\n            }\n        }\n        return best;\n    };\n    return Math.max(scan(s, \"(\"), scan([...s].reverse().join(\"\"), \")\"));   // 反过来扫描时把 ) 当成开括号\n};",
+     "marks": {
+      "fwd": [
+       3,
+       15
+      ],
+      "back": [
+       3,
+       15
+      ],
+      "count": [
+       5,
+       6
+      ],
+      "eq": [
+       7,
+       8
+      ],
+      "reset": [
+       9,
+       10
+      ],
+      "done": [
+       15
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function longestValidParentheses(s: string): number {\n    const scan = (s: string, opener: string): number => {\n        let best = 0, l = 0, r = 0;\n        for (const c of s) {\n            if (c === opener) l++;\n            else r++;\n            if (l === r) {\n                best = Math.max(best, 2 * r);\n            } else if (r > l) {\n                l = r = 0;\n            }\n        }\n        return best;\n    };\n    return Math.max(scan(s, \"(\"), scan([...s].reverse().join(\"\"), \")\"));   // 反过来扫描时把 ) 当成开括号\n}",
+     "marks": {
+      "fwd": [
+       3,
+       15
+      ],
+      "back": [
+       3,
+       15
+      ],
+      "count": [
+       5,
+       6
+      ],
+      "eq": [
+       7,
+       8
+      ],
+      "reset": [
+       9,
+       10
+      ],
+      "done": [
+       15
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "当前字符"
+   ],
+   [
+    "e",
+    "在栈里的下标"
+   ],
+   [
+    "c",
+    "以当前位置结尾的有效括号"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 2",
+    "args": {
+     "s": ")()())"
+    },
+    "note": "s = \")()())\""
+   },
+   {
+    "label": "嵌套",
+    "args": {
+     "s": "()(())"
+    },
+    "note": "s = \"()(())\""
+   },
+   {
+    "label": "左括号多",
+    "args": {
+     "s": "()(()"
+    },
+    "note": "s = \"()(()\""
+   }
+  ],
+  "build": "build(a, snap) {\n    const s = a.s, stack = [-1]; let best = 0;\n    const view = (i, seg, opts = {}) => [\n      {\n        t: \"array\",\n        label: \"s\",\n        items: s.split(\"\").map((c, k) => ({ v: c, cls: seg && k > seg[0] && k <= seg[1] ? \"c\" : k === i ? \"a\" : stack.includes(k) ? \"e\" : \"\" })),\n        ptrs: { i: i >= 0 ? i : null },\n        feeds: (opts.feeds || []).slice(),\n      },\n      { t: \"chips\", label: \"栈（存下标，右边是栈顶）\", items: stack.slice(), empty: \"空\" },\n    ];\n    snap(\"开始\", \"栈里先放 -1 当分界线：表示「下标 -1 之后的部分」。\", view(-1), {\n      at: \"init\",\n      facts: [[\"最长 best\", 0], [\"栈顶\", -1]],\n    });\n    for (let i = 0; i < s.length; i++) {\n      if (s[i] === \"(\") {\n        stack.push(i);\n        snap(\"左括号\", `下标 ${i} 是 (，压栈等待匹配。`, view(i), {\n          at: \"open\",\n          facts: [[\"字符\", \"'('\"], [\"入栈下标\", i], [\"最长 best\", best]],\n        });\n        continue;\n      }\n      const top = stack.pop();\n      if (!stack.length) {\n        stack.push(i);\n        snap(\"没人匹配\", `下标 ${i} 是 )，弹出 ${top} 后栈空了，说明它没有对应的 (。把 ${i} 压进去当新的分界线。`, view(i), {\n          at: \"lone\",\n          kind: \"warn\",\n          facts: [[\"弹出分界线\", top], [\"新分界线\", i], [\"最长 best\", best]],\n        });\n        continue;\n      }\n      const base = stack[stack.length - 1];\n      const len = i - base;\n      const oldBest = best;\n      best = Math.max(best, len);\n      snap(\"匹配\", `下标 ${i} 是 )，弹出 ${top} 和它配对。栈顶现在是 ${base}，以 ${i} 结尾的有效括号长度是 ${i} − ${base} = <b>${len}</b>。`, view(i, [base, i], {\n        feeds: [{ from: top, to: i, win: true, label: `len=${len}` }],\n      }), {\n        at: \"match\",\n        facts: [\n          [\"配对\", `${top}↔${i}`],\n          [\"当前长度\", len],\n          best !== oldBest ? [\"最长 best\", best, oldBest] : [\"最长 best\", best],\n        ],\n      });\n    }\n    snap(\"完成\", `最长有效括号的长度是 <b>${best}</b>。`, view(-1), {\n      at: \"done\",\n      kind: \"ok\",\n      ans: best,\n      facts: [[\"最长 best\", best]],\n    });\n  }",
+  "methods": [
+   {
+    "t": "栈",
+    "note": null,
+    "legend": [
+     [
+      "a",
+      "当前字符"
+     ],
+     [
+      "e",
+      "在栈里的下标"
+     ],
+     [
+      "c",
+      "以当前位置结尾的有效括号"
+     ]
+    ],
+    "code": "std",
+    "build": "build(a, snap) {\n    const s = a.s, stack = [-1]; let best = 0;\n    const view = (i, seg, opts = {}) => [\n      {\n        t: \"array\",\n        label: \"s\",\n        items: s.split(\"\").map((c, k) => ({ v: c, cls: seg && k > seg[0] && k <= seg[1] ? \"c\" : k === i ? \"a\" : stack.includes(k) ? \"e\" : \"\" })),\n        ptrs: { i: i >= 0 ? i : null },\n        feeds: (opts.feeds || []).slice(),\n      },\n      { t: \"chips\", label: \"栈（存下标，右边是栈顶）\", items: stack.slice(), empty: \"空\" },\n    ];\n    snap(\"开始\", \"栈里先放 -1 当分界线：表示「下标 -1 之后的部分」。\", view(-1), {\n      at: \"init\",\n      facts: [[\"最长 best\", 0], [\"栈顶\", -1]],\n    });\n    for (let i = 0; i < s.length; i++) {\n      if (s[i] === \"(\") {\n        stack.push(i);\n        snap(\"左括号\", `下标 ${i} 是 (，压栈等待匹配。`, view(i), {\n          at: \"open\",\n          facts: [[\"字符\", \"'('\"], [\"入栈下标\", i], [\"最长 best\", best]],\n        });\n        continue;\n      }\n      const top = stack.pop();\n      if (!stack.length) {\n        stack.push(i);\n        snap(\"没人匹配\", `下标 ${i} 是 )，弹出 ${top} 后栈空了，说明它没有对应的 (。把 ${i} 压进去当新的分界线。`, view(i), {\n          at: \"lone\",\n          kind: \"warn\",\n          facts: [[\"弹出分界线\", top], [\"新分界线\", i], [\"最长 best\", best]],\n        });\n        continue;\n      }\n      const base = stack[stack.length - 1];\n      const len = i - base;\n      const oldBest = best;\n      best = Math.max(best, len);\n      snap(\"匹配\", `下标 ${i} 是 )，弹出 ${top} 和它配对。栈顶现在是 ${base}，以 ${i} 结尾的有效括号长度是 ${i} − ${base} = <b>${len}</b>。`, view(i, [base, i], {\n        feeds: [{ from: top, to: i, win: true, label: `len=${len}` }],\n      }), {\n        at: \"match\",\n        facts: [\n          [\"配对\", `${top}↔${i}`],\n          [\"当前长度\", len],\n          best !== oldBest ? [\"最长 best\", best, oldBest] : [\"最长 best\", best],\n        ],\n      });\n    }\n    snap(\"完成\", `最长有效括号的长度是 <b>${best}</b>。`, view(-1), {\n      at: \"done\",\n      kind: \"ok\",\n      ans: best,\n      facts: [[\"最长 best\", best]],\n    });\n  }"
+   },
+   {
+    "t": "左右各数一遍",
+    "note": "从左往右数 ( 和 ) 的个数：一样多就是一段有效括号，) 多了就清零重来。左括号多出来的情况这样数不出来，所以再从右往左数一遍。",
+    "legend": [
+     [
+      "a",
+      "当前字符"
+     ],
+     [
+      "c",
+      "从计数起点到这里，( 和 ) 一样多"
+     ]
+    ],
+    "code": "scan",
+    "build": "build(a, snap) {\n      const s = a.s, n = s.length; let best = 0;\n      const view = (i, seg, dir, opts = {}) => [{\n        t: \"array\",\n        label: dir ? \"s（从左往右数）\" : \"s（从右往左数，把 ) 当开括号）\",\n        items: [...s].map((c, k) => ({ v: c, cls: k === i ? \"a\" : seg && k >= seg[0] && k <= seg[1] ? \"c\" : \"\" })),\n        ptrs: { i: i >= 0 && i < n ? i : null },\n        feeds: (opts.feeds || []).slice(),\n      }];\n      const pass = (fw) => {\n        const open = fw ? \"(\" : \")\";\n        let l = 0, r = 0, st = fw ? 0 : n - 1;\n        for (let t = 0; t < n; t++) {\n          const i = fw ? t : n - 1 - t, c = s[i];\n          const oldOpenCnt = fw ? l : r, oldCloseCnt = fw ? r : l;\n          if (c === open) l++; else r++;\n          const curOpenCnt = fw ? l : r, curCloseCnt = fw ? r : l;\n          const seg = fw ? [st, i] : [i, st];\n          if (l === r) {\n            const oldBest = best;\n            const len = 2 * r;\n            const up = len > best;\n            best = Math.max(best, len);\n            snap(\n              \"一样多\",\n              `下标 ${i} 是 ${c}。( 和 ) 都是 ${l} 个，${fw ? `从 ${st} 到 ${i}` : `从 ${i} 到 ${st}`} 是一段长 ${len} 的有效括号。` + (up ? \"比之前的都长。\" : \"\"),\n              view(i, seg, fw, { feeds: [{ from: st, to: i, win: true, label: `len=${len}` }] }),\n              {\n                at: [\"count\", \"eq\"],\n                kind: up ? \"ok\" : \"\",\n                facts: [\n                  curOpenCnt !== oldOpenCnt ? [\"( 的个数\", curOpenCnt, oldOpenCnt] : [\"( 的个数\", curOpenCnt],\n                  curCloseCnt !== oldCloseCnt ? [\") 的个数\", curCloseCnt, oldCloseCnt] : [\") 的个数\", curCloseCnt],\n                  best !== oldBest ? [\"最长 best\", best, oldBest] : [\"最长 best\", best],\n                ],\n              },\n            );\n          } else if (r > l) {\n            l = r = 0; st = fw ? i + 1 : i - 1;\n            snap(\n              \"清零\",\n              `下标 ${i} 是 ${c}，${fw ? \")\" : \"(\"} 比 ${open} 多了，这一段不可能再变有效。两个计数清零，从下一格重新数。`,\n              view(i, null, fw),\n              {\n                at: [\"count\", \"reset\"],\n                kind: \"warn\",\n                facts: [\n                  curOpenCnt !== 0 ? [\"( 的个数\", 0, curOpenCnt] : [\"( 的个数\", 0],\n                  curCloseCnt !== 0 ? [\") 的个数\", 0, curCloseCnt] : [\") 的个数\", 0],\n                  [\"最长 best\", best],\n                ],\n              },\n            );\n          } else {\n            snap(\"继续\", `下标 ${i} 是 ${c}。${open} 比另一种多，后面还可能补上，继续数。`, view(i, seg, fw), {\n              at: \"count\",\n              facts: [\n                curOpenCnt !== oldOpenCnt ? [\"( 的个数\", curOpenCnt, oldOpenCnt] : [\"( 的个数\", curOpenCnt],\n                curCloseCnt !== oldCloseCnt ? [\") 的个数\", curCloseCnt, oldCloseCnt] : [\") 的个数\", curCloseCnt],\n                [\"最长 best\", best],\n              ],\n            });\n          }\n        }\n      };\n      snap(\"从左往右\", \"先从左往右数。( 和 ) 一样多时，从计数起点到这里就是一段有效括号；) 多了就清零。\", view(-1, null, true), { at: \"fwd\", facts: [[\"最长 best\", 0]] });\n      pass(true);\n      snap(\"换方向\", `只从左往右数，会漏掉 ( 一直比 ) 多的情况（比如 \"(()\"，两个计数永远等不到相等）。所以再从右往左数一遍，这次把 ) 当成开括号。`, view(-1, null, false), { at: \"back\", facts: [[\"最长 best\", best]] });\n      pass(false);\n      snap(\"完成\", `两遍都数完了，最长有效括号的长度是 <b>${best}</b>。`, view(-1, null, true), { at: \"done\", kind: \"ok\", ans: best, facts: [[\"最长 best\", best]] });\n    }"
+   }
+  ],
+  "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const s = R.word(R.int(5, 10), \"()\");\n    return { args: { s }, note: `s = \"${s}\"`, py: `Solution().longestValidParentheses(\"${s}\")` };\n  })(R); return { args: r.args, note: r.note }; }"
+ }
+}

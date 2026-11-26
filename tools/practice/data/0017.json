@@ -1,0 +1,496 @@
+{
+  "id": 17,
+  "name": "电话号码的字母组合",
+  "signature": {
+    "fn": "letterCombinations",
+    "params": [
+      "string"
+    ],
+    "ret": "List<string>",
+    "cmp": "unordered"
+  },
+  "parameterNames": [
+    "digits"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Solution:\n    def letterCombinations(self, digits: str) -> List[str]:\n        ",
+      "javascript": "/**\n * @param {string} digits\n * @return {string[]}\n */\nvar letterCombinations = function(digits) {\n  \n};",
+      "typescript": "function letterCombinations(digits: string): string[] {\n  \n};",
+      "java": "class Solution {\n    public List<String> letterCombinations(String digits) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<string> letterCombinations(string digits) {\n        \n    }\n};",
+      "go": "func letterCombinations(digits string) []string {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nchar** letterCombinations(char* digits, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<string> LetterCombinations(string digits) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun letterCombinations(digits: String): List<String> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func letterCombinations(_ digits: String) -> [String] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn letter_combinations(digits: String) -> Vec<String> {\n        \n    }\n}",
+      "ruby": "# @param {String} digits\n# @return {String[]}\ndef letter_combinations(digits)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $digits\n     * @return String[]\n     */\n    function letterCombinations($digits) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def letterCombinations(digits: String): List[String] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<String> letterCombinations(String digits) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "1100be2c",
+    "javascript": "7974c726",
+    "typescript": "9c23083f"
+  },
+  "cases": [
+    {
+      "input": [
+        "23"
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": [
+        "ad",
+        "ae",
+        "af",
+        "bd",
+        "be",
+        "bf",
+        "cd",
+        "ce",
+        "cf"
+      ],
+      "stdin": "23\n",
+      "stdout": "9\nad\nae\naf\nbd\nbe\nbf\ncd\nce\ncf\n",
+      "source": {
+        "path": "problems/0017.电话号码的字母组合.md",
+        "index": 1,
+        "input": "digits = \"23\"",
+        "output": "[\"ad\",\"ae\",\"af\",\"bd\",\"be\",\"bf\",\"cd\",\"ce\",\"cf\"]"
+      }
+    },
+    {
+      "input": [
+        "2"
+      ],
+      "label": "示例 2",
+      "quick": true,
+      "expected": [
+        "a",
+        "b",
+        "c"
+      ],
+      "stdin": "2\n",
+      "stdout": "3\na\nb\nc\n",
+      "source": {
+        "path": "problems/0017.电话号码的字母组合.md",
+        "index": 2,
+        "input": "digits = \"2\"",
+        "output": "[\"a\",\"b\",\"c\"]"
+      }
+    },
+    {
+      "input": [
+        "234"
+      ],
+      "label": "仓库判题用例 2",
+      "quick": true,
+      "expected": [
+        "adg",
+        "adh",
+        "adi",
+        "aeg",
+        "aeh",
+        "aei",
+        "afg",
+        "afh",
+        "afi",
+        "bdg",
+        "bdh",
+        "bdi",
+        "beg",
+        "beh",
+        "bei",
+        "bfg",
+        "bfh",
+        "bfi",
+        "cdg",
+        "cdh",
+        "cdi",
+        "ceg",
+        "ceh",
+        "cei",
+        "cfg",
+        "cfh",
+        "cfi"
+      ],
+      "stdin": "234\n",
+      "stdout": "27\nadg\nadh\nadi\naeg\naeh\naei\nafg\nafh\nafi\nbdg\nbdh\nbdi\nbeg\nbeh\nbei\nbfg\nbfh\nbfi\ncdg\ncdh\ncdi\nceg\nceh\ncei\ncfg\ncfh\ncfi\n"
+    },
+    {
+      "input": [
+        ""
+      ],
+      "label": "仓库判题用例 3 · 边界",
+      "quick": true,
+      "expected": [],
+      "stdin": "\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        "79"
+      ],
+      "label": "仓库判题用例 5",
+      "quick": true,
+      "expected": [
+        "pw",
+        "px",
+        "py",
+        "pz",
+        "qw",
+        "qx",
+        "qy",
+        "qz",
+        "rw",
+        "rx",
+        "ry",
+        "rz",
+        "sw",
+        "sx",
+        "sy",
+        "sz"
+      ],
+      "stdin": "79\n",
+      "stdout": "16\npw\npx\npy\npz\nqw\nqx\nqy\nqz\nrw\nrx\nry\nrz\nsw\nsx\nsy\nsz\n"
+    },
+    {
+      "input": [
+        "26"
+      ],
+      "label": "仓库判题用例 6",
+      "expected": [
+        "am",
+        "an",
+        "ao",
+        "bm",
+        "bn",
+        "bo",
+        "cm",
+        "cn",
+        "co"
+      ],
+      "stdin": "26\n",
+      "stdout": "9\nam\nan\nao\nbm\nbn\nbo\ncm\ncn\nco\n"
+    },
+    {
+      "input": [
+        "435"
+      ],
+      "label": "仓库判题用例 7",
+      "expected": [
+        "gdj",
+        "gdk",
+        "gdl",
+        "gej",
+        "gek",
+        "gel",
+        "gfj",
+        "gfk",
+        "gfl",
+        "hdj",
+        "hdk",
+        "hdl",
+        "hej",
+        "hek",
+        "hel",
+        "hfj",
+        "hfk",
+        "hfl",
+        "idj",
+        "idk",
+        "idl",
+        "iej",
+        "iek",
+        "iel",
+        "ifj",
+        "ifk",
+        "ifl"
+      ],
+      "stdin": "435\n",
+      "stdout": "27\ngdj\ngdk\ngdl\ngej\ngek\ngel\ngfj\ngfk\ngfl\nhdj\nhdk\nhdl\nhej\nhek\nhel\nhfj\nhfk\nhfl\nidj\nidk\nidl\niej\niek\niel\nifj\nifk\nifl\n"
+    },
+    {
+      "input": [
+        "465"
+      ],
+      "label": "仓库判题用例 8",
+      "expected": [
+        "gmj",
+        "gmk",
+        "gml",
+        "gnj",
+        "gnk",
+        "gnl",
+        "goj",
+        "gok",
+        "gol",
+        "hmj",
+        "hmk",
+        "hml",
+        "hnj",
+        "hnk",
+        "hnl",
+        "hoj",
+        "hok",
+        "hol",
+        "imj",
+        "imk",
+        "iml",
+        "inj",
+        "ink",
+        "inl",
+        "ioj",
+        "iok",
+        "iol"
+      ],
+      "stdin": "465\n",
+      "stdout": "27\ngmj\ngmk\ngml\ngnj\ngnk\ngnl\ngoj\ngok\ngol\nhmj\nhmk\nhml\nhnj\nhnk\nhnl\nhoj\nhok\nhol\nimj\nimk\niml\ninj\nink\ninl\nioj\niok\niol\n"
+    },
+    {
+      "input": [
+        "35"
+      ],
+      "label": "仓库判题用例 9",
+      "expected": [
+        "dj",
+        "dk",
+        "dl",
+        "ej",
+        "ek",
+        "el",
+        "fj",
+        "fk",
+        "fl"
+      ],
+      "stdin": "35\n",
+      "stdout": "9\ndj\ndk\ndl\nej\nek\nel\nfj\nfk\nfl\n"
+    },
+    {
+      "input": [
+        "3"
+      ],
+      "label": "仓库判题用例 10",
+      "expected": [
+        "d",
+        "e",
+        "f"
+      ],
+      "stdin": "3\n",
+      "stdout": "3\nd\ne\nf\n"
+    },
+    {
+      "input": [
+        "64"
+      ],
+      "label": "仓库判题用例 11",
+      "expected": [
+        "mg",
+        "mh",
+        "mi",
+        "ng",
+        "nh",
+        "ni",
+        "og",
+        "oh",
+        "oi"
+      ],
+      "stdin": "64\n",
+      "stdout": "9\nmg\nmh\nmi\nng\nnh\nni\nog\noh\noi\n"
+    },
+    {
+      "input": [
+        "43"
+      ],
+      "label": "仓库判题用例 12",
+      "expected": [
+        "gd",
+        "ge",
+        "gf",
+        "hd",
+        "he",
+        "hf",
+        "id",
+        "ie",
+        "if"
+      ],
+      "stdin": "43\n",
+      "stdout": "9\ngd\nge\ngf\nhd\nhe\nhf\nid\nie\nif\n"
+    },
+    {
+      "input": [
+        "4"
+      ],
+      "label": "仓库判题用例 13",
+      "expected": [
+        "g",
+        "h",
+        "i"
+      ],
+      "stdin": "4\n",
+      "stdout": "3\ng\nh\ni\n"
+    },
+    {
+      "input": [
+        "6"
+      ],
+      "label": "仓库判题用例 14",
+      "expected": [
+        "m",
+        "n",
+        "o"
+      ],
+      "stdin": "6\n",
+      "stdout": "3\nm\nn\no\n"
+    },
+    {
+      "input": [
+        "344"
+      ],
+      "label": "仓库判题用例 15",
+      "expected": [
+        "dgg",
+        "dgh",
+        "dgi",
+        "dhg",
+        "dhh",
+        "dhi",
+        "dig",
+        "dih",
+        "dii",
+        "egg",
+        "egh",
+        "egi",
+        "ehg",
+        "ehh",
+        "ehi",
+        "eig",
+        "eih",
+        "eii",
+        "fgg",
+        "fgh",
+        "fgi",
+        "fhg",
+        "fhh",
+        "fhi",
+        "fig",
+        "fih",
+        "fii"
+      ],
+      "stdin": "344\n",
+      "stdout": "27\ndgg\ndgh\ndgi\ndhg\ndhh\ndhi\ndig\ndih\ndii\negg\negh\negi\nehg\nehh\nehi\neig\neih\neii\nfgg\nfgh\nfgi\nfhg\nfhh\nfhi\nfig\nfih\nfii\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "23"
+      ],
+      "expected": [
+        "ad",
+        "ae",
+        "af",
+        "bd",
+        "be",
+        "bf",
+        "cd",
+        "ce",
+        "cf"
+      ],
+      "stdin": "23\n",
+      "stdout": "9\nad\nae\naf\nbd\nbe\nbf\ncd\nce\ncf\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0017.电话号码的字母组合.md",
+        "index": 1,
+        "input": "digits = \"23\"",
+        "output": "[\"ad\",\"ae\",\"af\",\"bd\",\"be\",\"bf\",\"cd\",\"ce\",\"cf\"]"
+      }
+    },
+    {
+      "input": [
+        "2"
+      ],
+      "expected": [
+        "a",
+        "b",
+        "c"
+      ],
+      "stdin": "2\n",
+      "stdout": "3\na\nb\nc\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0017.电话号码的字母组合.md",
+        "index": 2,
+        "input": "digits = \"2\"",
+        "output": "[\"a\",\"b\",\"c\"]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定只包含数字 2 到 9 的字符串，按照电话九宫格的字母映射，输出所有可能的字母组合。2 对应 abc，3 对应 def，4 对应 ghi，5 对应 jkl，6 对应 mno，7 对应 pqrs，8 对应 tuv，9 对应 wxyz。空输入没有组合。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. digits：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：先一行字符串数量 n，之后 n 行每行一个字符串，不加引号；空字符串占一空行，n = 0 时没有字符串行。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= digits.length <= 4",
+      "数据范围：digits[i] 是范围 ['2', '9'] 的一个数字。",
+      "输出集合的排列顺序不限，不得遗漏或重复答案。"
+    ],
+    "examples": [
+      {
+        "input": "23\n",
+        "output": "9\nad\nae\naf\nbd\nbe\nbf\ncd\nce\ncf\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "2\n",
+        "output": "3\na\nb\nc\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "8a2b65ac"
+    ],
+    "javascript": [
+      "eda4473e"
+    ],
+    "typescript": [
+      "a3b31c78"
+    ]
+  }
+}

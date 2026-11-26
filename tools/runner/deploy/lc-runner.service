@@ -1,5 +1,5 @@
 [Unit]
-Description=lc-hot100 远端运行器（Go 单二进制 cd-runner）
+Description=lc-hot100 远端运行器（tools/runner）
 # 每次运行一台 Firecracker microVM（fc-manager）；开发测试用 Docker 时排在 docker 之后
 After=network-online.target fc-manager.service docker.service
 Wants=fc-manager.service
@@ -10,7 +10,7 @@ Group=lc-runner
 EnvironmentFile=/etc/lc-runner.env
 Environment=HOME=/tmp DOCKER_CONFIG=/tmp/docker
 WorkingDirectory=/opt/lc-runner
-ExecStart=/usr/local/bin/cd-runner
+ExecStart=/usr/local/bin/node /opt/lc-runner/server.mjs
 Restart=always
 RestartSec=3
 NoNewPrivileges=true

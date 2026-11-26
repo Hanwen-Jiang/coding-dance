@@ -1,0 +1,451 @@
+{
+  "id": 53,
+  "name": "最大子数组和",
+  "signature": {
+    "fn": "maxSubArray",
+    "params": [
+      "int[]"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "nums"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Solution:\n    def maxSubArray(self, nums: List[int]) -> int:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @return {number}\n */\nvar maxSubArray = function(nums) {\n  \n};",
+      "typescript": "function maxSubArray(nums: number[]): number {\n  \n};",
+      "java": "class Solution {\n    public int maxSubArray(int[] nums) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int maxSubArray(vector<int>& nums) {\n        \n    }\n};",
+      "go": "func maxSubArray(nums []int) int {\n    \n}",
+      "c": "int maxSubArray(int* nums, int numsSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public int MaxSubArray(int[] nums) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun maxSubArray(nums: IntArray): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func maxSubArray(_ nums: [Int]) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn max_sub_array(nums: Vec<i32>) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @return {Integer}\ndef max_sub_array(nums)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @return Integer\n     */\n    function maxSubArray($nums) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def maxSubArray(nums: Array[Int]): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int maxSubArray(List<int> nums) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "b04ef116",
+    "javascript": "a9d1f75c",
+    "typescript": "305f0d45"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          -2,
+          1,
+          -3,
+          4,
+          -1,
+          2,
+          1,
+          -5,
+          4
+        ]
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": 6,
+      "stdin": "9\n-2 1 -3 4 -1 2 1 -5 4\n",
+      "stdout": "6\n",
+      "source": {
+        "path": "problems/0053.最大子数组和.md",
+        "index": 1,
+        "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+        "output": "6"
+      }
+    },
+    {
+      "input": [
+        [
+          1
+        ]
+      ],
+      "label": "示例 2",
+      "quick": true,
+      "expected": 1,
+      "stdin": "1\n1\n",
+      "stdout": "1\n",
+      "source": {
+        "path": "problems/0053.最大子数组和.md",
+        "index": 2,
+        "input": "nums = [1]",
+        "output": "1"
+      }
+    },
+    {
+      "input": [
+        [
+          5,
+          4,
+          -1,
+          7,
+          8
+        ]
+      ],
+      "label": "示例 3",
+      "quick": true,
+      "expected": 23,
+      "stdin": "5\n5 4 -1 7 8\n",
+      "stdout": "23\n",
+      "source": {
+        "path": "problems/0053.最大子数组和.md",
+        "index": 3,
+        "input": "nums = [5,4,-1,7,8]",
+        "output": "23"
+      }
+    },
+    {
+      "input": [
+        [
+          -3,
+          -1,
+          -2
+        ]
+      ],
+      "label": "仓库判题用例 2",
+      "quick": true,
+      "expected": -1,
+      "stdin": "3\n-3 -1 -2\n",
+      "stdout": "-1\n"
+    },
+    {
+      "input": [
+        [
+          -1
+        ]
+      ],
+      "label": "仓库判题用例 4 · 边界",
+      "quick": true,
+      "expected": -1,
+      "stdin": "1\n-1\n",
+      "stdout": "-1\n"
+    },
+    {
+      "input": [
+        [
+          -2,
+          -3,
+          -1,
+          -5
+        ]
+      ],
+      "label": "仓库判题用例 6",
+      "quick": true,
+      "expected": -1,
+      "stdin": "4\n-2 -3 -1 -5\n",
+      "stdout": "-1\n"
+    },
+    {
+      "input": [
+        [
+          2,
+          -2,
+          0,
+          -5,
+          0,
+          -5,
+          -4,
+          1,
+          -1
+        ]
+      ],
+      "label": "仓库判题用例 7",
+      "expected": 2,
+      "stdin": "9\n2 -2 0 -5 0 -5 -4 1 -1\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        [
+          0,
+          -1,
+          0,
+          2,
+          3,
+          -1
+        ]
+      ],
+      "label": "仓库判题用例 8",
+      "expected": 5,
+      "stdin": "6\n0 -1 0 2 3 -1\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          3,
+          3,
+          4,
+          2,
+          0,
+          -2,
+          -3,
+          0
+        ]
+      ],
+      "label": "仓库判题用例 9",
+      "expected": 12,
+      "stdin": "8\n3 3 4 2 0 -2 -3 0\n",
+      "stdout": "12\n"
+    },
+    {
+      "input": [
+        [
+          -1,
+          -3,
+          0,
+          -1,
+          4,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 10",
+      "expected": 8,
+      "stdin": "6\n-1 -3 0 -1 4 4\n",
+      "stdout": "8\n"
+    },
+    {
+      "input": [
+        [
+          -1,
+          -5,
+          -5,
+          4,
+          -2,
+          1,
+          2,
+          -3
+        ]
+      ],
+      "label": "仓库判题用例 11",
+      "expected": 5,
+      "stdin": "8\n-1 -5 -5 4 -2 1 2 -3\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          4,
+          3,
+          4,
+          4,
+          5,
+          -5,
+          3,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 12",
+      "expected": 22,
+      "stdin": "8\n4 3 4 4 5 -5 3 4\n",
+      "stdout": "22\n"
+    },
+    {
+      "input": [
+        [
+          -3,
+          -4,
+          4,
+          1,
+          4,
+          -4,
+          -3,
+          2,
+          -4
+        ]
+      ],
+      "label": "仓库判题用例 13",
+      "expected": 9,
+      "stdin": "9\n-3 -4 4 1 4 -4 -3 2 -4\n",
+      "stdout": "9\n"
+    },
+    {
+      "input": [
+        [
+          -1,
+          -5,
+          -3,
+          4,
+          -4,
+          -5
+        ]
+      ],
+      "label": "仓库判题用例 14",
+      "expected": 4,
+      "stdin": "6\n-1 -5 -3 4 -4 -5\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          -5,
+          -3,
+          3,
+          2,
+          0,
+          -5,
+          3
+        ]
+      ],
+      "label": "仓库判题用例 15",
+      "expected": 5,
+      "stdin": "7\n-5 -3 3 2 0 -5 3\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          0,
+          -4,
+          5,
+          4,
+          2,
+          -4
+        ]
+      ],
+      "label": "仓库判题用例 16",
+      "expected": 11,
+      "stdin": "6\n0 -4 5 4 2 -4\n",
+      "stdout": "11\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          -2,
+          1,
+          -3,
+          4,
+          -1,
+          2,
+          1,
+          -5,
+          4
+        ]
+      ],
+      "expected": 6,
+      "stdin": "9\n-2 1 -3 4 -1 2 1 -5 4\n",
+      "stdout": "6\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0053.最大子数组和.md",
+        "index": 1,
+        "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+        "output": "6"
+      }
+    },
+    {
+      "input": [
+        [
+          1
+        ]
+      ],
+      "expected": 1,
+      "stdin": "1\n1\n",
+      "stdout": "1\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0053.最大子数组和.md",
+        "index": 2,
+        "input": "nums = [1]",
+        "output": "1"
+      }
+    },
+    {
+      "input": [
+        [
+          5,
+          4,
+          -1,
+          7,
+          8
+        ]
+      ],
+      "expected": 23,
+      "stdin": "5\n5 4 -1 7 8\n",
+      "stdout": "23\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0053.最大子数组和.md",
+        "index": 3,
+        "input": "nums = [5,4,-1,7,8]",
+        "output": "23"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定一个非空整数序列，选择一个非空连续区间，使区间内元素之和最大，输出这个最大和。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. nums：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= nums.length <= 10^5",
+      "数据范围：-10^4 <= nums[i] <= 10^4"
+    ],
+    "examples": [
+      {
+        "input": "9\n-2 1 -3 4 -1 2 1 -5 4\n",
+        "output": "6\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "1\n1\n",
+        "output": "1\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "5\n5 4 -1 7 8\n",
+        "output": "23\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "367c4808"
+    ],
+    "javascript": [
+      "e2a9d156"
+    ],
+    "typescript": [
+      "4ed1b3c8"
+    ]
+  }
+}

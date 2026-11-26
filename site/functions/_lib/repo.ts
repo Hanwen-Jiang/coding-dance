@@ -1,9 +1,8 @@
 // 把资源仓里的 Markdown / JSON 解析成网站需要的数据。这里只有不变的题目资源，个人进度在 progress.ts 里从用户自己的进度仓读。
 
-import type { IndexData, Level, ProblemDetail, ProblemSummary, Spec, Tier, Topic, TopicDetail, TopicLink, TopicSummary } from "../../lib/types.ts";
-import { byImportance } from "../../lib/types.ts";
-import { type Env, HttpError, listFiles, readText } from "./github.ts";
-import { loadR2Manifest, readR2Problem, readR2Topic, readR2TopicsIndex } from "./r2.ts";
+import type { IndexData, Level, ProblemDetail, ProblemSummary, Spec, Tier, Topic, TopicDetail, TopicLink, TopicSummary } from "../../lib/types";
+import { byImportance } from "../../lib/types";
+import { type Env, HttpError, listFiles, readText } from "./github";
 
 const pad = (n: number) => String(n).padStart(4, "0");
 const lines = (s: string) => s.split(/\r?\n/);
@@ -53,12 +52,11 @@ function parsePriority(md: string): Map<number, { tier: Tier; order: number }> {
   return map;
 }
 
-export async function loadIndex(env: Env, reqUrl?: string): Promise<IndexData & { files: string[] }> {
-  const [files, plan, prio, manifest] = await Promise.all([
+export async function loadIndex(env: Env): Promise<IndexData & { files: string[] }> {
+  const [files, plan, prio] = await Promise.all([
     listFiles(env),
     readText(env, "studyplan/热题100.md"),
     readText(env, "studyplan/优先级清单.md"),
-    loadR2Manifest(env, reqUrl),
   ]);
   if (!plan) throw new HttpError(502, "仓库里没有 studyplan/热题100.md");
   const tiers = parsePriority(prio ?? "");
@@ -72,7 +70,7 @@ export async function loadIndex(env: Env, reqUrl?: string): Promise<IndexData & 
       tier: t?.tier ?? "P3",
       order: t?.order ?? 100 + i,
       planOrder: i + 1,
-      hasSpec: Boolean(manifest?.problems?.[pad(r.id)]) || files.includes(`tools/illustrations/data/${pad(r.id)}.json`),
+      hasSpec: files.includes(`tools/illustrations/data/${pad(r.id)}.json`),
       hasIllustration: files.some((f) => f.startsWith("illustrations/" + p) && f.endsWith(".html")),
     };
   });
@@ -97,8 +95,8 @@ function parseProblemDoc(md: string) {
   return { slug, html };
 }
 
-export async function loadProblem(env: Env, id: number, reqUrl?: string): Promise<ProblemDetail> {
-  const index = await loadIndex(env, reqUrl);
+export async function loadProblem(env: Env, id: number): Promise<ProblemDetail> {
+  const index = await loadIndex(env);
   const summary = index.problems.find((p) => p.id === id);
   if (!summary) throw new HttpError(404, `题单里没有第 ${id} 题`);
   const p = pad(id) + ".";
@@ -108,10 +106,8 @@ export async function loadProblem(env: Env, id: number, reqUrl?: string): Promis
 
   const [doc, specText, topics] = await Promise.all([
     docPath ? readText(env, docPath) : Promise.resolve(null),
-    summary.hasSpec
-      ? readR2Problem(env, pad(id), reqUrl).then((t) => t ?? readText(env, `tools/illustrations/data/${pad(id)}.json`))
-      : Promise.resolve(null),
-    loadTopics(env, reqUrl).catch(() => [] as TopicSummary[]), // 专题读不到不影响题目页
+    summary.hasSpec ? readText(env, `tools/illustrations/data/${pad(id)}.json`) : Promise.resolve(null),
+    loadTopics(env).catch(() => [] as TopicSummary[]), // 专题读不到不影响题目页
   ]);
   const { slug, html } = doc ? parseProblemDoc(doc) : { slug: null, html: "" };
   let spec: Spec | null = null;
@@ -140,9 +136,9 @@ export async function loadProblem(env: Env, id: number, reqUrl?: string): Promis
 const TOPICS_DIR = "tools/illustrations/data/topics";
 const topicLink = (t: TopicLink): TopicLink => ({ slug: t.slug, name: t.name, kind: t.kind });
 
-/** 基础专题的目录：优先读 R2/ASSETS 清单，再回退 data/topics/index.json */
-export async function loadTopics(env: Env, reqUrl?: string): Promise<TopicSummary[]> {
-  const text = (await readR2TopicsIndex(env, reqUrl)) ?? (await readText(env, `${TOPICS_DIR}/index.json`));
+/** 基础专题的目录：data/topics/index.json（由 build.js 导出），还没有时是空列表 */
+export async function loadTopics(env: Env): Promise<TopicSummary[]> {
+  const text = await readText(env, `${TOPICS_DIR}/index.json`);
   if (!text) return [];
   try {
     return JSON.parse(text) as TopicSummary[];
@@ -152,12 +148,8 @@ export async function loadTopics(env: Env, reqUrl?: string): Promise<TopicSummar
 }
 
 /** 一个专题：讲解、代码、演示，加上相关热题的信息和前后两个专题 */
-export async function loadTopic(env: Env, slug: string, reqUrl?: string): Promise<TopicDetail> {
-  const [list, text, index] = await Promise.all([
-    loadTopics(env, reqUrl),
-    readR2Topic(env, slug, reqUrl).then((t) => t ?? readText(env, `${TOPICS_DIR}/${slug}.json`)),
-    loadIndex(env, reqUrl),
-  ]);
+export async function loadTopic(env: Env, slug: string): Promise<TopicDetail> {
+  const [list, text, index] = await Promise.all([loadTopics(env), readText(env, `${TOPICS_DIR}/${slug}.json`), loadIndex(env)]);
   const k = list.findIndex((t) => t.slug === slug);
   if (k < 0 || !text) throw new HttpError(404, `没有「${slug}」这个专题`);
   let topic: Topic;

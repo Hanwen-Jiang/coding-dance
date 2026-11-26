@@ -1,0 +1,24 @@
+{
+ "sig": {"fn":"minWindow","params":["string","string"],"ret":"string"},
+ "fixed": 8,
+ "cases": [
+  {"in":["ADOBECODEBANC","ABC"],"out":"BANC"},
+  {"in":["abaacbab","aab"],"out":"aba"},
+  {"in":["a","a"],"out":"a"},
+  {"in":["a","aa"],"out":""},
+  {"in":["aa","aa"],"out":"aa"},
+  {"in":["ab","b"],"out":"b"},
+  {"in":["bba","ab"],"out":"ba"},
+  {"in":["cabwefgewcwaefgcf","cae"],"out":"cwae"},
+  {"in":["CDADAABCBABCD","CA"],"out":"CDA"},
+  {"in":["BDBEEDADDD","BB"],"out":"BDB"},
+  {"in":["CADAACBDEBB","ABB"],"out":"ACBDEB"},
+  {"in":["DCBDEEAA","AAC"],"out":"CBDEEAA"},
+  {"in":["ACACBEAEBE","BB"],"out":"BEAEB"},
+  {"in":["CCBBCADBBDAC","AAA"],"out":""},
+  {"in":["CCCDABCCAE","ABC"],"out":"ABC"},
+  {"in":["BDECABEECEBA","CB"],"out":"CAB"},
+  {"in":["BCBEBDABED","AC"],"out":"CBEBDA"},
+  {"in":["DECCBAEDAAC","CB"],"out":"CB"}
+ ]
+}

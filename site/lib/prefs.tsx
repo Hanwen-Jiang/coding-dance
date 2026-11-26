@@ -4,7 +4,6 @@
 // 没登录：存在浏览器里。登录并开通了进度仓：以进度仓的 settings.json 为准，改动会写回去，换设备也跟着账号走。
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-import { apiFetch } from "@/lib/api-base";
 import { DEFAULT_LANGS, cleanLangs } from "@/lib/langs";
 import { useProgress } from "@/lib/progress";
 
@@ -42,7 +41,7 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const save = useCallback(async (next: string[]) => {
     setSaving(true);
     try {
-      const r = await apiFetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ langs: next }) });
+      const r = await fetch("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ langs: next }) });
       const j = (await r.json().catch(() => ({}))) as { error?: string };
       if (!r.ok) throw new Error(j.error || `保存失败（${r.status}）`);
       setError(null);

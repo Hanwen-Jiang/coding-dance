@@ -1,0 +1,444 @@
+{
+ "id": 394,
+ "name": "字符串解码",
+ "level": "中等",
+ "topic": "栈",
+ "h1": "字符串解码，遇到 [ 先存档，遇到 ] 再展开",
+ "lede": "括号可以嵌套，所以要先解开里面的。从左往右扫：遇到 [ 时，把括号外已经拼好的前缀和重复次数压栈，开始拼括号里的内容；遇到 ] 时，弹出存档，把括号里的内容重复若干次接到前缀后面。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "需要记住什么",
+   "body": [
+    "遇到 <code>[</code> 时，括号外面已经有一段拼好的字符串 <code>cur</code>，还有括号前的数字 <code>k</code>。",
+    "这两样都要先存起来，等括号里的内容解完再用。"
+   ]
+  },
+  {
+   "t": "用栈存档",
+   "body": [
+    "<code>[</code>：把 <code>(cur, k)</code> 压栈，<code>cur</code> 清空，<code>k</code> 清零。",
+    "<code>]</code>：弹出 <code>(prev, times)</code>，<code>cur = prev + cur * times</code>。",
+    "字母直接接到 <code>cur</code> 后面。"
+   ]
+  },
+  {
+   "t": "数字可能不止一位",
+   "body": [
+    "比如 <code>100[a]</code>。读数字时要 <code>k = k * 10 + int(c)</code>。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "存档时 k 要清零",
+   "body": "压栈后 k 归零，否则括号里的数字会接在外面的数字后面。"
+  },
+  {
+   "t": "展开是 prev + cur * times",
+   "body": "重复的只是括号里的部分，前缀只出现一次。"
+  },
+  {
+   "t": "复杂度",
+   "body": "时间和空间都和输出长度成正比。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：栈",
+   "kind": null,
+   "note": null,
+   "key": "std",
+   "code": "class Solution:\n    def decodeString(self, s: str) -> str:\n        stack, cur, k = [], \"\", 0\n        for c in s:\n            if c.isdigit():\n                k = k * 10 + int(c)         # 数字可能不止一位\n            elif c == \"[\":\n                stack.append((cur, k))      # 存档：括号外的前缀和重复次数\n                cur, k = \"\", 0\n            elif c == \"]\":\n                prev, times = stack.pop()\n                cur = prev + cur * times    # 展开后接回前缀\n            else:\n                cur += c\n        return cur",
+   "marks": {
+    "init": [
+     3
+    ],
+    "digit": [
+     5,
+     6
+    ],
+    "push": [
+     7,
+     8,
+     9
+    ],
+    "pop": [
+     10,
+     11,
+     12
+    ],
+    "letter": [
+     13,
+     14
+    ],
+    "done": [
+     15
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public String decodeString(String s) {\n        Deque<String> prevs = new ArrayDeque<>();\n        Deque<Integer> counts = new ArrayDeque<>();\n        StringBuilder cur = new StringBuilder();\n        int k = 0;\n        for (char c : s.toCharArray()) {\n            if (Character.isDigit(c)) {\n                k = k * 10 + (c - '0');                 // 数字可能不止一位\n            } else if (c == '[') {\n                prevs.push(cur.toString());             // 存档：括号外的前缀和重复次数\n                counts.push(k);\n                cur = new StringBuilder();\n                k = 0;\n            } else if (c == ']') {\n                String inner = cur.toString().repeat(counts.pop());\n                cur = new StringBuilder(prevs.pop()).append(inner);    // 展开后接回前缀\n            } else {\n                cur.append(c);\n            }\n        }\n        return cur.toString();\n    }\n}",
+     "marks": {
+      "init": [
+       3,
+       4,
+       5,
+       6
+      ],
+      "digit": [
+       8,
+       9
+      ],
+      "push": [
+       10,
+       11,
+       12,
+       13,
+       14
+      ],
+      "pop": [
+       15,
+       16,
+       17
+      ],
+      "letter": [
+       18,
+       19
+      ],
+      "done": [
+       22
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    string decodeString(string s) {\n        vector<pair<string, int>> stack;\n        string cur;\n        int k = 0;\n        for (char c : s) {\n            if (isdigit(c)) {\n                k = k * 10 + (c - '0');                 // 数字可能不止一位\n            } else if (c == '[') {\n                stack.push_back({cur, k});              // 存档：括号外的前缀和重复次数\n                cur = \"\";\n                k = 0;\n            } else if (c == ']') {\n                auto [prev, times] = stack.back();\n                stack.pop_back();\n                string inner;\n                while (times--) inner += cur;\n                cur = prev + inner;                     // 展开后接回前缀\n            } else {\n                cur += c;\n            }\n        }\n        return cur;\n    }\n};",
+     "marks": {
+      "init": [
+       4,
+       5,
+       6
+      ],
+      "digit": [
+       8,
+       9
+      ],
+      "push": [
+       10,
+       11,
+       12,
+       13
+      ],
+      "pop": [
+       14,
+       15,
+       16,
+       17,
+       18,
+       19
+      ],
+      "letter": [
+       20,
+       21
+      ],
+      "done": [
+       24
+      ]
+     }
+    },
+    "go": {
+     "code": "func decodeString(s string) string {\n\ttype saved struct {\n\t\tprev  string\n\t\ttimes int\n\t}\n\tstack, cur, k := []saved{}, \"\", 0\n\tfor _, c := range s {\n\t\tif c >= '0' && c <= '9' {\n\t\t\tk = k*10 + int(c-'0') // 数字可能不止一位\n\t\t} else if c == '[' {\n\t\t\tstack = append(stack, saved{cur, k}) // 存档：括号外的前缀和重复次数\n\t\t\tcur, k = \"\", 0\n\t\t} else if c == ']' {\n\t\t\ttop := stack[len(stack)-1]\n\t\t\tstack = stack[:len(stack)-1]\n\t\t\tcur = top.prev + strings.Repeat(cur, top.times) // 展开后接回前缀\n\t\t} else {\n\t\t\tcur += string(c)\n\t\t}\n\t}\n\treturn cur\n}",
+     "marks": {
+      "init": [
+       6
+      ],
+      "digit": [
+       8,
+       9
+      ],
+      "push": [
+       10,
+       11,
+       12
+      ],
+      "pop": [
+       13,
+       14,
+       15,
+       16
+      ],
+      "letter": [
+       17,
+       18
+      ],
+      "done": [
+       21
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var decodeString = function(s) {\n    const stack = [];\n    let cur = \"\", k = 0;\n    for (const c of s) {\n        if (c >= \"0\" && c <= \"9\") {\n            k = k * 10 + Number(c);                 // 数字可能不止一位\n        } else if (c === \"[\") {\n            stack.push([cur, k]);                   // 存档：括号外的前缀和重复次数\n            cur = \"\";\n            k = 0;\n        } else if (c === \"]\") {\n            const [prev, times] = stack.pop();\n            cur = prev + cur.repeat(times);         // 展开后接回前缀\n        } else {\n            cur += c;\n        }\n    }\n    return cur;\n};",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "digit": [
+       5,
+       6
+      ],
+      "push": [
+       7,
+       8,
+       9,
+       10
+      ],
+      "pop": [
+       11,
+       12,
+       13
+      ],
+      "letter": [
+       14,
+       15
+      ],
+      "done": [
+       18
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function decodeString(s: string): string {\n    const stack: [string, number][] = [];\n    let cur = \"\", k = 0;\n    for (const c of s) {\n        if (c >= \"0\" && c <= \"9\") {\n            k = k * 10 + Number(c);                 // 数字可能不止一位\n        } else if (c === \"[\") {\n            stack.push([cur, k]);                   // 存档：括号外的前缀和重复次数\n            cur = \"\";\n            k = 0;\n        } else if (c === \"]\") {\n            const [prev, times] = stack.pop()!;\n            cur = prev + cur.repeat(times);         // 展开后接回前缀\n        } else {\n            cur += c;\n        }\n    }\n    return cur;\n}",
+     "marks": {
+      "init": [
+       2,
+       3
+      ],
+      "digit": [
+       5,
+       6
+      ],
+      "push": [
+       7,
+       8,
+       9,
+       10
+      ],
+      "pop": [
+       11,
+       12,
+       13
+      ],
+      "letter": [
+       14,
+       15
+      ],
+      "done": [
+       18
+      ]
+     }
+    }
+   }
+  },
+  {
+   "t": "简洁写法：正则反复展开最内层",
+   "kind": "elegant",
+   "note": "「数字[纯字母]」一定是最内层的括号，替换掉它，直到没有括号为止。",
+   "key": "regex",
+   "code": "import re\n\nclass Solution:\n    def decodeString(self, s: str) -> str:\n        inner = re.compile(r\"(\\d+)\\[([a-z]*)\\]\")\n        while \"[\" in s:\n            s = inner.sub(lambda m: m[2] * int(m[1]), s)\n        return s",
+   "marks": {
+    "init": [
+     5
+    ],
+    "round": [
+     6
+    ],
+    "expand": [
+     7
+    ],
+    "done": [
+     8
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "import java.util.regex.*;\n\nclass Solution {\n    public String decodeString(String s) {\n        Pattern inner = Pattern.compile(\"(\\\\d+)\\\\[([a-z]*)\\\\]\");\n        while (s.contains(\"[\")) {\n            s = inner.matcher(s).replaceAll(m -> m.group(2).repeat(Integer.parseInt(m.group(1))));\n        }\n        return s;\n    }\n}",
+     "marks": {
+      "init": [
+       5
+      ],
+      "round": [
+       6
+      ],
+      "expand": [
+       7
+      ],
+      "done": [
+       9
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    string decodeString(string s) {\n        regex inner(\"(\\\\d+)\\\\[([a-z]*)\\\\]\");\n        while (s.find('[') != string::npos) {\n            string out;\n            auto from = s.cbegin();\n            smatch m;\n            while (regex_search(from, s.cend(), m, inner)) {\n                out += m.prefix().str();\n                for (int k = stoi(m[1].str()); k > 0; k--) out += m[2].str();\n                from = m[0].second;\n            }\n            out.append(from, s.cend());\n            s = out;\n        }\n        return s;\n    }\n};",
+     "marks": {
+      "init": [
+       4
+      ],
+      "round": [
+       5,
+       6,
+       7
+      ],
+      "expand": [
+       9,
+       10,
+       11,
+       12,
+       14,
+       15
+      ],
+      "done": [
+       17
+      ]
+     }
+    },
+    "go": {
+     "code": "func decodeString(s string) string {\n\t// inner(i)：从下标 i 开始是不是「数字[纯字母]」（一定是最内层的括号），是的话返回次数、括号里的字母和结束位置\n\tinner := func(i int) (k int, t string, end int) {\n\t\tj := i\n\t\tfor j < len(s) && s[j] >= '0' && s[j] <= '9' {\n\t\t\tj++\n\t\t}\n\t\tif j == i || j == len(s) || s[j] != '[' {\n\t\t\treturn 0, \"\", -1\n\t\t}\n\t\te := j + 1\n\t\tfor e < len(s) && s[e] >= 'a' && s[e] <= 'z' {\n\t\t\te++\n\t\t}\n\t\tif e == len(s) || s[e] != ']' {\n\t\t\treturn 0, \"\", -1\n\t\t}\n\t\tk, _ = strconv.Atoi(s[i:j])\n\t\treturn k, s[j+1 : e], e + 1\n\t}\n\tfor strings.Contains(s, \"[\") {\n\t\tvar b strings.Builder\n\t\tfor i := 0; i < len(s); {\n\t\t\tif k, t, end := inner(i); end >= 0 {\n\t\t\t\tb.WriteString(strings.Repeat(t, k))\n\t\t\t\ti = end\n\t\t\t} else {\n\t\t\t\tb.WriteByte(s[i])\n\t\t\t\ti++\n\t\t\t}\n\t\t}\n\t\ts = b.String()\n\t}\n\treturn s\n}",
+     "marks": {
+      "init": [
+       3
+      ],
+      "round": [
+       21,
+       22
+      ],
+      "expand": [
+       24,
+       25,
+       26,
+       32
+      ],
+      "done": [
+       34
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var decodeString = function(s) {\n    const inner = /(\\d+)\\[([a-z]*)\\]/g;\n    while (s.includes(\"[\")) {\n        s = s.replace(inner, (_, k, t) => t.repeat(Number(k)));\n    }\n    return s;\n};",
+     "marks": {
+      "init": [
+       2
+      ],
+      "round": [
+       3
+      ],
+      "expand": [
+       4
+      ],
+      "done": [
+       6
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function decodeString(s: string): string {\n    const inner = /(\\d+)\\[([a-z]*)\\]/g;\n    while (s.includes(\"[\")) {\n        s = s.replace(inner, (_, k: string, t: string) => t.repeat(Number(k)));\n    }\n    return s;\n}",
+     "marks": {
+      "init": [
+       2
+      ],
+      "round": [
+       3
+      ],
+      "expand": [
+       4
+      ],
+      "done": [
+       6
+      ]
+     }
+    }
+   }
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "当前字符 / 刚压入的存档"
+   ],
+   [
+    "e",
+    "还在栈里的 ["
+   ],
+   [
+    "c",
+    "刚配对展开的括号"
+   ],
+   [
+    "d",
+    "已经处理过"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "s": "3[a]2[bc]"
+    },
+    "note": "s = \"3[a]2[bc]\""
+   },
+   {
+    "label": "嵌套",
+    "args": {
+     "s": "3[a2[c]]"
+    },
+    "note": "s = \"3[a2[c]]\""
+   }
+  ],
+  "build": "build(a, snap) {\n    const s = a.s, stack = []; let cur = \"\", k = 0;\n    const view = (i, opts = {}) => {\n      const openSet = new Set(stack.map((f) => f[2]));\n      const matchL = opts.matchL ?? -1;\n      return [\n        {\n          t: \"array\",\n          label: \"s\",\n          items: s.split(\"\").map((c, j) => ({\n            v: c,\n            cls: j === matchL || (matchL >= 0 && j === i) ? \"c\"\n              : j === i ? \"a\"\n                : openSet.has(j) ? \"e\"\n                  : j < i ? \"d\" : \"\",\n          })),\n          ptrs: { i: i >= 0 && i < s.length ? i : null },\n          feeds: (opts.feeds || []).slice(),\n        },\n        {\n          t: \"chips\",\n          label: \"栈（存档：前缀, 次数）\",\n          items: stack.map(([p, t], idx) => ({\n            v: `(\"${p}\", ${t})`,\n            cls: opts.hlTop && idx === stack.length - 1 ? \"a\" : \"e\",\n          })),\n          empty: \"空\",\n        },\n      ];\n    };\n    snap(\"开始\", \"cur 是正在拼的字符串，k 是正在读的数字。\", view(-1), {\n      at: \"init\",\n      facts: [[\"cur\", \"\\\"\\\"\"], [\"k\", 0], [\"栈深度\", 0]],\n    });\n    for (let i = 0; i < s.length; i++) {\n      const c = s[i];\n      if (/\\d/.test(c)) {\n        const oldK = k;\n        k = k * 10 + +c;\n        snap(\"数字\", `读到数字 ${c}，k = <b>${k}</b>。`, view(i), {\n          at: \"digit\",\n          facts: [[\"cur\", `\"${cur}\"`], [\"k\", k, oldK], [\"栈深度\", stack.length]],\n        });\n      } else if (c === \"[\") {\n        const oldCur = cur, oldK = k, oldLen = stack.length;\n        stack.push([oldCur, oldK, i]);\n        cur = \"\";\n        k = 0;\n        snap(\"存档\", `遇到 [，把括号外的前缀 \"${oldCur}\" 和次数 ${oldK} 压栈，cur 清空，k 归零，开始拼括号里的内容。`, view(i, { hlTop: true }), {\n          at: \"push\",\n          facts: [\n            oldCur !== \"\" ? [\"cur\", \"\\\"\\\"\", `\"${oldCur}\"`] : [\"cur\", \"\\\"\\\"\"],\n            oldK !== 0 ? [\"k\", 0, oldK] : [\"k\", 0],\n            [\"栈深度\", stack.length, oldLen],\n          ],\n        });\n      } else if (c === \"]\") {\n        const oldLen = stack.length, oldCur = cur;\n        const [p, t, openI] = stack.pop();\n        cur = p + oldCur.repeat(t);\n        snap(\"展开\", `遇到 ]，弹出存档 (\"${p}\", ${t})。括号里是 \"${oldCur}\"，重复 ${t} 次接到 \"${p}\" 后面，cur = <b>\"${cur}\"</b>。`, view(i, {\n          matchL: openI,\n          feeds: [{ from: openI, to: i, win: true, label: `×${t}` }],\n        }), {\n          at: \"pop\",\n          kind: \"ok\",\n          facts: [\n            cur !== oldCur ? [\"cur\", `\"${cur}\"`, `\"${oldCur}\"`] : [\"cur\", `\"${cur}\"`],\n            [\"展开次数\", `×${t}`],\n            [\"栈深度\", stack.length, oldLen],\n          ],\n        });\n      } else {\n        const oldCur = cur;\n        cur += c;\n        snap(\"字母\", `字母 ${c} 直接接到 cur 后面。`, view(i), {\n          at: \"letter\",\n          facts: [[\"cur\", `\"${cur}\"`, `\"${oldCur}\"`], [\"k\", k], [\"栈深度\", stack.length]],\n        });\n      }\n    }\n    snap(\"完成\", `解码结果是 <b>\"${cur}\"</b>。`, view(s.length), {\n      at: \"done\",\n      kind: \"ok\",\n      ans: cur,\n      facts: [[\"结果\", `\"${cur}\"`], [\"长度\", cur.length]],\n    });\n  }",
+  "methods": [
+   {
+    "t": "栈",
+    "note": null,
+    "legend": [
+     [
+      "a",
+      "当前字符 / 刚压入的存档"
+     ],
+     [
+      "e",
+      "还在栈里的 ["
+     ],
+     [
+      "c",
+      "刚配对展开的括号"
+     ],
+     [
+      "d",
+      "已经处理过"
+     ]
+    ],
+    "code": "std",
+    "build": "build(a, snap) {\n    const s = a.s, stack = []; let cur = \"\", k = 0;\n    const view = (i, opts = {}) => {\n      const openSet = new Set(stack.map((f) => f[2]));\n      const matchL = opts.matchL ?? -1;\n      return [\n        {\n          t: \"array\",\n          label: \"s\",\n          items: s.split(\"\").map((c, j) => ({\n            v: c,\n            cls: j === matchL || (matchL >= 0 && j === i) ? \"c\"\n              : j === i ? \"a\"\n                : openSet.has(j) ? \"e\"\n                  : j < i ? \"d\" : \"\",\n          })),\n          ptrs: { i: i >= 0 && i < s.length ? i : null },\n          feeds: (opts.feeds || []).slice(),\n        },\n        {\n          t: \"chips\",\n          label: \"栈（存档：前缀, 次数）\",\n          items: stack.map(([p, t], idx) => ({\n            v: `(\"${p}\", ${t})`,\n            cls: opts.hlTop && idx === stack.length - 1 ? \"a\" : \"e\",\n          })),\n          empty: \"空\",\n        },\n      ];\n    };\n    snap(\"开始\", \"cur 是正在拼的字符串，k 是正在读的数字。\", view(-1), {\n      at: \"init\",\n      facts: [[\"cur\", \"\\\"\\\"\"], [\"k\", 0], [\"栈深度\", 0]],\n    });\n    for (let i = 0; i < s.length; i++) {\n      const c = s[i];\n      if (/\\d/.test(c)) {\n        const oldK = k;\n        k = k * 10 + +c;\n        snap(\"数字\", `读到数字 ${c}，k = <b>${k}</b>。`, view(i), {\n          at: \"digit\",\n          facts: [[\"cur\", `\"${cur}\"`], [\"k\", k, oldK], [\"栈深度\", stack.length]],\n        });\n      } else if (c === \"[\") {\n        const oldCur = cur, oldK = k, oldLen = stack.length;\n        stack.push([oldCur, oldK, i]);\n        cur = \"\";\n        k = 0;\n        snap(\"存档\", `遇到 [，把括号外的前缀 \"${oldCur}\" 和次数 ${oldK} 压栈，cur 清空，k 归零，开始拼括号里的内容。`, view(i, { hlTop: true }), {\n          at: \"push\",\n          facts: [\n            oldCur !== \"\" ? [\"cur\", \"\\\"\\\"\", `\"${oldCur}\"`] : [\"cur\", \"\\\"\\\"\"],\n            oldK !== 0 ? [\"k\", 0, oldK] : [\"k\", 0],\n            [\"栈深度\", stack.length, oldLen],\n          ],\n        });\n      } else if (c === \"]\") {\n        const oldLen = stack.length, oldCur = cur;\n        const [p, t, openI] = stack.pop();\n        cur = p + oldCur.repeat(t);\n        snap(\"展开\", `遇到 ]，弹出存档 (\"${p}\", ${t})。括号里是 \"${oldCur}\"，重复 ${t} 次接到 \"${p}\" 后面，cur = <b>\"${cur}\"</b>。`, view(i, {\n          matchL: openI,\n          feeds: [{ from: openI, to: i, win: true, label: `×${t}` }],\n        }), {\n          at: \"pop\",\n          kind: \"ok\",\n          facts: [\n            cur !== oldCur ? [\"cur\", `\"${cur}\"`, `\"${oldCur}\"`] : [\"cur\", `\"${cur}\"`],\n            [\"展开次数\", `×${t}`],\n            [\"栈深度\", stack.length, oldLen],\n          ],\n        });\n      } else {\n        const oldCur = cur;\n        cur += c;\n        snap(\"字母\", `字母 ${c} 直接接到 cur 后面。`, view(i), {\n          at: \"letter\",\n          facts: [[\"cur\", `\"${cur}\"`, `\"${oldCur}\"`], [\"k\", k], [\"栈深度\", stack.length]],\n        });\n      }\n    }\n    snap(\"完成\", `解码结果是 <b>\"${cur}\"</b>。`, view(s.length), {\n      at: \"done\",\n      kind: \"ok\",\n      ans: cur,\n      facts: [[\"结果\", `\"${cur}\"`], [\"长度\", cur.length]],\n    });\n  }"
+   },
+   {
+    "t": "反复展开最内层",
+    "note": "和简洁写法一样：「数字[纯字母]」里面没有别的括号，一定是最内层。每一轮把所有最内层的括号展开，直到没有括号为止。",
+    "legend": [
+     [
+      "a",
+      "这一轮要展开的最内层"
+     ],
+     [
+      "c",
+      "刚展开出来的内容"
+     ]
+    ],
+    "code": "regex",
+    "build": "build(a, snap) {\n      let s = a.s, round = 0;\n      const view = (hl, cls = \"a\") => [{ t: \"array\", label: \"s\", items: [...s].map((c, i) => ({ v: c, cls: hl.has(i) ? cls : \"\" })) }];\n      snap(\"开始\", \"正则 <code>(\\\\d+)\\\\[([a-z]*)\\\\]</code> 匹配「数字[纯字母]」，它一定是最内层的括号。\", view(new Set()), {\n        at: \"init\",\n        facts: [[\"轮数\", 0], [\"长度\", s.length]],\n      });\n      while (s.includes(\"[\")) {\n        const prevRound = round;\n        round++;\n        const re = /(\\d+)\\[([a-z]*)\\]/g, hl = new Set(), parts = [], matches = [];\n        let m;\n        while ((m = re.exec(s))) {\n          for (let k = m.index; k < m.index + m[0].length; k++) hl.add(k);\n          const rep = m[2].repeat(+m[1]);\n          parts.push(`${m[0]} 展开成 \"${rep}\"`);\n          matches.push([m.index, m.index + m[0].length, rep]);\n        }\n        snap(`第 ${round} 轮`, `找到 ${parts.length} 个最内层：${parts.join(\"，\")}。`, view(hl, \"a\"), {\n          at: \"round\",\n          facts: [[\"轮数\", round, prevRound], [\"匹配数\", parts.length], [\"长度\", s.length]],\n        });\n        const oldLen = s.length;\n        let nextS = \"\", cursor = 0;\n        const expanded = new Set();\n        for (const [start, end, rep] of matches) {\n          nextS += s.slice(cursor, start);\n          const base = nextS.length;\n          nextS += rep;\n          for (let k = base; k < base + rep.length; k++) expanded.add(k);\n          cursor = end;\n        }\n        nextS += s.slice(cursor);\n        s = nextS;\n        snap(`第 ${round} 轮完`, `替换后 s = \"${s}\"。` + (s.includes(\"[\") ? \"还有括号，原来的外层现在变成了最内层，再来一轮。\" : \"没有括号了。\"), view(expanded, \"c\"), {\n          at: \"expand\",\n          kind: \"ok\",\n          facts: [\n            [\"轮数\", round],\n            [\"展开处\", matches.length],\n            s.length !== oldLen ? [\"长度\", s.length, oldLen] : [\"长度\", s.length],\n          ],\n        });\n      }\n      snap(\"完成\", `解码结果是 <b>\"${s}\"</b>。`, view(new Set()), {\n        at: \"done\",\n        kind: \"ok\",\n        ans: s,\n        facts: [[\"总轮数\", round], [\"结果\", `\"${s}\"`], [\"长度\", s.length]],\n      });\n    }"
+   }
+  ],
+  "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const atom = () => R.word(R.int(1, 2), \"abc\");\n    const enc = (depth) => {\n      const inner = depth > 0 && R.chance(0.5) ? atom() + enc(depth - 1) : atom();\n      return `${R.int(2, 3)}[${inner}]`;\n    };\n    const s = (R.chance(0.4) ? atom() : \"\") + enc(R.int(0, 1)) + (R.chance(0.5) ? enc(0) : \"\") + (R.chance(0.3) ? atom() : \"\");\n    return { args: { s }, note: `s = \"${s}\"`, py: `Solution().decodeString(\"${s}\")` };\n  })(R); return { args: r.args, note: r.note }; }"
+ }
+}

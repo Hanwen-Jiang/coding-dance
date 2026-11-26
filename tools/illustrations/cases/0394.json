@@ -1,0 +1,23 @@
+{
+ "sig": {"fn":"decodeString","params":["string"],"ret":"string"},
+ "fixed": 7,
+ "cases": [
+  {"in":["3[a]2[bc]"],"out":"aaabcbc"},
+  {"in":["3[a2[c]]"],"out":"accaccacc"},
+  {"in":["2[abc]3[cd]ef"],"out":"abcabccdcdcdef"},
+  {"in":["abc3[cd]xyz"],"out":"abccdcdcdxyz"},
+  {"in":["10[a]"],"out":"aaaaaaaaaa"},
+  {"in":["3[z]2[2[y]pq4[2[jk]e1[f]]]ef"],"out":"zzzyypqjkjkefjkjkefjkjkefjkjkefyypqjkjkefjkjkefjkjkefjkjkefef"},
+  {"in":["abc"],"out":"abc"},
+  {"in":["2[b]2[bc]a"],"out":"bbbcbca"},
+  {"in":["c3[c]"],"out":"cccc"},
+  {"in":["2[b]"],"out":"bb"},
+  {"in":["ab3[b]"],"out":"abbbb"},
+  {"in":["aa3[cb]"],"out":"aacbcbcb"},
+  {"in":["3[cc]3[a]a"],"out":"ccccccaaaa"},
+  {"in":["3[b]"],"out":"bbb"},
+  {"in":["2[ca]aa"],"out":"cacaaa"},
+  {"in":["2[c]"],"out":"cc"},
+  {"in":["c3[cc]"],"out":"ccccccc"}
+ ]
+}

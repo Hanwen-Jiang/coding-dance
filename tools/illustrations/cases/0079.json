@@ -1,0 +1,23 @@
+{
+ "sig": {"fn":"exist","params":["char[][]","string"],"ret":"bool"},
+ "fixed": 7,
+ "cases": [
+  {"in":[[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]],"ABCCED"],"out":true},
+  {"in":[[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]],"ABCB"],"out":false},
+  {"in":[[["a"]],"a"],"out":true},
+  {"in":[[["a","a"]],"aaa"],"out":false},
+  {"in":[[["A","B"],["C","D"]],"ABDC"],"out":true},
+  {"in":[[["A","B"],["C","D"]],"ABCD"],"out":false},
+  {"in":[[["A","B","C","E"],["S","F","E","S"],["A","D","E","E"]],"ABCESEEEFS"],"out":true},
+  {"in":[[["D","B","E","B"],["D","D","C","B"],["C","B","B","D"]],"EDBA"],"out":false},
+  {"in":[[["A","A","A","E"],["C","D","C","A"],["B","B","D","A"]],"DDBC"],"out":false},
+  {"in":[[["C","A","E","C"],["E","B","D","D"],["C","A","E","E"]],"DEAB"],"out":true},
+  {"in":[[["C","D","C","A"],["E","C","E","A"],["C","B","D","C"]],"BBC"],"out":false},
+  {"in":[[["D","E","E","E"],["B","D","C","A"],["C","A","B","A"]],"EDBC"],"out":true},
+  {"in":[[["A","D","B","A"],["E","E","A","A"],["D","A","C","A"]],"EADB"],"out":true},
+  {"in":[[["C","C","E","B"],["A","E","D","E"],["D","A","E","B"]],"BEA"],"out":true},
+  {"in":[[["B","C","A","A"],["E","E","B","A"],["B","E","C","E"]],"ECEEE"],"out":true},
+  {"in":[[["B","D","A","A"],["D","A","B","B"],["D","B","E","B"]],"DBDAB"],"out":true},
+  {"in":[[["A","E","D","C"],["A","E","C","E"],["E","B","A","E"]],"CAAD"],"out":false}
+ ]
+}

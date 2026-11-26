@@ -1,0 +1,670 @@
+{
+ "slug": "linked-list",
+ "name": "链表",
+ "kind": "ds",
+ "order": 3,
+ "lede": "链表的节点散在内存各处，每个节点记着下一个节点在哪。好处是插入、删除只改一两个指针；代价是不能按下标直接访问，只能从头一个个往后走。写链表题最常用的两个技巧：哑节点和快慢指针。",
+ "related": [
+  206,
+  21,
+  2,
+  19,
+  24,
+  141,
+  142,
+  160,
+  234,
+  148,
+  25,
+  23
+ ],
+ "sections": [
+  {
+   "key": "build",
+   "t": "定义和构造",
+   "body": [
+    "一个节点就是一个小对象：<code>val</code> 存值，<code>next</code> 指向下一个节点，最后一个节点的 <code>next</code> 是空。力扣已经把 <code>ListNode</code> 定义好了（代码开头的注释就是它的定义），题目给你的是头节点 <code>head</code>。",
+    "从数组建链表时用<b>尾插法</b>：记住当前的尾巴 <code>tail</code>，每来一个数就新建节点接在 tail 后面，再把 tail 挪到新节点。开头先放一个<b>哑节点</b>（dummy），这样第一个节点和后面的节点处理方式完全一样，不用单独判断「链表还是空的」。"
+   ],
+   "points": [
+    {
+     "t": "返回 dummy.next",
+     "body": "哑节点只是个占位的，真正的头节点是它的下一个。数组为空时 <code>dummy.next</code> 正好是空。"
+    },
+    {
+     "t": "Go 里用指针",
+     "body": "Go 的节点要写成 <code>&amp;ListNode{Val: x}</code>，变量都是 <code>*ListNode</code>，不然改的是副本。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "尾插法",
+     "kind": null,
+     "note": null,
+     "key": "build",
+     "code": "# 力扣已经定义好了 ListNode：\n# class ListNode:\n#     def __init__(self, val=0, next=None):\n#         self.val = val\n#         self.next = next\n\nclass Solution:\n    def buildList(self, nums: List[int]) -> Optional[ListNode]:\n        dummy = ListNode()              # 哑节点：省掉「链表还是空的」这个特殊情况\n        tail = dummy\n        for x in nums:\n            tail.next = ListNode(x)     # 新建节点，接到尾巴后面\n            tail = tail.next            # 尾巴往后挪\n        return dummy.next               # 真正的头是哑节点的下一个",
+     "marks": {
+      "init": [
+       9,
+       10
+      ],
+      "loop": [
+       11
+      ],
+      "link": [
+       12
+      ],
+      "move": [
+       13
+      ],
+      "done": [
+       14
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "/**\n * 力扣已经定义好了 ListNode：\n * public class ListNode {\n *     int val;\n *     ListNode next;\n *     ListNode() {}\n *     ListNode(int val) { this.val = val; }\n *     ListNode(int val, ListNode next) { this.val = val; this.next = next; }\n * }\n */\nclass Solution {\n    public ListNode buildList(int[] nums) {\n        ListNode dummy = new ListNode();        // 哑节点：省掉「链表还是空的」这个特殊情况\n        ListNode tail = dummy;\n        for (int x : nums) {\n            tail.next = new ListNode(x);        // 新建节点，接到尾巴后面\n            tail = tail.next;                   // 尾巴往后挪\n        }\n        return dummy.next;                      // 真正的头是哑节点的下一个\n    }\n}",
+       "marks": {
+        "init": [
+         13,
+         14
+        ],
+        "loop": [
+         15
+        ],
+        "link": [
+         16
+        ],
+        "move": [
+         17
+        ],
+        "done": [
+         19
+        ]
+       }
+      },
+      "cpp": {
+       "code": "/**\n * 力扣已经定义好了 ListNode：\n * struct ListNode {\n *     int val;\n *     ListNode *next;\n *     ListNode() : val(0), next(nullptr) {}\n *     ListNode(int x) : val(x), next(nullptr) {}\n *     ListNode(int x, ListNode *next) : val(x), next(next) {}\n * };\n */\nclass Solution {\npublic:\n    ListNode* buildList(vector<int>& nums) {\n        ListNode dummy;                         // 哑节点：省掉「链表还是空的」这个特殊情况\n        ListNode* tail = &dummy;\n        for (int x : nums) {\n            tail->next = new ListNode(x);       // 新建节点，接到尾巴后面\n            tail = tail->next;                  // 尾巴往后挪\n        }\n        return dummy.next;                      // 真正的头是哑节点的下一个\n    }\n};",
+       "marks": {
+        "init": [
+         14,
+         15
+        ],
+        "loop": [
+         16
+        ],
+        "link": [
+         17
+        ],
+        "move": [
+         18
+        ],
+        "done": [
+         20
+        ]
+       }
+      },
+      "go": {
+       "code": "/**\n * 力扣已经定义好了 ListNode：\n * type ListNode struct {\n *     Val  int\n *     Next *ListNode\n * }\n */\nfunc buildList(nums []int) *ListNode {\n\tdummy := &ListNode{} // 哑节点：省掉「链表还是空的」这个特殊情况\n\ttail := dummy\n\tfor _, x := range nums {\n\t\ttail.Next = &ListNode{Val: x} // 新建节点，接到尾巴后面\n\t\ttail = tail.Next              // 尾巴往后挪\n\t}\n\treturn dummy.Next // 真正的头是哑节点的下一个\n}",
+       "marks": {
+        "init": [
+         9,
+         10
+        ],
+        "loop": [
+         11
+        ],
+        "link": [
+         12
+        ],
+        "move": [
+         13
+        ],
+        "done": [
+         15
+        ]
+       }
+      },
+      "javascript": {
+       "code": "/**\n * 力扣已经定义好了 ListNode：\n * function ListNode(val, next) {\n *     this.val = (val === undefined ? 0 : val);\n *     this.next = (next === undefined ? null : next);\n * }\n */\nvar buildList = function(nums) {\n    const dummy = new ListNode();           // 哑节点：省掉「链表还是空的」这个特殊情况\n    let tail = dummy;\n    for (const x of nums) {\n        tail.next = new ListNode(x);        // 新建节点，接到尾巴后面\n        tail = tail.next;                   // 尾巴往后挪\n    }\n    return dummy.next;                      // 真正的头是哑节点的下一个\n};",
+       "marks": {
+        "init": [
+         9,
+         10
+        ],
+        "loop": [
+         11
+        ],
+        "link": [
+         12
+        ],
+        "move": [
+         13
+        ],
+        "done": [
+         15
+        ]
+       }
+      },
+      "typescript": {
+       "code": "/**\n * 力扣已经定义好了 ListNode：\n * class ListNode {\n *     val: number\n *     next: ListNode | null\n *     constructor(val?: number, next?: ListNode | null)\n * }\n */\nfunction buildList(nums: number[]): ListNode | null {\n    const dummy = new ListNode();           // 哑节点：省掉「链表还是空的」这个特殊情况\n    let tail = dummy;\n    for (const x of nums) {\n        tail.next = new ListNode(x);        // 新建节点，接到尾巴后面\n        tail = tail.next;                   // 尾巴往后挪\n    }\n    return dummy.next;                      // 真正的头是哑节点的下一个\n}",
+       "marks": {
+        "init": [
+         10,
+         11
+        ],
+        "loop": [
+         12
+        ],
+        "link": [
+         13
+        ],
+        "move": [
+         14
+        ],
+        "done": [
+         16
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "定义和构造",
+    "legend": [
+     [
+      "g",
+      "哑节点"
+     ],
+     [
+      "a",
+      "刚接上的节点"
+     ],
+     [
+      "e",
+      "已经在链表里"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例",
+      "args": {
+       "nums": [
+        1,
+        2,
+        3,
+        4
+       ]
+      },
+      "note": "nums = [1,2,3,4]"
+     }
+    ],
+    "build": "build(a, snap) {\n        const nums = a.nums, nodes = [{ v: \"D\", cls: \"g\" }], next = [null];\n        let tail = 0, fresh = -1;\n        const view = (opts = {}) => [\n          {\n            t: \"array\",\n            label: \"nums\",\n            items: nums.map((v, i) => ({ v, cls: i === opts.idx ? \"a\" : i < nodes.length - 1 ? \"d\" : \"\" })),\n            ptrs: { i: opts.idx !== undefined ? opts.idx : null },\n          },\n          {\n            t: \"list\",\n            label: \"链表（D 是哑节点）\",\n            nodes: nodes.map((nd, i) => ({\n              ...nd,\n              cls: i === 0 ? \"g\" : i === fresh ? \"a\" : \"e\",\n              ...(opts.hot === i ? { ecls: \"on\" } : {}),\n            })),\n            next: next.slice(),\n            ptrs: { dummy: 0, tail },\n            ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),\n          },\n        ];\n        snap(\"开始\", \"先放一个哑节点 D，tail 指着它。现在链表里还没有真正的节点。\", view(), {\n          at: \"init\",\n          facts: [[\"当前节点\", \"—\"], [\"tail\", \"D\"], [\"链表长度\", 0]],\n        });\n        nums.forEach((x, idx) => {\n          const oldLen = nodes.length - 1;\n          nodes.push({ v: x });\n          fresh = nodes.length - 1;\n          next[tail] = fresh;\n          next.push(null);\n          snap(\"接上新节点\", `新建值为 ${x} 的节点，让 tail.next 指向它。`, view({ idx, hot: tail, animEdges: [tail] }), {\n            at: [\"loop\", \"link\"],\n            facts: [[\"当前节点\", x], [\"tail\", nodes[tail].v], [\"链表长度\", nodes.length - 1, oldLen]],\n          });\n          const oldTail = nodes[tail].v;\n          tail = fresh;\n          snap(\"尾巴后移\", `tail 挪到新节点 ${x} 上，下一个节点就接在它后面。`, view({ idx }), {\n            at: \"move\",\n            facts: [[\"当前节点\", x], [\"tail\", nodes[tail].v, oldTail], [\"链表长度\", nodes.length - 1]],\n          });\n        });\n        fresh = -1;\n        snap(\"完成\", nums.length ? `返回 dummy.next，也就是节点 ${nums[0]}。` : \"数组是空的，dummy.next 是空，返回空链表。\", view(), {\n          at: \"done\",\n          kind: \"ok\",\n          ans: nums.slice(),\n          facts: [[\"返回头节点\", nums.length ? nums[0] : \"空 (∅)\"], [\"链表长度\", nums.length]],\n        });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "g",
+        "哑节点"
+       ],
+       [
+        "a",
+        "刚接上的节点"
+       ],
+       [
+        "e",
+        "已经在链表里"
+       ]
+      ],
+      "code": "build",
+      "build": "build(a, snap) {\n        const nums = a.nums, nodes = [{ v: \"D\", cls: \"g\" }], next = [null];\n        let tail = 0, fresh = -1;\n        const view = (opts = {}) => [\n          {\n            t: \"array\",\n            label: \"nums\",\n            items: nums.map((v, i) => ({ v, cls: i === opts.idx ? \"a\" : i < nodes.length - 1 ? \"d\" : \"\" })),\n            ptrs: { i: opts.idx !== undefined ? opts.idx : null },\n          },\n          {\n            t: \"list\",\n            label: \"链表（D 是哑节点）\",\n            nodes: nodes.map((nd, i) => ({\n              ...nd,\n              cls: i === 0 ? \"g\" : i === fresh ? \"a\" : \"e\",\n              ...(opts.hot === i ? { ecls: \"on\" } : {}),\n            })),\n            next: next.slice(),\n            ptrs: { dummy: 0, tail },\n            ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),\n          },\n        ];\n        snap(\"开始\", \"先放一个哑节点 D，tail 指着它。现在链表里还没有真正的节点。\", view(), {\n          at: \"init\",\n          facts: [[\"当前节点\", \"—\"], [\"tail\", \"D\"], [\"链表长度\", 0]],\n        });\n        nums.forEach((x, idx) => {\n          const oldLen = nodes.length - 1;\n          nodes.push({ v: x });\n          fresh = nodes.length - 1;\n          next[tail] = fresh;\n          next.push(null);\n          snap(\"接上新节点\", `新建值为 ${x} 的节点，让 tail.next 指向它。`, view({ idx, hot: tail, animEdges: [tail] }), {\n            at: [\"loop\", \"link\"],\n            facts: [[\"当前节点\", x], [\"tail\", nodes[tail].v], [\"链表长度\", nodes.length - 1, oldLen]],\n          });\n          const oldTail = nodes[tail].v;\n          tail = fresh;\n          snap(\"尾巴后移\", `tail 挪到新节点 ${x} 上，下一个节点就接在它后面。`, view({ idx }), {\n            at: \"move\",\n            facts: [[\"当前节点\", x], [\"tail\", nodes[tail].v, oldTail], [\"链表长度\", nodes.length - 1]],\n          });\n        });\n        fresh = -1;\n        snap(\"完成\", nums.length ? `返回 dummy.next，也就是节点 ${nums[0]}。` : \"数组是空的，dummy.next 是空，返回空链表。\", view(), {\n          at: \"done\",\n          kind: \"ok\",\n          ans: nums.slice(),\n          facts: [[\"返回头节点\", nums.length ? nums[0] : \"空 (∅)\"], [\"链表长度\", nums.length]],\n        });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => { const nums = R.arr(R.int(1, 6), 0, 9); return { args: { nums }, note: `nums = ${R.fmt(nums)}` }; })(R); return { args: r.args, note: r.note }; }"
+   }
+  },
+  {
+   "key": "dummy",
+   "t": "哑节点：删除节点",
+   "body": [
+    "单链表删除节点要改它<b>前一个</b>节点的 <code>next</code>：<code>prev.next = prev.next.next</code>，被跳过的节点就不在链表里了。所以遍历时让 <code>cur</code> 停在「要检查的节点」前面一格，看的是 <code>cur.next</code>。",
+    "麻烦在头节点：它前面没有节点。在头前面接一个哑节点，头节点就也有了「前一个」，删头和删中间写法一样，最后返回 <code>dummy.next</code>。凡是头节点可能被删掉、被换掉的题（删除倒数第 N 个、合并、两两交换…）都可以先放一个哑节点。"
+   ],
+   "points": [
+    {
+     "t": "删完不要急着往后走",
+     "body": "删掉 <code>cur.next</code> 之后，新的 <code>cur.next</code> 还没检查过，所以这一轮 <code>cur</code> 不动。"
+    },
+    {
+     "t": "C++ 里记得释放",
+     "body": "力扣不检查内存，演示代码里没有 <code>delete</code>；自己的项目里删掉的节点要释放。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "哑节点",
+     "kind": null,
+     "note": null,
+     "key": "dummy",
+     "code": "class Solution:\n    def removeElements(self, head: Optional[ListNode], val: int) -> Optional[ListNode]:\n        dummy = ListNode(0, head)       # 头节点前面也有一个节点了\n        cur = dummy\n        while cur.next:                 # 检查的是 cur 的下一个节点\n            if cur.next.val == val:\n                cur.next = cur.next.next    # 跳过它，就把它删掉了\n            else:\n                cur = cur.next\n        return dummy.next",
+     "marks": {
+      "init": [
+       3,
+       4
+      ],
+      "check": [
+       5,
+       6
+      ],
+      "del": [
+       7
+      ],
+      "keep": [
+       8,
+       9
+      ],
+      "done": [
+       10
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    public ListNode removeElements(ListNode head, int val) {\n        ListNode dummy = new ListNode(0, head);     // 头节点前面也有一个节点了\n        ListNode cur = dummy;\n        while (cur.next != null) {                  // 检查的是 cur 的下一个节点\n            if (cur.next.val == val) {\n                cur.next = cur.next.next;           // 跳过它，就把它删掉了\n            } else {\n                cur = cur.next;\n            }\n        }\n        return dummy.next;\n    }\n}",
+       "marks": {
+        "init": [
+         3,
+         4
+        ],
+        "check": [
+         5,
+         6
+        ],
+        "del": [
+         7
+        ],
+        "keep": [
+         8,
+         9
+        ],
+        "done": [
+         12
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\npublic:\n    ListNode* removeElements(ListNode* head, int val) {\n        ListNode dummy(0, head);                    // 头节点前面也有一个节点了\n        ListNode* cur = &dummy;\n        while (cur->next) {                         // 检查的是 cur 的下一个节点\n            if (cur->next->val == val) {\n                cur->next = cur->next->next;        // 跳过它，就把它删掉了\n            } else {\n                cur = cur->next;\n            }\n        }\n        return dummy.next;\n    }\n};",
+       "marks": {
+        "init": [
+         4,
+         5
+        ],
+        "check": [
+         6,
+         7
+        ],
+        "del": [
+         8
+        ],
+        "keep": [
+         9,
+         10
+        ],
+        "done": [
+         13
+        ]
+       }
+      },
+      "go": {
+       "code": "func removeElements(head *ListNode, val int) *ListNode {\n\tdummy := &ListNode{Next: head} // 头节点前面也有一个节点了\n\tcur := dummy\n\tfor cur.Next != nil {          // 检查的是 cur 的下一个节点\n\t\tif cur.Next.Val == val {\n\t\t\tcur.Next = cur.Next.Next // 跳过它，就把它删掉了\n\t\t} else {\n\t\t\tcur = cur.Next\n\t\t}\n\t}\n\treturn dummy.Next\n}",
+       "marks": {
+        "init": [
+         2,
+         3
+        ],
+        "check": [
+         4,
+         5
+        ],
+        "del": [
+         6
+        ],
+        "keep": [
+         7,
+         8
+        ],
+        "done": [
+         11
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var removeElements = function(head, val) {\n    const dummy = new ListNode(0, head);    // 头节点前面也有一个节点了\n    let cur = dummy;\n    while (cur.next) {                      // 检查的是 cur 的下一个节点\n        if (cur.next.val === val) {\n            cur.next = cur.next.next;       // 跳过它，就把它删掉了\n        } else {\n            cur = cur.next;\n        }\n    }\n    return dummy.next;\n};",
+       "marks": {
+        "init": [
+         2,
+         3
+        ],
+        "check": [
+         4,
+         5
+        ],
+        "del": [
+         6
+        ],
+        "keep": [
+         7,
+         8
+        ],
+        "done": [
+         11
+        ]
+       }
+      },
+      "typescript": {
+       "code": "function removeElements(head: ListNode | null, val: number): ListNode | null {\n    const dummy = new ListNode(0, head);    // 头节点前面也有一个节点了\n    let cur = dummy;\n    while (cur.next) {                      // 检查的是 cur 的下一个节点\n        if (cur.next.val === val) {\n            cur.next = cur.next.next;       // 跳过它，就把它删掉了\n        } else {\n            cur = cur.next;\n        }\n    }\n    return dummy.next;\n}",
+       "marks": {
+        "init": [
+         2,
+         3
+        ],
+        "check": [
+         4,
+         5
+        ],
+        "del": [
+         6
+        ],
+        "keep": [
+         7,
+         8
+        ],
+        "done": [
+         11
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "哑节点：删除节点",
+    "legend": [
+     [
+      "g",
+      "哑节点"
+     ],
+     [
+      "a",
+      "正在检查 cur.next"
+     ],
+     [
+      "d",
+      "已经删掉"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例 1",
+      "args": {
+       "nums": [
+        1,
+        2,
+        6,
+        3,
+        4,
+        5,
+        6
+       ],
+       "val": 6
+      },
+      "note": "head = [1,2,6,3,4,5,6], val = 6"
+     },
+     {
+      "label": "删头节点",
+      "args": {
+       "nums": [
+        7,
+        7,
+        1,
+        7
+       ],
+       "val": 7
+      },
+      "note": "head = [7,7,1,7], val = 7"
+     }
+    ],
+    "build": "build(a, snap) {\n        const v = [\"D\", ...a.nums], n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null)), gone = new Set();\n        let cur = 0, look = null;\n        const view = (opts = {}) => [{\n          t: \"list\",\n          label: \"链表（D 是哑节点；虚红线 × 表示断开的旧指针）\",\n          nodes: v.map((x, i) => ({\n            v: x,\n            cls: i === 0 ? \"g\" : gone.has(i) ? \"d\" : i === look ? \"a\" : \"\",\n            noNil: gone.has(i),\n            ...(opts.hot === i ? { ecls: \"on\" } : {}),\n          })),\n          next: next.slice(),\n          ptrs: { cur, ...(look !== null ? { \"cur.next\": look } : {}) },\n          ...(opts.ghostEdges ? { ghostEdges: opts.ghostEdges } : {}),\n          ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),\n        }];\n        snap(\"开始\", `在头节点前面接一个哑节点 D，cur 从 D 开始。要删掉所有值为 ${a.val} 的节点。`, view(), {\n          at: \"init\",\n          facts: [[\"目标值 val\", a.val], [\"cur\", \"D\"], [\"已删节点数\", 0]],\n        });\n        while (next[cur] !== null) {\n          look = next[cur];\n          if (v[look] === a.val) {\n            snap(\"检查\", `cur.next 的值是 ${v[look]}，等于 ${a.val}，要删掉。`, view({ hot: cur }), {\n              at: \"check\",\n              facts: [[\"目标值 val\", a.val], [\"cur\", v[cur]], [\"cur.next\", v[look]], [\"已删节点数\", gone.size]],\n            });\n            const delIdx = look, oldGone = gone.size;\n            next[cur] = next[delIdx];\n            next[delIdx] = null;\n            gone.add(delIdx);\n            look = null;\n            snap(\"删除\", `cur.next = cur.next.next：${v[cur]} 直接指向${next[cur] === null ? \"空（∅）\" : \" \" + v[next[cur]]}，被跳过的节点就不在链表里了。cur 不动，接着检查新的 cur.next。`, view({ hot: cur, animEdges: [cur], ghostEdges: [[cur, delIdx]] }), {\n              at: \"del\",\n              kind: \"warn\",\n              facts: [[\"目标值 val\", a.val], [\"cur\", v[cur]], [\"删除节点\", v[delIdx]], [\"已删节点数\", gone.size, oldGone]],\n            });\n          } else {\n            snap(\"检查\", `cur.next 的值是 ${v[look]}，不用删。`, view({ hot: cur }), {\n              at: \"check\",\n              facts: [[\"目标值 val\", a.val], [\"cur\", v[cur]], [\"cur.next\", v[look]], [\"已删节点数\", gone.size]],\n            });\n            const oldCur = v[cur];\n            cur = look;\n            look = null;\n            snap(\"往后走\", `cur 挪到 ${v[cur]}。`, view(), {\n              at: \"keep\",\n              facts: [[\"目标值 val\", a.val], [\"cur\", v[cur], oldCur], [\"已删节点数\", gone.size]],\n            });\n          }\n        }\n        const out = [];\n        for (let i = next[0]; i !== null; i = next[i]) out.push(v[i]);\n        snap(\"完成\", `cur.next 是空，检查完了。返回 dummy.next：${out.length ? out.join(\" → \") : \"空链表\"}。`, view(), {\n          at: \"done\",\n          kind: \"ok\",\n          ans: out,\n          facts: [[\"已删节点数\", gone.size], [\"剩余节点\", out.length ? out.join(\" → \") : \"空\"]],\n        });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "g",
+        "哑节点"
+       ],
+       [
+        "a",
+        "正在检查 cur.next"
+       ],
+       [
+        "d",
+        "已经删掉"
+       ]
+      ],
+      "code": "dummy",
+      "build": "build(a, snap) {\n        const v = [\"D\", ...a.nums], n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null)), gone = new Set();\n        let cur = 0, look = null;\n        const view = (opts = {}) => [{\n          t: \"list\",\n          label: \"链表（D 是哑节点；虚红线 × 表示断开的旧指针）\",\n          nodes: v.map((x, i) => ({\n            v: x,\n            cls: i === 0 ? \"g\" : gone.has(i) ? \"d\" : i === look ? \"a\" : \"\",\n            noNil: gone.has(i),\n            ...(opts.hot === i ? { ecls: \"on\" } : {}),\n          })),\n          next: next.slice(),\n          ptrs: { cur, ...(look !== null ? { \"cur.next\": look } : {}) },\n          ...(opts.ghostEdges ? { ghostEdges: opts.ghostEdges } : {}),\n          ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),\n        }];\n        snap(\"开始\", `在头节点前面接一个哑节点 D，cur 从 D 开始。要删掉所有值为 ${a.val} 的节点。`, view(), {\n          at: \"init\",\n          facts: [[\"目标值 val\", a.val], [\"cur\", \"D\"], [\"已删节点数\", 0]],\n        });\n        while (next[cur] !== null) {\n          look = next[cur];\n          if (v[look] === a.val) {\n            snap(\"检查\", `cur.next 的值是 ${v[look]}，等于 ${a.val}，要删掉。`, view({ hot: cur }), {\n              at: \"check\",\n              facts: [[\"目标值 val\", a.val], [\"cur\", v[cur]], [\"cur.next\", v[look]], [\"已删节点数\", gone.size]],\n            });\n            const delIdx = look, oldGone = gone.size;\n            next[cur] = next[delIdx];\n            next[delIdx] = null;\n            gone.add(delIdx);\n            look = null;\n            snap(\"删除\", `cur.next = cur.next.next：${v[cur]} 直接指向${next[cur] === null ? \"空（∅）\" : \" \" + v[next[cur]]}，被跳过的节点就不在链表里了。cur 不动，接着检查新的 cur.next。`, view({ hot: cur, animEdges: [cur], ghostEdges: [[cur, delIdx]] }), {\n              at: \"del\",\n              kind: \"warn\",\n              facts: [[\"目标值 val\", a.val], [\"cur\", v[cur]], [\"删除节点\", v[delIdx]], [\"已删节点数\", gone.size, oldGone]],\n            });\n          } else {\n            snap(\"检查\", `cur.next 的值是 ${v[look]}，不用删。`, view({ hot: cur }), {\n              at: \"check\",\n              facts: [[\"目标值 val\", a.val], [\"cur\", v[cur]], [\"cur.next\", v[look]], [\"已删节点数\", gone.size]],\n            });\n            const oldCur = v[cur];\n            cur = look;\n            look = null;\n            snap(\"往后走\", `cur 挪到 ${v[cur]}。`, view(), {\n              at: \"keep\",\n              facts: [[\"目标值 val\", a.val], [\"cur\", v[cur], oldCur], [\"已删节点数\", gone.size]],\n            });\n          }\n        }\n        const out = [];\n        for (let i = next[0]; i !== null; i = next[i]) out.push(v[i]);\n        snap(\"完成\", `cur.next 是空，检查完了。返回 dummy.next：${out.length ? out.join(\" → \") : \"空链表\"}。`, view(), {\n          at: \"done\",\n          kind: \"ok\",\n          ans: out,\n          facts: [[\"已删节点数\", gone.size], [\"剩余节点\", out.length ? out.join(\" → \") : \"空\"]],\n        });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => { const nums = R.arr(R.int(0, 7), 1, 4), val = R.int(1, 4); return { args: { nums, val }, note: `head = ${R.fmt(nums)}, val = ${val}` }; })(R); return { args: r.args, note: r.note }; }"
+   }
+  },
+  {
+   "key": "fast-slow",
+   "t": "快慢指针：找中点",
+   "body": [
+    "两个指针从头出发，<code>slow</code> 每次走一步，<code>fast</code> 每次走两步。fast 走到头时，slow 正好走了一半，停在中点。这样一趟就找到中点，不用先数长度。",
+    "同样的思路还能判断链表有没有环（141、142：有环时 fast 一定会追上 slow）、找倒数第 k 个节点（19：让 fast 先走 k 步，再一起走）。"
+   ],
+   "points": [
+    {
+     "t": "循环条件",
+     "body": "<code>fast and fast.next</code>：fast 要能再走两步。偶数个节点时 slow 停在两个中点的第二个，正是力扣 876 要的。"
+    },
+    {
+     "t": "想要第一个中点",
+     "body": "排序链表（148）拆成两半时要第一个中点，可以让 fast 从 <code>head.next</code> 出发。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "快慢指针",
+     "kind": null,
+     "note": null,
+     "key": "fast-slow",
+     "code": "class Solution:\n    def middleNode(self, head: Optional[ListNode]) -> Optional[ListNode]:\n        slow = fast = head\n        while fast and fast.next:       # fast 还能再走两步\n            slow = slow.next            # 慢指针走一步\n            fast = fast.next.next       # 快指针走两步\n        return slow                     # fast 到头时 slow 在中间",
+     "marks": {
+      "init": [
+       3
+      ],
+      "loop": [
+       4
+      ],
+      "step": [
+       5,
+       6
+      ],
+      "done": [
+       7
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    public ListNode middleNode(ListNode head) {\n        ListNode slow = head, fast = head;\n        while (fast != null && fast.next != null) {     // fast 还能再走两步\n            slow = slow.next;                           // 慢指针走一步\n            fast = fast.next.next;                      // 快指针走两步\n        }\n        return slow;                                    // fast 到头时 slow 在中间\n    }\n}",
+       "marks": {
+        "init": [
+         3
+        ],
+        "loop": [
+         4
+        ],
+        "step": [
+         5,
+         6
+        ],
+        "done": [
+         8
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\npublic:\n    ListNode* middleNode(ListNode* head) {\n        ListNode *slow = head, *fast = head;\n        while (fast && fast->next) {                    // fast 还能再走两步\n            slow = slow->next;                          // 慢指针走一步\n            fast = fast->next->next;                    // 快指针走两步\n        }\n        return slow;                                    // fast 到头时 slow 在中间\n    }\n};",
+       "marks": {
+        "init": [
+         4
+        ],
+        "loop": [
+         5
+        ],
+        "step": [
+         6,
+         7
+        ],
+        "done": [
+         9
+        ]
+       }
+      },
+      "go": {
+       "code": "func middleNode(head *ListNode) *ListNode {\n\tslow, fast := head, head\n\tfor fast != nil && fast.Next != nil { // fast 还能再走两步\n\t\tslow = slow.Next      // 慢指针走一步\n\t\tfast = fast.Next.Next // 快指针走两步\n\t}\n\treturn slow // fast 到头时 slow 在中间\n}",
+       "marks": {
+        "init": [
+         2
+        ],
+        "loop": [
+         3
+        ],
+        "step": [
+         4,
+         5
+        ],
+        "done": [
+         7
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var middleNode = function(head) {\n    let slow = head, fast = head;\n    while (fast && fast.next) {             // fast 还能再走两步\n        slow = slow.next;                   // 慢指针走一步\n        fast = fast.next.next;              // 快指针走两步\n    }\n    return slow;                            // fast 到头时 slow 在中间\n};",
+       "marks": {
+        "init": [
+         2
+        ],
+        "loop": [
+         3
+        ],
+        "step": [
+         4,
+         5
+        ],
+        "done": [
+         7
+        ]
+       }
+      },
+      "typescript": {
+       "code": "function middleNode(head: ListNode | null): ListNode | null {\n    let slow = head, fast = head;\n    while (fast && fast.next) {             // fast 还能再走两步\n        slow = slow!.next;                  // 慢指针走一步\n        fast = fast.next.next;              // 快指针走两步\n    }\n    return slow;                            // fast 到头时 slow 在中间\n}",
+       "marks": {
+        "init": [
+         2
+        ],
+        "loop": [
+         3
+        ],
+        "step": [
+         4,
+         5
+        ],
+        "done": [
+         7
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "快慢指针：找中点",
+    "legend": [
+     [
+      "a",
+      "slow"
+     ],
+     [
+      "b",
+      "fast"
+     ],
+     [
+      "c",
+      "中点"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "奇数个",
+      "args": {
+       "nums": [
+        1,
+        2,
+        3,
+        4,
+        5
+       ]
+      },
+      "note": "head = [1,2,3,4,5]"
+     },
+     {
+      "label": "偶数个",
+      "args": {
+       "nums": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+       ]
+      },
+      "note": "head = [1,2,3,4,5,6]"
+     }
+    ],
+    "build": "build(a, snap) {\n        const v = a.nums, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null));\n        let slow = 0, fast = 0, done = false, stepsCnt = 0;\n        const view = (opts = {}) => {\n          const hotSet = new Set(opts.hot || []);\n          return [{\n            t: \"list\",\n            label: \"链表\",\n            nodes: v.map((x, i) => ({\n              v: x,\n              cls: done && i === slow ? \"c\" : i === fast && fast < n ? \"b\" : i === slow ? \"a\" : \"\",\n              ...(hotSet.has(i) ? { ecls: \"on\" } : {}),\n            })),\n            next: next.slice(),\n            ptrs: { slow, ...(fast < n ? { fast } : {}) },\n            ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),\n          }];\n        };\n        snap(\"开始\", \"slow 和 fast 都从头节点出发。\", view(), {\n          at: \"init\",\n          facts: [[\"步数\", 0], [\"slow\", `${v[0]} (下标 0)`], [\"fast\", `${v[0]} (下标 0)`]],\n        });\n        while (fast < n && fast + 1 < n) {\n          const prevSlow = slow, prevFast = fast, prevSteps = stepsCnt;\n          slow += 1; fast += 2; stepsCnt += 1;\n          const anim = [prevSlow, prevFast, ...(prevFast + 1 < n ? [prevFast + 1] : [])];\n          snap(\"各走一步 / 两步\", `fast 后面还有节点，slow 走一步到 ${v[slow]}，fast 走两步到${fast < n ? \" \" + v[fast] : \"空（∅）\"}。`, view({ hot: anim, animEdges: anim }), {\n            at: [\"loop\", \"step\"],\n            facts: [\n              [\"步数\", stepsCnt, prevSteps],\n              [\"slow\", `${v[slow]} (下标 ${slow})`, `${v[prevSlow]} (下标 ${prevSlow})`],\n              [\"fast\", fast < n ? `${v[fast]} (下标 ${fast})` : \"空 (∅)\", `${v[prevFast]} (下标 ${prevFast})`],\n            ],\n          });\n        }\n        done = true;\n        snap(\"完成\", `${fast < n ? \"fast 是最后一个节点\" : \"fast 走到了空\"}，不能再走两步了。slow 停在 ${v[slow]}，就是中点。`, view(), {\n          at: [\"loop\", \"done\"],\n          kind: \"ok\",\n          ans: v.slice(slow),\n          facts: [[\"步数\", stepsCnt], [\"中点 slow\", `${v[slow]} (下标 ${slow})`]],\n        });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "slow"
+       ],
+       [
+        "b",
+        "fast"
+       ],
+       [
+        "c",
+        "中点"
+       ]
+      ],
+      "code": "fast-slow",
+      "build": "build(a, snap) {\n        const v = a.nums, n = v.length, next = v.map((_, i) => (i + 1 < n ? i + 1 : null));\n        let slow = 0, fast = 0, done = false, stepsCnt = 0;\n        const view = (opts = {}) => {\n          const hotSet = new Set(opts.hot || []);\n          return [{\n            t: \"list\",\n            label: \"链表\",\n            nodes: v.map((x, i) => ({\n              v: x,\n              cls: done && i === slow ? \"c\" : i === fast && fast < n ? \"b\" : i === slow ? \"a\" : \"\",\n              ...(hotSet.has(i) ? { ecls: \"on\" } : {}),\n            })),\n            next: next.slice(),\n            ptrs: { slow, ...(fast < n ? { fast } : {}) },\n            ...(opts.animEdges ? { animEdges: opts.animEdges } : {}),\n          }];\n        };\n        snap(\"开始\", \"slow 和 fast 都从头节点出发。\", view(), {\n          at: \"init\",\n          facts: [[\"步数\", 0], [\"slow\", `${v[0]} (下标 0)`], [\"fast\", `${v[0]} (下标 0)`]],\n        });\n        while (fast < n && fast + 1 < n) {\n          const prevSlow = slow, prevFast = fast, prevSteps = stepsCnt;\n          slow += 1; fast += 2; stepsCnt += 1;\n          const anim = [prevSlow, prevFast, ...(prevFast + 1 < n ? [prevFast + 1] : [])];\n          snap(\"各走一步 / 两步\", `fast 后面还有节点，slow 走一步到 ${v[slow]}，fast 走两步到${fast < n ? \" \" + v[fast] : \"空（∅）\"}。`, view({ hot: anim, animEdges: anim }), {\n            at: [\"loop\", \"step\"],\n            facts: [\n              [\"步数\", stepsCnt, prevSteps],\n              [\"slow\", `${v[slow]} (下标 ${slow})`, `${v[prevSlow]} (下标 ${prevSlow})`],\n              [\"fast\", fast < n ? `${v[fast]} (下标 ${fast})` : \"空 (∅)\", `${v[prevFast]} (下标 ${prevFast})`],\n            ],\n          });\n        }\n        done = true;\n        snap(\"完成\", `${fast < n ? \"fast 是最后一个节点\" : \"fast 走到了空\"}，不能再走两步了。slow 停在 ${v[slow]}，就是中点。`, view(), {\n          at: [\"loop\", \"done\"],\n          kind: \"ok\",\n          ans: v.slice(slow),\n          facts: [[\"步数\", stepsCnt], [\"中点 slow\", `${v[slow]} (下标 ${slow})`]],\n        });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => { const nums = R.arr(R.int(1, 8), 1, 9); return { args: { nums }, note: `head = ${R.fmt(nums)}` }; })(R); return { args: r.args, note: r.note }; }"
+   }
+  }
+ ]
+}

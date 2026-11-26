@@ -1,0 +1,326 @@
+{
+  "id": 72,
+  "name": "编辑距离",
+  "signature": {
+    "fn": "minDistance",
+    "params": [
+      "string",
+      "string"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "word1",
+    "word2"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Solution:\n    def minDistance(self, word1: str, word2: str) -> int:\n        ",
+      "javascript": "/**\n * @param {string} word1\n * @param {string} word2\n * @return {number}\n */\nvar minDistance = function(word1, word2) {\n  \n};",
+      "typescript": "function minDistance(word1: string, word2: string): number {\n  \n};",
+      "java": "class Solution {\n    public int minDistance(String word1, String word2) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int minDistance(string word1, string word2) {\n        \n    }\n};",
+      "go": "func minDistance(word1 string, word2 string) int {\n    \n}",
+      "c": "int minDistance(char* word1, char* word2) {\n    \n}",
+      "csharp": "public class Solution {\n    public int MinDistance(string word1, string word2) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun minDistance(word1: String, word2: String): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func minDistance(_ word1: String, _ word2: String) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn min_distance(word1: String, word2: String) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {String} word1\n# @param {String} word2\n# @return {Integer}\ndef min_distance(word1, word2)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $word1\n     * @param String $word2\n     * @return Integer\n     */\n    function minDistance($word1, $word2) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def minDistance(word1: String, word2: String): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int minDistance(String word1, String word2) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "c9aa2039",
+    "javascript": "176c1133",
+    "typescript": "38b9bc2c"
+  },
+  "cases": [
+    {
+      "input": [
+        "horse",
+        "ros"
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": 3,
+      "stdin": "horse\nros\n",
+      "stdout": "3\n",
+      "source": {
+        "path": "problems/0072.编辑距离.md",
+        "index": 1,
+        "input": "word1 = \"horse\", word2 = \"ros\"",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        "intention",
+        "execution"
+      ],
+      "label": "示例 2",
+      "quick": true,
+      "expected": 5,
+      "stdin": "intention\nexecution\n",
+      "stdout": "5\n",
+      "source": {
+        "path": "problems/0072.编辑距离.md",
+        "index": 2,
+        "input": "word1 = \"intention\", word2 = \"execution\"",
+        "output": "5"
+      }
+    },
+    {
+      "input": [
+        "abc",
+        "yabd"
+      ],
+      "label": "仓库判题用例 2",
+      "quick": true,
+      "expected": 2,
+      "stdin": "abc\nyabd\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        "",
+        ""
+      ],
+      "label": "仓库判题用例 3",
+      "quick": true,
+      "expected": 0,
+      "stdin": "\n\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        "",
+        "abc"
+      ],
+      "label": "仓库判题用例 4",
+      "quick": true,
+      "expected": 3,
+      "stdin": "\nabc\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "abc",
+        ""
+      ],
+      "label": "仓库判题用例 5",
+      "quick": true,
+      "expected": 3,
+      "stdin": "abc\n\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "ccedb",
+        "addeb"
+      ],
+      "label": "仓库判题用例 7",
+      "expected": 4,
+      "stdin": "ccedb\naddeb\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        "addbe",
+        "bec"
+      ],
+      "label": "仓库判题用例 8",
+      "expected": 4,
+      "stdin": "addbe\nbec\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        "edeae",
+        "ab"
+      ],
+      "label": "仓库判题用例 9",
+      "expected": 4,
+      "stdin": "edeae\nab\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        "ea",
+        "db"
+      ],
+      "label": "仓库判题用例 10",
+      "expected": 2,
+      "stdin": "ea\ndb\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        "ccbcb",
+        "eadc"
+      ],
+      "label": "仓库判题用例 11",
+      "expected": 4,
+      "stdin": "ccbcb\neadc\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        "bedc",
+        "cb"
+      ],
+      "label": "仓库判题用例 12",
+      "expected": 4,
+      "stdin": "bedc\ncb\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        "aca",
+        "cb"
+      ],
+      "label": "仓库判题用例 13",
+      "expected": 2,
+      "stdin": "aca\ncb\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        "ba",
+        "cdc"
+      ],
+      "label": "仓库判题用例 14",
+      "expected": 3,
+      "stdin": "ba\ncdc\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "caac",
+        "cd"
+      ],
+      "label": "仓库判题用例 15",
+      "expected": 3,
+      "stdin": "caac\ncd\n",
+      "stdout": "3\n"
+    },
+    {
+      "input": [
+        "dee",
+        "acbb"
+      ],
+      "label": "仓库判题用例 16",
+      "expected": 4,
+      "stdin": "dee\nacbb\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        "",
+        "a"
+      ],
+      "label": "边界用例 1",
+      "quick": true,
+      "expected": 1,
+      "stdin": "\na\n",
+      "stdout": "1\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "horse",
+        "ros"
+      ],
+      "expected": 3,
+      "stdin": "horse\nros\n",
+      "stdout": "3\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0072.编辑距离.md",
+        "index": 1,
+        "input": "word1 = \"horse\", word2 = \"ros\"",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        "intention",
+        "execution"
+      ],
+      "expected": 5,
+      "stdin": "intention\nexecution\n",
+      "stdout": "5\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0072.编辑距离.md",
+        "index": 2,
+        "input": "word1 = \"intention\", word2 = \"execution\"",
+        "output": "5"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定两个字符串，可以对第一个字符串执行插入一个字符、删除一个字符或替换一个字符三种操作。求把它变成第二个字符串所需的最少操作次数。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. word1：字符串（占完整一行，不加引号，空串用空行）。\n2. word2：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：0 <= word1.length, word2.length <= 500",
+      "数据范围：word1 和 word2 由小写英文字母组成"
+    ],
+    "examples": [
+      {
+        "input": "horse\nros\n",
+        "output": "3\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "intention\nexecution\n",
+        "output": "5\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "c51d1641"
+    ],
+    "javascript": [
+      "dd319dae"
+    ],
+    "typescript": [
+      "aea2bd43"
+    ]
+  }
+}

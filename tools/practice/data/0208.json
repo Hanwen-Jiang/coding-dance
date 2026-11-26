@@ -1,0 +1,895 @@
+{
+  "id": 208,
+  "name": "实现 Trie (前缀树)",
+  "signature": {
+    "cls": "Trie",
+    "ctor": [],
+    "methods": {
+      "insert": [
+        [
+          "string"
+        ],
+        "void"
+      ],
+      "search": [
+        [
+          "string"
+        ],
+        "bool"
+      ],
+      "startsWith": [
+        [
+          "string"
+        ],
+        "bool"
+      ]
+    }
+  },
+  "parameterNames": [
+    "operations",
+    "arguments"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Trie:\n\n    def __init__(self):\n        \n\n    def insert(self, word: str) -> None:\n        \n\n    def search(self, word: str) -> bool:\n        \n\n    def startsWith(self, prefix: str) -> bool:\n        \n\n\n# Your Trie object will be instantiated and called as such:\n# obj = Trie()\n# obj.insert(word)\n# param_1 = obj.search(word)\n# param_2 = obj.startsWith(prefix)\n",
+      "javascript": "var Trie = function() {\n  \n};\n\n/**\n * @param {string} word\n * @return {void}\n */\nTrie.prototype.insert = function(word) {\n  \n};\n\n/**\n * @param {string} word\n * @return {boolean}\n */\nTrie.prototype.search = function(word) {\n  \n};\n\n/**\n * @param {string} prefix\n * @return {boolean}\n */\nTrie.prototype.startsWith = function(prefix) {\n  \n};\n\n/**\n * Your Trie object will be instantiated and called as such:\n * var obj = new Trie()\n * obj.insert(word)\n * var param_1 = obj.search(word)\n * var param_2 = obj.startsWith(prefix)\n */\n",
+      "typescript": "class Trie {\n  constructor() {\n    \n  }\n\n  insert(word: string): void {\n    \n  }\n\n  search(word: string): boolean {\n    \n  }\n\n  startsWith(prefix: string): boolean {\n    \n  }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * var obj = new Trie()\n * obj.insert(word)\n * var param_1 = obj.search(word)\n * var param_2 = obj.startsWith(prefix)\n */\n",
+      "java": "class Trie {\n\n    public Trie() {\n        \n    }\n    \n    public void insert(String word) {\n        \n    }\n    \n    public boolean search(String word) {\n        \n    }\n    \n    public boolean startsWith(String prefix) {\n        \n    }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * Trie obj = new Trie();\n * obj.insert(word);\n * boolean param_1 = obj.search(word);\n * boolean param_2 = obj.startsWith(prefix);\n */",
+      "cpp": "class Trie {\npublic:\n    Trie() {\n        \n    }\n    \n    void insert(string word) {\n        \n    }\n    \n    bool search(string word) {\n        \n    }\n    \n    bool startsWith(string prefix) {\n        \n    }\n};\n\n/**\n * Your Trie object will be instantiated and called as such:\n * Trie* obj = new Trie();\n * obj->insert(word);\n * bool param_1 = obj->search(word);\n * bool param_2 = obj->startsWith(prefix);\n */",
+      "go": "type Trie struct {\n    \n}\n\n\nfunc Constructor() Trie {\n    \n}\n\n\nfunc (this *Trie) Insert(word string)  {\n    \n}\n\n\nfunc (this *Trie) Search(word string) bool {\n    \n}\n\n\nfunc (this *Trie) StartsWith(prefix string) bool {\n    \n}\n\n\n/**\n * Your Trie object will be instantiated and called as such:\n * obj := Constructor();\n * obj.Insert(word);\n * param_1 := obj.Search(word);\n * param_2 := obj.StartsWith(prefix);\n */",
+      "c": "\n\n\ntypedef struct {\n    \n} Trie;\n\n\nTrie* trieCreate() {\n    \n}\n\nvoid trieInsert(Trie* obj, char* word) {\n    \n}\n\nbool trieSearch(Trie* obj, char* word) {\n    \n}\n\nbool trieStartsWith(Trie* obj, char* prefix) {\n    \n}\n\nvoid trieFree(Trie* obj) {\n    \n}\n\n/**\n * Your Trie struct will be instantiated and called as such:\n * Trie* obj = trieCreate();\n * trieInsert(obj, word);\n \n * bool param_2 = trieSearch(obj, word);\n \n * bool param_3 = trieStartsWith(obj, prefix);\n \n * trieFree(obj);\n*/",
+      "csharp": "public class Trie {\n\n    public Trie() {\n        \n    }\n    \n    public void Insert(string word) {\n        \n    }\n    \n    public bool Search(string word) {\n        \n    }\n    \n    public bool StartsWith(string prefix) {\n        \n    }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * Trie obj = new Trie();\n * obj.Insert(word);\n * bool param_2 = obj.Search(word);\n * bool param_3 = obj.StartsWith(prefix);\n */",
+      "kotlin": "class Trie() {\n\n    fun insert(word: String) {\n        \n    }\n\n    fun search(word: String): Boolean {\n        \n    }\n\n    fun startsWith(prefix: String): Boolean {\n        \n    }\n\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * var obj = Trie()\n * obj.insert(word)\n * var param_2 = obj.search(word)\n * var param_3 = obj.startsWith(prefix)\n */",
+      "swift": "\nclass Trie {\n\n    init() {\n        \n    }\n    \n    func insert(_ word: String) {\n        \n    }\n    \n    func search(_ word: String) -> Bool {\n        \n    }\n    \n    func startsWith(_ prefix: String) -> Bool {\n        \n    }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * let obj = Trie()\n * obj.insert(word)\n * let ret_2: Bool = obj.search(word)\n * let ret_3: Bool = obj.startsWith(prefix)\n */",
+      "rust": "struct Trie {\n\n}\n\n\n/** \n * `&self` means the method takes an immutable reference.\n * If you need a mutable reference, change it to `&mut self` instead.\n */\nimpl Trie {\n\n    fn new() -> Self {\n        \n    }\n    \n    fn insert(&self, word: String) {\n        \n    }\n    \n    fn search(&self, word: String) -> bool {\n        \n    }\n    \n    fn starts_with(&self, prefix: String) -> bool {\n        \n    }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * let obj = Trie::new();\n * obj.insert(word);\n * let ret_2: bool = obj.search(word);\n * let ret_3: bool = obj.starts_with(prefix);\n */",
+      "ruby": "class Trie\n    def initialize()\n        \n    end\n\n\n=begin\n    :type word: String\n    :rtype: Void\n=end\n    def insert(word)\n        \n    end\n\n\n=begin\n    :type word: String\n    :rtype: Boolean\n=end\n    def search(word)\n        \n    end\n\n\n=begin\n    :type prefix: String\n    :rtype: Boolean\n=end\n    def starts_with(prefix)\n        \n    end\n\n\nend\n\n# Your Trie object will be instantiated and called as such:\n# obj = Trie.new()\n# obj.insert(word)\n# param_2 = obj.search(word)\n# param_3 = obj.starts_with(prefix)",
+      "php": "class Trie {\n    /**\n     */\n    function __construct() {\n        \n    }\n  \n    /**\n     * @param String $word\n     * @return NULL\n     */\n    function insert($word) {\n        \n    }\n  \n    /**\n     * @param String $word\n     * @return Boolean\n     */\n    function search($word) {\n        \n    }\n  \n    /**\n     * @param String $prefix\n     * @return Boolean\n     */\n    function startsWith($prefix) {\n        \n    }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * $obj = Trie();\n * $obj->insert($word);\n * $ret_2 = $obj->search($word);\n * $ret_3 = $obj->startsWith($prefix);\n */",
+      "scala": "class Trie() {\n\n    def insert(word: String): Unit = {\n        \n    }\n\n    def search(word: String): Boolean = {\n        \n    }\n\n    def startsWith(prefix: String): Boolean = {\n        \n    }\n\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * val obj = new Trie()\n * obj.insert(word)\n * val param_2 = obj.search(word)\n * val param_3 = obj.startsWith(prefix)\n */",
+      "dart": "class Trie {\n\n  Trie() {\n    \n  }\n  \n  void insert(String word) {\n    \n  }\n  \n  bool search(String word) {\n    \n  }\n  \n  bool startsWith(String prefix) {\n    \n  }\n}\n\n/**\n * Your Trie object will be instantiated and called as such:\n * Trie obj = Trie();\n * obj.insert(word);\n * bool param2 = obj.search(word);\n * bool param3 = obj.startsWith(prefix);\n */"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "3e0a4413",
+    "javascript": "e5aafc47",
+    "typescript": "c9f7d656"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "search",
+          "startsWith",
+          "insert",
+          "search"
+        ],
+        [
+          [],
+          [
+            "apple"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ]
+        ]
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": [
+        null,
+        null,
+        true,
+        false,
+        true,
+        null,
+        true
+      ],
+      "stdin": "7\nTrie\ninsert apple\nsearch apple\nsearch app\nstartsWith app\ninsert app\nsearch app\n",
+      "stdout": "null\nnull\ntrue\nfalse\ntrue\nnull\ntrue\n",
+      "source": {
+        "path": "problems/0208.实现 Trie (前缀树).md",
+        "index": 1,
+        "input": "[\"Trie\", \"insert\", \"search\", \"search\", \"startsWith\", \"insert\", \"search\"]\n[[], [\"apple\"], [\"apple\"], [\"app\"], [\"app\"], [\"app\"], [\"app\"]]",
+        "output": "[null, null, true, false, true, null, true]"
+      }
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "insert",
+          "startsWith",
+          "search",
+          "search"
+        ],
+        [
+          [],
+          [
+            "car"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "do"
+          ],
+          [
+            "ca"
+          ],
+          [
+            "ca"
+          ],
+          [
+            "cat"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 2",
+      "quick": true,
+      "expected": [
+        null,
+        null,
+        null,
+        null,
+        true,
+        false,
+        true
+      ],
+      "stdin": "7\nTrie\ninsert car\ninsert cat\ninsert do\nstartsWith ca\nsearch ca\nsearch cat\n",
+      "stdout": "null\nnull\nnull\nnull\ntrue\nfalse\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "startsWith",
+          "search"
+        ],
+        [
+          [],
+          [
+            "a"
+          ],
+          [
+            "a"
+          ],
+          [
+            "b"
+          ],
+          [
+            "aa"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 3",
+      "quick": true,
+      "expected": [
+        null,
+        null,
+        true,
+        false,
+        false
+      ],
+      "stdin": "5\nTrie\ninsert a\nsearch a\nstartsWith b\nsearch aa\n",
+      "stdout": "null\nnull\ntrue\nfalse\nfalse\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "search",
+          "startsWith",
+          "insert",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "z"
+          ],
+          [
+            "z"
+          ],
+          [
+            "zz"
+          ],
+          [
+            "z"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 4",
+      "quick": true,
+      "expected": [
+        null,
+        false,
+        false,
+        null,
+        true
+      ],
+      "stdin": "5\nTrie\nsearch z\nstartsWith z\ninsert zz\nstartsWith z\n",
+      "stdout": "null\nfalse\nfalse\nnull\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "startsWith",
+          "search",
+          "insert",
+          "insert",
+          "insert"
+        ],
+        [
+          [],
+          [
+            "apple"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "car"
+          ],
+          [
+            "app"
+          ],
+          [
+            "car"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "ball"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 5",
+      "expected": [
+        null,
+        null,
+        null,
+        false,
+        false,
+        null,
+        null,
+        null
+      ],
+      "stdin": "8\nTrie\ninsert apple\ninsert cat\nstartsWith car\nsearch app\ninsert car\ninsert cat\ninsert ball\n",
+      "stdout": "null\nnull\nnull\nfalse\nfalse\nnull\nnull\nnull\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "startsWith",
+          "startsWith",
+          "insert",
+          "insert",
+          "startsWith",
+          "search"
+        ],
+        [
+          [],
+          [
+            "ball"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "ap"
+          ],
+          [
+            "c"
+          ],
+          [
+            "ape"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "c"
+          ],
+          [
+            "bat"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 6",
+      "expected": [
+        null,
+        null,
+        null,
+        false,
+        true,
+        null,
+        null,
+        true,
+        true
+      ],
+      "stdin": "9\nTrie\ninsert ball\ninsert cat\nstartsWith ap\nstartsWith c\ninsert ape\ninsert bat\nstartsWith c\nsearch bat\n",
+      "stdout": "null\nnull\nnull\nfalse\ntrue\nnull\nnull\ntrue\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "startsWith",
+          "search",
+          "search",
+          "search"
+        ],
+        [
+          [],
+          [
+            "apple"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "a"
+          ],
+          [
+            "car"
+          ],
+          [
+            "b"
+          ],
+          [
+            "b"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 7",
+      "expected": [
+        null,
+        null,
+        null,
+        true,
+        false,
+        false,
+        false
+      ],
+      "stdin": "7\nTrie\ninsert apple\ninsert cat\nstartsWith a\nsearch car\nsearch b\nsearch b\n",
+      "stdout": "null\nnull\nnull\ntrue\nfalse\nfalse\nfalse\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "insert",
+          "startsWith",
+          "search",
+          "insert",
+          "insert",
+          "insert"
+        ],
+        [
+          [],
+          [
+            "apple"
+          ],
+          [
+            "ap"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "ca"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "ape"
+          ],
+          [
+            "ape"
+          ],
+          [
+            "ape"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 8",
+      "expected": [
+        null,
+        null,
+        false,
+        null,
+        false,
+        false,
+        null,
+        null,
+        null
+      ],
+      "stdin": "9\nTrie\ninsert apple\nsearch ap\ninsert apple\nstartsWith ca\nsearch bat\ninsert ape\ninsert ape\ninsert ape\n",
+      "stdout": "null\nnull\nfalse\nnull\nfalse\nfalse\nnull\nnull\nnull\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "startsWith",
+          "insert",
+          "startsWith",
+          "startsWith",
+          "startsWith",
+          "insert",
+          "insert"
+        ],
+        [
+          [],
+          [
+            "car"
+          ],
+          [
+            "cat"
+          ],
+          [
+            "app"
+          ],
+          [
+            "ap"
+          ],
+          [
+            "app"
+          ],
+          [
+            "appl"
+          ],
+          [
+            "ball"
+          ],
+          [
+            "car"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 9",
+      "expected": [
+        null,
+        null,
+        false,
+        null,
+        true,
+        true,
+        false,
+        null,
+        null
+      ],
+      "stdin": "9\nTrie\ninsert car\nstartsWith cat\ninsert app\nstartsWith ap\nstartsWith app\nstartsWith appl\ninsert ball\ninsert car\n",
+      "stdout": "null\nnull\nfalse\nnull\ntrue\ntrue\nfalse\nnull\nnull\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "insert",
+          "insert",
+          "search",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "car"
+          ],
+          [
+            "ball"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "car"
+          ],
+          [
+            "ball"
+          ],
+          [
+            "appl"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 10",
+      "expected": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        true,
+        true
+      ],
+      "stdin": "7\nTrie\ninsert car\ninsert ball\ninsert apple\ninsert car\nsearch ball\nstartsWith appl\n",
+      "stdout": "null\nnull\nnull\nnull\nnull\ntrue\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "startsWith",
+          "search",
+          "startsWith",
+          "insert",
+          "search",
+          "search",
+          "insert"
+        ],
+        [
+          [],
+          [
+            "cat"
+          ],
+          [
+            "a"
+          ],
+          [
+            "car"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "a"
+          ],
+          [
+            "ball"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 11",
+      "expected": [
+        null,
+        null,
+        false,
+        false,
+        false,
+        null,
+        true,
+        false,
+        null
+      ],
+      "stdin": "9\nTrie\ninsert cat\nstartsWith a\nsearch car\nstartsWith bat\ninsert app\nsearch app\nsearch a\ninsert ball\n",
+      "stdout": "null\nnull\nfalse\nfalse\nfalse\nnull\ntrue\nfalse\nnull\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "insert",
+          "startsWith",
+          "startsWith",
+          "search",
+          "startsWith",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "cat"
+          ],
+          [
+            "ball"
+          ],
+          [
+            "appl"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "ca"
+          ],
+          [
+            "b"
+          ],
+          [
+            "ba"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 12",
+      "expected": [
+        null,
+        null,
+        null,
+        false,
+        false,
+        false,
+        true,
+        true
+      ],
+      "stdin": "8\nTrie\ninsert cat\ninsert ball\nstartsWith appl\nstartsWith bat\nsearch ca\nstartsWith b\nstartsWith ba\n",
+      "stdout": "null\nnull\nnull\nfalse\nfalse\nfalse\ntrue\ntrue\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "startsWith",
+          "search",
+          "insert",
+          "insert",
+          "insert"
+        ],
+        [
+          [],
+          [
+            "car"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "b"
+          ],
+          [
+            "ape"
+          ],
+          [
+            "bat"
+          ],
+          [
+            "bat"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 13",
+      "expected": [
+        null,
+        null,
+        false,
+        false,
+        null,
+        null,
+        null
+      ],
+      "stdin": "7\nTrie\ninsert car\nstartsWith bat\nsearch b\ninsert ape\ninsert bat\ninsert bat\n",
+      "stdout": "null\nnull\nfalse\nfalse\nnull\nnull\nnull\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "startsWith",
+          "insert",
+          "search",
+          "insert",
+          "startsWith",
+          "search",
+          "search"
+        ],
+        [
+          [],
+          [
+            "ape"
+          ],
+          [
+            "c"
+          ],
+          [
+            "car"
+          ],
+          [
+            "ba"
+          ],
+          [
+            "ball"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "c"
+          ],
+          [
+            "app"
+          ]
+        ]
+      ],
+      "label": "仓库判题用例 14",
+      "expected": [
+        null,
+        null,
+        false,
+        null,
+        false,
+        null,
+        false,
+        false,
+        false
+      ],
+      "stdin": "9\nTrie\ninsert ape\nstartsWith c\ninsert car\nsearch ba\ninsert ball\nstartsWith apple\nsearch c\nsearch app\n",
+      "stdout": "null\nnull\nfalse\nnull\nfalse\nnull\nfalse\nfalse\nfalse\n"
+    },
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "startsWith"
+        ],
+        [
+          [],
+          [
+            "a"
+          ],
+          [
+            "a"
+          ],
+          [
+            "b"
+          ]
+        ]
+      ],
+      "label": "边界用例 1",
+      "quick": true,
+      "expected": [
+        null,
+        null,
+        true,
+        false
+      ],
+      "stdin": "4\nTrie\ninsert a\nsearch a\nstartsWith b\n",
+      "stdout": "null\nnull\ntrue\nfalse\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          "Trie",
+          "insert",
+          "search",
+          "search",
+          "startsWith",
+          "insert",
+          "search"
+        ],
+        [
+          [],
+          [
+            "apple"
+          ],
+          [
+            "apple"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ],
+          [
+            "app"
+          ]
+        ]
+      ],
+      "expected": [
+        null,
+        null,
+        true,
+        false,
+        true,
+        null,
+        true
+      ],
+      "stdin": "7\nTrie\ninsert apple\nsearch apple\nsearch app\nstartsWith app\ninsert app\nsearch app\n",
+      "stdout": "null\nnull\ntrue\nfalse\ntrue\nnull\ntrue\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0208.实现 Trie (前缀树).md",
+        "index": 1,
+        "input": "[\"Trie\", \"insert\", \"search\", \"search\", \"startsWith\", \"insert\", \"search\"]\n[[], [\"apple\"], [\"apple\"], [\"app\"], [\"app\"], [\"app\"], [\"app\"]]",
+        "output": "[null, null, true, false, true, null, true]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "维护一个最初为空的前缀树。insert word 插入单词；search word 判断完整单词是否已经插入；startsWith prefix 判断是否存在以 prefix 开头的已插入单词。所有单词仅含小写英文字母。",
+    "input": "第一行输入操作数 q，之后 q 行每行一个操作。第一条必须是构造操作 Trie。其余操作为：\ninsert word\nsearch word\nstartsWith prefix\n参数与操作名使用空格分隔，字符串不加引号。",
+    "output": "输出 q 行，与输入操作一一对应。构造操作和没有返回值的操作输出 null；查询操作输出查询结果，布尔值写 true 或 false。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= word.length, prefix.length <= 2000",
+      "数据范围：word 和 prefix 仅由小写英文字母组成",
+      "数据范围：insert、search 和 startsWith 调用次数 总计 不超过 3 * 10^4 次"
+    ],
+    "examples": [
+      {
+        "input": "7\nTrie\ninsert apple\nsearch apple\nsearch app\nstartsWith app\ninsert app\nsearch app\n",
+        "output": "null\nnull\ntrue\nfalse\ntrue\nnull\ntrue\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "00e2c418"
+    ],
+    "javascript": [
+      "37ce6dc6"
+    ],
+    "typescript": [
+      "38d69031"
+    ]
+  }
+}

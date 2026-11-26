@@ -1,0 +1,369 @@
+{
+  "id": 394,
+  "name": "字符串解码",
+  "signature": {
+    "fn": "decodeString",
+    "params": [
+      "string"
+    ],
+    "ret": "string"
+  },
+  "parameterNames": [
+    "s"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Solution:\n    def decodeString(self, s: str) -> str:\n        ",
+      "javascript": "/**\n * @param {string} s\n * @return {string}\n */\nvar decodeString = function(s) {\n  \n};",
+      "typescript": "function decodeString(s: string): string {\n  \n};",
+      "java": "class Solution {\n    public String decodeString(String s) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    string decodeString(string s) {\n        \n    }\n};",
+      "go": "func decodeString(s string) string {\n    \n}",
+      "c": "char* decodeString(char* s) {\n    \n}",
+      "csharp": "public class Solution {\n    public string DecodeString(string s) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun decodeString(s: String): String {\n        \n    }\n}",
+      "swift": "class Solution {\n    func decodeString(_ s: String) -> String {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn decode_string(s: String) -> String {\n        \n    }\n}",
+      "ruby": "# @param {String} s\n# @return {String}\ndef decode_string(s)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String $s\n     * @return String\n     */\n    function decodeString($s) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def decodeString(s: String): String = {\n        \n    }\n}",
+      "dart": "class Solution {\n  String decodeString(String s) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "8fa24a20",
+    "javascript": "c9b7d9a6",
+    "typescript": "8bfebc0d"
+  },
+  "cases": [
+    {
+      "input": [
+        "3[a]2[bc]"
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": "aaabcbc",
+      "stdin": "3[a]2[bc]\n",
+      "stdout": "aaabcbc\n",
+      "source": {
+        "path": "problems/0394.字符串解码.md",
+        "index": 1,
+        "input": "s = \"3[a]2[bc]\"",
+        "output": "\"aaabcbc\""
+      }
+    },
+    {
+      "input": [
+        "3[a2[c]]"
+      ],
+      "label": "示例 2",
+      "quick": true,
+      "expected": "accaccacc",
+      "stdin": "3[a2[c]]\n",
+      "stdout": "accaccacc\n",
+      "source": {
+        "path": "problems/0394.字符串解码.md",
+        "index": 2,
+        "input": "s = \"3[a2[c]]\"",
+        "output": "\"accaccacc\""
+      }
+    },
+    {
+      "input": [
+        "2[abc]3[cd]ef"
+      ],
+      "label": "示例 3",
+      "quick": true,
+      "expected": "abcabccdcdcdef",
+      "stdin": "2[abc]3[cd]ef\n",
+      "stdout": "abcabccdcdcdef\n",
+      "source": {
+        "path": "problems/0394.字符串解码.md",
+        "index": 3,
+        "input": "s = \"2[abc]3[cd]ef\"",
+        "output": "\"abcabccdcdcdef\""
+      }
+    },
+    {
+      "input": [
+        "abc3[cd]xyz"
+      ],
+      "label": "示例 4",
+      "quick": true,
+      "expected": "abccdcdcdxyz",
+      "stdin": "abc3[cd]xyz\n",
+      "stdout": "abccdcdcdxyz\n",
+      "source": {
+        "path": "problems/0394.字符串解码.md",
+        "index": 4,
+        "input": "s = \"abc3[cd]xyz\"",
+        "output": "\"abccdcdcdxyz\""
+      }
+    },
+    {
+      "input": [
+        "10[a]"
+      ],
+      "label": "仓库判题用例 5",
+      "quick": true,
+      "expected": "aaaaaaaaaa",
+      "stdin": "10[a]\n",
+      "stdout": "aaaaaaaaaa\n"
+    },
+    {
+      "input": [
+        "3[z]2[2[y]pq4[2[jk]e1[f]]]ef"
+      ],
+      "label": "仓库判题用例 6",
+      "quick": true,
+      "expected": "zzzyypqjkjkefjkjkefjkjkefjkjkefyypqjkjkefjkjkefjkjkefjkjkefef",
+      "stdin": "3[z]2[2[y]pq4[2[jk]e1[f]]]ef\n",
+      "stdout": "zzzyypqjkjkefjkjkefjkjkefjkjkefyypqjkjkefjkjkefjkjkefjkjkefef\n"
+    },
+    {
+      "input": [
+        "abc"
+      ],
+      "label": "仓库判题用例 7",
+      "quick": true,
+      "expected": "abc",
+      "stdin": "abc\n",
+      "stdout": "abc\n"
+    },
+    {
+      "input": [
+        "2[b]2[bc]a"
+      ],
+      "label": "仓库判题用例 8",
+      "expected": "bbbcbca",
+      "stdin": "2[b]2[bc]a\n",
+      "stdout": "bbbcbca\n"
+    },
+    {
+      "input": [
+        "c3[c]"
+      ],
+      "label": "仓库判题用例 9",
+      "expected": "cccc",
+      "stdin": "c3[c]\n",
+      "stdout": "cccc\n"
+    },
+    {
+      "input": [
+        "2[b]"
+      ],
+      "label": "仓库判题用例 10",
+      "expected": "bb",
+      "stdin": "2[b]\n",
+      "stdout": "bb\n"
+    },
+    {
+      "input": [
+        "ab3[b]"
+      ],
+      "label": "仓库判题用例 11",
+      "expected": "abbbb",
+      "stdin": "ab3[b]\n",
+      "stdout": "abbbb\n"
+    },
+    {
+      "input": [
+        "aa3[cb]"
+      ],
+      "label": "仓库判题用例 12",
+      "expected": "aacbcbcb",
+      "stdin": "aa3[cb]\n",
+      "stdout": "aacbcbcb\n"
+    },
+    {
+      "input": [
+        "3[cc]3[a]a"
+      ],
+      "label": "仓库判题用例 13",
+      "expected": "ccccccaaaa",
+      "stdin": "3[cc]3[a]a\n",
+      "stdout": "ccccccaaaa\n"
+    },
+    {
+      "input": [
+        "3[b]"
+      ],
+      "label": "仓库判题用例 14",
+      "expected": "bbb",
+      "stdin": "3[b]\n",
+      "stdout": "bbb\n"
+    },
+    {
+      "input": [
+        "2[ca]aa"
+      ],
+      "label": "仓库判题用例 15",
+      "expected": "cacaaa",
+      "stdin": "2[ca]aa\n",
+      "stdout": "cacaaa\n"
+    },
+    {
+      "input": [
+        "2[c]"
+      ],
+      "label": "仓库判题用例 16",
+      "expected": "cc",
+      "stdin": "2[c]\n",
+      "stdout": "cc\n"
+    },
+    {
+      "input": [
+        "c3[cc]"
+      ],
+      "label": "仓库判题用例 17",
+      "expected": "ccccccc",
+      "stdin": "c3[cc]\n",
+      "stdout": "ccccccc\n"
+    },
+    {
+      "input": [
+        "1[a]"
+      ],
+      "label": "边界用例 1",
+      "quick": true,
+      "expected": "a",
+      "stdin": "1[a]\n",
+      "stdout": "a\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        "3[a]2[bc]"
+      ],
+      "expected": "aaabcbc",
+      "stdin": "3[a]2[bc]\n",
+      "stdout": "aaabcbc\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0394.字符串解码.md",
+        "index": 1,
+        "input": "s = \"3[a]2[bc]\"",
+        "output": "\"aaabcbc\""
+      }
+    },
+    {
+      "input": [
+        "3[a2[c]]"
+      ],
+      "expected": "accaccacc",
+      "stdin": "3[a2[c]]\n",
+      "stdout": "accaccacc\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0394.字符串解码.md",
+        "index": 2,
+        "input": "s = \"3[a2[c]]\"",
+        "output": "\"accaccacc\""
+      }
+    },
+    {
+      "input": [
+        "2[abc]3[cd]ef"
+      ],
+      "expected": "abcabccdcdcdef",
+      "stdin": "2[abc]3[cd]ef\n",
+      "stdout": "abcabccdcdcdef\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0394.字符串解码.md",
+        "index": 3,
+        "input": "s = \"2[abc]3[cd]ef\"",
+        "output": "\"abcabccdcdcdef\""
+      }
+    },
+    {
+      "input": [
+        "abc3[cd]xyz"
+      ],
+      "expected": "abccdcdcdxyz",
+      "stdin": "abc3[cd]xyz\n",
+      "stdout": "abccdcdcdxyz\n",
+      "label": "示例 4",
+      "source": {
+        "path": "problems/0394.字符串解码.md",
+        "index": 4,
+        "input": "s = \"abc3[cd]xyz\"",
+        "output": "\"abccdcdcdxyz\""
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定一个合法编码字符串，将 k[片段] 展开为片段重复 k 次的结果。方括号可以嵌套，k 为正整数，普通字母保持原样，输出完全展开后的字符串。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. s：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：字符串（占完整一行，不加引号，空串用空行）。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= s.length <= 30",
+      "数据范围：s 由小写英文字母、数字和方括号 '[]' 组成",
+      "数据范围：s 保证是一个 有效 的输入。",
+      "数据范围：s 中所有整数的取值范围为 [1, 300]"
+    ],
+    "examples": [
+      {
+        "input": "3[a]2[bc]\n",
+        "output": "aaabcbc\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "3[a2[c]]\n",
+        "output": "accaccacc\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "2[abc]3[cd]ef\n",
+        "output": "abcabccdcdcdef\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "abc3[cd]xyz\n",
+        "output": "abccdcdcdxyz\n",
+        "explanation": "示例 4：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "fb5ddf28"
+    ],
+    "javascript": [
+      "2279109e"
+    ],
+    "typescript": [
+      "274eb724"
+    ]
+  }
+}

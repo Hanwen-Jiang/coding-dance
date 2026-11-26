@@ -1,31 +1,20 @@
 // Real-browser regression checks against a running local preview.
 // Run from the repository root: node tools/practice-ui/test.mjs
 import assert from "node:assert/strict";
-import { existsSync } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
-function findChromeExecutable() {
-  if (process.env.CHROME_PATH) return process.env.CHROME_PATH;
-  const candidates = process.platform === "darwin"
-    ? ["/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", "/Applications/Chromium.app/Contents/MacOS/Chromium"]
-    : process.platform === "win32"
-      ? ["C:/Program Files/Google/Chrome/Application/chrome.exe", "C:/Program Files (x86)/Google/Chrome/Application/chrome.exe"]
-      : ["/usr/bin/google-chrome", "/usr/bin/google-chrome-stable", "/usr/bin/chromium", "/usr/bin/chromium-browser"];
-  return candidates.find((p) => existsSync(p));
-}
-
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const require = createRequire(new URL("../../site/package.json", import.meta.url));
 const { chromium } = require("@playwright/test");
 const base = process.env.PRACTICE_BASE_URL || "http://127.0.0.1:8788";
 const screenshots = process.env.PRACTICE_SCREENSHOT_DIR || path.join(os.tmpdir(), "leetcode-practice-ui");
-const chrome = findChromeExecutable();
+const chrome = process.env.CHROME_PATH || "C:/Program Files/Google/Chrome/Application/chrome.exe";
 const spec = JSON.parse(await fs.readFile(path.join(root, "tools/illustrations/data/0015.json"), "utf8"));
-const browser = await chromium.launch(chrome ? { executablePath: chrome, headless: true } : { headless: true });
+const browser = await chromium.launch({ executablePath: chrome, headless: true });
 const context = await browser.newContext({ viewport: { width: 1440, height: 1080 }, colorScheme: "light" });
 const page = await context.newPage();
 page.setDefaultTimeout(20000);
@@ -227,10 +216,10 @@ try {
   // 重置在标签栏的「⋯」（编辑器设置）菜单里
   const resetCode = async () => { await page.locator("#practice").getByRole("button", { name: "编辑器设置", exact: true }).click(); await page.getByRole("menuitem", { name: /重置代码/ }).click(); };
   await resetCode();
-  await page.getByTestId("practice-reset-modal").getByRole("button", { name: "取消", exact: true }).click();
+  await page.getByRole("button", { name: "取消", exact: true }).click();
   assert((await page.locator(".cm-content").innerText()).includes("debug-fixture"));
   await resetCode();
-  await page.getByTestId("practice-reset-modal").getByRole("button", { name: "确认重置", exact: true }).click();
+  await page.getByRole("button", { name: "确认重置", exact: true }).click();
   await page.waitForFunction(() => { const t = document.querySelector(".cm-content")?.textContent || ""; return !t.includes("debug-fixture") && t.includes("threeSum"); });
   console.log("✓ Reset requires explicit confirmation");
 
@@ -247,12 +236,9 @@ try {
     await page.waitForFunction(() => !document.querySelector('[role="menu"]'));
   };
   const typeAfter = async (head, keys) => {
-    await page.getByRole("textbox", { name: "代码编辑器", exact: true }).evaluate((e, value) => {
-      const v = e.cmTile?.root?.view || e.cmView?.view;
-      v.dispatch({ changes: { from: 0, to: v.state.doc.length, insert: value }, selection: { anchor: value.length } });
-      v.focus();
-    }, head);
-    await page.waitForTimeout(50);
+    await writeCode(head);
+    await page.getByRole("textbox", { name: "代码编辑器", exact: true }).click();
+    await page.keyboard.press("ControlOrMeta+End");
     await page.keyboard.press("Enter");
     await page.keyboard.type(keys);
     await page.waitForTimeout(500);

@@ -1,8 +1,6 @@
-import manifest from "../../public/practice-runtime/manifest.json";
 import { parseAcmOutput } from "./acm";
 import { comparePracticeOutput } from "./compare";
 import { runRemote, runsInCloud } from "./remote";
-import { resolveRuntimeVendorUrls } from "./runtime-manifest";
 import type { PracticeCaseResult, PracticeRunRequest, PracticeRunResult } from "./types";
 
 export type { PracticeCaseResult, PracticeRunResult } from "./types";
@@ -16,15 +14,11 @@ export interface PracticeRunOptions {
   timeoutMs?: number;
 }
 
-/**
- * Versioned runtime paths resolved from manifest.json / R2 CDN (NEXT_PUBLIC_RUNTIME_BASE_URL)
- * with automatic fallback to local /practice-runtime/vendor/ for offline development.
- */
-const VENDOR = resolveRuntimeVendorUrls(manifest, {
-  baseUrl: process.env.NEXT_PUBLIC_RUNTIME_BASE_URL,
-  pyodideVersion: process.env.PRACTICE_PYODIDE_VERSION,
-  typescriptVersion: process.env.PRACTICE_TYPESCRIPT_VERSION,
-});
+/** Versioned runtime paths under /practice-runtime/ (copied by tools/practice-runtime/prepare.mjs, cached for a year). */
+const VENDOR = {
+  pyodide: `vendor/pyodide/${process.env.PRACTICE_PYODIDE_VERSION}/`,
+  typescript: `vendor/typescript/${process.env.PRACTICE_TYPESCRIPT_VERSION}/typescript.js`,
+};
 
 /**
  * Opaque iframe + disposable Worker: user programs never share the site's origin.

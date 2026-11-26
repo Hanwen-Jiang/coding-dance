@@ -1,0 +1,272 @@
+{
+ "id": 189,
+ "name": "轮转数组",
+ "level": "中等",
+ "topic": "普通数组",
+ "h1": "轮转数组，翻转三次",
+ "lede": "向右轮转 k 步，就是把最后 k 个数搬到最前面。先把整个数组翻转，这 k 个数就到了前面，只是顺序反了。再把前 k 个和后面的各自翻转回来，就得到答案，而且不需要额外的数组。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "看结果长什么样",
+   "body": [
+    "<code>[1,2,3,4,5,6,7]</code> 右移 3 步变成 <code>[5,6,7,1,2,3,4]</code>。",
+    "也就是后 k 个数整体挪到了前面，两段内部的顺序都没变。"
+   ]
+  },
+  {
+   "t": "k 可能比 n 大",
+   "body": [
+    "轮转 n 步等于没动，所以先让 <code>k = k % n</code>。"
+   ]
+  },
+  {
+   "t": "三次翻转",
+   "body": [
+    "整体翻转：<code>[7,6,5,4,3,2,1]</code>，后 k 个数到了前面，但两段都是倒着的。",
+    "翻转前 k 个：<code>[5,6,7,…]</code>。再翻转剩下的：<code>[…,1,2,3,4]</code>。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "先取余",
+   "body": "不取余的话，k 大于 n 时 <code>reverse(0, k - 1)</code> 会越界。"
+  },
+  {
+   "t": "原地修改",
+   "body": "写 <code>nums = nums[-k:] + nums[:-k]</code> 只是让局部变量指向新列表，原数组没变。要写成 <code>nums[:] = …</code>。"
+  },
+  {
+   "t": "复杂度",
+   "body": "每个数最多被交换两次，时间 O(n)，空间 O(1)。"
+  }
+ ],
+ "codes": [
+  {
+   "t": "标准解法：三次翻转",
+   "kind": null,
+   "note": null,
+   "key": "std",
+   "code": "class Solution:\n    def rotate(self, nums: List[int], k: int) -> None:\n        def reverse(i, j):\n            while i < j:\n                nums[i], nums[j] = nums[j], nums[i]\n                i += 1\n                j -= 1\n\n        n = len(nums)\n        k %= n\n        reverse(0, n - 1)               # 整体翻转\n        reverse(0, k - 1)               # 翻转前 k 个\n        reverse(k, n - 1)               # 翻转剩下的",
+   "marks": {
+    "swap": [
+     5,
+     6,
+     7
+    ],
+    "init": [
+     9,
+     10
+    ],
+    "all": [
+     11
+    ],
+    "front": [
+     12
+    ],
+    "back": [
+     13
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    public void rotate(int[] nums, int k) {\n        int n = nums.length;\n        k %= n;\n        reverse(nums, 0, n - 1);                // 整体翻转\n        reverse(nums, 0, k - 1);                // 翻转前 k 个\n        reverse(nums, k, n - 1);                // 翻转剩下的\n    }\n\n    private void reverse(int[] nums, int i, int j) {\n        while (i < j) {\n            int t = nums[i];\n            nums[i] = nums[j];\n            nums[j] = t;\n            i++;\n            j--;\n        }\n    }\n}",
+     "marks": {
+      "init": [
+       3,
+       4
+      ],
+      "all": [
+       5
+      ],
+      "front": [
+       6
+      ],
+      "back": [
+       7
+      ],
+      "swap": [
+       12,
+       13,
+       14,
+       15,
+       16
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    void rotate(vector<int>& nums, int k) {\n        auto reverse = [&](int i, int j) {\n            while (i < j) {\n                swap(nums[i], nums[j]);\n                i++;\n                j--;\n            }\n        };\n        int n = nums.size();\n        k %= n;\n        reverse(0, n - 1);                      // 整体翻转\n        reverse(0, k - 1);                      // 翻转前 k 个\n        reverse(k, n - 1);                      // 翻转剩下的\n    }\n};",
+     "marks": {
+      "swap": [
+       6,
+       7,
+       8
+      ],
+      "init": [
+       11,
+       12
+      ],
+      "all": [
+       13
+      ],
+      "front": [
+       14
+      ],
+      "back": [
+       15
+      ]
+     }
+    },
+    "go": {
+     "code": "func rotate(nums []int, k int) {\n\treverse := func(i, j int) {\n\t\tfor i < j {\n\t\t\tnums[i], nums[j] = nums[j], nums[i]\n\t\t\ti++\n\t\t\tj--\n\t\t}\n\t}\n\tn := len(nums)\n\tk %= n\n\treverse(0, n-1) // 整体翻转\n\treverse(0, k-1) // 翻转前 k 个\n\treverse(k, n-1) // 翻转剩下的\n}",
+     "marks": {
+      "swap": [
+       4,
+       5,
+       6
+      ],
+      "init": [
+       9,
+       10
+      ],
+      "all": [
+       11
+      ],
+      "front": [
+       12
+      ],
+      "back": [
+       13
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var rotate = function(nums, k) {\n    const reverse = (i, j) => {\n        while (i < j) {\n            [nums[i], nums[j]] = [nums[j], nums[i]];\n            i++;\n            j--;\n        }\n    };\n    const n = nums.length;\n    k %= n;\n    reverse(0, n - 1);                          // 整体翻转\n    reverse(0, k - 1);                          // 翻转前 k 个\n    reverse(k, n - 1);                          // 翻转剩下的\n};",
+     "marks": {
+      "swap": [
+       4,
+       5,
+       6
+      ],
+      "init": [
+       9,
+       10
+      ],
+      "all": [
+       11
+      ],
+      "front": [
+       12
+      ],
+      "back": [
+       13
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function rotate(nums: number[], k: number): void {\n    const reverse = (i: number, j: number): void => {\n        while (i < j) {\n            [nums[i], nums[j]] = [nums[j], nums[i]];\n            i++;\n            j--;\n        }\n    };\n    const n = nums.length;\n    k %= n;\n    reverse(0, n - 1);                          // 整体翻转\n    reverse(0, k - 1);                          // 翻转前 k 个\n    reverse(k, n - 1);                          // 翻转剩下的\n}",
+     "marks": {
+      "swap": [
+       4,
+       5,
+       6
+      ],
+      "init": [
+       9,
+       10
+      ],
+      "all": [
+       11
+      ],
+      "front": [
+       12
+      ],
+      "back": [
+       13
+      ]
+     }
+    }
+   }
+  },
+  {
+   "t": "简洁写法：切片拼接",
+   "kind": "elegant",
+   "note": "后 k 个挪到前面。k 可能比 n 大，先取模。nums[:] 赋值是原地修改，但切片会用 O(n) 临时空间。",
+   "code": "class Solution:\n    def rotate(self, nums: List[int], k: int) -> None:\n        k %= len(nums)\n        nums[:] = nums[-k:] + nums[:-k] if k else nums"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "e",
+    "正在翻转的范围"
+   ],
+   [
+    "a",
+    "正在交换的两个数"
+   ],
+   [
+    "c",
+    "已经到位"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "示例 1",
+    "args": {
+     "nums": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+     ],
+     "k": 3
+    },
+    "note": "nums = [1,2,3,4,5,6,7], k = 3"
+   },
+   {
+    "label": "k 大于 n",
+    "args": {
+     "nums": [
+      1,
+      2,
+      3,
+      4,
+      5
+     ],
+     "k": 7
+    },
+    "note": "nums = [1,2,3,4,5], k = 7"
+   }
+  ],
+  "build": "build(a, snap) {\n    const n = a.nums.slice(), len = n.length, k = a.k % len; let doneTo = -1;\n    const view = (opts = {}) => {\n      const lo = opts.lo ?? -1, hi = opts.hi ?? -1, i = opts.i, j = opts.j;\n      const prevMap = opts.prevMap || {};\n      return [{\n        t: \"array\",\n        label: \"nums\",\n        items: n.map((v, t) => ({\n          v,\n          ...(prevMap[t] !== undefined ? { prev: prevMap[t] } : {}),\n          cls: t === i || t === j ? \"a\" : t >= lo && t <= hi ? \"e\" : t <= doneTo ? \"c\" : \"\",\n        })),\n        ptrs: i === undefined ? {} : { i, j },\n        swaps: opts.swaps || [],\n      }];\n    };\n    snap(\"开始\", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : \"。\") + `目标是把最后 ${k} 个数搬到最前面。`, view(), { at: \"init\", facts: [[\"k % n\", k]] });\n    const rev = (lo, hi, name, tag) => {\n      snap(name, `${name}：准备双指针翻转下标 ${lo} 到 ${hi} 这一段。`, view({ lo, hi, i: lo, j: hi }), { at: tag, facts: [[\"阶段\", name], [\"k % n\", k], [\"i\", lo], [\"j\", hi]] });\n      for (let i = lo, j = hi; i < j; i++, j--) {\n        const oldI = n[i], oldJ = n[j], diff = oldI !== oldJ;\n        [n[i], n[j]] = [n[j], n[i]];\n        snap(\n          `${name} · 交换`,\n          diff ? `交换 nums[${i}]（${oldI}）和 nums[${j}]（${oldJ}）。` : `nums[${i}] 和 nums[${j}] 都是 ${oldI}，数值不变。`,\n          view({\n            lo,\n            hi,\n            i,\n            j,\n            swaps: diff ? [[i, j]] : [],\n            prevMap: diff ? { [i]: oldI, [j]: oldJ } : {},\n          }),\n          { at: [tag, \"swap\"], facts: [[\"阶段\", name], [\"k % n\", k], [\"i\", i], [\"j\", j]] },\n        );\n        if (i + 1 < j - 1) {\n          snap(\n            `${name} · 指针靠拢`,\n            `i 前进到 ${i + 1}，j 后退到 ${j - 1}，继续往中间翻转。`,\n            view({ lo, hi, i: i + 1, j: j - 1 }),\n            { at: tag, facts: [[\"阶段\", name], [\"k % n\", k], [\"i\", i + 1, i], [\"j\", j - 1, j]] },\n          );\n        }\n      }\n    };\n    if (len > 1) rev(0, len - 1, \"整体翻转\", \"all\");\n    if (k > 1) rev(0, k - 1, \"翻转前 k 个\", \"front\");\n    doneTo = k - 1;\n    if (len - k > 1) rev(k, len - 1, \"翻转剩下的\", \"back\");\n    doneTo = len - 1;\n    snap(\"完成\", `三次翻转后得到 [${n.join(\", \")}]。`, view(), { at: [], kind: \"ok\", ans: n.slice(), facts: [[\"k % n\", k], [\"结果\", `[${n.join(\", \")}]`]] });\n  }",
+  "methods": [
+   {
+    "t": "标准解法",
+    "note": null,
+    "legend": [
+     [
+      "e",
+      "正在翻转的范围"
+     ],
+     [
+      "a",
+      "正在交换的两个数"
+     ],
+     [
+      "c",
+      "已经到位"
+     ]
+    ],
+    "code": "std",
+    "build": "build(a, snap) {\n    const n = a.nums.slice(), len = n.length, k = a.k % len; let doneTo = -1;\n    const view = (opts = {}) => {\n      const lo = opts.lo ?? -1, hi = opts.hi ?? -1, i = opts.i, j = opts.j;\n      const prevMap = opts.prevMap || {};\n      return [{\n        t: \"array\",\n        label: \"nums\",\n        items: n.map((v, t) => ({\n          v,\n          ...(prevMap[t] !== undefined ? { prev: prevMap[t] } : {}),\n          cls: t === i || t === j ? \"a\" : t >= lo && t <= hi ? \"e\" : t <= doneTo ? \"c\" : \"\",\n        })),\n        ptrs: i === undefined ? {} : { i, j },\n        swaps: opts.swaps || [],\n      }];\n    };\n    snap(\"开始\", `n = ${len}，k = ${a.k}` + (a.k !== k ? `，先取余：k % n = <b>${k}</b>。` : \"。\") + `目标是把最后 ${k} 个数搬到最前面。`, view(), { at: \"init\", facts: [[\"k % n\", k]] });\n    const rev = (lo, hi, name, tag) => {\n      snap(name, `${name}：准备双指针翻转下标 ${lo} 到 ${hi} 这一段。`, view({ lo, hi, i: lo, j: hi }), { at: tag, facts: [[\"阶段\", name], [\"k % n\", k], [\"i\", lo], [\"j\", hi]] });\n      for (let i = lo, j = hi; i < j; i++, j--) {\n        const oldI = n[i], oldJ = n[j], diff = oldI !== oldJ;\n        [n[i], n[j]] = [n[j], n[i]];\n        snap(\n          `${name} · 交换`,\n          diff ? `交换 nums[${i}]（${oldI}）和 nums[${j}]（${oldJ}）。` : `nums[${i}] 和 nums[${j}] 都是 ${oldI}，数值不变。`,\n          view({\n            lo,\n            hi,\n            i,\n            j,\n            swaps: diff ? [[i, j]] : [],\n            prevMap: diff ? { [i]: oldI, [j]: oldJ } : {},\n          }),\n          { at: [tag, \"swap\"], facts: [[\"阶段\", name], [\"k % n\", k], [\"i\", i], [\"j\", j]] },\n        );\n        if (i + 1 < j - 1) {\n          snap(\n            `${name} · 指针靠拢`,\n            `i 前进到 ${i + 1}，j 后退到 ${j - 1}，继续往中间翻转。`,\n            view({ lo, hi, i: i + 1, j: j - 1 }),\n            { at: tag, facts: [[\"阶段\", name], [\"k % n\", k], [\"i\", i + 1, i], [\"j\", j - 1, j]] },\n          );\n        }\n      }\n    };\n    if (len > 1) rev(0, len - 1, \"整体翻转\", \"all\");\n    if (k > 1) rev(0, k - 1, \"翻转前 k 个\", \"front\");\n    doneTo = k - 1;\n    if (len - k > 1) rev(k, len - 1, \"翻转剩下的\", \"back\");\n    doneTo = len - 1;\n    snap(\"完成\", `三次翻转后得到 [${n.join(\", \")}]。`, view(), { at: [], kind: \"ok\", ans: n.slice(), facts: [[\"k % n\", k], [\"结果\", `[${n.join(\", \")}]`]] });\n  }"
+   }
+  ],
+  "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const nums = Array.from({ length: R.int(4, 8) }, (_, i) => i + 1), k = R.int(0, 10);\n    return { args: { nums, k }, note: `nums = ${R.fmt(nums)}, k = ${k}`, py: `__inplace(Solution().rotate, ${R.py(nums)}, ${k})` };\n  })(R); return { args: r.args, note: r.note }; }"
+ }
+}

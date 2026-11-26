@@ -139,11 +139,11 @@
 - [x] 练习数据挪到资源仓的 `tools/practice/data/`，网站经 `/api/practice/<题号>` 运行时读；CI 重新生成一遍并 `git diff` 检查
 - [x] TypeScript 只转译不做类型检查：编辑器下面加了说明（真做类型检查要带 `lib.*.d.ts`，以后再说）
 - [x] 去掉没用到的 `recharts` 依赖
-- [x] `@playwright/test` 写的界面测试接进 CI：**Phase 4 已彻底解耦 `@heroui-pro/react` 私有依赖**（内置预编译样式 + 零私有源同构兼容层），`.github/workflows/verify.yml` 的 `practice-ui` 任务直接在 CI 构建静态站点并在真实无头 Chrome 中运行 `tools/practice-ui/test.mjs`；本地也可随时用 `node tools/dev/preview.mjs` + `node tools/practice-ui/test.mjs` 复测
+- [ ] `@playwright/test` 写的界面测试接进 CI：**卡在 HeroUI Pro**——它的 npm 包要授权才能装（公开的只是空壳），CI 里构建不了网站。要接进 CI，得在 GitHub 上配一个 HeroUI Pro 的授权密钥（作者决定）。目前在本地跑：`node tools/dev/preview.mjs` 起预览，再跑 `node tools/practice-ui/test.mjs`
 - [x] 检查题目页的布局：手机（430 px）和桌面（1440 px）都没有横向溢出；「相关基础」在侧栏不显示的宽度下放到题面下面
 
 ### 阶段 1：运行环境包框架
-- [x] 清单格式、R2 存放、版本和 sha256 校验（`site/public/practice-runtime/manifest.json` + `site/lib/practice/runtime-manifest.ts` + `tools/practice-runtime/prepare.mjs --verify`）
+- [ ] 清单格式、R2 存放、版本和 sha256 校验
 - [ ] 下载前确认弹窗、进度、断点续传、Cache Storage、持久存储
 - [ ] 设置里「已下载的运行环境」管理页
 
@@ -178,7 +178,7 @@
 - [x] 防滥用（一部分）：按 GitHub 用户名限流（每分钟 20 次、同时一个）、全站排队上限
 - [x] 每天的额度、预算开关、新账号防滥用（`site/functions/_lib/quota.ts`）：KV `SESSIONS` 按北京时间 0 点清零记录每日次数（免费 30 次/天、首批用户 / 专业版 2000 次/天），免费账号默认要求 GitHub 注册满 30 天（`CLOUD_MIN_ACCOUNT_DAYS`），支持 `CLOUD_FREE_PAUSED=1` 月度预算开关，运行器不可用时自动退回额度
 - [x] 调试：Java（JDI）、C++（gdb）、Go（dlv）用真调试器一次跑完、记下每一步（行号、调用栈、变量、返回值、异常），格式和浏览器的执行记录一样，调试面板直接用
-- [x] 交互式调试（断点停住、求值）：DAP 会话 + WebSocket 转发、会话回收 — 认领：Antigravity（分支 `feat/go-modernization`，Go 单二进制 `cd-runner` `/v1/dap` + 沙箱 `dap-session.js` + `JdiDap` / `dlv dap` / `gdb -i=dap`）
+- [ ] 交互式调试（断点停住、求值）：DAP 会话 + WebSocket 转发、会话回收
 - [x] 云端加九种语言：C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart（只运行、不调试） — 认领：Claude（分支 `more-langs`）
   - [x] 起始代码用力扣原样的（`tools/practice/leetcode-starters.json`、`fetch-starters.mjs`）；力扣没有的 Dart 6 道照写，Rust 的 138、141、142、160 力扣模式做不了（`leetcodeUnavailable`，提示用 ACM 模式）
   - [x] 判题程序各语言的部分（`tools/illustrations/judge/langs/`、`prelude/`），镜像装上九种工具链，Kotlin / Scala 编译器做 CDS 归档
@@ -214,20 +214,6 @@
 
 ## 变更记录
 
-- 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 4（前端与 CI 零私有源闭环）：
-  - 从 `site/package.json` 移除私有 `@heroui-pro/react` 依赖并完善 `site/lib/ui/heroui-pro-shim/`（支持受控/非受控 `Segment` 与 WAI-ARIA 键盘导航、`CodeBlock` SVG 复制按钮），配合 `site/styles/heroui-pro.prebuilt.css` 实现零 Token `npm install && npm run build` 静态导出；
-  - 将 WASM 运行时迁移至声明式 SHA-256 清单 `site/public/practice-runtime/manifest.json` + `site/lib/practice/runtime-manifest.ts`（`pyodide@314.0.8`、`typescript@5.6.3` 逐文件 SHA-256 校验 + R2 URL 解析 + `prepare.mjs --verify/--out/--force` 幂等拷贝），将 `prepare:practice` 从 `npm run build` 阻塞链中解耦；
-  - 净化 `.github/workflows/verify.yml`：移除 `/tmp/rt` 变通与 `HEROUI_PRO_SHIM=1` 强切，启用 R2 模式下无 `vendor/` 冗余产物校验，并新增跨平台 Playwright `practice-ui` 浏览器端到端回归任务。
-- 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 3（`cd-build` + declarative contracts + 3 级 R2/ASSETS 清单读取 + 停止 375 份派生 JSON Git 污染）：
-  - 新增声明式题库契约 `contracts/practice-meta.json`（汇总 100 道题 ACM 题面叙述与边界用例）与 `contracts/schema/problem.schema.json` 字段对齐；
-  - 将全部构建与六语言并发判题下沉至 Go CLI `cmd/cd-build`（`internal/builder/{build,practice_gen,starters,judge,examples,acm_codec,sig,verify,r2}.go`：`build` 分片并发建图解 + 统一 `topics/index.json` + 纯 Go 100 题练习生成 + `--bundle site/public/_r2`；`judge` 多核并发跑 `python/go/javascript/typescript(tsc --strict)/java/cpp`；`verify` / `export-contracts` / `dump-official-examples`）；
-  - 彻底退役 `tools/practice/{build.cjs,official-examples.py,descriptions.cjs,boundaries.cjs}` 与 `tools/illustrations/judge/run.js`，并通过 `git rm -rf` + `.gitignore` 从 Git 移除全部 375 份派生 JSON；
-  - 网站边缘层新增 `site/functions/_lib/r2.ts` 与端到端测试 `r2.test.ts`，支持 `R2_ASSETS_BASE_URL` → Pages 静态 `env.ASSETS` (`/_r2/v1/...`) → GitHub Raw 三级回退。
-- 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 2：
-  - 将 `cd-api`（`cmd/cd-api` + `internal/api` + `internal/progress`）接入零 CGO PostgreSQL 热存储（`pgx/v5/stdlib` `PostgresStore` + 事务发件箱 `git_sync_outbox`，保留 `MemoryStore` 内存兜底）、实现 GitHub App OAuth 登录/授权/回调/退出、Valkey/KV `fam:<family>` 单次使用 refresh token 去重、`Hydrator` 冷启动异步并发回填（`conc.WithContext`），并补齐 `/api/session`、`/api/auth/*`、`/api/progress*`、`/api/settings`、`/api/solutions/{id}`、`/api/sync/{repo,blobs,commit}`、`/api/run`、`/api/dap`、`/api/companion/*` 与 `/api/admin/runner` 全量 BFF 接口；
-  - 前端新增 `site/lib/api-base.ts` 支持同源 Edge BFF 代理或 `NEXT_PUBLIC_API_BASE_URL` 直连，Cloudflare Pages 边缘层通过 `site/functions/_lib/bff.ts` 与 `_middleware.ts`（`CD_API_UPSTREAM`）统一转发并彻底退役约 1,500 行直连 GitHub REST OLTP Pages Functions 与三域名 `sso.ts` 重定向链；
-  - `.github/workflows/verify.yml` 新增 `postgres:16-alpine` 真实数据库服务集成测试与 `site/functions/_lib/test/bff.test.ts` Edge ⇄ Go OAuth 端到端测试。
-- 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 1，用零 CGO 静态单二进制 `cd-runner`（`cmd/cd-runner` + `internal/runner`）彻底替换宿主机 Node 服务 `tools/runner/server.mjs` 与 `tools/runner/lib/*`；宿主机部署脚本 `setup.sh` 零 Node.js 运行时依赖；打通三驱动隔离式 WebSocket 交互真调试器（`GET /v1/dap` ⇄ 沙箱 `dap-session.js` + `JdiDap` / `dlv dap` / `gdb -i=dap`，支持力扣模式与 ACM 模式行号双向映射、空闲与最长会话回收及 microVM 即用即毁），并接入 Prometheus `/metrics`、OTLP 推送及网站边缘 `/api/dap`、`/api/admin/runner` 集群遥测接口。
 - 2026-11-25：补齐云端每日额度限制与防滥用（`site/functions/_lib/quota.ts`），免费 30 次/天、首批用户/专业版 2000 次/天，北京时间 0 点重置，支持新账号注册天数限制、月度预算开关及节点不可用自动退回额度；优化 `/welcome/` 引导页默认展开加载 Star 列表并跨跳转保留勾选；升级动画引擎 V2（支持重播本步、值交换弧线、DP 依赖箭头、值前后变化及树/链表关键帧平滑过渡），修复 Issue #47（#114 二叉树展开为链表）并重绘 4 道标杆题（#75、#72、#206、#215）。
 - 2026-11-23：Python、JavaScript、TypeScript 也能选云端运行（分支 `cloud-run`）。练习区的「⋯」菜单和状态栏上选「浏览器 / 云端」，每门语言各记各的（`hot100:practice:target:<语言>`，默认浏览器）；语言列表里选了云端的也标「云端」。选了云端时运行和测试经 `/api/run` 交给运行器，调试仍在浏览器里（运行器只给 Java、C++、Go 接了调试器）。云端运行要登录：确定没登录时直接在控制台里提示登录，不发请求；登录过期 `/api/run` 回 401 时也显示同样的提示，不再只有一行报错。运行器这边 Python、JavaScript 早就支持，TypeScript 补了两处：语法错误原来按运行时出错报（每组都是 Node 的一长串调用栈），现在先用 Node 自带的转换器解析一遍，报成编译错误、带编辑器里的行号；`enum`、构造函数参数属性这些要转换的写法原来直接报错（Node 默认只擦类型），现在加 `--experimental-transform-types`，和浏览器里一样能用。这一版的节点在 `/v1/status` 里报 `features: ["ts-transform"]`，网站只把 TypeScript 交给报了它的节点；lou1 重跑 `setup.sh` 之前，练习区显示 TypeScript 暂时不能在云端运行，不会交给旧版沙箱。CI 的起始代码测试加上这三种语言（300 组）。本地用假的 `/api/run`（在 lc-runner 镜像里跑这个分支的沙箱）在 Chrome 里走了一遍：没登录、登录、登录过期、调试、每门语言各记各的、运行器不在线。
 - 2026-11-18：练习区加九种云端语言（C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart，分支 `more-langs`）。起始代码不自己生成，用 leetcode.cn 公开接口取的力扣原样模板（`tools/practice/fetch-starters.mjs` → `leetcode-starters.json`），判题程序按同样的类型和函数名调用，`build.cjs` 逐题核对函数名，CI 再把九种 × 100 题的起始代码补上「还没写」编译、跑一组（896 组，Rust 少 4 道）。力扣没有 Rust 版本的 138、141、142、160（Box 表示不了成环、共用节点、random 指针）在力扣模式下提示改用 ACM 模式；Dart 没有的 138、141、142、160、236、240 照力扣 Dart 的写法补。各语言实测（本机 1 核）：编译 C 0.1 秒、Rust 0.2 秒、C# 0.5 秒、Swift 0.3–1 秒、Dart 0.4 秒、Scala 1.6 秒、Kotlin 2.1 秒（Kotlin、Scala 原来要 5 秒、3 秒，只用 C1 加 CDS 归档省了一半）。踩过的坑：Swift `-O` 下越界只会 ud2、不说原因，加了 `-assert-config Debug` 调用栈又在断言那里断了，改用 `-Onone -g`；Dart AOT 的调用栈没有行号，改用 kernel + JIT；Ruby 的几道链表题力扣用的是驼峰函数名（`hasCycle`）。镜像从 6 种语言变成 15 种，Swift 去掉 SourceKit、LLDB 等省 1 GB 多。网站：`/v1/status` 报的 `langs` 里没有的语言，练习区显示「云端运行器还没装上」，不去跑；新语言暂时不能调试。顺手修了练习区存进度仓时 Java / C++ / Go 的提交说明里语言名是 undefined。

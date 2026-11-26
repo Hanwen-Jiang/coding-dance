@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { apiFetch } from "@/lib/api-base";
 import type { Attempt } from "@/lib/types";
 
 export type CompanionConsentMode = "proactive_consent" | "on_demand" | "off";
@@ -98,7 +97,7 @@ export interface HistoryAnalyzeResponse {
 }
 
 async function postCompanion<T>(path: string, body: Record<string, unknown>): Promise<T> {
-  const res = await apiFetch(path, {
+  const res = await fetch(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

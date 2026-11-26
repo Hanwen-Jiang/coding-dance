@@ -1,0 +1,430 @@
+{
+  "id": 543,
+  "name": "二叉树的直径",
+  "signature": {
+    "fn": "diameterOfBinaryTree",
+    "params": [
+      "TreeNode"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "root"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "# Definition for a binary tree node.\n# class TreeNode:\n#     def __init__(self, val=0, left=None, right=None):\n#         self.val = val\n#         self.left = left\n#         self.right = right\nclass Solution:\n    def diameterOfBinaryTree(self, root: Optional[TreeNode]) -> int:\n        ",
+      "javascript": "/**\n * Definition for a binary tree node.\n * function TreeNode(val, left, right) {\n *     this.val = (val===undefined ? 0 : val)\n *     this.left = (left===undefined ? null : left)\n *     this.right = (right===undefined ? null : right)\n * }\n */\n/**\n * @param {TreeNode} root\n * @return {number}\n */\nvar diameterOfBinaryTree = function(root) {\n  \n};",
+      "typescript": "/**\n * Definition for a binary tree node.\n * class TreeNode {\n *     val: number\n *     left: TreeNode | null\n *     right: TreeNode | null\n *     constructor(val?: number, left?: TreeNode | null, right?: TreeNode | null) {\n *         this.val = (val===undefined ? 0 : val)\n *         this.left = (left===undefined ? null : left)\n *         this.right = (right===undefined ? null : right)\n *     }\n * }\n */\n\nfunction diameterOfBinaryTree(root: TreeNode | null): number {\n  \n};",
+      "java": "/**\n * Definition for a binary tree node.\n * public class TreeNode {\n *     int val;\n *     TreeNode left;\n *     TreeNode right;\n *     TreeNode() {}\n *     TreeNode(int val) { this.val = val; }\n *     TreeNode(int val, TreeNode left, TreeNode right) {\n *         this.val = val;\n *         this.left = left;\n *         this.right = right;\n *     }\n * }\n */\nclass Solution {\n    public int diameterOfBinaryTree(TreeNode root) {\n        \n    }\n}",
+      "cpp": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     TreeNode *left;\n *     TreeNode *right;\n *     TreeNode() : val(0), left(nullptr), right(nullptr) {}\n *     TreeNode(int x) : val(x), left(nullptr), right(nullptr) {}\n *     TreeNode(int x, TreeNode *left, TreeNode *right) : val(x), left(left), right(right) {}\n * };\n */\nclass Solution {\npublic:\n    int diameterOfBinaryTree(TreeNode* root) {\n        \n    }\n};",
+      "go": "/**\n * Definition for a binary tree node.\n * type TreeNode struct {\n *     Val int\n *     Left *TreeNode\n *     Right *TreeNode\n * }\n */\nfunc diameterOfBinaryTree(root *TreeNode) int {\n    \n}",
+      "c": "/**\n * Definition for a binary tree node.\n * struct TreeNode {\n *     int val;\n *     struct TreeNode *left;\n *     struct TreeNode *right;\n * };\n */\nint diameterOfBinaryTree(struct TreeNode* root) {\n    \n}",
+      "csharp": "/**\n * Definition for a binary tree node.\n * public class TreeNode {\n *     public int val;\n *     public TreeNode left;\n *     public TreeNode right;\n *     public TreeNode(int val=0, TreeNode left=null, TreeNode right=null) {\n *         this.val = val;\n *         this.left = left;\n *         this.right = right;\n *     }\n * }\n */\npublic class Solution {\n    public int DiameterOfBinaryTree(TreeNode root) {\n        \n    }\n}",
+      "kotlin": "/**\n * Example:\n * var ti = TreeNode(5)\n * var v = ti.`val`\n * Definition for a binary tree node.\n * class TreeNode(var `val`: Int) {\n *     var left: TreeNode? = null\n *     var right: TreeNode? = null\n * }\n */\nclass Solution {\n    fun diameterOfBinaryTree(root: TreeNode?): Int {\n        \n    }\n}",
+      "swift": "/**\n * Definition for a binary tree node.\n * public class TreeNode {\n *     public var val: Int\n *     public var left: TreeNode?\n *     public var right: TreeNode?\n *     public init() { self.val = 0; self.left = nil; self.right = nil; }\n *     public init(_ val: Int) { self.val = val; self.left = nil; self.right = nil; }\n *     public init(_ val: Int, _ left: TreeNode?, _ right: TreeNode?) {\n *         self.val = val\n *         self.left = left\n *         self.right = right\n *     }\n * }\n */\nclass Solution {\n    func diameterOfBinaryTree(_ root: TreeNode?) -> Int {\n        \n    }\n}",
+      "rust": "// Definition for a binary tree node.\n// #[derive(Debug, PartialEq, Eq)]\n// pub struct TreeNode {\n//   pub val: i32,\n//   pub left: Option<Rc<RefCell<TreeNode>>>,\n//   pub right: Option<Rc<RefCell<TreeNode>>>,\n// }\n// \n// impl TreeNode {\n//   #[inline]\n//   pub fn new(val: i32) -> Self {\n//     TreeNode {\n//       val,\n//       left: None,\n//       right: None\n//     }\n//   }\n// }\nuse std::rc::Rc;\nuse std::cell::RefCell;\nimpl Solution {\n    pub fn diameter_of_binary_tree(root: Option<Rc<RefCell<TreeNode>>>) -> i32 {\n        \n    }\n}",
+      "ruby": "# Definition for a binary tree node.\n# class TreeNode\n#     attr_accessor :val, :left, :right\n#     def initialize(val = 0, left = nil, right = nil)\n#         @val = val\n#         @left = left\n#         @right = right\n#     end\n# end\n# @param {TreeNode} root\n# @return {Integer}\ndef diameter_of_binary_tree(root)\n    \nend",
+      "php": "/**\n * Definition for a binary tree node.\n * class TreeNode {\n *     public $val = null;\n *     public $left = null;\n *     public $right = null;\n *     function __construct($val = 0, $left = null, $right = null) {\n *         $this->val = $val;\n *         $this->left = $left;\n *         $this->right = $right;\n *     }\n * }\n */\nclass Solution {\n\n    /**\n     * @param TreeNode $root\n     * @return Integer\n     */\n    function diameterOfBinaryTree($root) {\n        \n    }\n}",
+      "scala": "/**\n * Definition for a binary tree node.\n * class TreeNode(_value: Int = 0, _left: TreeNode = null, _right: TreeNode = null) {\n *   var value: Int = _value\n *   var left: TreeNode = _left\n *   var right: TreeNode = _right\n * }\n */\nobject Solution {\n    def diameterOfBinaryTree(root: TreeNode): Int = {\n        \n    }\n}",
+      "dart": "/**\n * Definition for a binary tree node.\n * class TreeNode {\n *   int val;\n *   TreeNode? left;\n *   TreeNode? right;\n *   TreeNode([this.val = 0, this.left, this.right]);\n * }\n */\nclass Solution {\n  int diameterOfBinaryTree(TreeNode? root) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "3602a05e",
+    "javascript": "5c1e60f4",
+    "typescript": "cc864619"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": 3,
+      "stdin": "5\n1 2 3 4 5\n",
+      "stdout": "3\n",
+      "source": {
+        "path": "problems/0543.二叉树的直径.md",
+        "index": 1,
+        "input": "root = [1,2,3,4,5]",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        [
+          1,
+          2
+        ]
+      ],
+      "label": "示例 2",
+      "quick": true,
+      "expected": 1,
+      "stdin": "2\n1 2\n",
+      "stdout": "1\n",
+      "source": {
+        "path": "problems/0543.二叉树的直径.md",
+        "index": 2,
+        "input": "root = [1,2]",
+        "output": "1"
+      }
+    },
+    {
+      "input": [
+        [
+          1,
+          2,
+          null,
+          3,
+          4,
+          5,
+          null,
+          null,
+          6
+        ]
+      ],
+      "label": "仓库判题用例 2",
+      "quick": true,
+      "expected": 4,
+      "stdin": "9\n1 2 null 3 4 5 null null 6\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          1
+        ]
+      ],
+      "label": "仓库判题用例 3",
+      "quick": true,
+      "expected": 0,
+      "stdin": "1\n1\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        [
+          5,
+          3,
+          4,
+          2,
+          2,
+          null,
+          null,
+          null,
+          null,
+          8,
+          3
+        ]
+      ],
+      "label": "仓库判题用例 5",
+      "expected": 4,
+      "stdin": "11\n5 3 4 2 2 null null null null 8 3\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          7,
+          4,
+          5,
+          4,
+          null,
+          null,
+          1,
+          null,
+          4,
+          3,
+          null,
+          null,
+          null,
+          1
+        ]
+      ],
+      "label": "仓库判题用例 6",
+      "expected": 7,
+      "stdin": "14\n7 4 5 4 null null 1 null 4 3 null null null 1\n",
+      "stdout": "7\n"
+    },
+    {
+      "input": [
+        [
+          9,
+          1,
+          7,
+          null,
+          null,
+          8,
+          2,
+          null,
+          null,
+          6,
+          4,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 7",
+      "expected": 5,
+      "stdin": "12\n9 1 7 null null 8 2 null null 6 4 4\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          7,
+          8,
+          7,
+          null,
+          7,
+          null,
+          null,
+          5,
+          3,
+          9,
+          4
+        ]
+      ],
+      "label": "仓库判题用例 8",
+      "expected": 5,
+      "stdin": "11\n7 8 7 null 7 null null 5 3 9 4\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          1,
+          8,
+          null,
+          8,
+          1,
+          null,
+          null,
+          null,
+          5,
+          9,
+          3
+        ]
+      ],
+      "label": "仓库判题用例 9",
+      "expected": 4,
+      "stdin": "11\n1 8 null 8 1 null null null 5 9 3\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          2,
+          2,
+          1,
+          7,
+          4,
+          null,
+          4,
+          null,
+          null,
+          null,
+          null,
+          null,
+          1
+        ]
+      ],
+      "label": "仓库判题用例 10",
+      "expected": 5,
+      "stdin": "13\n2 2 1 7 4 null 4 null null null null null 1\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          6,
+          5,
+          1,
+          5,
+          2,
+          null,
+          null,
+          null,
+          null,
+          5,
+          4,
+          null,
+          9,
+          3
+        ]
+      ],
+      "label": "仓库判题用例 11",
+      "expected": 5,
+      "stdin": "14\n6 5 1 5 2 null null null null 5 4 null 9 3\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          2,
+          null,
+          1,
+          null,
+          6
+        ]
+      ],
+      "label": "仓库判题用例 12",
+      "expected": 2,
+      "stdin": "5\n2 null 1 null 6\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        [
+          4,
+          null,
+          7,
+          null,
+          1,
+          5,
+          9,
+          9
+        ]
+      ],
+      "label": "仓库判题用例 13",
+      "expected": 4,
+      "stdin": "8\n4 null 7 null 1 5 9 9\n",
+      "stdout": "4\n"
+    },
+    {
+      "input": [
+        [
+          7,
+          4,
+          null,
+          5,
+          3
+        ]
+      ],
+      "label": "仓库判题用例 14",
+      "expected": 2,
+      "stdin": "5\n7 4 null 5 3\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        []
+      ],
+      "label": "边界用例 1",
+      "quick": true,
+      "expected": 0,
+      "stdin": "0\n",
+      "stdout": "0\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      ],
+      "expected": 3,
+      "stdin": "5\n1 2 3 4 5\n",
+      "stdout": "3\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0543.二叉树的直径.md",
+        "index": 1,
+        "input": "root = [1,2,3,4,5]",
+        "output": "3"
+      }
+    },
+    {
+      "input": [
+        [
+          1,
+          2
+        ]
+      ],
+      "expected": 1,
+      "stdin": "2\n1 2\n",
+      "stdout": "1\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0543.二叉树的直径.md",
+        "index": 2,
+        "input": "root = [1,2]",
+        "output": "1"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定一棵二叉树，求任意两个节点之间最长简单路径经过的边数。路径不一定经过根节点，空树或只有一个节点时答案为 0。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. root：二叉树层序序列：先一行序列长度 n；n > 0 时下一行给出 n 个空格分隔的节点值或 null。按队列从左到右分配每个非空节点的左右孩子，末尾多余 null 可省略；空树写 0。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：树中节点数目在范围 [1, 10^4] 内",
+      "数据范围：-100 <= Node.val <= 100",
+      "ACM 使用上述序列格式表示链表或二叉树，程序需自行读取输入并处理这些结构。LeetCode 模式由测试环境建立节点。"
+    ],
+    "examples": [
+      {
+        "input": "5\n1 2 3 4 5\n",
+        "output": "3\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "2\n1 2\n",
+        "output": "1\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "53ffb85e"
+    ],
+    "javascript": [
+      "10738537"
+    ],
+    "typescript": [
+      "017856cb"
+    ]
+  }
+}

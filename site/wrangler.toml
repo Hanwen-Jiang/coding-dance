@@ -2,7 +2,7 @@ name = "lc-hot100"
 pages_build_output_dir = "out"
 compatibility_date = "2026-10-01"
 
-# 网站的数据优先经三级内容寻址清单读取（R2_ASSETS_BASE_URL -> Pages 静态 ASSETS /_r2/v1/... -> GitHub API 回退）。
+# 网站的数据就是这个仓库：Pages Functions 在运行时通过 GitHub API 读取。
 # 私有仓库需要令牌：wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 # 令牌只存在 Cloudflare 的加密环境变量里，不要写进这个文件或仓库里的任何地方。
 # 登录用的 GitHub App：GITHUB_APP_CLIENT_ID、GITHUB_APP_CLIENT_SECRET，会话加密密钥 SESSION_SECRET，
@@ -10,9 +10,6 @@ compatibility_date = "2026-10-01"
 [vars]
 GITHUB_REPO = "Hanwen-Jiang/leetcode"
 GITHUB_BRANCH = "main"
-# 可选：独立的 R2 公共 CDN 根路径（如 "https://assets.codingdance.cn/r2"，下挂 v1/manifest.json）。
-# 未设置时自动读取随站点一起构建发布的 Pages 静态资产 `/_r2/v1/manifest.json`，再无则回退 GitHub 仓库。
-# R2_ASSETS_BASE_URL = "https://assets.codingdance.cn/r2"
 # 0 进度的进度仓模板，用户用它在自己账号下建名为 PROGRESS_REPO 的进度仓
 TEMPLATE_REPO = "Hanwen-Jiang/hot100-progress-template"
 PROGRESS_REPO = "hot100-progress"
@@ -22,10 +19,9 @@ STAR_REPOS = "Hanwen-Jiang/agent-runtime,Hanwen-Jiang/coding-agent,Hanwen-Jiang/
 FOUNDER_CUTOFF = "2026-11-18T00:00:00+08:00"
 # GitHub App 的 slug（https://github.com/apps/<slug>），建好 App 后填上
 GITHUB_APP_SLUG = "coding-dance"
-# 网站的几个域名（都是这个 Pages 项目的自定义域名）。Phase 2 起，认证、进度、设置、题解与同步路由由 Edge BFF 代理至统一 Go 后端 cd-api：
-# 通过加密或公开变量设置 CD_API_UPSTREAM（如 "https://api.codingdance.cn"）；若开启了 Access 保护再配置 CD_API_ACCESS_ID / CD_API_ACCESS_SECRET。
-# 测试见 functions/_lib/test/bff.test.ts。
-# CD_API_UPSTREAM = "https://api.codingdance.cn"
+# 网站的几个域名（都是这个 Pages 项目的自定义域名）。第一个是「登录域名」：GitHub App 的回调地址只登记了它，
+# 登录、授权都在它上面走，再把会话同步到其余域名；退出时一起退出。换登录域名要先在 GitHub App 设置里加它的回调地址。
+# 原理和安全考虑见 functions/_lib/sso.ts，测试 functions/_lib/test/sso.test.ts
 SITE_ORIGINS = "https://leetcode.cgent.link,https://codexdance.cn,https://codingdance.cn"
 # 云端运行（Java / C++ / Go）的运行器集群：「节点编号=地址」用逗号隔开，见 tools/runner/README.md 和 functions/_lib/runner.ts。
 # 各节点共用的签名密钥 RUNNER_SECRET 是加密环境变量；运行器前面开了 Cloudflare Access 的话，服务令牌 RUNNER_ACCESS_ID / RUNNER_ACCESS_SECRET 也是。

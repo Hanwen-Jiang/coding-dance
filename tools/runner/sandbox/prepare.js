@@ -59,8 +59,8 @@ step("Go 标准库", () => {
   fs.rmSync(t, { recursive: true, force: true });
 });
 
-step("Java 调试器（JdiTrace + JdiDap）", () => {
-  sh("javac", ["-encoding", "UTF-8", "-d", path.join(PREP, "jdi"), path.join(__dirname, "trace", "JdiTrace.java"), path.join(__dirname, "trace", "JdiDap.java")]);
+step("Java 调试器", () => {
+  sh("javac", ["-encoding", "UTF-8", "-d", path.join(PREP, "jdi"), path.join(__dirname, "trace", "JdiTrace.java")]);
 });
 
 // —— 后加的九种语言 ——

@@ -1,0 +1,23 @@
+{
+ "sig": {"fn":"longestPalindrome","params":["string"],"ret":"string","cmp":"length"},
+ "fixed": 7,
+ "cases": [
+  {"in":["babad"],"out":"bab"},
+  {"in":["cbbd"],"out":"bb"},
+  {"in":["xabacabay"],"out":"abacaba"},
+  {"in":["a"],"out":"a"},
+  {"in":["ac"],"out":"a"},
+  {"in":["aaaa"],"out":"aaaa"},
+  {"in":["abcba"],"out":"abcba"},
+  {"in":["bbbba"],"out":"bbbb"},
+  {"in":["aabba"],"out":"abba"},
+  {"in":["aabbaa"],"out":"aabbaa"},
+  {"in":["babbab"],"out":"babbab"},
+  {"in":["aaabaaaa"],"out":"aaabaaa"},
+  {"in":["abcccaabb"],"out":"ccc"},
+  {"in":["abbbaaaa"],"out":"abbba"},
+  {"in":["abbaaab"],"out":"baaab"},
+  {"in":["aaaabba"],"out":"aaaa"},
+  {"in":["aaabaaa"],"out":"aaabaaa"}
+ ]
+}

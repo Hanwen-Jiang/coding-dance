@@ -15,11 +15,7 @@
     "jsx": "react-jsx",
     "incremental": true,
     "plugins": [{ "name": "next" }],
-    "paths": {
-      "@/*": ["./*"],
-      "@heroui-pro/react": ["./lib/ui/heroui-pro-shim/index.tsx"],
-      "@heroui-pro/react/code-block": ["./lib/ui/heroui-pro-shim/code-block.tsx"]
-    }
+    "paths": { "@/*": ["./*"] }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
   "exclude": ["node_modules", "functions"]

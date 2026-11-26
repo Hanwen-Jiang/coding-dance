@@ -1,0 +1,20 @@
+{
+ "sig": {"cls":"Trie","ctor":[],"methods":{"insert":[["string"],"void"],"search":[["string"],"bool"],"startsWith":[["string"],"bool"]}},
+ "fixed": 4,
+ "cases": [
+  {"in":[["Trie","insert","search","search","startsWith","insert","search"],[[],["apple"],["apple"],["app"],["app"],["app"],["app"]]],"out":[null,null,true,false,true,null,true]},
+  {"in":[["Trie","insert","insert","insert","startsWith","search","search"],[[],["car"],["cat"],["do"],["ca"],["ca"],["cat"]]],"out":[null,null,null,null,true,false,true]},
+  {"in":[["Trie","insert","search","startsWith","search"],[[],["a"],["a"],["b"],["aa"]]],"out":[null,null,true,false,false]},
+  {"in":[["Trie","search","startsWith","insert","startsWith"],[[],["z"],["z"],["zz"],["z"]]],"out":[null,false,false,null,true]},
+  {"in":[["Trie","insert","insert","startsWith","search","insert","insert","insert"],[[],["apple"],["cat"],["car"],["app"],["car"],["cat"],["ball"]]],"out":[null,null,null,false,false,null,null,null]},
+  {"in":[["Trie","insert","insert","startsWith","startsWith","insert","insert","startsWith","search"],[[],["ball"],["cat"],["ap"],["c"],["ape"],["bat"],["c"],["bat"]]],"out":[null,null,null,false,true,null,null,true,true]},
+  {"in":[["Trie","insert","insert","startsWith","search","search","search"],[[],["apple"],["cat"],["a"],["car"],["b"],["b"]]],"out":[null,null,null,true,false,false,false]},
+  {"in":[["Trie","insert","search","insert","startsWith","search","insert","insert","insert"],[[],["apple"],["ap"],["apple"],["ca"],["bat"],["ape"],["ape"],["ape"]]],"out":[null,null,false,null,false,false,null,null,null]},
+  {"in":[["Trie","insert","startsWith","insert","startsWith","startsWith","startsWith","insert","insert"],[[],["car"],["cat"],["app"],["ap"],["app"],["appl"],["ball"],["car"]]],"out":[null,null,false,null,true,true,false,null,null]},
+  {"in":[["Trie","insert","insert","insert","insert","search","startsWith"],[[],["car"],["ball"],["apple"],["car"],["ball"],["appl"]]],"out":[null,null,null,null,null,true,true]},
+  {"in":[["Trie","insert","startsWith","search","startsWith","insert","search","search","insert"],[[],["cat"],["a"],["car"],["bat"],["app"],["app"],["a"],["ball"]]],"out":[null,null,false,false,false,null,true,false,null]},
+  {"in":[["Trie","insert","insert","startsWith","startsWith","search","startsWith","startsWith"],[[],["cat"],["ball"],["appl"],["bat"],["ca"],["b"],["ba"]]],"out":[null,null,null,false,false,false,true,true]},
+  {"in":[["Trie","insert","startsWith","search","insert","insert","insert"],[[],["car"],["bat"],["b"],["ape"],["bat"],["bat"]]],"out":[null,null,false,false,null,null,null]},
+  {"in":[["Trie","insert","startsWith","insert","search","insert","startsWith","search","search"],[[],["ape"],["c"],["car"],["ba"],["ball"],["apple"],["c"],["app"]]],"out":[null,null,false,null,false,null,false,false,false]}
+ ]
+}

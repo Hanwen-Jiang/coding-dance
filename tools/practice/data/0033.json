@@ -1,0 +1,526 @@
+{
+  "id": 33,
+  "name": "搜索旋转排序数组",
+  "signature": {
+    "fn": "search",
+    "params": [
+      "int[]",
+      "int"
+    ],
+    "ret": "int"
+  },
+  "parameterNames": [
+    "nums",
+    "target"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Solution:\n    def search(self, nums: List[int], target: int) -> int:\n        ",
+      "javascript": "/**\n * @param {number[]} nums\n * @param {number} target\n * @return {number}\n */\nvar search = function(nums, target) {\n  \n};",
+      "typescript": "function search(nums: number[], target: number): number {\n  \n};",
+      "java": "class Solution {\n    public int search(int[] nums, int target) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    int search(vector<int>& nums, int target) {\n        \n    }\n};",
+      "go": "func search(nums []int, target int) int {\n    \n}",
+      "c": "int search(int* nums, int numsSize, int target) {\n    \n}",
+      "csharp": "public class Solution {\n    public int Search(int[] nums, int target) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun search(nums: IntArray, target: Int): Int {\n        \n    }\n}",
+      "swift": "class Solution {\n    func search(_ nums: [Int], _ target: Int) -> Int {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn search(nums: Vec<i32>, target: i32) -> i32 {\n        \n    }\n}",
+      "ruby": "# @param {Integer[]} nums\n# @param {Integer} target\n# @return {Integer}\ndef search(nums, target)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer[] $nums\n     * @param Integer $target\n     * @return Integer\n     */\n    function search($nums, $target) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def search(nums: Array[Int], target: Int): Int = {\n        \n    }\n}",
+      "dart": "class Solution {\n  int search(List<int> nums, int target) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "f15dc9a5",
+    "javascript": "03f1962f",
+    "typescript": "fd93a256"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          4,
+          5,
+          6,
+          7,
+          0,
+          1,
+          2
+        ],
+        0
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": 4,
+      "stdin": "7\n4 5 6 7 0 1 2\n0\n",
+      "stdout": "4\n",
+      "source": {
+        "path": "problems/0033.搜索旋转排序数组.md",
+        "index": 1,
+        "input": "nums = [4,5,6,7,0,1,2], target = 0",
+        "output": "4"
+      }
+    },
+    {
+      "input": [
+        [
+          4,
+          5,
+          6,
+          7,
+          0,
+          1,
+          2
+        ],
+        3
+      ],
+      "label": "示例 2",
+      "quick": true,
+      "expected": -1,
+      "stdin": "7\n4 5 6 7 0 1 2\n3\n",
+      "stdout": "-1\n",
+      "source": {
+        "path": "problems/0033.搜索旋转排序数组.md",
+        "index": 2,
+        "input": "nums = [4,5,6,7,0,1,2], target = 3",
+        "output": "-1"
+      }
+    },
+    {
+      "input": [
+        [
+          1
+        ],
+        0
+      ],
+      "label": "示例 3 · 边界",
+      "quick": true,
+      "expected": -1,
+      "stdin": "1\n1\n0\n",
+      "stdout": "-1\n",
+      "source": {
+        "path": "problems/0033.搜索旋转排序数组.md",
+        "index": 3,
+        "input": "nums = [1], target = 0",
+        "output": "-1"
+      }
+    },
+    {
+      "input": [
+        [
+          6,
+          7,
+          8,
+          9,
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        8
+      ],
+      "label": "仓库判题用例 3",
+      "quick": true,
+      "expected": 2,
+      "stdin": "9\n6 7 8 9 1 2 3 4 5\n8\n",
+      "stdout": "2\n"
+    },
+    {
+      "input": [
+        [
+          1
+        ],
+        1
+      ],
+      "label": "仓库判题用例 5",
+      "quick": true,
+      "expected": 0,
+      "stdin": "1\n1\n1\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        [
+          3,
+          1
+        ],
+        1
+      ],
+      "label": "仓库判题用例 6",
+      "quick": true,
+      "expected": 1,
+      "stdin": "2\n3 1\n1\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        [
+          3,
+          1
+        ],
+        3
+      ],
+      "label": "仓库判题用例 7",
+      "quick": true,
+      "expected": 0,
+      "stdin": "2\n3 1\n3\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        [
+          5,
+          1,
+          3
+        ],
+        5
+      ],
+      "label": "仓库判题用例 8",
+      "quick": true,
+      "expected": 0,
+      "stdin": "3\n5 1 3\n5\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        [
+          1,
+          3
+        ],
+        3
+      ],
+      "label": "仓库判题用例 9",
+      "quick": true,
+      "expected": 1,
+      "stdin": "2\n1 3\n3\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        [
+          2,
+          9,
+          10,
+          11,
+          13,
+          15,
+          17,
+          19,
+          0
+        ],
+        17
+      ],
+      "label": "仓库判题用例 10",
+      "expected": 6,
+      "stdin": "9\n2 9 10 11 13 15 17 19 0\n17\n",
+      "stdout": "6\n"
+    },
+    {
+      "input": [
+        [
+          17,
+          6,
+          8,
+          13,
+          15
+        ],
+        10
+      ],
+      "label": "仓库判题用例 11",
+      "expected": -1,
+      "stdin": "5\n17 6 8 13 15\n10\n",
+      "stdout": "-1\n"
+    },
+    {
+      "input": [
+        [
+          0,
+          5,
+          10,
+          12,
+          14,
+          15,
+          20
+        ],
+        0
+      ],
+      "label": "仓库判题用例 12",
+      "expected": 0,
+      "stdin": "7\n0 5 10 12 14 15 20\n0\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        [
+          7,
+          10,
+          11,
+          15,
+          18,
+          19,
+          1,
+          2,
+          5
+        ],
+        5
+      ],
+      "label": "仓库判题用例 13",
+      "expected": 8,
+      "stdin": "9\n7 10 11 15 18 19 1 2 5\n5\n",
+      "stdout": "8\n"
+    },
+    {
+      "input": [
+        [
+          0,
+          3,
+          5,
+          6,
+          9,
+          10,
+          12,
+          17,
+          20
+        ],
+        20
+      ],
+      "label": "仓库判题用例 14",
+      "expected": 8,
+      "stdin": "9\n0 3 5 6 9 10 12 17 20\n20\n",
+      "stdout": "8\n"
+    },
+    {
+      "input": [
+        [
+          5,
+          9,
+          12,
+          20,
+          0,
+          2,
+          4
+        ],
+        5
+      ],
+      "label": "仓库判题用例 15",
+      "expected": 0,
+      "stdin": "7\n5 9 12 20 0 2 4\n5\n",
+      "stdout": "0\n"
+    },
+    {
+      "input": [
+        [
+          19,
+          7,
+          9,
+          10,
+          12,
+          14,
+          15
+        ],
+        15
+      ],
+      "label": "仓库判题用例 16",
+      "expected": 6,
+      "stdin": "7\n19 7 9 10 12 14 15\n15\n",
+      "stdout": "6\n"
+    },
+    {
+      "input": [
+        [
+          3,
+          4,
+          7,
+          8,
+          10,
+          13,
+          15,
+          1,
+          2
+        ],
+        13
+      ],
+      "label": "仓库判题用例 17",
+      "expected": 5,
+      "stdin": "9\n3 4 7 8 10 13 15 1 2\n13\n",
+      "stdout": "5\n"
+    },
+    {
+      "input": [
+        [
+          20,
+          3,
+          8,
+          9,
+          10,
+          11,
+          16
+        ],
+        3
+      ],
+      "label": "仓库判题用例 18",
+      "expected": 1,
+      "stdin": "7\n20 3 8 9 10 11 16\n3\n",
+      "stdout": "1\n"
+    },
+    {
+      "input": [
+        [
+          4,
+          5,
+          7,
+          11,
+          16,
+          19,
+          1,
+          2
+        ],
+        19
+      ],
+      "label": "仓库判题用例 19",
+      "expected": 5,
+      "stdin": "8\n4 5 7 11 16 19 1 2\n19\n",
+      "stdout": "5\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          4,
+          5,
+          6,
+          7,
+          0,
+          1,
+          2
+        ],
+        0
+      ],
+      "expected": 4,
+      "stdin": "7\n4 5 6 7 0 1 2\n0\n",
+      "stdout": "4\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0033.搜索旋转排序数组.md",
+        "index": 1,
+        "input": "nums = [4,5,6,7,0,1,2], target = 0",
+        "output": "4"
+      }
+    },
+    {
+      "input": [
+        [
+          4,
+          5,
+          6,
+          7,
+          0,
+          1,
+          2
+        ],
+        3
+      ],
+      "expected": -1,
+      "stdin": "7\n4 5 6 7 0 1 2\n3\n",
+      "stdout": "-1\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0033.搜索旋转排序数组.md",
+        "index": 2,
+        "input": "nums = [4,5,6,7,0,1,2], target = 3",
+        "output": "-1"
+      }
+    },
+    {
+      "input": [
+        [
+          1
+        ],
+        0
+      ],
+      "expected": -1,
+      "stdin": "1\n1\n0\n",
+      "stdout": "-1\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0033.搜索旋转排序数组.md",
+        "index": 3,
+        "input": "nums = [1], target = 0",
+        "output": "-1"
+      }
+    }
+  ],
+  "acm": {
+    "description": "一个严格递增的整数序列经过某次循环旋转后得到 nums。给定目标值 target，输出它在 nums 中的下标；不存在时输出 -1。序列中没有重复值。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. nums：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的整数，n = 0 时没有元素行。\n2. target：整数。",
+    "output": "输出题目要求的结果。格式为：整数。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= nums.length <= 5000",
+      "数据范围：-10^4 <= nums[i] <= 10^4",
+      "数据范围：nums 中的每个值都 独一无二",
+      "数据范围：题目数据保证 nums 在预先未知的某个下标上进行了旋转",
+      "数据范围：-10^4 <= target <= 10^4"
+    ],
+    "examples": [
+      {
+        "input": "7\n4 5 6 7 0 1 2\n0\n",
+        "output": "4\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "7\n4 5 6 7 0 1 2\n3\n",
+        "output": "-1\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "1\n1\n0\n",
+        "output": "-1\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "87b31f73"
+    ],
+    "javascript": [
+      "6d5472b4"
+    ],
+    "typescript": [
+      "f716953f"
+    ]
+  }
+}

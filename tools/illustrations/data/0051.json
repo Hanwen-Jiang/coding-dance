@@ -1,0 +1,491 @@
+{
+ "id": 51,
+ "name": "N 皇后",
+ "level": "困难",
+ "topic": "回溯",
+ "h1": "N 皇后，一行放一个，三个集合查冲突",
+ "lede": "每行恰好放一个皇后，所以按行往下放，每行只需要决定放在哪一列。冲突只可能来自三个方向：同一列、同一条主对角线、同一条副对角线，各用一个集合记下来，O(1) 就能判断。",
+ "handwritten": false,
+ "hints": [
+  {
+   "t": "按行放",
+   "body": [
+    "n 个皇后放在 n 行里，不能同行，所以每行正好一个。",
+    "递归 <code>dfs(r)</code> 负责给第 <code>r</code> 行挑一列，挑好就去下一行。"
+   ]
+  },
+  {
+   "t": "怎么判断冲突",
+   "body": [
+    "同一列：列号 <code>c</code> 相同。",
+    "同一条「\\」斜线：<code>r - c</code> 相同；同一条「/」斜线：<code>r + c</code> 相同。",
+    "用三个集合 <code>cols</code>、<code>diag1</code>、<code>diag2</code> 记下已经被占的值。"
+   ]
+  },
+  {
+   "t": "放不下就回溯",
+   "body": [
+    "某一行每一列都冲突，说明上面的摆法不行，退回上一行换一列。",
+    "退回时要把这个皇后从三个集合里删掉。"
+   ]
+  }
+ ],
+ "points": [
+  {
+   "t": "对角线的编号",
+   "body": "<code>r - c</code> 的范围是 -(n-1) 到 n-1，用集合就不用管负数；用数组的话要加上 n-1 的偏移。"
+  },
+  {
+   "t": "撤销要和放置成对",
+   "body": "放的时候改了 4 个地方（queens 和 3 个集合），回溯时 4 个都要撤销。"
+  },
+  {
+   "t": "复杂度",
+   "body": "最坏是 O(n!)，实际因为剪枝远比这个少。n = 8 时有 92 种摆法。"
+  }
+ ],
+ "figures": {
+  "queens.jpg": [
+   {
+    "t": "row",
+    "label": "4 皇后的两种摆法：任意两个皇后不同行、不同列、不在同一条斜线上",
+    "sep": "",
+    "items": [
+     {
+      "t": "grid",
+      "ax": false,
+      "rows": [
+       [
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "Q",
+         "cls": "a"
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        }
+       ],
+       [
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "Q",
+         "cls": "a"
+        }
+       ],
+       [
+        {
+         "v": "Q",
+         "cls": "a"
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        }
+       ],
+       [
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "Q",
+         "cls": "a"
+        },
+        {
+         "v": "",
+         "cls": ""
+        }
+       ]
+      ]
+     },
+     {
+      "t": "grid",
+      "ax": false,
+      "rows": [
+       [
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "Q",
+         "cls": "a"
+        },
+        {
+         "v": "",
+         "cls": ""
+        }
+       ],
+       [
+        {
+         "v": "Q",
+         "cls": "a"
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        }
+       ],
+       [
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "Q",
+         "cls": "a"
+        }
+       ],
+       [
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "Q",
+         "cls": "a"
+        },
+        {
+         "v": "",
+         "cls": ""
+        },
+        {
+         "v": "",
+         "cls": ""
+        }
+       ]
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "codes": [
+  {
+   "t": "标准解法：回溯 + 三个集合",
+   "kind": null,
+   "note": null,
+   "key": "std",
+   "code": "class Solution:\n    def solveNQueens(self, n: int) -> List[List[str]]:\n        res, queens = [], []                # queens[r]：第 r 行皇后所在的列\n        cols, diag1, diag2 = set(), set(), set()\n\n        def dfs(r):\n            if r == n:\n                res.append([\".\" * c + \"Q\" + \".\" * (n - c - 1) for c in queens])\n                return\n            for c in range(n):\n                if c in cols or r - c in diag1 or r + c in diag2:\n                    continue                # 同列或同一条斜线上已经有皇后\n                queens.append(c)\n                cols.add(c); diag1.add(r - c); diag2.add(r + c)\n                dfs(r + 1)\n                queens.pop()\n                cols.remove(c); diag1.remove(r - c); diag2.remove(r + c)\n\n        dfs(0)\n        return res",
+   "marks": {
+    "init": [
+     3,
+     4,
+     19
+    ],
+    "found": [
+     7,
+     8,
+     9
+    ],
+    "place": [
+     10,
+     11,
+     12,
+     13,
+     14,
+     15
+    ],
+    "back": [
+     16,
+     17
+    ],
+    "done": [
+     20
+    ]
+   },
+   "langs": {
+    "java": {
+     "code": "class Solution {\n    private int n;\n    private int[] queens;                               // queens[r]：第 r 行皇后所在的列\n    private boolean[] cols, diag1, diag2;               // diag1 用 r - c + n 当下标，避免负数\n    private List<List<String>> res;\n\n    public List<List<String>> solveNQueens(int n) {\n        this.n = n;\n        res = new ArrayList<>();\n        queens = new int[n];\n        cols = new boolean[n]; diag1 = new boolean[2 * n]; diag2 = new boolean[2 * n];\n        dfs(0);\n        return res;\n    }\n\n    private void dfs(int r) {\n        if (r == n) {\n            List<String> board = new ArrayList<>();\n            for (int c : queens) {\n                board.add(\".\".repeat(c) + \"Q\" + \".\".repeat(n - c - 1));\n            }\n            res.add(board);\n            return;\n        }\n        for (int c = 0; c < n; c++) {\n            if (cols[c] || diag1[r - c + n] || diag2[r + c]) {\n                continue;                               // 同列或同一条斜线上已经有皇后\n            }\n            queens[r] = c;\n            cols[c] = diag1[r - c + n] = diag2[r + c] = true;\n            dfs(r + 1);\n            cols[c] = diag1[r - c + n] = diag2[r + c] = false;\n        }\n    }\n}",
+     "marks": {
+      "init": [
+       8,
+       9,
+       10,
+       11,
+       12
+      ],
+      "done": [
+       13
+      ],
+      "found": [
+       17,
+       18,
+       19,
+       20,
+       22,
+       23
+      ],
+      "place": [
+       25,
+       26,
+       27,
+       29,
+       30,
+       31
+      ],
+      "back": [
+       32
+      ]
+     }
+    },
+    "cpp": {
+     "code": "class Solution {\npublic:\n    vector<vector<string>> solveNQueens(int n) {\n        this->n = n;\n        res.clear();\n        queens.assign(n, 0);\n        cols.assign(n, false); diag1.assign(2 * n, false); diag2.assign(2 * n, false);\n        dfs(0);\n        return res;\n    }\n\nprivate:\n    int n;\n    vector<int> queens;                                 // queens[r]：第 r 行皇后所在的列\n    vector<bool> cols, diag1, diag2;                    // diag1 用 r - c + n 当下标，避免负数\n    vector<vector<string>> res;\n\n    void dfs(int r) {\n        if (r == n) {\n            vector<string> board;\n            for (int c : queens) {\n                board.push_back(string(c, '.') + \"Q\" + string(n - c - 1, '.'));\n            }\n            res.push_back(board);\n            return;\n        }\n        for (int c = 0; c < n; c++) {\n            if (cols[c] || diag1[r - c + n] || diag2[r + c]) {\n                continue;                               // 同列或同一条斜线上已经有皇后\n            }\n            queens[r] = c;\n            cols[c] = diag1[r - c + n] = diag2[r + c] = true;\n            dfs(r + 1);\n            cols[c] = diag1[r - c + n] = diag2[r + c] = false;\n        }\n    }\n};",
+     "marks": {
+      "init": [
+       4,
+       5,
+       6,
+       7,
+       8
+      ],
+      "done": [
+       9
+      ],
+      "found": [
+       19,
+       20,
+       21,
+       22,
+       24,
+       25
+      ],
+      "place": [
+       27,
+       28,
+       29,
+       31,
+       32,
+       33
+      ],
+      "back": [
+       34
+      ]
+     }
+    },
+    "go": {
+     "code": "func solveNQueens(n int) [][]string {\n\tres, queens := [][]string{}, make([]int, n)                                // queens[r]：第 r 行皇后所在的列\n\tcols, diag1, diag2 := make([]bool, n), make([]bool, 2*n), make([]bool, 2*n) // diag1 用 r - c + n 当下标\n\tvar dfs func(r int)\n\tdfs = func(r int) {\n\t\tif r == n {\n\t\t\tboard := []string{}\n\t\t\tfor _, c := range queens {\n\t\t\t\tboard = append(board, strings.Repeat(\".\", c)+\"Q\"+strings.Repeat(\".\", n-c-1))\n\t\t\t}\n\t\t\tres = append(res, board)\n\t\t\treturn\n\t\t}\n\t\tfor c := 0; c < n; c++ {\n\t\t\tif cols[c] || diag1[r-c+n] || diag2[r+c] {\n\t\t\t\tcontinue // 同列或同一条斜线上已经有皇后\n\t\t\t}\n\t\t\tqueens[r] = c\n\t\t\tcols[c], diag1[r-c+n], diag2[r+c] = true, true, true\n\t\t\tdfs(r + 1)\n\t\t\tcols[c], diag1[r-c+n], diag2[r+c] = false, false, false\n\t\t}\n\t}\n\tdfs(0)\n\treturn res\n}",
+     "marks": {
+      "init": [
+       2,
+       3,
+       24
+      ],
+      "found": [
+       6,
+       7,
+       8,
+       9,
+       11,
+       12
+      ],
+      "place": [
+       14,
+       15,
+       16,
+       18,
+       19,
+       20
+      ],
+      "back": [
+       21
+      ],
+      "done": [
+       25
+      ]
+     }
+    },
+    "javascript": {
+     "code": "var solveNQueens = function(n) {\n    const res = [], queens = [];                    // queens[r]：第 r 行皇后所在的列\n    const cols = new Set(), diag1 = new Set(), diag2 = new Set();\n    const dfs = (r) => {\n        if (r === n) {\n            res.push(queens.map((c) => \".\".repeat(c) + \"Q\" + \".\".repeat(n - c - 1)));\n            return;\n        }\n        for (let c = 0; c < n; c++) {\n            if (cols.has(c) || diag1.has(r - c) || diag2.has(r + c)) {\n                continue;                           // 同列或同一条斜线上已经有皇后\n            }\n            queens.push(c);\n            cols.add(c); diag1.add(r - c); diag2.add(r + c);\n            dfs(r + 1);\n            queens.pop();\n            cols.delete(c); diag1.delete(r - c); diag2.delete(r + c);\n        }\n    };\n    dfs(0);\n    return res;\n};",
+     "marks": {
+      "init": [
+       2,
+       3,
+       20
+      ],
+      "found": [
+       5,
+       6,
+       7
+      ],
+      "place": [
+       9,
+       10,
+       11,
+       13,
+       14,
+       15
+      ],
+      "back": [
+       16,
+       17
+      ],
+      "done": [
+       21
+      ]
+     }
+    },
+    "typescript": {
+     "code": "function solveNQueens(n: number): string[][] {\n    const res: string[][] = [], queens: number[] = [];  // queens[r]：第 r 行皇后所在的列\n    const cols = new Set<number>(), diag1 = new Set<number>(), diag2 = new Set<number>();\n    const dfs = (r: number): void => {\n        if (r === n) {\n            res.push(queens.map((c) => \".\".repeat(c) + \"Q\" + \".\".repeat(n - c - 1)));\n            return;\n        }\n        for (let c = 0; c < n; c++) {\n            if (cols.has(c) || diag1.has(r - c) || diag2.has(r + c)) {\n                continue;                           // 同列或同一条斜线上已经有皇后\n            }\n            queens.push(c);\n            cols.add(c); diag1.add(r - c); diag2.add(r + c);\n            dfs(r + 1);\n            queens.pop();\n            cols.delete(c); diag1.delete(r - c); diag2.delete(r + c);\n        }\n    };\n    dfs(0);\n    return res;\n}",
+     "marks": {
+      "init": [
+       2,
+       3,
+       20
+      ],
+      "found": [
+       5,
+       6,
+       7
+      ],
+      "place": [
+       9,
+       10,
+       11,
+       13,
+       14,
+       15
+      ],
+      "back": [
+       16,
+       17
+      ],
+      "done": [
+       21
+      ]
+     }
+    }
+   }
+  },
+  {
+   "t": "简洁写法：生成器 + 现场检查",
+   "kind": "elegant",
+   "note": "第 i 行的皇后在列 q。新皇后放在第 r 行第 c 列，不冲突的条件是列不同，且列差不等于行差。",
+   "code": "class Solution:\n    def solveNQueens(self, n: int) -> List[List[str]]:\n        def dfs(qs):\n            r = len(qs)\n            if r == n:\n                yield [\".\" * c + \"Q\" + \".\" * (n - c - 1) for c in qs]\n                return\n            for c in range(n):\n                if all(c != q and abs(c - q) != r - i for i, q in enumerate(qs)):\n                    yield from dfs(qs + [c])\n        return list(dfs([]))"
+  }
+ ],
+ "demo": {
+  "title": "逐步演示",
+  "legend": [
+   [
+    "a",
+    "刚放的皇后"
+   ],
+   [
+    "c",
+    "已经放好的皇后"
+   ],
+   [
+    "d",
+    "被攻击到的格子"
+   ],
+   [
+    "w",
+    "回溯拿掉"
+   ],
+   [
+    "k",
+    "找到的一种摆法"
+   ]
+  ],
+  "presets": [
+   {
+    "label": "n = 4",
+    "args": {
+     "n": 4
+    },
+    "note": "n = 4"
+   },
+   {
+    "label": "n = 5",
+    "args": {
+     "n": 5
+    },
+    "note": "n = 5"
+   }
+  ],
+  "build": "build(a, snap) {\n    const n = a.n, q = [], res = [];\n    const hit = (r, c) => q.some((x, i) => x === c || Math.abs(x - c) === Math.abs(r - i));\n    const view = (opts = {}) => {\n      const done = !!opts.done, placed = opts.placed || null, removed = opts.removed || null;\n      return [{\n        t: \"grid\",\n        label: \"棋盘\",\n        rows: Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => {\n          if (q[r] === c) {\n            const isPlaced = placed && placed[0] === r && placed[1] === c;\n            return {\n              v: \"Q\",\n              ...(isPlaced ? { prev: \"\" } : {}),\n              cls: done ? \"k\" : isPlaced ? \"a\" : \"c\",\n            };\n          }\n          if (removed && removed[0] === r && removed[1] === c) {\n            return { v: \"\", prev: \"Q\", cls: \"w\" };\n          }\n          return { v: \"\", cls: !done && r >= q.length && hit(r, c) ? \"d\" : \"\" };\n        })),\n      }];\n    };\n    let prevPlaced = `0 / ${n}`, prevRow = 0, prevFound = 0;\n    const emit = (phase, msg, views, curRow, o = {}) => {\n      const curPlaced = `${q.length} / ${n}`, curFound = res.length;\n      const facts = o.facts || [\n        curPlaced !== prevPlaced ? [\"已放\", curPlaced, prevPlaced] : [\"已放\", curPlaced],\n        curRow !== prevRow ? [\"当前行\", curRow, prevRow] : [\"当前行\", curRow],\n        curFound !== prevFound ? [\"找到\", curFound, prevFound] : [\"找到\", curFound],\n      ];\n      prevPlaced = curPlaced; prevRow = curRow; prevFound = curFound;\n      snap(phase, msg, views, { ...o, facts });\n    };\n    emit(\"开始\", `在 ${n}×${n} 的棋盘上放 ${n} 个皇后。从第 0 行开始，一行放一个。`, view(), 0, {\n      at: \"init\",\n      facts: [[\"已放\", `0 / ${n}`], [\"当前行\", 0], [\"找到\", 0]],\n    });\n    const dfs = (r) => {\n      if (r === n) {\n        res.push(q.map((c) => \".\".repeat(c) + \"Q\" + \".\".repeat(n - c - 1)));\n        emit(\"找到\", `${n} 行都放好了，记下这种摆法（第 ${res.length} 种）。`, view({ done: true }), n, { at: \"found\", kind: \"ok\" });\n        return null;\n      }\n      let any = false;\n      for (let c = 0; c < n; c++) {\n        if (hit(r, c)) continue;\n        any = true; q.push(c);\n        emit(`第 ${r} 行`, `第 ${r} 行第 ${c} 列没有被攻击，放一个皇后。灰色是它和上面的皇后能攻击到的格子。`, view({ placed: [r, c] }), r, { at: \"place\" });\n        const childAny = dfs(r + 1);\n        const removedC = q.pop();\n        if (childAny !== null) {\n          emit(\"回溯\", `第 ${r + 1} 行${childAny ? \"剩下的列都试过了\" : \"每一列都被攻击了，放不下\"}。拿掉第 ${r} 行的皇后，换下一列试。`, view({ removed: [r, removedC] }), r, { at: \"back\", kind: \"warn\" });\n        }\n      }\n      return any;\n    };\n    dfs(0);\n    snap(\"完成\", `所有摆法都试过了，一共 <b>${res.length}</b> 种。`, view(), {\n      at: \"done\",\n      kind: \"ok\",\n      ans: res.map((x) => x.slice()),\n      facts: [[\"已放\", `0 / ${n}`], [\"找到\", res.length]],\n    });\n  }",
+  "methods": [
+   {
+    "t": "标准解法",
+    "note": null,
+    "legend": [
+     [
+      "a",
+      "刚放的皇后"
+     ],
+     [
+      "c",
+      "已经放好的皇后"
+     ],
+     [
+      "d",
+      "被攻击到的格子"
+     ],
+     [
+      "w",
+      "回溯拿掉"
+     ],
+     [
+      "k",
+      "找到的一种摆法"
+     ]
+    ],
+    "code": "std",
+    "build": "build(a, snap) {\n    const n = a.n, q = [], res = [];\n    const hit = (r, c) => q.some((x, i) => x === c || Math.abs(x - c) === Math.abs(r - i));\n    const view = (opts = {}) => {\n      const done = !!opts.done, placed = opts.placed || null, removed = opts.removed || null;\n      return [{\n        t: \"grid\",\n        label: \"棋盘\",\n        rows: Array.from({ length: n }, (_, r) => Array.from({ length: n }, (_, c) => {\n          if (q[r] === c) {\n            const isPlaced = placed && placed[0] === r && placed[1] === c;\n            return {\n              v: \"Q\",\n              ...(isPlaced ? { prev: \"\" } : {}),\n              cls: done ? \"k\" : isPlaced ? \"a\" : \"c\",\n            };\n          }\n          if (removed && removed[0] === r && removed[1] === c) {\n            return { v: \"\", prev: \"Q\", cls: \"w\" };\n          }\n          return { v: \"\", cls: !done && r >= q.length && hit(r, c) ? \"d\" : \"\" };\n        })),\n      }];\n    };\n    let prevPlaced = `0 / ${n}`, prevRow = 0, prevFound = 0;\n    const emit = (phase, msg, views, curRow, o = {}) => {\n      const curPlaced = `${q.length} / ${n}`, curFound = res.length;\n      const facts = o.facts || [\n        curPlaced !== prevPlaced ? [\"已放\", curPlaced, prevPlaced] : [\"已放\", curPlaced],\n        curRow !== prevRow ? [\"当前行\", curRow, prevRow] : [\"当前行\", curRow],\n        curFound !== prevFound ? [\"找到\", curFound, prevFound] : [\"找到\", curFound],\n      ];\n      prevPlaced = curPlaced; prevRow = curRow; prevFound = curFound;\n      snap(phase, msg, views, { ...o, facts });\n    };\n    emit(\"开始\", `在 ${n}×${n} 的棋盘上放 ${n} 个皇后。从第 0 行开始，一行放一个。`, view(), 0, {\n      at: \"init\",\n      facts: [[\"已放\", `0 / ${n}`], [\"当前行\", 0], [\"找到\", 0]],\n    });\n    const dfs = (r) => {\n      if (r === n) {\n        res.push(q.map((c) => \".\".repeat(c) + \"Q\" + \".\".repeat(n - c - 1)));\n        emit(\"找到\", `${n} 行都放好了，记下这种摆法（第 ${res.length} 种）。`, view({ done: true }), n, { at: \"found\", kind: \"ok\" });\n        return null;\n      }\n      let any = false;\n      for (let c = 0; c < n; c++) {\n        if (hit(r, c)) continue;\n        any = true; q.push(c);\n        emit(`第 ${r} 行`, `第 ${r} 行第 ${c} 列没有被攻击，放一个皇后。灰色是它和上面的皇后能攻击到的格子。`, view({ placed: [r, c] }), r, { at: \"place\" });\n        const childAny = dfs(r + 1);\n        const removedC = q.pop();\n        if (childAny !== null) {\n          emit(\"回溯\", `第 ${r + 1} 行${childAny ? \"剩下的列都试过了\" : \"每一列都被攻击了，放不下\"}。拿掉第 ${r} 行的皇后，换下一列试。`, view({ removed: [r, removedC] }), r, { at: \"back\", kind: \"warn\" });\n        }\n      }\n      return any;\n    };\n    dfs(0);\n    snap(\"完成\", `所有摆法都试过了，一共 <b>${res.length}</b> 种。`, view(), {\n      at: \"done\",\n      kind: \"ok\",\n      ans: res.map((x) => x.slice()),\n      facts: [[\"已放\", `0 / ${n}`], [\"找到\", res.length]],\n    });\n  }"
+   }
+  ],
+  "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n    const n = R.int(4, 5);\n    return { args: { n }, note: `n = ${n}`, py: `Solution().solveNQueens(${n})`, cmp: \"unordered\" };\n  })(R); return { args: r.args, note: r.note }; }"
+ }
+}

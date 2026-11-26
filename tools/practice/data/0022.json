@@ -1,0 +1,220 @@
+{
+  "id": 22,
+  "name": "括号生成",
+  "signature": {
+    "fn": "generateParenthesis",
+    "params": [
+      "int"
+    ],
+    "ret": "List<string>",
+    "cmp": "unordered"
+  },
+  "parameterNames": [
+    "n"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Solution:\n    def generateParenthesis(self, n: int) -> List[str]:\n        ",
+      "javascript": "/**\n * @param {number} n\n * @return {string[]}\n */\nvar generateParenthesis = function(n) {\n  \n};",
+      "typescript": "function generateParenthesis(n: number): string[] {\n  \n};",
+      "java": "class Solution {\n    public List<String> generateParenthesis(int n) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    vector<string> generateParenthesis(int n) {\n        \n    }\n};",
+      "go": "func generateParenthesis(n int) []string {\n    \n}",
+      "c": "/**\n * Note: The returned array must be malloced, assume caller calls free().\n */\nchar** generateParenthesis(int n, int* returnSize) {\n    \n}",
+      "csharp": "public class Solution {\n    public IList<string> GenerateParenthesis(int n) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun generateParenthesis(n: Int): List<String> {\n        \n    }\n}",
+      "swift": "class Solution {\n    func generateParenthesis(_ n: Int) -> [String] {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn generate_parenthesis(n: i32) -> Vec<String> {\n        \n    }\n}",
+      "ruby": "# @param {Integer} n\n# @return {String[]}\ndef generate_parenthesis(n)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param Integer $n\n     * @return String[]\n     */\n    function generateParenthesis($n) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def generateParenthesis(n: Int): List[String] = {\n        \n    }\n}",
+      "dart": "class Solution {\n  List<String> generateParenthesis(int n) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "aeba4471",
+    "javascript": "8d6365f3",
+    "typescript": "bfdb40a4"
+  },
+  "cases": [
+    {
+      "input": [
+        3
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": [
+        "((()))",
+        "(()())",
+        "(())()",
+        "()(())",
+        "()()()"
+      ],
+      "stdin": "3\n",
+      "stdout": "5\n((()))\n(()())\n(())()\n()(())\n()()()\n",
+      "source": {
+        "path": "problems/0022.括号生成.md",
+        "index": 1,
+        "input": "n = 3",
+        "output": "[\"((()))\",\"(()())\",\"(())()\",\"()(())\",\"()()()\"]"
+      }
+    },
+    {
+      "input": [
+        1
+      ],
+      "label": "示例 2 · 边界",
+      "quick": true,
+      "expected": [
+        "()"
+      ],
+      "stdin": "1\n",
+      "stdout": "1\n()\n",
+      "source": {
+        "path": "problems/0022.括号生成.md",
+        "index": 2,
+        "input": "n = 1",
+        "output": "[\"()\"]"
+      }
+    },
+    {
+      "input": [
+        2
+      ],
+      "label": "仓库判题用例 1",
+      "quick": true,
+      "expected": [
+        "(())",
+        "()()"
+      ],
+      "stdin": "2\n",
+      "stdout": "2\n(())\n()()\n"
+    },
+    {
+      "input": [
+        4
+      ],
+      "label": "仓库判题用例 4",
+      "quick": true,
+      "expected": [
+        "(((())))",
+        "((()()))",
+        "((())())",
+        "((()))()",
+        "(()(()))",
+        "(()()())",
+        "(()())()",
+        "(())(())",
+        "(())()()",
+        "()((()))",
+        "()(()())",
+        "()(())()",
+        "()()(())",
+        "()()()()"
+      ],
+      "stdin": "4\n",
+      "stdout": "14\n(((())))\n((()()))\n((())())\n((()))()\n(()(()))\n(()()())\n(()())()\n(())(())\n(())()()\n()((()))\n()(()())\n()(())()\n()()(())\n()()()()\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        3
+      ],
+      "expected": [
+        "((()))",
+        "(()())",
+        "(())()",
+        "()(())",
+        "()()()"
+      ],
+      "stdin": "3\n",
+      "stdout": "5\n((()))\n(()())\n(())()\n()(())\n()()()\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0022.括号生成.md",
+        "index": 1,
+        "input": "n = 3",
+        "output": "[\"((()))\",\"(()())\",\"(())()\",\"()(())\",\"()()()\"]"
+      }
+    },
+    {
+      "input": [
+        1
+      ],
+      "expected": [
+        "()"
+      ],
+      "stdin": "1\n",
+      "stdout": "1\n()\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0022.括号生成.md",
+        "index": 2,
+        "input": "n = 1",
+        "output": "[\"()\"]"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定括号对数 n，输出由恰好 n 个左括号和 n 个右括号构成的全部合法括号串。合法串的任意前缀中，左括号数量都不少于右括号数量；结果不重复，顺序不限。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. n：整数。",
+    "output": "输出题目要求的结果。格式为：先一行字符串数量 n，之后 n 行每行一个字符串，不加引号；空字符串占一空行，n = 0 时没有字符串行。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：1 <= n <= 8",
+      "输出集合的排列顺序不限，不得遗漏或重复答案。"
+    ],
+    "examples": [
+      {
+        "input": "3\n",
+        "output": "5\n((()))\n(()())\n(())()\n()(())\n()()()\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "1\n",
+        "output": "1\n()\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "1c2df0ab"
+    ],
+    "javascript": [
+      "d35eca6d"
+    ],
+    "typescript": [
+      "7f8c68d7"
+    ]
+  }
+}

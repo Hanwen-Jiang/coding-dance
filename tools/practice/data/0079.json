@@ -1,0 +1,732 @@
+{
+  "id": 79,
+  "name": "单词搜索",
+  "signature": {
+    "fn": "exist",
+    "params": [
+      "char[][]",
+      "string"
+    ],
+    "ret": "bool"
+  },
+  "parameterNames": [
+    "board",
+    "word"
+  ],
+  "starters": {
+    "leetcode": {
+      "python": "class Solution:\n    def exist(self, board: List[List[str]], word: str) -> bool:\n        ",
+      "javascript": "/**\n * @param {character[][]} board\n * @param {string} word\n * @return {boolean}\n */\nvar exist = function(board, word) {\n  \n};",
+      "typescript": "function exist(board: string[][], word: string): boolean {\n  \n};",
+      "java": "class Solution {\n    public boolean exist(char[][] board, String word) {\n        \n    }\n}",
+      "cpp": "class Solution {\npublic:\n    bool exist(vector<vector<char>>& board, string word) {\n        \n    }\n};",
+      "go": "func exist(board [][]byte, word string) bool {\n    \n}",
+      "c": "bool exist(char** board, int boardSize, int* boardColSize, char* word) {\n    \n}",
+      "csharp": "public class Solution {\n    public bool Exist(char[][] board, string word) {\n        \n    }\n}",
+      "kotlin": "class Solution {\n    fun exist(board: Array<CharArray>, word: String): Boolean {\n        \n    }\n}",
+      "swift": "class Solution {\n    func exist(_ board: [[Character]], _ word: String) -> Bool {\n        \n    }\n}",
+      "rust": "impl Solution {\n    pub fn exist(board: Vec<Vec<char>>, word: String) -> bool {\n        \n    }\n}",
+      "ruby": "# @param {Character[][]} board\n# @param {String} word\n# @return {Boolean}\ndef exist(board, word)\n    \nend",
+      "php": "class Solution {\n\n    /**\n     * @param String[][] $board\n     * @param String $word\n     * @return Boolean\n     */\n    function exist($board, $word) {\n        \n    }\n}",
+      "scala": "object Solution {\n    def exist(board: Array[Array[Char]], word: String): Boolean = {\n        \n    }\n}",
+      "dart": "class Solution {\n  bool exist(List<List<String>> board, String word) {\n    \n  }\n}"
+    },
+    "acm": {
+      "python": "",
+      "javascript": "",
+      "typescript": "",
+      "java": "",
+      "cpp": "",
+      "go": "",
+      "c": "",
+      "csharp": "",
+      "kotlin": "",
+      "swift": "",
+      "rust": "",
+      "ruby": "",
+      "php": "",
+      "scala": "",
+      "dart": ""
+    }
+  },
+  "legacyAcmStarterHashes": {
+    "python": "39f39467",
+    "javascript": "bbf75759",
+    "typescript": "93b7e5d2"
+  },
+  "cases": [
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B",
+            "C",
+            "E"
+          ],
+          [
+            "S",
+            "F",
+            "C",
+            "S"
+          ],
+          [
+            "A",
+            "D",
+            "E",
+            "E"
+          ]
+        ],
+        "ABCCED"
+      ],
+      "label": "示例 1",
+      "quick": true,
+      "expected": true,
+      "stdin": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nABCCED\n",
+      "stdout": "true\n",
+      "source": {
+        "path": "problems/0079.单词搜索.md",
+        "index": 1,
+        "input": "board = [['A','B','C','E'],['S','F','C','S'],['A','D','E','E']], word = \"ABCCED\"",
+        "output": "true"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B",
+            "C",
+            "E"
+          ],
+          [
+            "S",
+            "F",
+            "C",
+            "S"
+          ],
+          [
+            "A",
+            "D",
+            "E",
+            "E"
+          ]
+        ],
+        "SEE"
+      ],
+      "label": "示例 2",
+      "quick": true,
+      "expected": true,
+      "stdin": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nSEE\n",
+      "stdout": "true\n",
+      "source": {
+        "path": "problems/0079.单词搜索.md",
+        "index": 2,
+        "input": "board = [['A','B','C','E'],['S','F','C','S'],['A','D','E','E']], word = \"SEE\"",
+        "output": "true"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B",
+            "C",
+            "E"
+          ],
+          [
+            "S",
+            "F",
+            "C",
+            "S"
+          ],
+          [
+            "A",
+            "D",
+            "E",
+            "E"
+          ]
+        ],
+        "ABCB"
+      ],
+      "label": "示例 3",
+      "quick": true,
+      "expected": false,
+      "stdin": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nABCB\n",
+      "stdout": "false\n",
+      "source": {
+        "path": "problems/0079.单词搜索.md",
+        "index": 3,
+        "input": "board = [['A','B','C','E'],['S','F','C','S'],['A','D','E','E']], word = \"ABCB\"",
+        "output": "false"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            "a"
+          ]
+        ],
+        "a"
+      ],
+      "label": "仓库判题用例 3",
+      "quick": true,
+      "expected": true,
+      "stdin": "1\n1\na\na\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "a",
+            "a"
+          ]
+        ],
+        "aaa"
+      ],
+      "label": "仓库判题用例 4",
+      "quick": true,
+      "expected": false,
+      "stdin": "1\n2\na a\naaa\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B"
+          ],
+          [
+            "C",
+            "D"
+          ]
+        ],
+        "ABDC"
+      ],
+      "label": "仓库判题用例 5",
+      "quick": true,
+      "expected": true,
+      "stdin": "2\n2\nA B\n2\nC D\nABDC\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B"
+          ],
+          [
+            "C",
+            "D"
+          ]
+        ],
+        "ABCD"
+      ],
+      "label": "仓库判题用例 6",
+      "quick": true,
+      "expected": false,
+      "stdin": "2\n2\nA B\n2\nC D\nABCD\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B",
+            "C",
+            "E"
+          ],
+          [
+            "S",
+            "F",
+            "E",
+            "S"
+          ],
+          [
+            "A",
+            "D",
+            "E",
+            "E"
+          ]
+        ],
+        "ABCESEEEFS"
+      ],
+      "label": "仓库判题用例 7",
+      "quick": true,
+      "expected": true,
+      "stdin": "3\n4\nA B C E\n4\nS F E S\n4\nA D E E\nABCESEEEFS\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "D",
+            "B",
+            "E",
+            "B"
+          ],
+          [
+            "D",
+            "D",
+            "C",
+            "B"
+          ],
+          [
+            "C",
+            "B",
+            "B",
+            "D"
+          ]
+        ],
+        "EDBA"
+      ],
+      "label": "仓库判题用例 8",
+      "expected": false,
+      "stdin": "3\n4\nD B E B\n4\nD D C B\n4\nC B B D\nEDBA\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "A",
+            "A",
+            "E"
+          ],
+          [
+            "C",
+            "D",
+            "C",
+            "A"
+          ],
+          [
+            "B",
+            "B",
+            "D",
+            "A"
+          ]
+        ],
+        "DDBC"
+      ],
+      "label": "仓库判题用例 9",
+      "expected": false,
+      "stdin": "3\n4\nA A A E\n4\nC D C A\n4\nB B D A\nDDBC\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "C",
+            "A",
+            "E",
+            "C"
+          ],
+          [
+            "E",
+            "B",
+            "D",
+            "D"
+          ],
+          [
+            "C",
+            "A",
+            "E",
+            "E"
+          ]
+        ],
+        "DEAB"
+      ],
+      "label": "仓库判题用例 10",
+      "expected": true,
+      "stdin": "3\n4\nC A E C\n4\nE B D D\n4\nC A E E\nDEAB\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "C",
+            "D",
+            "C",
+            "A"
+          ],
+          [
+            "E",
+            "C",
+            "E",
+            "A"
+          ],
+          [
+            "C",
+            "B",
+            "D",
+            "C"
+          ]
+        ],
+        "BBC"
+      ],
+      "label": "仓库判题用例 11",
+      "expected": false,
+      "stdin": "3\n4\nC D C A\n4\nE C E A\n4\nC B D C\nBBC\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "D",
+            "E",
+            "E",
+            "E"
+          ],
+          [
+            "B",
+            "D",
+            "C",
+            "A"
+          ],
+          [
+            "C",
+            "A",
+            "B",
+            "A"
+          ]
+        ],
+        "EDBC"
+      ],
+      "label": "仓库判题用例 12",
+      "expected": true,
+      "stdin": "3\n4\nD E E E\n4\nB D C A\n4\nC A B A\nEDBC\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "D",
+            "B",
+            "A"
+          ],
+          [
+            "E",
+            "E",
+            "A",
+            "A"
+          ],
+          [
+            "D",
+            "A",
+            "C",
+            "A"
+          ]
+        ],
+        "EADB"
+      ],
+      "label": "仓库判题用例 13",
+      "expected": true,
+      "stdin": "3\n4\nA D B A\n4\nE E A A\n4\nD A C A\nEADB\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "C",
+            "C",
+            "E",
+            "B"
+          ],
+          [
+            "A",
+            "E",
+            "D",
+            "E"
+          ],
+          [
+            "D",
+            "A",
+            "E",
+            "B"
+          ]
+        ],
+        "BEA"
+      ],
+      "label": "仓库判题用例 14",
+      "expected": true,
+      "stdin": "3\n4\nC C E B\n4\nA E D E\n4\nD A E B\nBEA\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "B",
+            "C",
+            "A",
+            "A"
+          ],
+          [
+            "E",
+            "E",
+            "B",
+            "A"
+          ],
+          [
+            "B",
+            "E",
+            "C",
+            "E"
+          ]
+        ],
+        "ECEEE"
+      ],
+      "label": "仓库判题用例 15",
+      "expected": true,
+      "stdin": "3\n4\nB C A A\n4\nE E B A\n4\nB E C E\nECEEE\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "B",
+            "D",
+            "A",
+            "A"
+          ],
+          [
+            "D",
+            "A",
+            "B",
+            "B"
+          ],
+          [
+            "D",
+            "B",
+            "E",
+            "B"
+          ]
+        ],
+        "DBDAB"
+      ],
+      "label": "仓库判题用例 16",
+      "expected": true,
+      "stdin": "3\n4\nB D A A\n4\nD A B B\n4\nD B E B\nDBDAB\n",
+      "stdout": "true\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "E",
+            "D",
+            "C"
+          ],
+          [
+            "A",
+            "E",
+            "C",
+            "E"
+          ],
+          [
+            "E",
+            "B",
+            "A",
+            "E"
+          ]
+        ],
+        "CAAD"
+      ],
+      "label": "仓库判题用例 17",
+      "expected": false,
+      "stdin": "3\n4\nA E D C\n4\nA E C E\n4\nE B A E\nCAAD\n",
+      "stdout": "false\n"
+    },
+    {
+      "input": [
+        [
+          [
+            "A"
+          ]
+        ],
+        "A"
+      ],
+      "label": "边界用例 1",
+      "quick": true,
+      "expected": true,
+      "stdin": "1\n1\nA\nA\n",
+      "stdout": "true\n"
+    }
+  ],
+  "examples": [
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B",
+            "C",
+            "E"
+          ],
+          [
+            "S",
+            "F",
+            "C",
+            "S"
+          ],
+          [
+            "A",
+            "D",
+            "E",
+            "E"
+          ]
+        ],
+        "ABCCED"
+      ],
+      "expected": true,
+      "stdin": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nABCCED\n",
+      "stdout": "true\n",
+      "label": "示例 1",
+      "source": {
+        "path": "problems/0079.单词搜索.md",
+        "index": 1,
+        "input": "board = [['A','B','C','E'],['S','F','C','S'],['A','D','E','E']], word = \"ABCCED\"",
+        "output": "true"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B",
+            "C",
+            "E"
+          ],
+          [
+            "S",
+            "F",
+            "C",
+            "S"
+          ],
+          [
+            "A",
+            "D",
+            "E",
+            "E"
+          ]
+        ],
+        "SEE"
+      ],
+      "expected": true,
+      "stdin": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nSEE\n",
+      "stdout": "true\n",
+      "label": "示例 2",
+      "source": {
+        "path": "problems/0079.单词搜索.md",
+        "index": 2,
+        "input": "board = [['A','B','C','E'],['S','F','C','S'],['A','D','E','E']], word = \"SEE\"",
+        "output": "true"
+      }
+    },
+    {
+      "input": [
+        [
+          [
+            "A",
+            "B",
+            "C",
+            "E"
+          ],
+          [
+            "S",
+            "F",
+            "C",
+            "S"
+          ],
+          [
+            "A",
+            "D",
+            "E",
+            "E"
+          ]
+        ],
+        "ABCB"
+      ],
+      "expected": false,
+      "stdin": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nABCB\n",
+      "stdout": "false\n",
+      "label": "示例 3",
+      "source": {
+        "path": "problems/0079.单词搜索.md",
+        "index": 3,
+        "input": "board = [['A','B','C','E'],['S','F','C','S'],['A','D','E','E']], word = \"ABCB\"",
+        "output": "false"
+      }
+    }
+  ],
+  "acm": {
+    "description": "给定字符网格和单词 word，判断是否能沿上下左右相邻格子依次拼出 word。一次路径不能重复使用同一个格子，存在这样的路径输出 true，否则输出 false。",
+    "input": "依次读取以下参数，各参数从新的一行开始：\n1. board：先一行外层序列的长度 r；之后依次给出 r 个子序列，每个子序列按以下规则独立编码：先一行元素个数 n；n > 0 时下一行给出 n 个空格分隔的字符，n = 0 时没有元素行。\n2. word：字符串（占完整一行，不加引号，空串用空行）。",
+    "output": "输出题目要求的结果。格式为：布尔值 true 或 false。",
+    "notes": [
+      "每次运行只处理一组数据，不需要读取测试组数 T。",
+      "数据范围：m == board.length",
+      "数据范围：n = board[i].length",
+      "数据范围：1 <= m, n <= 6",
+      "数据范围：1 <= word.length <= 15",
+      "数据范围：board 和 word 仅由大小写英文字母组成"
+    ],
+    "examples": [
+      {
+        "input": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nABCCED\n",
+        "output": "true\n",
+        "explanation": "示例 1：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nSEE\n",
+        "output": "true\n",
+        "explanation": "示例 2：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      },
+      {
+        "input": "3\n4\nA B C E\n4\nS F C S\n4\nA D E E\nABCB\n",
+        "output": "false\n",
+        "explanation": "示例 3：由原题对应示例改写，所有序列长度和节点下标均按上述格式编码。"
+      }
+    ]
+  },
+  "previousAcmStarterHashes": {
+    "python": [
+      "4258d72a"
+    ],
+    "javascript": [
+      "d05a0ff6"
+    ],
+    "typescript": [
+      "5def7cc9"
+    ]
+  },
+  "previousLeetcodeStarterHashes": {
+    "python": [
+      "43958e3d"
+    ],
+    "javascript": [
+      "f2f78db5"
+    ],
+    "typescript": [
+      "ff8594db"
+    ]
+  }
+}

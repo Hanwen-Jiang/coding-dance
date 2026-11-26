@@ -1,0 +1,24 @@
+{
+ "sig": {"fn":"lengthOfLongestSubstring","params":["string"],"ret":"int"},
+ "fixed": 8,
+ "cases": [
+  {"in":["abcabcbb"],"out":3},
+  {"in":["pwwkew"],"out":3},
+  {"in":["abba"],"out":2},
+  {"in":[""],"out":0},
+  {"in":["bbbbb"],"out":1},
+  {"in":["dvdf"],"out":3},
+  {"in":[" "],"out":1},
+  {"in":["tmmzuxt"],"out":5},
+  {"in":["adacdbcbee"],"out":4},
+  {"in":["bbacaabbcac"],"out":3},
+  {"in":["ccbbbaaacba"],"out":3},
+  {"in":["cbbebcec"],"out":3},
+  {"in":["dacddaddbc"],"out":3},
+  {"in":["aaaabacbb"],"out":3},
+  {"in":["accbaabb"],"out":3},
+  {"in":["aaeeeabaea"],"out":3},
+  {"in":["ddcdbcaab"],"out":4},
+  {"in":["babedebada"],"out":4}
+ ]
+}

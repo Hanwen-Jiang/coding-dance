@@ -15,15 +15,3 @@ __pycache__/
 
 # 编辑器
 .vscode/
-
-# Go 二进制与构建产物目录
-/bin/
-/dist/
-/cd-runner
-/cd-api
-/cd-build
-/contracts/generated/
-/tools/illustrations/data/
-/tools/illustrations/cases/
-/tools/practice/data/
-/site/public/_r2/

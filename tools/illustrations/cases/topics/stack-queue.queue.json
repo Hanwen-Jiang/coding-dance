@@ -1,0 +1,19 @@
+{
+ "sig": {"cls":"MyQueue","ctor":[],"methods":{"push":[["int"],"void"],"pop":[[],"int"],"peek":[[],"int"],"empty":[[],"bool"]}},
+ "fixed": 3,
+ "cases": [
+  {"in":[["MyQueue","push","push","push","pop","push","pop","peek","pop","empty"],[[],[1],[2],[3],[],[4],[],[],[],[]]],"out":[null,null,null,null,1,null,2,3,3,false]},
+  {"in":[["MyQueue","push","push","peek","pop","empty"],[[],[1],[2],[],[],[]]],"out":[null,null,null,1,1,false]},
+  {"in":[["MyQueue","empty"],[[],[]]],"out":[null,true]},
+  {"in":[["MyQueue","push","empty","pop","push","peek","push"],[[],[1],[],[],[2],[],[3]]],"out":[null,null,false,1,null,2,null]},
+  {"in":[["MyQueue","push","peek","push","empty","push","peek","push","empty","peek"],[[],[1],[],[2],[],[3],[],[4],[],[]]],"out":[null,null,1,null,false,null,1,null,false,1]},
+  {"in":[["MyQueue","push","peek","push","push","push","push","empty","pop"],[[],[1],[],[2],[3],[4],[5],[],[]]],"out":[null,null,1,null,null,null,null,false,1]},
+  {"in":[["MyQueue","push","peek","push","push","peek","push","empty","pop","push"],[[],[1],[],[2],[3],[],[4],[],[],[5]]],"out":[null,null,1,null,null,1,null,false,1,null]},
+  {"in":[["MyQueue","push","pop","push","pop","push","push"],[[],[1],[],[2],[],[3],[4]]],"out":[null,null,1,null,2,null,null]},
+  {"in":[["MyQueue","push","peek","peek","pop","push","pop"],[[],[1],[],[],[],[2],[]]],"out":[null,null,1,1,1,null,2]},
+  {"in":[["MyQueue","push","peek","push","pop","push","push","push","pop"],[[],[1],[],[2],[],[3],[4],[5],[]]],"out":[null,null,1,null,1,null,null,null,2]},
+  {"in":[["MyQueue","push","peek","push","pop","push","push","push","push"],[[],[1],[],[2],[],[3],[4],[5],[6]]],"out":[null,null,1,null,1,null,null,null,null]},
+  {"in":[["MyQueue","push","peek","push","pop","pop","push","push"],[[],[1],[],[2],[],[],[3],[4]]],"out":[null,null,1,null,1,2,null,null]},
+  {"in":[["MyQueue","push","empty","push","push","empty","push","pop"],[[],[1],[],[2],[3],[],[4],[]]],"out":[null,null,false,null,null,false,null,1]}
+ ]
+}

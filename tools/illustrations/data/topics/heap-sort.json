@@ -1,0 +1,426 @@
+{
+ "slug": "heap-sort",
+ "name": "堆排序与 Top K",
+ "kind": "algo",
+ "order": 4,
+ "lede": "把数组原地调成最大堆，堆顶就是最大的数；把它和末尾交换，末尾就排好了一个，剩下的再调成堆。重复 n 次就排好了，不用额外空间。Top K 问题反过来用堆：只留一个大小为 k 的最小堆，堆顶就是第 k 大。",
+ "related": [
+  215,
+  347,
+  295,
+  23
+ ],
+ "sections": [
+  {
+   "key": "sort",
+   "t": "堆排序",
+   "body": [
+    "第一步<b>建堆</b>：把数组看成完全二叉树（i 的孩子是 2i+1、2i+2），从最后一个非叶子节点 <code>n // 2 - 1</code> 开始往前，逐个<b>下沉</b>（和更大的孩子交换，直到不比孩子小）。做完整个数组就是最大堆，总共 O(n)。",
+    "第二步<b>取最大</b>：堆顶 <code>nums[0]</code> 是最大的，和堆的最后一个数交换，它就到了最终位置；堆的大小减一，新的堆顶下沉，恢复成堆。重复到堆里只剩一个数。",
+    "时间 O(n log n)，空间 O(1)，但不稳定。下沉的写法和「堆」专题里一样，只是这里是最大堆。"
+   ],
+   "points": [
+    {
+     "t": "下沉时传入堆的大小",
+     "body": "排好的数已经放在数组末尾，下沉时只能看 <code>[0, end)</code> 这一段，不能把它们又换回来。"
+    },
+    {
+     "t": "为什么从 n//2-1 开始",
+     "body": "下标比它大的都是叶子，单独一个节点本来就是堆，不用下沉。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "原地堆排序",
+     "kind": null,
+     "note": null,
+     "key": "sort",
+     "code": "class Solution:\n    def sortArray(self, nums: List[int]) -> List[int]:\n        def sift_down(i: int, n: int) -> None:  # 在 nums[0..n-1] 这个最大堆里让 nums[i] 下沉\n            while True:\n                big, l, r = i, 2 * i + 1, 2 * i + 2\n                if l < n and nums[l] > nums[big]:\n                    big = l\n                if r < n and nums[r] > nums[big]:\n                    big = r\n                if big == i:\n                    return\n                nums[i], nums[big] = nums[big], nums[i]\n                i = big\n        n = len(nums)\n        for i in range(n // 2 - 1, -1, -1):     # 建最大堆：从最后一个非叶子往前下沉\n            sift_down(i, n)\n        for end in range(n - 1, 0, -1):\n            nums[0], nums[end] = nums[end], nums[0]     # 堆顶（最大）换到末尾\n            sift_down(0, end)                   # 剩下的 end 个数重新调成堆\n        return nums",
+     "marks": {
+      "build": [
+       15,
+       16
+      ],
+      "pick": [
+       17,
+       18
+      ],
+      "fix": [
+       19
+      ],
+      "done": [
+       20
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class Solution {\n    public int[] sortArray(int[] nums) {\n        int n = nums.length;\n        for (int i = n / 2 - 1; i >= 0; i--) {  // 建最大堆：从最后一个非叶子往前下沉\n            siftDown(nums, i, n);\n        }\n        for (int end = n - 1; end > 0; end--) {\n            int t = nums[0];                    // 堆顶（最大）换到末尾\n            nums[0] = nums[end];\n            nums[end] = t;\n            siftDown(nums, 0, end);             // 剩下的 end 个数重新调成堆\n        }\n        return nums;\n    }\n\n    // 在 nums[0..n-1] 这个最大堆里让 nums[i] 下沉\n    private void siftDown(int[] nums, int i, int n) {\n        while (true) {\n            int big = i, l = 2 * i + 1, r = 2 * i + 2;\n            if (l < n && nums[l] > nums[big]) big = l;\n            if (r < n && nums[r] > nums[big]) big = r;\n            if (big == i) return;\n            int t = nums[i];\n            nums[i] = nums[big];\n            nums[big] = t;\n            i = big;\n        }\n    }\n}",
+       "marks": {
+        "build": [
+         4,
+         5
+        ],
+        "pick": [
+         7,
+         8,
+         9,
+         10
+        ],
+        "fix": [
+         11
+        ],
+        "done": [
+         13
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class Solution {\n    // 在 nums[0..n-1] 这个最大堆里让 nums[i] 下沉\n    void siftDown(vector<int>& nums, int i, int n) {\n        while (true) {\n            int big = i, l = 2 * i + 1, r = 2 * i + 2;\n            if (l < n && nums[l] > nums[big]) big = l;\n            if (r < n && nums[r] > nums[big]) big = r;\n            if (big == i) return;\n            swap(nums[i], nums[big]);\n            i = big;\n        }\n    }\n\npublic:\n    vector<int> sortArray(vector<int>& nums) {\n        int n = nums.size();\n        for (int i = n / 2 - 1; i >= 0; i--) {  // 建最大堆：从最后一个非叶子往前下沉\n            siftDown(nums, i, n);\n        }\n        for (int end = n - 1; end > 0; end--) {\n            swap(nums[0], nums[end]);           // 堆顶（最大）换到末尾\n            siftDown(nums, 0, end);             // 剩下的 end 个数重新调成堆\n        }\n        return nums;\n    }\n};",
+       "marks": {
+        "build": [
+         17,
+         18
+        ],
+        "pick": [
+         20,
+         21
+        ],
+        "fix": [
+         22
+        ],
+        "done": [
+         24
+        ]
+       }
+      },
+      "go": {
+       "code": "func sortArray(nums []int) []int {\n\t// 在 nums[0..n-1] 这个最大堆里让 nums[i] 下沉\n\tsiftDown := func(i, n int) {\n\t\tfor {\n\t\t\tbig, l, r := i, 2*i+1, 2*i+2\n\t\t\tif l < n && nums[l] > nums[big] {\n\t\t\t\tbig = l\n\t\t\t}\n\t\t\tif r < n && nums[r] > nums[big] {\n\t\t\t\tbig = r\n\t\t\t}\n\t\t\tif big == i {\n\t\t\t\treturn\n\t\t\t}\n\t\t\tnums[i], nums[big] = nums[big], nums[i]\n\t\t\ti = big\n\t\t}\n\t}\n\tn := len(nums)\n\tfor i := n/2 - 1; i >= 0; i-- { // 建最大堆：从最后一个非叶子往前下沉\n\t\tsiftDown(i, n)\n\t}\n\tfor end := n - 1; end > 0; end-- {\n\t\tnums[0], nums[end] = nums[end], nums[0] // 堆顶（最大）换到末尾\n\t\tsiftDown(0, end)                       // 剩下的 end 个数重新调成堆\n\t}\n\treturn nums\n}",
+       "marks": {
+        "build": [
+         20,
+         21
+        ],
+        "pick": [
+         23,
+         24
+        ],
+        "fix": [
+         25
+        ],
+        "done": [
+         27
+        ]
+       }
+      },
+      "javascript": {
+       "code": "var sortArray = function(nums) {\n    // 在 nums[0..n-1] 这个最大堆里让 nums[i] 下沉\n    const siftDown = (i, n) => {\n        while (true) {\n            let big = i;\n            const l = 2 * i + 1, r = 2 * i + 2;\n            if (l < n && nums[l] > nums[big]) big = l;\n            if (r < n && nums[r] > nums[big]) big = r;\n            if (big === i) return;\n            [nums[i], nums[big]] = [nums[big], nums[i]];\n            i = big;\n        }\n    };\n    const n = nums.length;\n    for (let i = (n >> 1) - 1; i >= 0; i--) {   // 建最大堆：从最后一个非叶子往前下沉\n        siftDown(i, n);\n    }\n    for (let end = n - 1; end > 0; end--) {\n        [nums[0], nums[end]] = [nums[end], nums[0]];    // 堆顶（最大）换到末尾\n        siftDown(0, end);                       // 剩下的 end 个数重新调成堆\n    }\n    return nums;\n};",
+       "marks": {
+        "build": [
+         15,
+         16
+        ],
+        "pick": [
+         18,
+         19
+        ],
+        "fix": [
+         20
+        ],
+        "done": [
+         22
+        ]
+       }
+      },
+      "typescript": {
+       "code": "function sortArray(nums: number[]): number[] {\n    // 在 nums[0..n-1] 这个最大堆里让 nums[i] 下沉\n    const siftDown = (i: number, n: number): void => {\n        while (true) {\n            let big = i;\n            const l = 2 * i + 1, r = 2 * i + 2;\n            if (l < n && nums[l] > nums[big]) big = l;\n            if (r < n && nums[r] > nums[big]) big = r;\n            if (big === i) return;\n            [nums[i], nums[big]] = [nums[big], nums[i]];\n            i = big;\n        }\n    };\n    const n = nums.length;\n    for (let i = (n >> 1) - 1; i >= 0; i--) {   // 建最大堆：从最后一个非叶子往前下沉\n        siftDown(i, n);\n    }\n    for (let end = n - 1; end > 0; end--) {\n        [nums[0], nums[end]] = [nums[end], nums[0]];    // 堆顶（最大）换到末尾\n        siftDown(0, end);                       // 剩下的 end 个数重新调成堆\n    }\n    return nums;\n}",
+       "marks": {
+        "build": [
+         15,
+         16
+        ],
+        "pick": [
+         18,
+         19
+        ],
+        "fix": [
+         20
+        ],
+        "done": [
+         22
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "堆排序",
+    "legend": [
+     [
+      "a",
+      "正在下沉 / 堆顶"
+     ],
+     [
+      "b",
+      "交换的对象"
+     ],
+     [
+      "c",
+      "已经排好"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例",
+      "args": {
+       "nums": [
+        4,
+        10,
+        3,
+        5,
+        1,
+        8,
+        7
+       ]
+      },
+      "note": "nums = [4,10,3,5,1,8,7]"
+     }
+    ],
+    "build": "build(a, snap) {\n        const nums = a.nums.slice(), n = nums.length;\n        let end = n, hot = [], cmp = -1;\n        const view = (opts = {}) => {\n          const prevMap = opts.prevMap || {};\n          const N = {}, cls = {};\n          for (let i = 0; i < end; i++) {\n            N[i] = {\n              v: nums[i],\n              ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),\n              l: 2 * i + 1 < end ? 2 * i + 1 : null,\n              r: 2 * i + 2 < end ? 2 * i + 2 : null,\n            };\n            cls[i] = hot.includes(i) ? \"a\" : i === cmp ? \"b\" : \"\";\n          }\n          return [\n            end\n              ? { t: \"tree\", label: `堆（前 ${end} 个数）`, nodes: N, root: 0, cls, swaps: opts.treeSwaps || [] }\n              : { t: \"note\", label: \"堆\", html: \"空\" },\n            {\n              t: \"array\",\n              label: \"nums\",\n              items: nums.map((v, i) => ({\n                v,\n                ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),\n                cls: i >= end ? \"c\" : hot.includes(i) ? \"a\" : i === cmp ? \"b\" : \"\",\n              })),\n              swaps: opts.swaps || [],\n            },\n          ];\n        };\n        const siftStep = (start, m, tag, phaseName) => {\n          let i = start, moved = false;\n          for (;;) {\n            let b = i; const l = 2 * i + 1, r = 2 * i + 2;\n            if (l < m && nums[l] > nums[b]) b = l;\n            if (r < m && nums[r] > nums[b]) b = r;\n            if (b === i) {\n              if (!moved) {\n                hot = [i]; cmp = -1;\n                snap(phaseName, `下标 ${i} 的 ${nums[i]} 不比孩子小，不用动。`, view(), {\n                  at: tag,\n                  facts: [[\"阶段\", phaseName], [\"堆大小\", end], [\"已排好\", n - end], [\"堆顶\", nums[0]]],\n                });\n              }\n              return;\n            }\n            const vi = nums[i], vb = nums[b], oldTop = nums[0];\n            [nums[i], nums[b]] = [nums[b], nums[i]];\n            moved = true;\n            hot = [b]; cmp = i;\n            snap(phaseName, `${vi} 比更大的孩子 ${vb} 小，交换下沉。`, view({\n              swaps: [[i, b]],\n              treeSwaps: [[i, b]],\n              prevMap: { [i]: vi, [b]: vb },\n            }), {\n              at: tag,\n              facts: [[\"阶段\", phaseName], [\"堆大小\", end], [\"堆顶\", nums[0], oldTop], [\"交换节点\", `${i} ↔ ${b}`]],\n            });\n            i = b;\n          }\n        };\n        snap(\"开始\", \"把数组看成一棵完全二叉树。先把它调成最大堆。\", view(), {\n          at: \"build\",\n          facts: [[\"阶段\", \"建最大堆\"], [\"堆大小\", end], [\"已排好\", 0], [\"堆顶\", nums[0]]],\n        });\n        for (let i = (n >> 1) - 1; i >= 0; i--) {\n          siftStep(i, n, \"build\", \"建堆：下沉\");\n        }\n        hot = []; cmp = -1;\n        snap(\"堆建好了\", `最大堆建好了，堆顶 ${nums[0]} 是最大的数。`, view(), {\n          at: \"build\",\n          facts: [[\"阶段\", \"建堆完成\"], [\"堆大小\", end], [\"已排好\", 0], [\"堆顶\", nums[0]]],\n        });\n        for (let e = n - 1; e > 0; e--) {\n          const oldEnd = end, oldSorted = n - end, v0 = nums[0], ve = nums[e];\n          [nums[0], nums[e]] = [nums[e], nums[0]];\n          hot = [0]; cmp = e; end = e;\n          snap(\"堆顶换到末尾\", `把堆顶 ${v0} 和下标 ${e} 的 ${ve} 交换，${v0} 到了最终位置，堆里还剩 ${e} 个数。`, view({\n            swaps: [[0, e]],\n            treeSwaps: [],\n            prevMap: { 0: v0, [e]: ve },\n          }), {\n            at: \"pick\",\n            facts: [[\"阶段\", \"取最大值\"], [\"堆大小\", end, oldEnd], [\"已排好\", n - end, oldSorted], [\"堆顶\", nums[0], v0]],\n          });\n          siftStep(0, end, \"fix\", \"重新调成堆\");\n        }\n        hot = []; cmp = -1; end = 0;\n        snap(\"完成\", `排好了：[${nums.join(\", \")}]。`, view(), {\n          at: \"done\",\n          kind: \"ok\",\n          ans: nums.slice(),\n          facts: [[\"阶段\", \"完成\"], [\"堆大小\", 0, 1], [\"已排好\", n, n - 1]],\n        });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "正在下沉 / 堆顶"
+       ],
+       [
+        "b",
+        "交换的对象"
+       ],
+       [
+        "c",
+        "已经排好"
+       ]
+      ],
+      "code": "sort",
+      "build": "build(a, snap) {\n        const nums = a.nums.slice(), n = nums.length;\n        let end = n, hot = [], cmp = -1;\n        const view = (opts = {}) => {\n          const prevMap = opts.prevMap || {};\n          const N = {}, cls = {};\n          for (let i = 0; i < end; i++) {\n            N[i] = {\n              v: nums[i],\n              ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),\n              l: 2 * i + 1 < end ? 2 * i + 1 : null,\n              r: 2 * i + 2 < end ? 2 * i + 2 : null,\n            };\n            cls[i] = hot.includes(i) ? \"a\" : i === cmp ? \"b\" : \"\";\n          }\n          return [\n            end\n              ? { t: \"tree\", label: `堆（前 ${end} 个数）`, nodes: N, root: 0, cls, swaps: opts.treeSwaps || [] }\n              : { t: \"note\", label: \"堆\", html: \"空\" },\n            {\n              t: \"array\",\n              label: \"nums\",\n              items: nums.map((v, i) => ({\n                v,\n                ...(prevMap[i] !== undefined ? { prev: prevMap[i] } : {}),\n                cls: i >= end ? \"c\" : hot.includes(i) ? \"a\" : i === cmp ? \"b\" : \"\",\n              })),\n              swaps: opts.swaps || [],\n            },\n          ];\n        };\n        const siftStep = (start, m, tag, phaseName) => {\n          let i = start, moved = false;\n          for (;;) {\n            let b = i; const l = 2 * i + 1, r = 2 * i + 2;\n            if (l < m && nums[l] > nums[b]) b = l;\n            if (r < m && nums[r] > nums[b]) b = r;\n            if (b === i) {\n              if (!moved) {\n                hot = [i]; cmp = -1;\n                snap(phaseName, `下标 ${i} 的 ${nums[i]} 不比孩子小，不用动。`, view(), {\n                  at: tag,\n                  facts: [[\"阶段\", phaseName], [\"堆大小\", end], [\"已排好\", n - end], [\"堆顶\", nums[0]]],\n                });\n              }\n              return;\n            }\n            const vi = nums[i], vb = nums[b], oldTop = nums[0];\n            [nums[i], nums[b]] = [nums[b], nums[i]];\n            moved = true;\n            hot = [b]; cmp = i;\n            snap(phaseName, `${vi} 比更大的孩子 ${vb} 小，交换下沉。`, view({\n              swaps: [[i, b]],\n              treeSwaps: [[i, b]],\n              prevMap: { [i]: vi, [b]: vb },\n            }), {\n              at: tag,\n              facts: [[\"阶段\", phaseName], [\"堆大小\", end], [\"堆顶\", nums[0], oldTop], [\"交换节点\", `${i} ↔ ${b}`]],\n            });\n            i = b;\n          }\n        };\n        snap(\"开始\", \"把数组看成一棵完全二叉树。先把它调成最大堆。\", view(), {\n          at: \"build\",\n          facts: [[\"阶段\", \"建最大堆\"], [\"堆大小\", end], [\"已排好\", 0], [\"堆顶\", nums[0]]],\n        });\n        for (let i = (n >> 1) - 1; i >= 0; i--) {\n          siftStep(i, n, \"build\", \"建堆：下沉\");\n        }\n        hot = []; cmp = -1;\n        snap(\"堆建好了\", `最大堆建好了，堆顶 ${nums[0]} 是最大的数。`, view(), {\n          at: \"build\",\n          facts: [[\"阶段\", \"建堆完成\"], [\"堆大小\", end], [\"已排好\", 0], [\"堆顶\", nums[0]]],\n        });\n        for (let e = n - 1; e > 0; e--) {\n          const oldEnd = end, oldSorted = n - end, v0 = nums[0], ve = nums[e];\n          [nums[0], nums[e]] = [nums[e], nums[0]];\n          hot = [0]; cmp = e; end = e;\n          snap(\"堆顶换到末尾\", `把堆顶 ${v0} 和下标 ${e} 的 ${ve} 交换，${v0} 到了最终位置，堆里还剩 ${e} 个数。`, view({\n            swaps: [[0, e]],\n            treeSwaps: [],\n            prevMap: { 0: v0, [e]: ve },\n          }), {\n            at: \"pick\",\n            facts: [[\"阶段\", \"取最大值\"], [\"堆大小\", end, oldEnd], [\"已排好\", n - end, oldSorted], [\"堆顶\", nums[0], v0]],\n          });\n          siftStep(0, end, \"fix\", \"重新调成堆\");\n        }\n        hot = []; cmp = -1; end = 0;\n        snap(\"完成\", `排好了：[${nums.join(\", \")}]。`, view(), {\n          at: \"done\",\n          kind: \"ok\",\n          ans: nums.slice(),\n          facts: [[\"阶段\", \"完成\"], [\"堆大小\", 0, 1], [\"已排好\", n, n - 1]],\n        });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => { const nums = R.arr(R.int(4, 8), 1, 15); return { args: { nums }, note: `nums = ${R.fmt(nums)}` }; })(R); return { args: r.args, note: r.note }; }"
+   }
+  },
+  {
+   "key": "topk",
+   "t": "Top K：大小为 k 的最小堆",
+   "body": [
+    "数据一个个到来，随时要回答「目前第 k 大的数是多少」。只维护<b>最大的 k 个数</b>就够了，并且放在一个<b>最小堆</b>里：堆顶是这 k 个里最小的，正好就是第 k 大。",
+    "新来一个数先放进堆；堆里超过 k 个，就弹出堆顶——它比另外 k 个都小，不可能再是前 k 大。每次 O(log k)，比每次排序快得多。",
+    "反过来，求第 k 小就用大小为 k 的最大堆。数据全部已知时还可以用快速选择，平均 O(n)。"
+   ],
+   "points": [
+    {
+     "t": "堆的方向别弄反",
+     "body": "求「前 k 大」用<b>最小</b>堆：要随时踢掉这 k 个里最小的那个。"
+    },
+    {
+     "t": "各语言的最小堆",
+     "body": "Python <code>heapq</code>，Java <code>PriorityQueue</code>，C++ <code>priority_queue&lt;int, vector&lt;int&gt;, greater&lt;int&gt;&gt;</code>，Go <code>container/heap</code>；JavaScript 要自己写（力扣上有 <code>MinPriorityQueue</code>）。"
+    }
+   ],
+   "codes": [
+    {
+     "t": "最小堆只留 k 个",
+     "kind": null,
+     "note": null,
+     "key": "topk",
+     "code": "class KthLargest:\n    def __init__(self, k: int, nums: List[int]):\n        self.k = k\n        self.heap = []                      # 最小堆，只留最大的 k 个数\n        for x in nums:\n            self.add(x)\n\n    def add(self, val: int) -> int:\n        heapq.heappush(self.heap, val)\n        if len(self.heap) > self.k:         # 多了一个：最小的那个不可能是前 k 大\n            heapq.heappop(self.heap)\n        return self.heap[0]                 # 堆顶就是第 k 大",
+     "marks": {
+      "init": [
+       4,
+       5,
+       6
+      ],
+      "push": [
+       9
+      ],
+      "trim": [
+       10,
+       11
+      ],
+      "top": [
+       12
+      ]
+     },
+     "langs": {
+      "java": {
+       "code": "class KthLargest {\n    private final int k;\n    private final PriorityQueue<Integer> heap = new PriorityQueue<>();  // 最小堆，只留最大的 k 个数\n\n    public KthLargest(int k, int[] nums) {\n        this.k = k;\n        for (int x : nums) {\n            add(x);\n        }\n    }\n\n    public int add(int val) {\n        heap.offer(val);\n        if (heap.size() > k) {                  // 多了一个：最小的那个不可能是前 k 大\n            heap.poll();\n        }\n        return heap.peek();                     // 堆顶就是第 k 大\n    }\n}",
+       "marks": {
+        "init": [
+         3,
+         7,
+         8
+        ],
+        "push": [
+         13
+        ],
+        "trim": [
+         14,
+         15
+        ],
+        "top": [
+         17
+        ]
+       }
+      },
+      "cpp": {
+       "code": "class KthLargest {\n    int k;\n    priority_queue<int, vector<int>, greater<int>> heap;   // 最小堆，只留最大的 k 个数\n\npublic:\n    KthLargest(int k, const vector<int>& nums) : k(k) {\n        for (int x : nums) {\n            add(x);\n        }\n    }\n\n    int add(int val) {\n        heap.push(val);\n        if ((int)heap.size() > k) {             // 多了一个：最小的那个不可能是前 k 大\n            heap.pop();\n        }\n        return heap.top();                      // 堆顶就是第 k 大\n    }\n};",
+       "marks": {
+        "init": [
+         3,
+         7,
+         8
+        ],
+        "push": [
+         13
+        ],
+        "trim": [
+         14,
+         15
+        ],
+        "top": [
+         17
+        ]
+       }
+      },
+      "go": {
+       "code": "// container/heap 要求自己的类型实现 Len、Less、Swap、Push、Pop\ntype minHeap []int\n\nfunc (h minHeap) Len() int           { return len(h) }\nfunc (h minHeap) Less(i, j int) bool { return h[i] < h[j] }\nfunc (h minHeap) Swap(i, j int)      { h[i], h[j] = h[j], h[i] }\nfunc (h *minHeap) Push(x any)        { *h = append(*h, x.(int)) }\nfunc (h *minHeap) Pop() any {\n\told := *h\n\tx := old[len(old)-1]\n\t*h = old[:len(old)-1]\n\treturn x\n}\n\ntype KthLargest struct {\n\tk int\n\th *minHeap // 最小堆，只留最大的 k 个数\n}\n\nfunc Constructor(k int, nums []int) KthLargest {\n\tkl := KthLargest{k, &minHeap{}}\n\tfor _, x := range nums {\n\t\tkl.Add(x)\n\t}\n\treturn kl\n}\n\nfunc (kl *KthLargest) Add(val int) int {\n\theap.Push(kl.h, val)\n\tif kl.h.Len() > kl.k { // 多了一个：最小的那个不可能是前 k 大\n\t\theap.Pop(kl.h)\n\t}\n\treturn (*kl.h)[0] // 堆顶就是第 k 大\n}",
+       "marks": {
+        "init": [
+         21,
+         22,
+         23
+        ],
+        "push": [
+         29
+        ],
+        "trim": [
+         30,
+         31
+        ],
+        "top": [
+         33
+        ]
+       }
+      },
+      "javascript": {
+       "code": "// JavaScript 没有内置的堆，这里手写一个最小堆（力扣的 JavaScript 环境里可以直接用 MinPriorityQueue）\nclass MinHeap {\n    constructor() {\n        this.a = [];\n    }\n    size() {\n        return this.a.length;\n    }\n    peek() {\n        return this.a[0];\n    }\n    push(x) {\n        const a = this.a;\n        a.push(x);\n        for (let i = a.length - 1; i > 0 && a[(i - 1) >> 1] > a[i]; i = (i - 1) >> 1) {\n            [a[i], a[(i - 1) >> 1]] = [a[(i - 1) >> 1], a[i]];\n        }\n    }\n    pop() {\n        const a = this.a, top = a[0], last = a.pop();\n        if (a.length) {\n            a[0] = last;\n            for (let i = 0; ;) {\n                let small = i;\n                for (const c of [2 * i + 1, 2 * i + 2]) {\n                    if (c < a.length && a[c] < a[small]) small = c;\n                }\n                if (small === i) break;\n                [a[i], a[small]] = [a[small], a[i]];\n                i = small;\n            }\n        }\n        return top;\n    }\n}\n\nclass KthLargest {\n    constructor(k, nums) {\n        this.k = k;\n        this.heap = new MinHeap();              // 最小堆，只留最大的 k 个数\n        for (const x of nums) {\n            this.add(x);\n        }\n    }\n\n    add(val) {\n        this.heap.push(val);\n        if (this.heap.size() > this.k) {        // 多了一个：最小的那个不可能是前 k 大\n            this.heap.pop();\n        }\n        return this.heap.peek();                // 堆顶就是第 k 大\n    }\n}",
+       "marks": {
+        "init": [
+         40,
+         41,
+         42
+        ],
+        "push": [
+         47
+        ],
+        "trim": [
+         48,
+         49
+        ],
+        "top": [
+         51
+        ]
+       }
+      },
+      "typescript": {
+       "code": "// TypeScript 没有内置的堆，这里手写一个最小堆（力扣的 TypeScript 环境里可以直接用 MinPriorityQueue）\nclass MinHeap {\n    private a: number[] = [];\n    size(): number {\n        return this.a.length;\n    }\n    peek(): number {\n        return this.a[0];\n    }\n    push(x: number): void {\n        const a = this.a;\n        a.push(x);\n        for (let i = a.length - 1; i > 0 && a[(i - 1) >> 1] > a[i]; i = (i - 1) >> 1) {\n            [a[i], a[(i - 1) >> 1]] = [a[(i - 1) >> 1], a[i]];\n        }\n    }\n    pop(): number {\n        const a = this.a, top = a[0], last = a.pop()!;\n        if (a.length) {\n            a[0] = last;\n            for (let i = 0; ;) {\n                let small = i;\n                for (const c of [2 * i + 1, 2 * i + 2]) {\n                    if (c < a.length && a[c] < a[small]) small = c;\n                }\n                if (small === i) break;\n                [a[i], a[small]] = [a[small], a[i]];\n                i = small;\n            }\n        }\n        return top;\n    }\n}\n\nclass KthLargest {\n    private k: number;\n    private heap = new MinHeap();               // 最小堆，只留最大的 k 个数\n\n    constructor(k: number, nums: number[]) {\n        this.k = k;\n        for (const x of nums) {\n            this.add(x);\n        }\n    }\n\n    add(val: number): number {\n        this.heap.push(val);\n        if (this.heap.size() > this.k) {        // 多了一个：最小的那个不可能是前 k 大\n            this.heap.pop();\n        }\n        return this.heap.peek();                // 堆顶就是第 k 大\n    }\n}",
+       "marks": {
+        "init": [
+         37,
+         41,
+         42
+        ],
+        "push": [
+         47
+        ],
+        "trim": [
+         48,
+         49
+        ],
+        "top": [
+         51
+        ]
+       }
+      }
+     }
+    }
+   ],
+   "demo": {
+    "title": "Top K：大小为 k 的最小堆",
+    "legend": [
+     [
+      "a",
+      "刚放进来的数"
+     ],
+     [
+      "d",
+      "被弹出的数"
+     ],
+     [
+      "c",
+      "堆顶：第 k 大"
+     ]
+    ],
+    "presets": [
+     {
+      "label": "示例",
+      "args": {
+       "k": 3,
+       "nums": [
+        4,
+        5,
+        8,
+        2
+       ],
+       "adds": [
+        3,
+        5,
+        10,
+        9,
+        4
+       ]
+      },
+      "note": "k = 3, nums = [4,5,8,2]，依次 add 3、5、10、9、4"
+     }
+    ],
+    "build": "build(a, snap) {\n        const k = a.k, heap = [], out = [null];\n        let fresh = null, gone = null;\n        const view = () => [\n          { t: \"chips\", label: `最小堆（最多 ${k} 个，从小到大排给你看，左边是堆顶）`, items: heap.slice().sort((x, y) => x - y).map((v, i) => ({ v, cls: i === 0 && heap.length === k ? \"c\" : v === fresh ? \"a\" : \"\" })), empty: \"空\" },\n          { t: \"chips\", label: \"弹出的\", items: gone === null ? [] : [{ v: gone, cls: \"d\" }], empty: \"无\" },\n          { t: \"chips\", label: \"add 的返回值\", items: out.slice(1).map((v, idx, arr) => ({ v, cls: idx === arr.length - 1 ? \"c\" : \"\" })), empty: \"还没有\" },\n        ];\n        const topOf = () => (heap.length ? Math.min(...heap) : \"空\");\n        const add = (x, init) => {\n          const oldSize = `${heap.length} / ${k}`, oldTop = topOf();\n          heap.push(x); fresh = x; gone = null;\n          let trimmed = false;\n          if (heap.length > k) { heap.sort((p, q) => p - q); gone = heap.shift(); trimmed = true; }\n          snap(init ? `初始化：放进 ${x}` : `add(${x})`, `${x} 放进堆。` + (trimmed ? `堆里超过 ${k} 个了，弹出堆顶 ${gone}：它比另外 ${k} 个都小，不可能是前 ${k} 大。` : `堆里有 ${heap.length} 个，还没超过 ${k}。`), view(), {\n            at: init ? [\"init\", \"push\", ...(trimmed ? [\"trim\"] : [])] : trimmed ? [\"push\", \"trim\"] : \"push\",\n            facts: [\n              [\"堆大小\", `${heap.length} / ${k}`, oldSize],\n              [\"堆顶 (第 k 大)\", topOf(), oldTop],\n              [\"弹出\", gone ?? \"—\"],\n            ],\n          });\n        };\n        snap(\"开始\", `k = ${k}。先把 nums 里的数一个个加进去。`, view(), {\n          at: \"init\",\n          facts: [[\"堆大小\", `0 / ${k}`], [\"堆顶 (第 k 大)\", \"空\"], [\"目标 k\", k]],\n        });\n        for (const x of a.nums) add(x, true);\n        for (const x of a.adds) {\n          add(x, false);\n          const top = Math.min(...heap);\n          out.push(top); fresh = null;\n          snap(\"返回堆顶\", `堆顶 ${top} 是这 ${k} 个里最小的，就是第 ${k} 大，返回 ${top}。`, view(), {\n            at: \"top\",\n            facts: [[\"堆大小\", `${heap.length} / ${k}`], [\"堆顶 (第 k 大)\", top], [\"返回值\", top]],\n          });\n        }\n        gone = null;\n        snap(\"完成\", `每次 add 只做 O(log ${k}) 的堆操作。`, view(), {\n          at: [],\n          kind: \"ok\",\n          ans: out,\n          facts: [[\"堆大小\", `${heap.length} / ${k}`], [\"最终第 k 大\", topOf()]],\n        });\n      }",
+    "methods": [
+     {
+      "t": "演示",
+      "note": null,
+      "legend": [
+       [
+        "a",
+        "刚放进来的数"
+       ],
+       [
+        "d",
+        "被弹出的数"
+       ],
+       [
+        "c",
+        "堆顶：第 k 大"
+       ]
+      ],
+      "code": "topk",
+      "build": "build(a, snap) {\n        const k = a.k, heap = [], out = [null];\n        let fresh = null, gone = null;\n        const view = () => [\n          { t: \"chips\", label: `最小堆（最多 ${k} 个，从小到大排给你看，左边是堆顶）`, items: heap.slice().sort((x, y) => x - y).map((v, i) => ({ v, cls: i === 0 && heap.length === k ? \"c\" : v === fresh ? \"a\" : \"\" })), empty: \"空\" },\n          { t: \"chips\", label: \"弹出的\", items: gone === null ? [] : [{ v: gone, cls: \"d\" }], empty: \"无\" },\n          { t: \"chips\", label: \"add 的返回值\", items: out.slice(1).map((v, idx, arr) => ({ v, cls: idx === arr.length - 1 ? \"c\" : \"\" })), empty: \"还没有\" },\n        ];\n        const topOf = () => (heap.length ? Math.min(...heap) : \"空\");\n        const add = (x, init) => {\n          const oldSize = `${heap.length} / ${k}`, oldTop = topOf();\n          heap.push(x); fresh = x; gone = null;\n          let trimmed = false;\n          if (heap.length > k) { heap.sort((p, q) => p - q); gone = heap.shift(); trimmed = true; }\n          snap(init ? `初始化：放进 ${x}` : `add(${x})`, `${x} 放进堆。` + (trimmed ? `堆里超过 ${k} 个了，弹出堆顶 ${gone}：它比另外 ${k} 个都小，不可能是前 ${k} 大。` : `堆里有 ${heap.length} 个，还没超过 ${k}。`), view(), {\n            at: init ? [\"init\", \"push\", ...(trimmed ? [\"trim\"] : [])] : trimmed ? [\"push\", \"trim\"] : \"push\",\n            facts: [\n              [\"堆大小\", `${heap.length} / ${k}`, oldSize],\n              [\"堆顶 (第 k 大)\", topOf(), oldTop],\n              [\"弹出\", gone ?? \"—\"],\n            ],\n          });\n        };\n        snap(\"开始\", `k = ${k}。先把 nums 里的数一个个加进去。`, view(), {\n          at: \"init\",\n          facts: [[\"堆大小\", `0 / ${k}`], [\"堆顶 (第 k 大)\", \"空\"], [\"目标 k\", k]],\n        });\n        for (const x of a.nums) add(x, true);\n        for (const x of a.adds) {\n          add(x, false);\n          const top = Math.min(...heap);\n          out.push(top); fresh = null;\n          snap(\"返回堆顶\", `堆顶 ${top} 是这 ${k} 个里最小的，就是第 ${k} 大，返回 ${top}。`, view(), {\n            at: \"top\",\n            facts: [[\"堆大小\", `${heap.length} / ${k}`], [\"堆顶 (第 k 大)\", top], [\"返回值\", top]],\n          });\n        }\n        gone = null;\n        snap(\"完成\", `每次 add 只做 O(log ${k}) 的堆操作。`, view(), {\n          at: [],\n          kind: \"ok\",\n          ans: out,\n          facts: [[\"堆大小\", `${heap.length} / ${k}`], [\"最终第 k 大\", topOf()]],\n        });\n      }"
+     }
+    ],
+    "random": "() => { const R = (function makeR() {\n  const int = (a, b) => a + Math.floor(Math.random() * (b - a + 1));\n  const pick = (xs) => xs[int(0, xs.length - 1)];\n  const chance = (p) => Math.random() < p;\n  const shuffle = (xs) => {\n    const a = xs.slice();\n    for (let i = a.length - 1; i > 0; i--) {\n      const j = int(0, i);\n      [a[i], a[j]] = [a[j], a[i]];\n    }\n    return a;\n  };\n  const arr = (n, a, b) => Array.from({ length: n }, () => int(a, b));\n  const distinct = (n, a, b) => shuffle(Array.from({ length: b - a + 1 }, (_, i) => a + i)).slice(0, n);\n  const sorted = (xs) => xs.slice().sort((x, y) => x - y);\n  const word = (n, abc) => Array.from({ length: n }, () => pick(abc)).join(\"\");\n  const fmt = (x) => JSON.stringify(x);\n  const py = (x) => JSON.stringify(x).replace(/null/g, \"None\").replace(/true/g, \"True\").replace(/false/g, \"False\");\n  // 二叉树用「堆下标」表示：下标 i 的孩子是 2i+1、2i+2，最多 4 层（下标 < 31）\n  const toLc = (heap) => {\n    const out = [];\n    const q = heap.length && heap[0] != null ? [0] : [];\n    while (q.length) {\n      const i = q.shift();\n      if (i < 0) { out.push(null); continue; }\n      out.push(heap[i]);\n      for (const c of [2 * i + 1, 2 * i + 2]) q.push(heap[c] != null ? c : -1);\n    }\n    while (out.length && out[out.length - 1] === null) out.pop();\n    return out;\n  };\n  const trim = (heap) => {\n    while (heap.length && heap[heap.length - 1] == null) heap.pop();\n    return heap;\n  };\n  /** 随机形状的树，n 个节点，值由 val(k) 给出 */\n  const tree = (n, val, maxId = 30) => {\n    const ids = [0];\n    let guard = 0;\n    while (ids.length < n && guard++ < 500) {\n      const p = pick(ids), c = 2 * p + int(1, 2);\n      if (c <= maxId && !ids.includes(c)) ids.push(c);\n    }\n    const heap = [];\n    ids.sort((a, b) => a - b).forEach((id, k) => (heap[id] = val(k)));\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  /** 把一串不同的值依次插入二叉搜索树，超过 4 层的值丢掉 */\n  const bst = (vals) => {\n    const heap = [];\n    for (const v of vals) {\n      let i = 0;\n      while (heap[i] != null && i <= 30) i = v < heap[i] ? 2 * i + 1 : 2 * i + 2;\n      if (i <= 30) heap[i] = v;\n    }\n    for (let i = 0; i < heap.length; i++) if (heap[i] === undefined) heap[i] = null;\n    trim(heap);\n    return { heap, lc: toLc(heap) };\n  };\n  return { int, pick, chance, shuffle, arr, distinct, sorted, word, fmt, py, tree, bst, toLc };\n})(); const r = ((R) => {\n      const k = R.int(1, 4), nums = R.arr(R.int(k - 1, k + 3), 1, 20), adds = R.arr(R.int(3, 6), 1, 20);\n      return { args: { k, nums, adds }, note: `k = ${k}, nums = ${R.fmt(nums)}，依次 add ${adds.join(\"、\")}` };\n    })(R); return { args: r.args, note: r.note }; }"
+   }
+  }
+ ]
+}

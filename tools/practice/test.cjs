@@ -12,12 +12,7 @@ async function main() {
   assert.equal(files.length, 100);
   const expectedIds = fs.readdirSync(path.join(root, "tools/illustrations/specs")).filter((f) => /^\d+\.js$/.test(f)).map((f) => Number(f.split(".")[0])).sort((a, b) => a - b);
   const problems = files.map((f) => JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")));
-  const cdBuildBin = process.env.CD_BUILD_BIN;
-  const official = JSON.parse(
-    cdBuildBin
-      ? cp.execFileSync(cdBuildBin, ["dump-official-examples", "--root", root], { encoding: "utf8", maxBuffer: 32 << 20, windowsHide: true })
-      : cp.execFileSync("go", ["run", "./cmd/cd-build", "dump-official-examples", "--root", root], { cwd: root, encoding: "utf8", maxBuffer: 32 << 20, windowsHide: true }),
-  );
+  const official = JSON.parse(cp.execFileSync(process.env.PYTHON || (process.platform === "win32" ? "python" : "python3"), [path.join(__dirname, "official-examples.py")], { encoding: "utf8", env: { ...process.env, PYTHONUTF8: "1" }, windowsHide: true }));
   assert.deepEqual(problems.map((p) => p.id).sort((a, b) => a - b), expectedIds);
   const pythonJobs = [];
   let count = 0, exampleCount = 0;
