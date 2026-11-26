@@ -18,7 +18,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
 };
 
 export const onRequestPut = async ({ request, env }: { request: Request; env: AuthEnv }) => {
-  if (!sameOrigin(request)) return privateJson({ error: "不接受跨站请求" }, 403);
+  if (!sameOrigin(request, env)) return privateJson({ error: "不接受跨站请求" }, 403);
   const { session: s, cookie } = await getSession(request, env);
   if (!s) return privateJson({ error: "还没登录" }, 401, [cookie]);
   const body = (await request.json().catch(() => ({}))) as { id?: number; status?: Status };

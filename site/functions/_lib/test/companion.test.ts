@@ -183,4 +183,25 @@ await test("超过每分钟限流返回 429", async () => {
   assert.equal(rBlocked.status, 429);
 });
 
-console.log("全部 6 项通过");
+await test("EdgeOne 反向代理回源 lc-hot100.pages.dev 时允许 SITE_ORIGINS 发起写请求，仍拦截未知 Origin", async () => {
+  const env = makeEnv({ SITE_ORIGINS: "https://codingdance.cn,https://codexdance.cn" });
+  const mockFetch: typeof fetch = async () => new Response(JSON.stringify({ action: "silent" }), { status: 200 });
+
+  const reqOk = new Request("https://lc-hot100.pages.dev/api/companion/hint-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://codingdance.cn" },
+    body: JSON.stringify({ problem_id: "0001" }),
+  });
+  const rOk = await forwardCompanion(reqOk, env, "hint-check", { fetchImpl: mockFetch });
+  assert.equal(rOk.status, 200);
+
+  const reqEvil = new Request("https://lc-hot100.pages.dev/api/companion/hint-check", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "https://evil.example" },
+    body: JSON.stringify({ problem_id: "0001" }),
+  });
+  const rEvil = await forwardCompanion(reqEvil, env, "hint-check", { fetchImpl: mockFetch });
+  assert.equal(rEvil.status, 403);
+});
+
+console.log("全部 7 项通过");

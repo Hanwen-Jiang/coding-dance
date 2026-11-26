@@ -4,7 +4,7 @@ import { cleanLangs, saveSettings } from "../_lib/progress";
 import { type AuthEnv, getSession, privateJson, sameOrigin } from "../_lib/session";
 
 export const onRequestPut = async ({ request, env }: { request: Request; env: AuthEnv }) => {
-  if (!sameOrigin(request)) return privateJson({ error: "不接受跨站请求" }, 403);
+  if (!sameOrigin(request, env)) return privateJson({ error: "不接受跨站请求" }, 403);
   const { session: s, cookie } = await getSession(request, env);
   if (!s) return privateJson({ error: "还没登录" }, 401, [cookie]);
   const body = (await request.json().catch(() => ({}))) as { langs?: unknown };

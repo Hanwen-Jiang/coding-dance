@@ -4,7 +4,7 @@
 // 这样在 GitHub 上一口气走完；回到网站先落在开通页（/welcome/）建进度仓，建好再回原来的页面。
 import { repoUsable, userInstallation } from "../../_lib/install";
 import {
-  type AuthEnv, OAUTH_COOKIE, type Session, authConfigured, b64u, exchangeToken, getSession, newFamily, safeReturn, sessionCookie, setCookie,
+  type AuthEnv, OAUTH_COOKIE, type Session, authConfigured, b64u, exchangeToken, getSession, newFamily, requestOrigin, safeReturn, sessionCookie, setCookie,
 } from "../../_lib/session";
 import { destCookie, finishLogin, go, newSession, readDest, ssoOf, target, viaSetup, withFlag } from "../../_lib/sso";
 
@@ -30,7 +30,7 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: Au
   }
   if (!code || !d || url.searchParams.get("state") !== d.s) return go(withFlag(to, "failed"), [clear]);
 
-  const tok = await exchangeToken(env, { code, redirect_uri: `${url.origin}/api/auth/callback` });
+  const tok = await exchangeToken(env, { code, redirect_uri: `${requestOrigin(request, env)}/api/auth/callback` });
   if (!tok) return go(withFlag(to, "failed"), [clear]);
   const ur = await fetch("https://api.github.com/user", {
     headers: { Authorization: `Bearer ${tok.t}`, Accept: "application/vnd.github+json", "User-Agent": "lc-hot100-site" },

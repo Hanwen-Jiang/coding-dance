@@ -3,7 +3,7 @@
 // 运行：node functions/_lib/test/sso.test.ts（在 site/ 里）
 import assert from "node:assert/strict";
 import {
-  type AuthEnv, type Kv, type Session, OAUTH_COOKIE, SESSION_COOKIE, getSession, readCookie, sealData, sessionCookie, unseal,
+  type AuthEnv, type Kv, type Session, OAUTH_COOKIE, SESSION_COOKIE, getSession, readCookie, requestOrigin, sameOrigin, sealData, sessionCookie, unseal,
 } from "../session.ts";
 import {
   LINK_COOKIE, finishLogin, newSession, onAccept, onBridge, onLink, onLogout, onSignout, onSpread, needSpread, readDest, ssoOf, target, authEntry, viaSetup,
@@ -433,6 +433,47 @@ await test("上线前发出去的旧格式 OAuth Cookie 也能读", async () => 
   const d = readDest(new Request(`${A}/`, { headers: { Cookie: `${OAUTH_COOKIE}=${encodeURIComponent("st|/p/2/")}` } }));
   assert.deepEqual(d, { s: "st", r: "/p/2/" });
   assert.equal(readCookie(new Request(`${A}/`, { headers: { Cookie: "a=1" } }), OAUTH_COOKIE), null);
+});
+
+await test("EdgeOne 反向代理回源时按 SITE_ORIGINS / EDGE_PROXY_KEY 识别 X-Forwarded-Host 与 sameOrigin", async () => {
+  const env = baseEnv({ SITE_ORIGINS: `${A},${B}` });
+  const reqB = new Request("https://lc-hot100.pages.dev/api/auth/login", {
+    headers: { "X-Forwarded-Host": "b.test", "X-Forwarded-Proto": "https" },
+  });
+  assert.equal(requestOrigin(reqB, env), B);
+  const s = await ssoOf(reqB, env);
+  assert.equal(s?.here, B);
+  assert.equal(s?.hub, A);
+
+  const reqHub = new Request("https://lc-hot100.pages.dev/api/auth/login", {
+    headers: { "X-Edge-Origin-Host": "a.test" },
+  });
+  const loginRes = await authEntry(reqHub, env, "login");
+  assert.equal(new URL(loginRes.headers.get("Location")!).searchParams.get("redirect_uri"), `${A}/api/auth/callback`);
+
+  const reqEvilHost = new Request("https://lc-hot100.pages.dev/api/auth/login", {
+    headers: { "X-Forwarded-Host": "evil.example" },
+  });
+  assert.equal(requestOrigin(reqEvilHost, env), "https://lc-hot100.pages.dev");
+
+  const keyedEnv = baseEnv({ SITE_ORIGINS: `${A},${B}`, EDGE_PROXY_KEY: "secret-k" });
+  const reqBadKey = new Request("https://lc-hot100.pages.dev/api/auth/login", {
+    headers: { "X-Edge-Origin-Host": "b.test", "X-Edge-Proxy-Key": "bad" },
+  });
+  assert.equal(requestOrigin(reqBadKey, keyedEnv), "https://lc-hot100.pages.dev");
+  const reqGoodKey = new Request("https://lc-hot100.pages.dev/api/auth/login", {
+    headers: { "X-Edge-Origin-Host": "b.test", "X-Edge-Proxy-Key": "secret-k" },
+  });
+  assert.equal(requestOrigin(reqGoodKey, keyedEnv), B);
+
+  assert.equal(
+    sameOrigin(new Request("https://lc-hot100.pages.dev/api/progress", { method: "PUT", headers: { Origin: B } }), env),
+    true,
+  );
+  assert.equal(
+    sameOrigin(new Request("https://lc-hot100.pages.dev/api/progress", { method: "PUT", headers: { Origin: "https://evil.example" } }), env),
+    false,
+  );
 });
 
 console.log(`全部 ${n} 项通过`);

@@ -56,7 +56,7 @@ export async function forwardCompanion(
   endpoint: CompanionEndpoint,
   opts: { requireAuth?: boolean; fetchImpl?: typeof fetch; now?: number } = {},
 ): Promise<Response> {
-  if (!sameOrigin(request)) {
+  if (!sameOrigin(request, env)) {
     return privateJson({ error: "不接受跨站请求" }, 403);
   }
   if (!companionConfigured(env)) {

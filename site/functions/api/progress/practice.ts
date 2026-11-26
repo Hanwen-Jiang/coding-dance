@@ -11,7 +11,7 @@ import { privateJson, sameOrigin } from "../../_lib/session";
 import { type SyncEnv, withUser } from "../../_lib/sync-api";
 
 export const onRequestPost = async ({ request, env }: { request: Request; env: SyncEnv }) => {
-  if (!sameOrigin(request)) return privateJson({ error: "不接受跨站请求" }, 403);
+  if (!sameOrigin(request, env)) return privateJson({ error: "不接受跨站请求" }, 403);
   const body = await request.json().catch(() => null);
   return withUser(request, env, (api, repo) => savePractice(api, repo, body));
 };

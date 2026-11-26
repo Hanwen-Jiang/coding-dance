@@ -11,7 +11,7 @@
 //   - 退出时同样走一遍，把每个域名的会话都清掉。
 // 这几个域名的会话是同一套 GitHub 令牌；令牌换新的问题在 session.ts 的 getSession 里处理（KV）。
 import {
-  type AuthEnv, type Session, OAUTH_COOKIE, SESSION_COOKIE, SESSION_DAYS, b64u, clean, dropFamily, getSession, newFamily, privateJson, readCookie, safeReturn,
+  type AuthEnv, type Session, OAUTH_COOKIE, SESSION_COOKIE, SESSION_DAYS, allowedSiteOrigins, b64u, clean, dropFamily, getSession, newFamily, privateJson, readCookie, requestOrigin, safeReturn,
   sameOrigin, sealData, sessionCookie, setCookie, unseal, unsealData,
 } from "./session.ts";
 
@@ -32,19 +32,12 @@ export interface Sso {
 }
 
 /** 解析 SITE_ORIGINS：只认 http(s)://主机[:端口]，去掉重复 */
-export function siteOrigins(env: Pick<AuthEnv, "SITE_ORIGINS">): string[] {
-  const out: string[] = [];
-  for (const raw of (env.SITE_ORIGINS || "").split(",")) {
-    const v = raw.trim().replace(/\/+$/, "");
-    if (/^https?:\/\/[\w.-]+(:\d+)?$/.test(v) && !out.includes(v)) out.push(v);
-  }
-  return out;
-}
+export const siteOrigins = allowedSiteOrigins;
 
 /** 当前请求要不要走多域名登录：列表里至少两个域名，并且当前域名在列表里（pages.dev 之类的预览地址不参与） */
 export async function ssoOf(request: Request, env: AuthEnv): Promise<Sso | null> {
   const all = siteOrigins(env);
-  const here = new URL(request.url).origin;
+  const here = requestOrigin(request, env);
   if (all.length < 2 || !all.includes(here) || !env.SESSION_SECRET) return null;
   const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(all.join(","))));
   return { here, hub: all[0], all, others: all.slice(1), tag: b64u(hash).slice(0, 10) };
@@ -135,7 +128,7 @@ export function githubStart(request: Request, env: AuthEnv, mode: "login" | "ins
   if (mode === "login") {
     gh = new URL("https://github.com/login/oauth/authorize");
     gh.searchParams.set("client_id", clean(env.GITHUB_APP_CLIENT_ID));
-    gh.searchParams.set("redirect_uri", `${new URL(request.url).origin}/api/auth/callback`);
+    gh.searchParams.set("redirect_uri", `${requestOrigin(request, env)}/api/auth/callback`);
   } else {
     gh = new URL(`https://github.com/apps/${env.GITHUB_APP_SLUG}/installations/new`);
   }
@@ -291,7 +284,7 @@ interface SignoutToken { k: "o"; x: number }
  * KV 里这次登录的令牌也删掉。
  */
 export async function onLogout(request: Request, env: AuthEnv): Promise<Response> {
-  if (!sameOrigin(request)) return privateJson({ error: "不接受跨站请求" }, 403);
+  if (!sameOrigin(request, env)) return privateJson({ error: "不接受跨站请求" }, 403);
   const v = readCookie(request, SESSION_COOKIE);
   const sess = v && env.SESSION_SECRET ? await unseal(env.SESSION_SECRET, v) : null;
   await dropFamily(env, sess?.f);
