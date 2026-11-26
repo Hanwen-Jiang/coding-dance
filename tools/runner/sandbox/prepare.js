@@ -10,6 +10,10 @@ const { CPP_FLAGS } = require("./toolchain");
 const { JUDGE } = require("./programs");
 
 const PREP = process.env.RUNNER_PREPARED || "/opt/lc/prepared";
+const GROUP = (process.env.RUNNER_PREPARE_GROUP || "all").toLowerCase();
+const GROUPS = new Set(GROUP.split(",").map((s) => s.trim()).filter(Boolean));
+const want = (g) => GROUPS.has("all") || GROUPS.has(g);
+fs.mkdirSync(PREP, { recursive: true });
 const sh = (cmd, args, opts = {}) => {
   const r = cp.spawnSync(cmd, args, { encoding: "utf8", maxBuffer: 64 << 20, ...opts });
   if (r.status !== 0) throw new Error(`${cmd} ${args.join(" ")} 失败：\n${r.stderr || r.stdout || r.error}`);
@@ -17,7 +21,7 @@ const sh = (cmd, args, opts = {}) => {
 };
 const step = (name, fn) => { const t = Date.now(); fn(); console.log(`✓ ${name}（${((Date.now() - t) / 1000).toFixed(1)} 秒）`); };
 
-step("C++ 预编译头", () => {
+if (want("native")) step("C++ 预编译头", () => {
   for (const variant of ["run", "debug"]) {
     const dir = path.join(PREP, "cpp", variant);
     fs.mkdirSync(dir, { recursive: true });
@@ -39,7 +43,7 @@ step("C++ 预编译头", () => {
   sh("g++", [...CPP_FLAGS.run, "-x", "c++-header", path.join(dir, "stdc++.h"), "-o", path.join(dir, "stdc++.h.gch")]);
 });
 
-step("Go 标准库", () => {
+if (want("native")) step("Go 标准库", () => {
   const dir = path.join(PREP, "go"), cache = path.join(dir, "cache");
   fs.mkdirSync(cache, { recursive: true });
   const env = { ...process.env, GOCACHE: cache, CGO_ENABLED: "0", GOFLAGS: "", GOPATH: "/tmp/gopath" };
@@ -59,7 +63,7 @@ step("Go 标准库", () => {
   fs.rmSync(t, { recursive: true, force: true });
 });
 
-step("Java 调试器（JdiTrace + JdiDap）", () => {
+if (want("jvm")) step("Java 调试器（JdiTrace + JdiDap）", () => {
   sh("javac", ["-encoding", "UTF-8", "-d", path.join(PREP, "jdi"), path.join(__dirname, "trace", "JdiTrace.java"), path.join(__dirname, "trace", "JdiDap.java")]);
 });
 
@@ -83,7 +87,7 @@ function expectRun(cmd, args, opts) {
 
 // javac 跑在 JVM 上：编一个代表性题目，把加载过的编译器类存成 CDS 归档，减少 1 核沙箱里的冷启开销
 const JAVA_SAMPLE = "class Solution {\n    public List<List<Integer>> levelOrder(TreeNode root) {\n        List<List<Integer>> res = new ArrayList<>();\n        Queue<TreeNode> q = new ArrayDeque<>();\n        if (root != null) q.offer(root);\n        while (!q.isEmpty()) {\n            int n = q.size();\n            List<Integer> level = new ArrayList<>(n);\n            for (int i = 0; i < n; i++) {\n                TreeNode t = q.poll();\n                level.add(t.val);\n                if (t.left != null) q.offer(t.left);\n                if (t.right != null) q.offer(t.right);\n            }\n            res.add(level);\n        }\n        Map<Integer, Integer> m = new HashMap<>();\n        m.put(1, m.getOrDefault(1, 0) + 1);\n        return res;\n    }\n}\n";
-step("Java 编译器（javac）的 CDS 归档", () => {
+if (want("jvm")) step("Java 编译器（javac）的 CDS 归档", () => {
   const jsa = path.join(PREP, "java", "javac.jsa");
   fs.mkdirSync(path.dirname(jsa), { recursive: true });
   const s = sample("java", JAVA_SAMPLE);
@@ -98,7 +102,7 @@ step("Java 编译器（javac）的 CDS 归档", () => {
   fs.rmSync(s.dir, { recursive: true, force: true });
 });
 
-step("C# 编译器和引用程序集", () => {
+if (want("extra")) step("C# 编译器和引用程序集", () => {
   const dir = path.join(PREP, "csharp");
   fs.mkdirSync(dir, { recursive: true });
   const cs = T.findCsharp(path.join(dir, "refs.rsp"));
@@ -117,6 +121,7 @@ const JVM_SAMPLES = {
   scala: "object Solution {\n    def levelOrder(root: TreeNode): List[List[Int]] = {\n        val res = scala.collection.mutable.ListBuffer[List[Int]]()\n        val q = scala.collection.mutable.Queue[TreeNode]()\n        if (root != null) q.enqueue(root)\n        while (q.nonEmpty) {\n            val level = (0 until q.size).map { _ =>\n                val t = q.dequeue()\n                if (t.left != null) q.enqueue(t.left)\n                if (t.right != null) q.enqueue(t.right)\n                t.value\n            }\n            res += level.toList.sortBy(_ => 0)\n        }\n        val m = scala.collection.mutable.HashMap[Int, Int]().withDefaultValue(0); m(1) += 1\n        res.toList\n    }\n}\n",
 };
 for (const lang of ["kotlin", "scala"]) {
+  if (!want("jvm")) break;
   step(`${lang === "kotlin" ? "Kotlin" : "Scala"} 编译器的 CDS 归档`, () => {
     const home = lang === "kotlin" ? T.KOTLIN_HOME : T.SCALA_HOME, args = lang === "kotlin" ? T.kotlincArgs(home) : T.scalacArgs(home);
     const jsa = path.join(PREP, lang, "compiler.jsa");
@@ -135,7 +140,15 @@ for (const lang of ["kotlin", "scala"]) {
   });
 }
 
-step("Swift、Rust、Dart、C、Ruby、PHP 编一个例子试试", () => {
+const SMOKE_BY_GROUP = {
+  native: ["c", "rust"],
+  script: ["ruby", "php"],
+  extra: ["swift", "dart"],
+};
+const activeSmokeLangs = new Set(
+  Object.entries(SMOKE_BY_GROUP).flatMap(([g, ls]) => (want(g) ? ls : [])),
+);
+if (activeSmokeLangs.size > 0) step(`试编试跑（${[...activeSmokeLangs].join("、")}）`, () => {
   const codes = {
     swift: "class Solution {\n    func levelOrder(_ root: TreeNode?) -> [[Int]] {\n        var res: [[Int]] = [], q: [TreeNode] = []\n        if let r = root { q.append(r) }\n        while !q.isEmpty {\n            res.append(q.map { $0.val })\n            q = q.flatMap { [$0.left, $0.right].compactMap { $0 } }\n        }\n        return res\n    }\n}\n",
     rust: "use std::rc::Rc;\nuse std::cell::RefCell;\nimpl Solution {\n    pub fn level_order(root: Option<Rc<RefCell<TreeNode>>>) -> Vec<Vec<i32>> {\n        let mut res = vec![];\n        let mut q: Vec<Rc<RefCell<TreeNode>>> = root.into_iter().collect();\n        while !q.is_empty() {\n            res.push(q.iter().map(|t| t.borrow().val).collect());\n            q = q.iter().flat_map(|t| { let b = t.borrow(); vec![b.left.clone(), b.right.clone()] }).flatten().collect();\n        }\n        res\n    }\n}\n",
@@ -145,6 +158,7 @@ step("Swift、Rust、Dart、C、Ruby、PHP 编一个例子试试", () => {
     php: "class Solution {\n    function levelOrder($root) {\n        $res = [];\n        $q = $root ? [$root] : [];\n        while ($q) {\n            $res[] = array_map(fn($t) => $t->val, $q);\n            $next = [];\n            foreach ($q as $t) { if ($t->left) $next[] = $t->left; if ($t->right) $next[] = $t->right; }\n            $q = $next;\n        }\n        return $res;\n    }\n}\n",
   };
   for (const [lang, code] of Object.entries(codes)) {
+    if (!activeSmokeLangs.has(lang)) continue;
     const s = sample(lang, code);
     const files = Object.keys(s.prog.files);
     if (lang === "swift") { sh("swiftc", [...T.SWIFT_FLAGS, "-module-cache-path", path.join(s.dir, "mc"), "-o", "prog", ...files.filter((f) => f.endsWith(".swift"))], { cwd: s.dir }); expectRun(path.join(s.dir, "prog"), ["0", "t"], { cwd: s.dir }); }

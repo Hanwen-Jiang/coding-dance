@@ -1,0 +1,43 @@
+{
+  "name": "lc-runner-cf-poc",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": true,
+  "vars": {
+    "RUNNER_NODE_ID": "cf-poc",
+    "CONTAINER_SLEEP_MS": "120000"
+  },
+  "containers": [
+    {
+      "class_name": "RunnerScriptDO",
+      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-script:poc",
+      "instance_type": "basic",
+      "max_instances": 4
+    },
+    {
+      "class_name": "RunnerJvmDO",
+      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-jvm:poc",
+      "instance_type": "standard-1",
+      "max_instances": 4
+    },
+    {
+      "class_name": "RunnerNativeDO",
+      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-native:poc",
+      "instance_type": "standard-1",
+      "max_instances": 4
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "RUNNER_SCRIPT", "class_name": "RunnerScriptDO" },
+      { "name": "RUNNER_JVM", "class_name": "RunnerJvmDO" },
+      { "name": "RUNNER_NATIVE", "class_name": "RunnerNativeDO" }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["RunnerScriptDO", "RunnerJvmDO", "RunnerNativeDO"]
+    }
+  ]
+}
