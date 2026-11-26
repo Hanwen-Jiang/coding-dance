@@ -64,6 +64,44 @@
   - 再加上前面说的 `StringBuilder.append(Object)` 歧义（判题器里临时绕开了）。
 - **CheerpJ 5**（无界面 Chrome，全新缓存，3 段）：初始化 4.4 s；**第一次 javac 63 s**，之后每段 javac 8–9 s；运行 1.4–1.8 s；3 段都对。比 teavm-javac 慢一到两个数量级，不适合「改一下、跑一下」的练习节奏。（内置浏览器面板隐藏时测的那次更慢，页面被当成后台降速，那组数字作废。）
 
+## 实测结果：Cloudflare Containers 多分组 PoC（2026-11-27）
+
+- **环境与方法**：日期 `2026-11-27`（UTC `2026-11-26T20:09Z`）；Cloudflare Containers（Firecracker 运行时、`enableInternet: false`、空闲休眠 `CONTAINER_SLEEP_MS=120000`）；单 Worker 调度网关 `lc-runner-cf-poc`（自定义域名 `https://run-cf-poc.codingdance.cn`，代码见 `tools/runner/cf/`）；测试端为国内网络 macOS / Node 26.7.0，脚本 `tools/runner/cf/test-poc.mjs`，测试题为力扣 #1 `twoSum`（输入 `[[3, 2, 4], 6]`，期望 `[1, 2]`）。
+- **多分组镜像体积与 CF 规格**（对比 15 语言单镜像 `5.18 GB` / `6.1 GB` ext4）：
+  - `runner-script`（`python`、`javascript`、`typescript`、`ruby`、`php`）：`414 MB`，CF `basic`（0.25 vCPU / 1 GiB / 4 GB 盘）
+  - `runner-jvm`（`java` + `JdiTrace`/`JdiDap` + `javac.jsa`、`kotlin`、`scala`）：`856 MB`，CF `standard-1`（0.5 vCPU / 4 GiB / 8 GB 盘）
+  - `runner-native`（`c`、`cpp` + `gdb`、`go` + `dlv`、`rust`）：`1.86 GB`，CF `standard-1`（0.5 vCPU / 4 GiB / 8 GB 盘）
+  - `runner-extra`（`csharp`、`swift`、`dart`）：PoC 尚未构建，**未测**。
+
+| 用例 | 分组 / 规格 | 冷启动 | `cfContainerBootMs` | `compileMs` | `runMs` | 容器 `totalMs` | 端到端 `clientWallMs` |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `python` (cold) | `script` (`basic`) | 是 | 488 ms | 96 ms | 50 ms | 335 ms | 1359 ms |
+| `python` (warm) | `script` (`basic`) | 否 | 0 ms | 47 ms | 39 ms | 149 ms | 513 ms |
+| `typescript` (warm) | `script` (`basic`) | 否 | 0 ms | 140 ms | 247 ms | 434 ms | 750 ms |
+| `java` (cold) | `jvm` (`standard-1`) | 是 | 412 ms | 1050 ms | 114 ms | 1352 ms | 2394 ms |
+| `java` (warm) | `jvm` (`standard-1`) | 否 | 0 ms | 815 ms | 84 ms | 962 ms | 1312 ms |
+| `kotlin` (warm) | `jvm` (`standard-1`) | 否 | 0 ms | 6205 ms | 66 ms | 6322 ms | 6613 ms |
+| `cpp` (cold) | `native` (`standard-1`) | 是 | 466 ms | 2374 ms | 34 ms | 2629 ms | 3616 ms |
+| `cpp` (warm) | `native` (`standard-1`) | 否 | 0 ms | 1751 ms | 11 ms | 1820 ms | 2220 ms |
+| `go` (warm) | `native` (`standard-1`) | 否 | 0 ms | 336 ms | 6 ms | 402 ms | 731 ms |
+| `rust` (warm) | `native` (`standard-1`) | 否 | 0 ms | 1579 ms | 4 ms | 1646 ms | 1940 ms |
+
+（注：全部 10 项返回 HTTP 200 且结果匹配 `[1, 2]`。）
+
+- **调试器（`ptrace` / JDWP / WebSocket DAP）与隔离验证**：
+  - Trace 调试（`POST /v1/run` `debug: true`）：`cpp`（`gdb`，15 步，`2206 ms`）、`go`（`dlv`，15 步，`1094 ms`）、`java`（`JdiTrace`，13 步，`4772 ms`），全部通过。
+  - 交互式 WebSocket DAP（`GET /v1/dap`，断点命中 + `stackTrace` 映射回编辑器行号）：`cpp`（`gdb -i=dap`，第 6 行，`4017 ms`）、`go`（`dlv dap`，第 4 行，`2825 ms`）、`java`（`JdiDap`，第 5 行，`3279 ms`），全部通过。
+  - 出网隔离（`enableInternet: false`）：Python 执行 `socket.create_connection(("1.1.1.1", 53), timeout=2)` 返回 `NET_BLOCKED`。
+- **对比基线（`lou1` 经 Cloudflare Tunnel，2026-11-26 实测）**：
+  - 国内直连 `https://run-lou1.codingdance.cn/healthz`：冷连接 `ttfb=4.35 s`（`tls=0.75 s`），热连接 `ttfb=1.39–1.97 s`（仅 Tunnel 往返就占 `0.9–3.6 s`）。
+  - `lou1` 本机 `fc-manager` 预热池（`AR_FC_WARM_POOL=lc-runner:1000:1024:4`）：热 VM 检出 `9–51 ms`，Python 热跑总耗时 `279–314 ms`，但闲置约 30 分钟后冷峰达到 `6.68–6.72 s`。
+- **结论与踩过的坑**：
+  - 按语言族拆分后可用 `basic` / `standard-1` 跑通，无需为了 5.18 GB 单镜像买 `standard-2`；容器冷启动 `412–488 ms`，无 Tunnel 抖动，且支持 `120 s` 空闲自动休眠缩零。
+  - CF Containers（Firecracker）原生支持 `gdb` / `dlv` 的 `ptrace`、JDWP 与 WebSocket DAP 透传，无需额外提权。
+  - 国内访问 `*.workers.dev` 会超时 / 被干扰，必须绑定自定义域名（如 `run-cf-poc.codingdance.cn`）。
+  - `standard-1` 只有 `0.5 vCPU`，导致 `kotlin`（`6.2 s`）和 `cpp`（`1.75–2.37 s`）编译慢于 1 核（本机 1 核 Kotlin 实测 `2.1 s`）；后续若要更快编译可把 `jvm` / `native` 调到 1 vCPU / `standard-2`。
+  - 在 WSL 的 `/mnt/c/...` 目录下执行 `wrangler containers push` 会触发 `@cloudflare/workerd-windows-64` 平台冲突，需切到 Linux 路径（如 `/tmp`）推送镜像。
+
 ## 设计
 
 ### 1. 运行环境包：按需下载，先问用户
@@ -214,6 +252,7 @@
 
 ## 变更记录
 
+- 2026-11-27：完成 Cloudflare Containers 多分组 PoC（`tools/runner/cf/`，`runner-script`、`runner-jvm`、`runner-native` 共 12 门语言，经自定义域名 `run-cf-poc.codingdance.cn` 的单 Worker 网关按语言族路由；`runner-extra` 未测），实测容器冷启动 `412–488 ms`、原生支持 `gdb`/`dlv`/`JdiTrace` trace 调试与 WebSocket DAP 断点调试、`enableInternet: false` 隔离生效，并将全部实测与 `lou1` 对比数据记入本文「实测结果」。
 - 2026-11-25：补齐云端每日额度限制与防滥用（`site/functions/_lib/quota.ts`），免费 30 次/天、首批用户/专业版 2000 次/天，北京时间 0 点重置，支持新账号注册天数限制、月度预算开关及节点不可用自动退回额度；优化 `/welcome/` 引导页默认展开加载 Star 列表并跨跳转保留勾选；升级动画引擎 V2（支持重播本步、值交换弧线、DP 依赖箭头、值前后变化及树/链表关键帧平滑过渡），修复 Issue #47（#114 二叉树展开为链表）并重绘 4 道标杆题（#75、#72、#206、#215）。
 - 2026-11-23：Python、JavaScript、TypeScript 也能选云端运行（分支 `cloud-run`）。练习区的「⋯」菜单和状态栏上选「浏览器 / 云端」，每门语言各记各的（`hot100:practice:target:<语言>`，默认浏览器）；语言列表里选了云端的也标「云端」。选了云端时运行和测试经 `/api/run` 交给运行器，调试仍在浏览器里（运行器只给 Java、C++、Go 接了调试器）。云端运行要登录：确定没登录时直接在控制台里提示登录，不发请求；登录过期 `/api/run` 回 401 时也显示同样的提示，不再只有一行报错。运行器这边 Python、JavaScript 早就支持，TypeScript 补了两处：语法错误原来按运行时出错报（每组都是 Node 的一长串调用栈），现在先用 Node 自带的转换器解析一遍，报成编译错误、带编辑器里的行号；`enum`、构造函数参数属性这些要转换的写法原来直接报错（Node 默认只擦类型），现在加 `--experimental-transform-types`，和浏览器里一样能用。这一版的节点在 `/v1/status` 里报 `features: ["ts-transform"]`，网站只把 TypeScript 交给报了它的节点；lou1 重跑 `setup.sh` 之前，练习区显示 TypeScript 暂时不能在云端运行，不会交给旧版沙箱。CI 的起始代码测试加上这三种语言（300 组）。本地用假的 `/api/run`（在 lc-runner 镜像里跑这个分支的沙箱）在 Chrome 里走了一遍：没登录、登录、登录过期、调试、每门语言各记各的、运行器不在线。
 - 2026-11-18：练习区加九种云端语言（C、C#、Kotlin、Swift、Rust、Ruby、PHP、Scala、Dart，分支 `more-langs`）。起始代码不自己生成，用 leetcode.cn 公开接口取的力扣原样模板（`tools/practice/fetch-starters.mjs` → `leetcode-starters.json`），判题程序按同样的类型和函数名调用，`build.cjs` 逐题核对函数名，CI 再把九种 × 100 题的起始代码补上「还没写」编译、跑一组（896 组，Rust 少 4 道）。力扣没有 Rust 版本的 138、141、142、160（Box 表示不了成环、共用节点、random 指针）在力扣模式下提示改用 ACM 模式；Dart 没有的 138、141、142、160、236、240 照力扣 Dart 的写法补。各语言实测（本机 1 核）：编译 C 0.1 秒、Rust 0.2 秒、C# 0.5 秒、Swift 0.3–1 秒、Dart 0.4 秒、Scala 1.6 秒、Kotlin 2.1 秒（Kotlin、Scala 原来要 5 秒、3 秒，只用 C1 加 CDS 归档省了一半）。踩过的坑：Swift `-O` 下越界只会 ud2、不说原因，加了 `-assert-config Debug` 调用栈又在断言那里断了，改用 `-Onone -g`；Dart AOT 的调用栈没有行号，改用 kernel + JIT；Ruby 的几道链表题力扣用的是驼峰函数名（`hasCycle`）。镜像从 6 种语言变成 15 种，Swift 去掉 SourceKit、LLDB 等省 1 GB 多。网站：`/v1/status` 报的 `langs` 里没有的语言，练习区显示「云端运行器还没装上」，不去跑；新语言暂时不能调试。顺手修了练习区存进度仓时 Java / C++ / Go 的提交说明里语言名是 undefined。
