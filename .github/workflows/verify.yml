@@ -12,6 +12,20 @@ jobs:
   go-modernization:
     name: Go 控制面与零私有源构建
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: codingdance_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d codingdance_test"
+          --health-interval=3s
+          --health-timeout=3s
+          --health-retries=10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -22,6 +36,8 @@ jobs:
         with:
           node-version: 24
       - name: Go 静态检查与竞态单测（cd-runner / cd-api / cd-build）
+        env:
+          TEST_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/codingdance_test?sslmode=disable
         run: |
           go vet ./...
           go test -race ./...
@@ -66,9 +82,9 @@ jobs:
           node lib/practice/test/record.test.ts
           node lib/practice/test/save-queue.test.ts
           node functions/_lib/test/runner.test.ts
-      - name: 多域名登录的测试
+      - name: Edge BFF 代理与 cd-api OAuth 端到端测试
         working-directory: site
-        run: node functions/_lib/test/sso.test.ts
+        run: node functions/_lib/test/bff.test.ts
 
   practice:
     name: 练习数据和运行器

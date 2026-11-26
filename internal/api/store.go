@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	_ "embed"
 	"encoding/json"
 	"fmt"
@@ -16,6 +17,23 @@ import (
 
 //go:embed migrations/001_init.sql
 var PostgresMigrationSQL string
+
+type UserProfile struct {
+	Login       string `json:"login"`
+	AvatarURL   string `json:"avatarUrl"`
+	Tier        string `json:"tier"` // "free" | "pro"
+	Founder     bool   `json:"founder"`
+	GHCreatedAt string `json:"ghCreatedAt,omitempty"`
+	RepoSynced  bool   `json:"repoSynced,omitempty"`
+}
+
+func (p UserProfile) ToQuotaProfile() QuotaProfile {
+	tier := p.Tier
+	if tier == "" {
+		tier = "free"
+	}
+	return QuotaProfile{Tier: tier, Founder: p.Founder, CreatedAt: p.GHCreatedAt}
+}
 
 type OutboxItem struct {
 	ID          int64     `json:"id"`
@@ -49,35 +67,100 @@ type PracticeSaveResponse struct {
 	Status   string   `json:"status,omitempty"`
 }
 
-// HotStore provides sub-millisecond reads/writes for drafts, attempts, solutions, progress,
-// and transactional Git sync outbox items.
-type HotStore struct {
+type ProblemHistoryResponse struct {
+	History  []progress.HistoryFile `json:"history"`
+	Attempts []progress.Attempt     `json:"attempts"`
+}
+
+type DraftSeed struct {
+	ProblemID int
+	Lang      string
+	Mode      string
+	FilePath  string
+	Code      string
+}
+
+type SolutionSeed struct {
+	FilePath  string
+	ProblemID int
+	Lang      string
+	Code      string
+}
+
+type AttemptSeed struct {
+	ProblemID int
+	Date      string
+	Seq       int
+	Result    string
+	Lang      string
+	Mode      string
+	FilePath  string
+	Markdown  string
+}
+
+type HydratedRepo struct {
+	Progress  map[string]progress.ProgressEntry
+	Settings  []string
+	Drafts    []DraftSeed
+	Solutions []SolutionSeed
+	Attempts  []AttemptSeed
+	AllPaths  []string
+}
+
+// Store abstracts HotStore operations across PostgreSQL (production) and MemoryStore (local dev / unit tests).
+type Store interface {
+	Problem(id int) (progress.ProblemMeta, bool)
+	UpsertProfile(ctx context.Context, p UserProfile) error
+	GetProfile(ctx context.Context, login string) (UserProfile, bool, error)
+	IsHydrated(ctx context.Context, login string) (bool, error)
+	ReplaceFromHydration(ctx context.Context, login string, data HydratedRepo, now time.Time) error
+	LoadOverview(ctx context.Context, login string) (ProgressOverview, error)
+	SaveStatus(ctx context.Context, login, repo, sealedToken string, id int, status string, now time.Time) (ProgressOverview, error)
+	SaveSettings(ctx context.Context, login, repo, sealedToken string, langs []string, now time.Time) ([]string, error)
+	GetDraft(ctx context.Context, login string, id int, lang, mode string) (code, path string, ok bool, err error)
+	SavePractice(ctx context.Context, login, repo, sealedToken string, save progress.PracticeSave, now time.Time) (PracticeSaveResponse, error)
+	LoadProblemHistory(ctx context.Context, login string, id int) (ProblemHistoryResponse, error)
+	PendingBatchForNextUser(ctx context.Context, now time.Time) (login, repo, sealedToken string, items []OutboxItem, err error)
+	MarkOutboxSynced(ctx context.Context, ids []int64, commitSHA string, now time.Time) error
+	MarkOutboxRetry(ctx context.Context, ids []int64, errStr string, backoff time.Duration, now time.Time) error
+	OutboxCounts(ctx context.Context) (pending, synced int, err error)
+	Close() error
+}
+
+// MemoryStore is the thread-safe in-memory (and optional JSON snapshot) implementation of Store.
+type MemoryStore struct {
 	mu           sync.RWMutex
 	snapshotFile string
 	problems     map[int]progress.ProblemMeta
 
+	profiles        map[string]UserProfile
+	hydrated        map[string]bool
 	progressByUser  map[string]map[string]progress.ProgressEntry // login -> problemID -> entry
 	settingsByUser  map[string][]string                          // login -> langs
 	draftsByUser    map[string]map[string]string                 // login -> "id:lang:mode" -> code
 	pathsByUser     map[string]map[string]struct{}               // login -> virtual repo file path set
 	solutionsByUser map[string]map[string]string                 // login -> path -> code
+	attemptsByUser  map[string]map[string]string                 // login -> path -> markdown
 	outbox          []*OutboxItem
 	nextOutboxID    int64
 }
 
-func NewHotStore(problems []progress.ProblemMeta, snapshotFile string) *HotStore {
+func NewHotStore(problems []progress.ProblemMeta, snapshotFile string) *MemoryStore {
 	pm := make(map[int]progress.ProblemMeta, len(problems))
 	for _, p := range problems {
 		pm[p.ID] = p
 	}
-	s := &HotStore{
+	s := &MemoryStore{
 		snapshotFile:    snapshotFile,
 		problems:        pm,
+		profiles:        make(map[string]UserProfile),
+		hydrated:        make(map[string]bool),
 		progressByUser:  make(map[string]map[string]progress.ProgressEntry),
 		settingsByUser:  make(map[string][]string),
 		draftsByUser:    make(map[string]map[string]string),
 		pathsByUser:     make(map[string]map[string]struct{}),
 		solutionsByUser: make(map[string]map[string]string),
+		attemptsByUser:  make(map[string]map[string]string),
 		nextOutboxID:    1,
 	}
 	if snapshotFile != "" {
@@ -86,12 +169,12 @@ func NewHotStore(problems []progress.ProblemMeta, snapshotFile string) *HotStore
 	return s
 }
 
-func (s *HotStore) Problem(id int) (progress.ProblemMeta, bool) {
+func (s *MemoryStore) Problem(id int) (progress.ProblemMeta, bool) {
 	p, ok := s.problems[id]
 	return p, ok
 }
 
-func (s *HotStore) ensureUserLocked(login string) {
+func (s *MemoryStore) ensureUserLocked(login string) {
 	if s.progressByUser[login] == nil {
 		s.progressByUser[login] = make(map[string]progress.ProgressEntry)
 	}
@@ -104,13 +187,79 @@ func (s *HotStore) ensureUserLocked(login string) {
 	if s.solutionsByUser[login] == nil {
 		s.solutionsByUser[login] = make(map[string]string)
 	}
+	if s.attemptsByUser[login] == nil {
+		s.attemptsByUser[login] = make(map[string]string)
+	}
 }
 
 func draftMapKey(id int, lang, mode string) string {
 	return fmt.Sprintf("%d:%s:%s", id, lang, mode)
 }
 
-func (s *HotStore) LoadOverview(login string) ProgressOverview {
+func (s *MemoryStore) UpsertProfile(_ context.Context, p UserProfile) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	prev := s.profiles[p.Login]
+	p.RepoSynced = p.RepoSynced || prev.RepoSynced
+	if p.GHCreatedAt == "" {
+		p.GHCreatedAt = prev.GHCreatedAt
+	}
+	s.profiles[p.Login] = p
+	s.persistSnapshotLocked()
+	return nil
+}
+
+func (s *MemoryStore) GetProfile(_ context.Context, login string) (UserProfile, bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	p, ok := s.profiles[login]
+	return p, ok, nil
+}
+
+func (s *MemoryStore) IsHydrated(_ context.Context, login string) (bool, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.hydrated[login], nil
+}
+
+func (s *MemoryStore) ReplaceFromHydration(_ context.Context, login string, data HydratedRepo, _ time.Time) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.progressByUser[login] = make(map[string]progress.ProgressEntry, len(data.Progress))
+	for k, v := range data.Progress {
+		s.progressByUser[login][k] = v
+	}
+	if len(data.Settings) > 0 {
+		s.settingsByUser[login] = append([]string(nil), data.Settings...)
+	} else {
+		delete(s.settingsByUser, login)
+	}
+	s.draftsByUser[login] = make(map[string]string, len(data.Drafts))
+	for _, d := range data.Drafts {
+		s.draftsByUser[login][draftMapKey(d.ProblemID, d.Lang, d.Mode)] = d.Code
+	}
+	s.solutionsByUser[login] = make(map[string]string, len(data.Solutions))
+	for _, sol := range data.Solutions {
+		s.solutionsByUser[login][sol.FilePath] = sol.Code
+	}
+	s.attemptsByUser[login] = make(map[string]string, len(data.Attempts))
+	for _, att := range data.Attempts {
+		s.attemptsByUser[login][att.FilePath] = att.Markdown
+	}
+	s.pathsByUser[login] = make(map[string]struct{}, len(data.AllPaths))
+	for _, p := range data.AllPaths {
+		s.pathsByUser[login][p] = struct{}{}
+	}
+	s.hydrated[login] = true
+	if prof, ok := s.profiles[login]; ok {
+		prof.RepoSynced = true
+		s.profiles[login] = prof
+	}
+	s.persistSnapshotLocked()
+	return nil
+}
+
+func (s *MemoryStore) LoadOverview(_ context.Context, login string) (ProgressOverview, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -121,71 +270,26 @@ func (s *HotStore) LoadOverview(login string) ProgressOverview {
 		}
 	}
 	langsOut := make(map[string][]string)
-	for path := range s.solutionsByUser[login] {
-		if pid, lang, ok := parseSolutionPathQuick(path); ok {
+	for p := range s.solutionsByUser[login] {
+		if pid, lang, _, ok := progress.ParseSolutionPath(p); ok {
 			key := strconv.Itoa(pid)
 			if !slices.Contains(langsOut[key], lang) {
 				langsOut[key] = append(langsOut[key], lang)
 			}
 		}
 	}
-	var settings any
+	var settings map[string]any
 	if langs := s.settingsByUser[login]; len(langs) > 0 {
-		settings = map[string]any{"langs": langs}
+		settings = map[string]any{"langs": append([]string(nil), langs...)}
 	}
 	return ProgressOverview{
 		Status:   statusOut,
 		Langs:    langsOut,
-		Settings: toSettingsMap(settings),
-	}
+		Settings: settings,
+	}, nil
 }
 
-func toSettingsMap(v any) map[string]any {
-	if m, ok := v.(map[string]any); ok {
-		return m
-	}
-	return nil
-}
-
-func parseSolutionPathQuick(p string) (int, string, bool) {
-	// solutions/<lang>/<pad4>.<rest>
-	var lang string
-	rest, ok := cutPrefix(p, "solutions/")
-	if !ok {
-		return 0, "", false
-	}
-	idx := indexByte(rest, '/')
-	if idx <= 0 || idx+5 >= len(rest) || rest[idx+5] != '.' {
-		return 0, "", false
-	}
-	lang = rest[:idx]
-	if _, ok := progress.PracticeExt[lang]; !ok {
-		return 0, "", false
-	}
-	id, err := strconv.Atoi(rest[idx+1 : idx+5])
-	if err != nil {
-		return 0, "", false
-	}
-	return id, lang, true
-}
-
-func cutPrefix(s, p string) (string, bool) {
-	if len(s) >= len(p) && s[:len(p)] == p {
-		return s[len(p):], true
-	}
-	return s, false
-}
-
-func indexByte(s string, c byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == c {
-			return i
-		}
-	}
-	return -1
-}
-
-func (s *HotStore) SaveStatus(login, repo, sealedToken string, id int, status string, now time.Time) ProgressOverview {
+func (s *MemoryStore) SaveStatus(ctx context.Context, login, repo, sealedToken string, id int, status string, now time.Time) (ProgressOverview, error) {
 	s.mu.Lock()
 	s.ensureUserLocked(login)
 	key := strconv.Itoa(id)
@@ -195,18 +299,20 @@ func (s *HotStore) SaveStatus(login, repo, sealedToken string, id int, status st
 		bjDate, _ := progress.BeijingParts(now)
 		s.progressByUser[login][key] = progress.ProgressEntry{Status: status, UpdatedAt: bjDate}
 	}
+	s.pathsByUser[login]["progress.json"] = struct{}{}
 	progContent := progress.WriteProgressJSON(s.progressByUser[login])
 	s.enqueueOutboxLocked(login, repo, sealedToken, "progress.json", progContent, fmt.Sprintf("进度：第 %d 题 → %s", id, status), now)
 	s.persistSnapshotLocked()
 	s.mu.Unlock()
-	return s.LoadOverview(login)
+	return s.LoadOverview(ctx, login)
 }
 
-func (s *HotStore) SaveSettings(login, repo, sealedToken string, langs []string, now time.Time) []string {
+func (s *MemoryStore) SaveSettings(_ context.Context, login, repo, sealedToken string, langs []string, now time.Time) ([]string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.ensureUserLocked(login)
 	s.settingsByUser[login] = append([]string(nil), langs...)
+	s.pathsByUser[login]["settings.json"] = struct{}{}
 	labels := make([]string, len(langs))
 	for i, l := range langs {
 		if lbl, ok := progress.LangLabel[l]; ok {
@@ -218,7 +324,7 @@ func (s *HotStore) SaveSettings(login, repo, sealedToken string, langs []string,
 	msg := "设置：常用语言 → " + joinStr(labels, "、")
 	s.enqueueOutboxLocked(login, repo, sealedToken, "settings.json", progress.WriteSettingsJSON(langs), msg, now)
 	s.persistSnapshotLocked()
-	return langs
+	return langs, nil
 }
 
 func joinStr(xs []string, sep string) string {
@@ -232,22 +338,22 @@ func joinStr(xs []string, sep string) string {
 	return out
 }
 
-func (s *HotStore) GetDraft(login string, id int, lang, mode string) (code string, path string, ok bool) {
+func (s *MemoryStore) GetDraft(_ context.Context, login string, id int, lang, mode string) (string, string, bool, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	dm := s.draftsByUser[login]
 	if dm == nil {
-		return "", "", false
+		return "", "", false, nil
 	}
 	c, exists := dm[draftMapKey(id, lang, mode)]
 	if !exists {
-		return "", "", false
+		return "", "", false, nil
 	}
 	prob := s.problems[id]
-	return c, progress.DraftPath(prob, lang, mode), true
+	return c, progress.DraftPath(prob, lang, mode), true, nil
 }
 
-func (s *HotStore) SavePractice(login, repo, sealedToken string, save progress.PracticeSave, now time.Time) (PracticeSaveResponse, error) {
+func (s *MemoryStore) SavePractice(_ context.Context, login, repo, sealedToken string, save progress.PracticeSave, now time.Time) (PracticeSaveResponse, error) {
 	prob, exists := s.problems[save.ID]
 	if !exists {
 		return PracticeSaveResponse{}, &progress.ValidationError{Message: "这道题不在热题 100 题库里", Status: 404}
@@ -312,6 +418,9 @@ func (s *HotStore) SavePractice(login, repo, sealedToken string, save progress.P
 		if f.Path == plan.Solution {
 			s.solutionsByUser[login][f.Path] = f.Content
 		}
+		if f.Path == plan.Attempt {
+			s.attemptsByUser[login][f.Path] = f.Content
+		}
 		if f.Path == "progress.json" && plan.Status != "" {
 			bjDate, _ := progress.BeijingParts(now)
 			s.progressByUser[login][strconv.Itoa(save.ID)] = progress.ProgressEntry{
@@ -332,7 +441,63 @@ func (s *HotStore) SavePractice(login, repo, sealedToken string, save progress.P
 	}, nil
 }
 
-func (s *HotStore) enqueueOutboxLocked(login, repo, sealedToken, filePath, content, commitMsg string, now time.Time) {
+func (s *MemoryStore) LoadProblemHistory(_ context.Context, login string, id int) (ProblemHistoryResponse, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return buildProblemHistory(id, s.solutionsByUser[login], s.attemptsByUser[login]), nil
+}
+
+func buildProblemHistory(id int, solutions map[string]string, attempts map[string]string) ProblemHistoryResponse {
+	history := []progress.HistoryFile{}
+	for path, src := range solutions {
+		pid, lang, variant, ok := progress.ParseSolutionPath(path)
+		if !ok || pid != id {
+			continue
+		}
+		lbl := progress.LangLabel[lang]
+		if lbl == "" {
+			lbl = lang
+		}
+		if variant != "" {
+			lbl += " · " + variant
+		}
+		history = append(history, progress.HistoryFile{
+			Lang:  lang,
+			Label: lbl,
+			File:  path,
+			Code:  progress.TrimSolution(lang, src),
+		})
+	}
+	order := progress.LangOrder()
+	sort.Slice(history, func(i, j int) bool {
+		oi := slices.Index(order, history[i].Lang)
+		oj := slices.Index(order, history[j].Lang)
+		if oi != oj {
+			return oi < oj
+		}
+		return history[i].File < history[j].File
+	})
+
+	attOut := []progress.Attempt{}
+	for path, md := range attempts {
+		pid, _, _, _, ok := progress.ParseAttemptPath(path)
+		if !ok || pid != id {
+			continue
+		}
+		if parsed, ok := progress.ParseAttemptFull(path, md); ok {
+			attOut = append(attOut, parsed)
+		}
+	}
+	sort.Slice(attOut, func(i, j int) bool {
+		if attOut[i].Date != attOut[j].Date {
+			return attOut[i].Date < attOut[j].Date
+		}
+		return attOut[i].Seq < attOut[j].Seq
+	})
+	return ProblemHistoryResponse{History: history, Attempts: attOut}
+}
+
+func (s *MemoryStore) enqueueOutboxLocked(login, repo, sealedToken, filePath, content, commitMsg string, now time.Time) {
 	id := s.nextOutboxID
 	s.nextOutboxID++
 	s.outbox = append(s.outbox, &OutboxItem{
@@ -348,8 +513,7 @@ func (s *HotStore) enqueueOutboxLocked(login, repo, sealedToken, filePath, conte
 	})
 }
 
-// PendingBatchForNextUser fetches all ready unsynced outbox items for one user repo.
-func (s *HotStore) PendingBatchForNextUser(now time.Time) (login, repo, sealedToken string, items []OutboxItem) {
+func (s *MemoryStore) PendingBatchForNextUser(_ context.Context, now time.Time) (login, repo, sealedToken string, items []OutboxItem, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -362,14 +526,14 @@ func (s *HotStore) PendingBatchForNextUser(now time.Time) (login, repo, sealedTo
 			repo = it.Repo
 		}
 		if it.Login == login && it.Repo == repo {
-			sealedToken = it.TokenSealed // always use freshest token
+			sealedToken = it.TokenSealed
 			items = append(items, *it)
 		}
 	}
-	return login, repo, sealedToken, items
+	return login, repo, sealedToken, items, nil
 }
 
-func (s *HotStore) MarkOutboxSynced(ids []int64, commitSHA string, now time.Time) {
+func (s *MemoryStore) MarkOutboxSynced(_ context.Context, ids []int64, commitSHA string, now time.Time) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	idSet := make(map[int64]struct{}, len(ids))
@@ -384,9 +548,10 @@ func (s *HotStore) MarkOutboxSynced(ids []int64, commitSHA string, now time.Time
 		}
 	}
 	s.persistSnapshotLocked()
+	return nil
 }
 
-func (s *HotStore) MarkOutboxRetry(ids []int64, errStr string, backoff time.Duration, now time.Time) {
+func (s *MemoryStore) MarkOutboxRetry(_ context.Context, ids []int64, errStr string, backoff time.Duration, now time.Time) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	idSet := make(map[int64]struct{}, len(ids))
@@ -401,9 +566,10 @@ func (s *HotStore) MarkOutboxRetry(ids []int64, errStr string, backoff time.Dura
 		}
 	}
 	s.persistSnapshotLocked()
+	return nil
 }
 
-func (s *HotStore) OutboxCounts() (pending, synced int) {
+func (s *MemoryStore) OutboxCounts(_ context.Context) (pending, synced int, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	for _, it := range s.outbox {
@@ -413,29 +579,37 @@ func (s *HotStore) OutboxCounts() (pending, synced int) {
 			synced++
 		}
 	}
-	return pending, synced
+	return pending, synced, nil
 }
 
+func (s *MemoryStore) Close() error { return nil }
+
 type storeSnapshot struct {
+	Profiles  map[string]UserProfile                       `json:"profiles"`
+	Hydrated  map[string]bool                              `json:"hydrated"`
 	Progress  map[string]map[string]progress.ProgressEntry `json:"progress"`
 	Settings  map[string][]string                          `json:"settings"`
 	Drafts    map[string]map[string]string                 `json:"drafts"`
 	Paths     map[string]map[string]struct{}               `json:"paths"`
 	Solutions map[string]map[string]string                 `json:"solutions"`
+	Attempts  map[string]map[string]string                 `json:"attempts"`
 	Outbox    []*OutboxItem                                `json:"outbox"`
 	NextID    int64                                        `json:"nextId"`
 }
 
-func (s *HotStore) persistSnapshotLocked() {
+func (s *MemoryStore) persistSnapshotLocked() {
 	if s.snapshotFile == "" {
 		return
 	}
 	b, err := json.Marshal(storeSnapshot{
+		Profiles:  s.profiles,
+		Hydrated:  s.hydrated,
 		Progress:  s.progressByUser,
 		Settings:  s.settingsByUser,
 		Drafts:    s.draftsByUser,
 		Paths:     s.pathsByUser,
 		Solutions: s.solutionsByUser,
+		Attempts:  s.attemptsByUser,
 		Outbox:    s.outbox,
 		NextID:    s.nextOutboxID,
 	})
@@ -444,13 +618,19 @@ func (s *HotStore) persistSnapshotLocked() {
 	}
 }
 
-func (s *HotStore) loadSnapshot() {
+func (s *MemoryStore) loadSnapshot() {
 	raw, err := os.ReadFile(s.snapshotFile)
 	if err != nil {
 		return
 	}
 	var snap storeSnapshot
 	if json.Unmarshal(raw, &snap) == nil {
+		if snap.Profiles != nil {
+			s.profiles = snap.Profiles
+		}
+		if snap.Hydrated != nil {
+			s.hydrated = snap.Hydrated
+		}
 		if snap.Progress != nil {
 			s.progressByUser = snap.Progress
 		}
@@ -465,6 +645,9 @@ func (s *HotStore) loadSnapshot() {
 		}
 		if snap.Solutions != nil {
 			s.solutionsByUser = snap.Solutions
+		}
+		if snap.Attempts != nil {
+			s.attemptsByUser = snap.Attempts
 		}
 		s.outbox = snap.Outbox
 		if snap.NextID > 0 {

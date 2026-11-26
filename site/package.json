@@ -10,7 +10,7 @@
     "preview:local": "node ../tools/dev/preview.mjs",
     "dev:resources": "node ../tools/dev/resource-api.mjs",
     "test:dev-resources": "node ../tools/dev/resource-api.test.mjs",
-    "test": "node lib/sync/test/sync.test.ts && node lib/practice/test/record.test.ts && node lib/practice/test/save-queue.test.ts && node functions/_lib/test/sso.test.ts && node functions/_lib/test/quota.test.ts && node functions/_lib/test/companion.test.ts",
+    "test": "node lib/sync/test/sync.test.ts && node lib/practice/test/record.test.ts && node lib/practice/test/save-queue.test.ts && node functions/_lib/test/bff.test.ts && node functions/_lib/test/quota.test.ts && node functions/_lib/test/companion.test.ts",
     "deploy": "npm run build && wrangler pages deploy out",
     "prepare:practice": "node ../tools/practice-runtime/prepare.mjs",
     "generate:practice": "node ../tools/practice/build.cjs",

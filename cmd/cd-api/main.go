@@ -24,7 +24,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	srv := api.NewServer(cfg, nil, nil, runner.DefaultJSONLogger)
+	problems := api.LoadProblemsFromDir(cfg.ProblemsDir)
+	var store api.Store
+	if cfg.DatabaseURL != "" {
+		pgStore, err := api.NewPostgresStore(ctx, cfg.DatabaseURL, problems)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "连接 PostgreSQL 失败: %v\n", err)
+			os.Exit(1)
+		}
+		defer pgStore.Close()
+		store = pgStore
+	}
+
+	srv := api.NewServerWithStore(cfg, problems, store, nil, runner.DefaultJSONLogger)
 	srv.Worker.Start(ctx)
 	srv.Metrics.StartOTLPPusher(ctx, cfg.OTLPEndpoint, 15*time.Second)
 
@@ -44,6 +56,7 @@ func main() {
 		"binary":       "cd-api",
 		"host":         cfg.Host,
 		"port":         cfg.Port,
+		"postgres":     cfg.DatabaseURL != "",
 		"runnerNodes":  len(cfg.RunnerNodes),
 		"valkey":       cfg.ValkeyAddr != "",
 		"companion":    srv.Companion.Configured(),

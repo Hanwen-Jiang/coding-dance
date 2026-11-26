@@ -146,6 +146,6 @@ coding-dance/
 | 演进阶段 | 当前状态 | 切流开关 / 灰度粒度 | 验证门禁 | 秒级回滚手段 |
 | --- | --- | --- | --- | --- |
 | **Phase 1 (`cd-runner`)** | **✅ 已完成落地（`server.mjs` 与 `lib/*` 已彻底退役）** | 按节点灰度：先新起 `lou2` 跑 `cd-runner`（或更新 `lou1`），`RUNNER_NODES` 平滑承接 | HMAC 签名测试向量一致、`fc-manager` 协议与 SecretStore 热读全绿、Java/Go/C++ WebSocket DAP 断点单步跑通、`/api/admin/runner` 指标可见 | 从 `RUNNER_NODES` 摘除异常节点或切回上一版静态二进制 |
-| **Phase 2 (`cd-api`)** | **🚧 核心底座已就绪，待切流** | 前端 `NEXT_PUBLIC_API_BASE_URL` 或 Cloudflare 路由按路径前缀逐步切流（先 `/api/run` → 再 `/api/progress/*`） | AES-GCM Cookie 双向互通、Postgres 热写 `<5ms`、Outbox Worker 提交至测试进度仓与 `check.mjs` 零差异 | Cloudflare 路由切回 Pages Functions（因 Git 进度仓持续双写归档，数据零丢失） |
+| **Phase 2 (`cd-api`)** | **✅ 已完成落地（直连 GitHub 的 OLTP Pages Functions 与 `sso.ts` 已退役，统一收敛至 `cd-api` + Postgres/Valkey 热存储 + Edge BFF 代理）** | 前端 `NEXT_PUBLIC_API_BASE_URL` 或 Cloudflare `CD_API_UPSTREAM` 一键切流至 `cd-api` | AES-GCM Cookie 双向互通、Postgres 热写 `<5ms`、冷启动 GitHub Hydrator、Outbox Worker 批量合并提交及 Edge ⇄ Go OAuth 端到端全绿 | 清空 `CD_API_UPSTREAM` 退回只读降级态（Git 进度仓持续双写归档，数据零丢失） |
 | **Phase 3 (`cd-build`)** | **🚧 并发校验与 R2 打包已就绪** | CI 双跑对比期：`cd-build verify` 与旧 `build.js` 输出比对一致后再移除 Git 内派生 JSON | 100 题 + 22 专题 `//@tag` 零偏差、多语言判题全绿、R2 `manifest.json` 校验通过 | 站点数据读取层保留 GitHub Raw / R2 Manifest 双源回退 |
 | **Phase 4 (前端 & CI)** | **🚧 清单与零 Token 构建已就绪** | `NEXT_PUBLIC_RUNTIME_BASE_URL` 控制 R2 运行时源；`next.config.mjs` 自动探测 `@heroui-pro/react` 完整性 | 无私有 Token 全新容器内 `npm install && npm run build` 静态导出成功 + 运行时单测全绿 | 清空 `NEXT_PUBLIC_RUNTIME_BASE_URL` 即退回同源静态目录 |

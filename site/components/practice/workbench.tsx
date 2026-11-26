@@ -27,6 +27,7 @@ import {
 } from "@/lib/companion";
 import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from "@/lib/practice/acm";
 import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
+import { apiFetch } from "@/lib/api-base";
 import { runPractice } from "@/lib/practice/runner";
 import { isRemote, readTarget, remoteLacks, RemoteLoginError, RemoteQuotaError, remoteStatus, REMOTE_DEBUG_LANGUAGES, writeTarget, type RemoteStatus } from "@/lib/practice/remote";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
@@ -614,7 +615,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
   useEffect(() => {
     if (!ready || !repoReady) return;
     let alive = true;
-    fetch(`/api/progress/practice?id=${problem.id}&lang=${language}&mode=${mode}`, { cache: "no-store" })
+    apiFetch(`/api/progress/practice?id=${problem.id}&lang=${language}&mode=${mode}`, { cache: "no-store" })
       .then((r) => (r.ok ? (r.json() as Promise<{ code?: string | null }>) : null))
       .then((j) => {
         if (!alive || !j?.code) return;

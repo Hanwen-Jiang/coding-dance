@@ -18,6 +18,7 @@ import { StatusPicker } from "@/components/account";
 import { LevelPixels, PixelBullet, PixelIcon, PixelLoader, PixelText, Skel } from "@/components/pixel";
 import { SolutionCode } from "@/components/solution-code";
 import { TierChip, TopicChip } from "@/components/tags";
+import { apiFetch } from "@/lib/api-base";
 import { useCompanionMode } from "@/lib/companion";
 import { IDS } from "@/lib/ids";
 import { codeIn } from "@/lib/langs";
@@ -295,7 +296,7 @@ function useMine(id: number) {
   useEffect(() => {
     if (!canRead) return;
     let alive = true;
-    fetch(`/api/solutions/${id}`, { cache: "no-store" })
+    apiFetch(`/api/solutions/${id}`, { cache: "no-store" })
       .then(async (r) => {
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || `请求失败（${r.status}）`);

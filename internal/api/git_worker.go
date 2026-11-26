@@ -18,10 +18,10 @@ import (
 
 var errGitRefConflict = errors.New("github ref 409/422 conflict")
 
-// GitSyncWorker drains coalesced batches from HotStore's git_sync_outbox and commits
+// GitSyncWorker drains coalesced batches from Store's git_sync_outbox and commits
 // them atomically to the user's <login>/hot100-progress GitHub repository.
 type GitSyncWorker struct {
-	Store         *HotStore
+	Store         Store
 	GitHubAPIBase string
 	SessionSecret string
 	HTTPClient    *http.Client
@@ -32,7 +32,7 @@ type GitSyncWorker struct {
 	wakeCh chan struct{}
 }
 
-func NewGitSyncWorker(store *HotStore, ghBase, secret string, metrics *otel.Registry, logFn func(map[string]any)) *GitSyncWorker {
+func NewGitSyncWorker(store Store, ghBase, secret string, metrics *otel.Registry, logFn func(map[string]any)) *GitSyncWorker {
 	if ghBase == "" {
 		ghBase = "https://api.github.com"
 	}
@@ -48,7 +48,10 @@ func NewGitSyncWorker(store *HotStore, ghBase, secret string, metrics *otel.Regi
 	}
 	if metrics != nil && store != nil {
 		metrics.RegisterGaugeFunc("cd_api_outbox_pending", func() float64 {
-			p, _ := store.OutboxCounts()
+			p, _, err := store.OutboxCounts(context.Background())
+			if err != nil {
+				return 0
+			}
 			return float64(p)
 		})
 	}
@@ -89,8 +92,8 @@ func (w *GitSyncWorker) FlushReady(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		login, repo, sealedTok, items := w.Store.PendingBatchForNextUser(time.Now())
-		if len(items) == 0 {
+		login, repo, sealedTok, items, err := w.Store.PendingBatchForNextUser(ctx, time.Now())
+		if err != nil || len(items) == 0 {
 			return
 		}
 		ids := make([]int64, len(items))
@@ -99,7 +102,7 @@ func (w *GitSyncWorker) FlushReady(ctx context.Context) {
 		}
 		var ghToken string
 		if err := UnsealData(w.SessionSecret, sealedTok, &ghToken); err != nil || ghToken == "" {
-			w.Store.MarkOutboxRetry(ids, "unseal github token failed", 30*time.Second, time.Now())
+			_ = w.Store.MarkOutboxRetry(ctx, ids, "unseal github token failed", 30*time.Second, time.Now())
 			continue
 		}
 
@@ -107,7 +110,7 @@ func (w *GitSyncWorker) FlushReady(ctx context.Context) {
 		if err != nil {
 			attempt := items[0].Attempts + 1
 			backoff := time.Duration(minInt(60, 1<<minInt(attempt, 6))) * time.Second
-			w.Store.MarkOutboxRetry(ids, err.Error(), backoff, time.Now())
+			_ = w.Store.MarkOutboxRetry(ctx, ids, err.Error(), backoff, time.Now())
 			if w.Metrics != nil {
 				w.Metrics.IncCounter("cd_api_git_sync_total", map[string]string{"status": "retry"})
 			}
@@ -116,7 +119,7 @@ func (w *GitSyncWorker) FlushReady(ctx context.Context) {
 			}
 			continue
 		}
-		w.Store.MarkOutboxSynced(ids, commitSHA, time.Now())
+		_ = w.Store.MarkOutboxSynced(ctx, ids, commitSHA, time.Now())
 		if w.Metrics != nil {
 			w.Metrics.IncCounter("cd_api_git_sync_total", map[string]string{"status": "ok"})
 		}

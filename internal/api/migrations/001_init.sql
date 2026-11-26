@@ -7,8 +7,10 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     tier           TEXT NOT NULL DEFAULT 'free', -- 'free' | 'pro'
     founder        BOOLEAN NOT NULL DEFAULT FALSE,
     gh_created_at  TIMESTAMPTZ,
+    repo_synced_at TIMESTAMPTZ,
     updated_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+ALTER TABLE user_profiles ADD COLUMN IF NOT EXISTS repo_synced_at TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS problem_progress (
     login          TEXT NOT NULL,
@@ -45,10 +47,20 @@ CREATE TABLE IF NOT EXISTS practice_attempts (
     result         TEXT NOT NULL,
     lang           TEXT NOT NULL,
     mode           TEXT NOT NULL,
-    file_path      TEXT NOT NULL UNIQUE,
+    file_path      TEXT NOT NULL,
     markdown       TEXT NOT NULL,
-    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (login, file_path)
 );
+ALTER TABLE practice_attempts DROP CONSTRAINT IF EXISTS practice_attempts_file_path_key;
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'practice_attempts_login_file_path_key'
+    ) THEN
+        ALTER TABLE practice_attempts ADD CONSTRAINT practice_attempts_login_file_path_key UNIQUE (login, file_path);
+    END IF;
+END $$;
 CREATE INDEX IF NOT EXISTS idx_practice_attempts_user_problem ON practice_attempts (login, problem_id, date_bj, seq);
 
 CREATE TABLE IF NOT EXISTS user_solutions (
@@ -62,6 +74,12 @@ CREATE TABLE IF NOT EXISTS user_solutions (
     PRIMARY KEY (login, file_path)
 );
 CREATE INDEX IF NOT EXISTS idx_user_solutions_lookup ON user_solutions (login, problem_id, lang);
+
+CREATE TABLE IF NOT EXISTS user_repo_paths (
+    login          TEXT NOT NULL,
+    file_path      TEXT NOT NULL,
+    PRIMARY KEY (login, file_path)
+);
 
 CREATE TABLE IF NOT EXISTS git_sync_outbox (
     id             BIGSERIAL PRIMARY KEY,

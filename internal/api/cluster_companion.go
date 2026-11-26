@@ -33,6 +33,7 @@ type NodeStatus struct {
 	Queue      int      `json:"queue"`
 	Busy       int      `json:"busy"`
 	Queued     int      `json:"queued"`
+	DapActive  int      `json:"dapActive"`
 	Version    string   `json:"version"`
 }
 
@@ -345,6 +346,84 @@ func (c *ClusterRouter) ProxyDAP(w http.ResponseWriter, r *http.Request, user, l
 	go pipe(downConn, upConn)
 	go pipe(upConn, downConn)
 	<-done
+}
+
+// Telemetry aggregates real-time status & OTel telemetry across all configured cd-runner nodes for #/admin.
+func (c *ClusterRouter) Telemetry(ctx context.Context) map[string]any {
+	type nodeTelemetry struct {
+		ID        string         `json:"id"`
+		URL       string         `json:"url"`
+		Online    bool           `json:"online"`
+		Status    *NodeStatus    `json:"status"`
+		Telemetry map[string]any `json:"telemetry"`
+	}
+	items := make([]nodeTelemetry, len(c.Nodes))
+	var wg sync.WaitGroup
+	wg.Add(len(c.Nodes))
+	for i, node := range c.Nodes {
+		idx, n := i, node
+		go func() {
+			defer wg.Done()
+			it := nodeTelemetry{ID: n.ID, URL: n.URL}
+			var st *NodeStatus
+			var tel map[string]any
+			var innerWG sync.WaitGroup
+			innerWG.Add(2)
+			go func() {
+				defer innerWG.Done()
+				resp, err := c.callNode(ctx, n, http.MethodGet, "/v1/status", "admin", nil, 3*time.Second)
+				if err == nil && resp != nil {
+					if resp.StatusCode == http.StatusOK {
+						var parsed NodeStatus
+						if json.NewDecoder(resp.Body).Decode(&parsed) == nil {
+							st = &parsed
+						}
+					}
+					_ = resp.Body.Close()
+				}
+			}()
+			go func() {
+				defer innerWG.Done()
+				resp, err := c.callNode(ctx, n, http.MethodGet, "/v1/admin/telemetry", "admin", nil, 3*time.Second)
+				if err == nil && resp != nil {
+					if resp.StatusCode == http.StatusOK {
+						_ = json.NewDecoder(resp.Body).Decode(&tel)
+					}
+					_ = resp.Body.Close()
+				}
+			}()
+			innerWG.Wait()
+			it.Status = st
+			it.Telemetry = tel
+			it.Online = st != nil
+			items[idx] = it
+		}()
+	}
+	wg.Wait()
+
+	online, totalSlots, busySlots, queuedJobs, activeDAP := 0, 0, 0, 0, 0
+	for _, x := range items {
+		if x.Online && x.Status != nil {
+			online++
+			totalSlots += x.Status.Slots
+			busySlots += x.Status.Busy
+			queuedJobs += x.Status.Queued
+			activeDAP += x.Status.DapActive
+		}
+	}
+	return map[string]any{
+		"ok":        true,
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"summary": map[string]int{
+			"totalNodes":        len(c.Nodes),
+			"onlineNodes":       online,
+			"totalSlots":        totalSlots,
+			"busySlots":         busySlots,
+			"queuedJobs":        queuedJobs,
+			"activeDapSessions": activeDAP,
+		},
+		"nodes": items,
+	}
 }
 
 // —— Consent-First Companion Proxy (100% compatible with site/functions/_lib/companion.ts) ——

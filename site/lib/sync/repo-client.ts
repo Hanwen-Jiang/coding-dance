@@ -1,8 +1,9 @@
 // 同步页在浏览器里用的进度仓接口：请求本站的 /api/sync/*，由服务端用用户自己的 GitHub 登录代办。
+import { API_BASE, apiFetch } from "../api-base.ts";
 import { ConflictError, type RepoClient } from "./plan.ts";
 
 async function call(path: string, init?: RequestInit) {
-  const r = await fetch(path, { credentials: "same-origin", ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) } });
+  const r = await apiFetch(path, { credentials: API_BASE ? "include" : "same-origin", ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) } });
   const j = await r.json().catch(() => ({}));
   if (r.status === 409 && path.endsWith("/commit")) throw new ConflictError("仓库在这期间有了新的提交");
   if (!r.ok) throw new Error(j.error || `请求失败（${r.status}）`);

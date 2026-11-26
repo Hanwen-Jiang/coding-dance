@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,16 +22,24 @@ import (
 type Config struct {
 	Host               string
 	Port               int
+	DatabaseURL        string
 	SessionSecret      string
 	SiteOrigins        []string
+	CookieDomain       string
+	GitHubClientID     string
+	GitHubClientSecret string
+	GitHubAppSlug      string
+	GitHubOAuthBase    string
+	GitHubAPIBase      string
 	ProgressRepo       string
 	TemplateRepo       string
+	StarRepos          string
 	FounderCutoff      string
-	GitHubAPIBase      string
 	RunnerNodes        []RunnerNode
 	RunnerSecret       string
 	RunnerAccessID     string
 	RunnerAccessSecret string
+	AdminToken         string
 	ValkeyAddr         string
 	ValkeyPassword     string
 	QuotaFree          int
@@ -64,16 +73,24 @@ func LoadConfigFromEnv() Config {
 	return Config{
 		Host:               str("API_HOST", "127.0.0.1"),
 		Port:               num("API_PORT", 8788),
+		DatabaseURL:        str("DATABASE_URL", ""),
 		SessionSecret:      str("SESSION_SECRET", ""),
 		SiteOrigins:        ParseAllowedOrigins(str("SITE_ORIGINS", "https://leetcode.cgent.link,https://codexdance.cn,https://codingdance.cn")),
+		CookieDomain:       str("COOKIE_DOMAIN", ""),
+		GitHubClientID:     str("GITHUB_APP_CLIENT_ID", ""),
+		GitHubClientSecret: str("GITHUB_APP_CLIENT_SECRET", ""),
+		GitHubAppSlug:      str("GITHUB_APP_SLUG", "coding-dance"),
+		GitHubOAuthBase:    str("GITHUB_OAUTH_BASE", "https://github.com"),
+		GitHubAPIBase:      str("SYNC_GITHUB_API", "https://api.github.com"),
 		ProgressRepo:       str("PROGRESS_REPO", "hot100-progress"),
 		TemplateRepo:       str("TEMPLATE_REPO", "Hanwen-Jiang/hot100-progress-template"),
+		StarRepos:          str("STAR_REPOS", ""),
 		FounderCutoff:      str("FOUNDER_CUTOFF", "2026-11-18T00:00:00+08:00"),
-		GitHubAPIBase:      str("SYNC_GITHUB_API", "https://api.github.com"),
 		RunnerNodes:        ParseRunnerNodes(os.Getenv("RUNNER_NODES")),
 		RunnerSecret:       str("RUNNER_SECRET", ""),
 		RunnerAccessID:     str("RUNNER_ACCESS_ID", ""),
 		RunnerAccessSecret: str("RUNNER_ACCESS_SECRET", ""),
+		AdminToken:         str("RUNNER_ADMIN_TOKEN", ""),
 		ValkeyAddr:         str("VALKEY_ADDR", ""),
 		ValkeyPassword:     str("VALKEY_PASSWORD", ""),
 		QuotaFree:          num("CLOUD_QUOTA_FREE", 30),
@@ -113,19 +130,46 @@ func LoadProblemsFromDir(dir string) []progress.ProblemMeta {
 }
 
 type Server struct {
-	Cfg       Config
-	Store     *HotStore
-	Worker    *GitSyncWorker
-	Quota     *QuotaManager
-	Cluster   *ClusterRouter
-	Companion *CompanionGateway
-	Metrics   *otel.Registry
-	ProfileFn func(sess *Session) QuotaProfile
+	Cfg        Config
+	Store      Store
+	Worker     *GitSyncWorker
+	Hydrator   *Hydrator
+	Quota      *QuotaManager
+	Cluster    *ClusterRouter
+	Companion  *CompanionGateway
+	Metrics    *otel.Registry
+	HTTPClient *http.Client
+	ProfileFn  func(sess *Session) QuotaProfile
 }
 
 func NewServer(cfg Config, problems []progress.ProblemMeta, kv KVStore, logFn func(map[string]any)) *Server {
+	return NewServerWithStore(cfg, problems, nil, kv, logFn)
+}
+
+func NewServerWithStore(cfg Config, problems []progress.ProblemMeta, store Store, kv KVStore, logFn func(map[string]any)) *Server {
+	if cfg.ProgressRepo == "" {
+		cfg.ProgressRepo = "hot100-progress"
+	}
+	if cfg.TemplateRepo == "" {
+		cfg.TemplateRepo = "Hanwen-Jiang/hot100-progress-template"
+	}
+	if cfg.GitHubAppSlug == "" {
+		cfg.GitHubAppSlug = "coding-dance"
+	}
+	if cfg.GitHubOAuthBase == "" {
+		cfg.GitHubOAuthBase = "https://github.com"
+	}
+	cfg.GitHubOAuthBase = strings.TrimRight(cfg.GitHubOAuthBase, "/")
+	if cfg.GitHubAPIBase == "" {
+		cfg.GitHubAPIBase = "https://api.github.com"
+	}
+	cfg.GitHubAPIBase = strings.TrimRight(cfg.GitHubAPIBase, "/")
+
 	if len(problems) == 0 && cfg.ProblemsDir != "" {
 		problems = LoadProblemsFromDir(cfg.ProblemsDir)
+	}
+	if store == nil {
+		store = NewHotStore(problems, cfg.SnapshotFile)
 	}
 	if kv == nil {
 		if cfg.ValkeyAddr != "" {
@@ -135,8 +179,8 @@ func NewServer(cfg Config, problems []progress.ProblemMeta, kv KVStore, logFn fu
 		}
 	}
 	metrics := otel.NewRegistry("cd-api", "bff")
-	store := NewHotStore(problems, cfg.SnapshotFile)
 	worker := NewGitSyncWorker(store, cfg.GitHubAPIBase, cfg.SessionSecret, metrics, logFn)
+	hydrator := NewHydrator(store, cfg.GitHubAPIBase, cfg.ProgressRepo)
 	quota := &QuotaManager{
 		KV: kv,
 		Cfg: QuotaConfig{
@@ -148,18 +192,26 @@ func NewServer(cfg Config, problems []progress.ProblemMeta, kv KVStore, logFn fu
 	}
 	cluster := NewClusterRouter(cfg.RunnerNodes, cfg.RunnerSecret, cfg.RunnerAccessID, cfg.RunnerAccessSecret)
 	comp := NewCompanionGateway(cfg.CompanionURL, cfg.CompanionToken, cfg.WebhookURL, cfg.WebhookSecret)
-	return &Server{
-		Cfg:       cfg,
-		Store:     store,
-		Worker:    worker,
-		Quota:     quota,
-		Cluster:   cluster,
-		Companion: comp,
-		Metrics:   metrics,
-		ProfileFn: func(_ *Session) QuotaProfile {
-			return QuotaProfile{Tier: "free", Founder: false}
-		},
+	srv := &Server{
+		Cfg:        cfg,
+		Store:      store,
+		Worker:     worker,
+		Hydrator:   hydrator,
+		Quota:      quota,
+		Cluster:    cluster,
+		Companion:  comp,
+		Metrics:    metrics,
+		HTTPClient: &http.Client{Timeout: 20 * time.Second},
 	}
+	srv.ProfileFn = func(sess *Session) QuotaProfile {
+		if sess != nil {
+			if p, ok, err := store.GetProfile(context.Background(), sess.Login); err == nil && ok {
+				return p.ToQuotaProfile()
+			}
+		}
+		return QuotaProfile{Tier: "free", Founder: false}
+	}
+	return srv
 }
 
 func (s *Server) applyCORS(w http.ResponseWriter, r *http.Request) bool {
@@ -169,7 +221,7 @@ func (s *Server) applyCORS(w http.ResponseWriter, r *http.Request) bool {
 		h.Set("Access-Control-Allow-Origin", origin)
 		h.Set("Access-Control-Allow-Credentials", "true")
 		h.Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
-		h.Set("Access-Control-Allow-Headers", "Content-Type")
+		h.Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		h.Set("Vary", "Origin")
 	}
 	if r.Method == http.MethodOptions {
@@ -199,11 +251,47 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && path == "/v1/admin/telemetry":
 		writePrivateJSON(w, http.StatusOK, s.Metrics.Snapshot())
 
+	case r.Method == http.MethodGet && path == "/api/admin/runner":
+		s.handleAdminRunner(w, r)
+
+	case r.Method == http.MethodGet && path == "/api/session":
+		s.handleSession(w, r)
+
+	case r.Method == http.MethodGet && path == "/api/auth/login":
+		s.handleAuthLogin(w, r)
+
+	case r.Method == http.MethodGet && path == "/api/auth/install":
+		s.handleAuthInstall(w, r)
+
+	case r.Method == http.MethodGet && path == "/api/auth/callback":
+		s.handleAuthCallback(w, r)
+
+	case r.Method == http.MethodPost && path == "/api/auth/logout":
+		s.handleAuthLogout(w, r)
+
 	case path == "/api/progress":
 		s.handleProgress(w, r)
 
 	case path == "/api/progress/practice":
 		s.handlePractice(w, r)
+
+	case r.Method == http.MethodPost && path == "/api/progress/create":
+		s.handleProgressCreate(w, r)
+
+	case r.Method == http.MethodPost && path == "/api/progress/star":
+		s.handleProgressStar(w, r)
+
+	case r.Method == http.MethodGet && strings.HasPrefix(path, "/api/solutions/"):
+		s.handleSolutions(w, r)
+
+	case r.Method == http.MethodGet && path == "/api/sync/repo":
+		s.handleSyncRepo(w, r)
+
+	case r.Method == http.MethodPost && path == "/api/sync/blobs":
+		s.handleSyncBlobs(w, r)
+
+	case r.Method == http.MethodPost && path == "/api/sync/commit":
+		s.handleSyncCommit(w, r)
 
 	case r.Method == http.MethodPut && path == "/api/settings":
 		s.handleSettings(w, r)
@@ -227,7 +315,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			writePrivateJSON(w, http.StatusNotFound, map[string]any{"error": "没有这个接口"})
 			return
 		}
-		sess := ReadSessionFromRequest(r, s.Cfg.SessionSecret, time.Now())
+		sess := s.ResolveSession(r.Context(), w, r)
 		s.Companion.Forward(w, r, ep, sess, ep == "history-analyze")
 
 	default:
@@ -240,7 +328,7 @@ func (s *Server) requireAuth(w http.ResponseWriter, r *http.Request, checkCSRF b
 		writePrivateJSON(w, http.StatusForbidden, map[string]any{"error": "不接受跨站请求"})
 		return nil, "", "", false
 	}
-	sess := ReadSessionFromRequest(r, s.Cfg.SessionSecret, time.Now())
+	sess := s.ResolveSession(r.Context(), w, r)
 	if sess == nil {
 		writePrivateJSON(w, http.StatusUnauthorized, map[string]any{"error": "还没登录"})
 		return nil, "", "", false
@@ -260,13 +348,23 @@ func (s *Server) handleProgress(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			return
 		}
-		writePrivateJSON(w, http.StatusOK, s.Store.LoadOverview(sess.Login))
+		if err := s.Hydrator.EnsureHydrated(r.Context(), sess); err != nil {
+			writePrivateJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
+		ov, err := s.Store.LoadOverview(r.Context(), sess.Login)
+		if err != nil {
+			writePrivateJSON(w, http.StatusInternalServerError, map[string]any{"error": "读取进度失败"})
+			return
+		}
+		writePrivateJSON(w, http.StatusOK, ov)
 
 	case http.MethodPut:
 		sess, repo, sealedTok, ok := s.requireAuth(w, r, true)
 		if !ok {
 			return
 		}
+		_ = s.Hydrator.EnsureHydrated(r.Context(), sess)
 		var body struct {
 			ID     int    `json:"id"`
 			Status string `json:"status"`
@@ -275,7 +373,11 @@ func (s *Server) handleProgress(w http.ResponseWriter, r *http.Request) {
 			writePrivateJSON(w, http.StatusBadRequest, map[string]any{"error": "参数不对"})
 			return
 		}
-		overview := s.Store.SaveStatus(sess.Login, repo, sealedTok, body.ID, body.Status, time.Now())
+		overview, err := s.Store.SaveStatus(r.Context(), sess.Login, repo, sealedTok, body.ID, body.Status, time.Now())
+		if err != nil {
+			writePrivateJSON(w, http.StatusInternalServerError, map[string]any{"error": "保存进度失败"})
+			return
+		}
 		s.Worker.Notify()
 		writePrivateJSON(w, http.StatusOK, overview)
 
@@ -291,6 +393,10 @@ func (s *Server) handlePractice(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			return
 		}
+		if err := s.Hydrator.EnsureHydrated(r.Context(), sess); err != nil {
+			writePrivateJSON(w, http.StatusBadGateway, map[string]any{"error": err.Error()})
+			return
+		}
 		q := r.URL.Query()
 		id, err := strconv.Atoi(q.Get("id"))
 		mode := q.Get("mode")
@@ -299,7 +405,11 @@ func (s *Server) handlePractice(w http.ResponseWriter, r *http.Request) {
 			writePrivateJSON(w, http.StatusBadRequest, map[string]any{"error": "参数不对"})
 			return
 		}
-		code, p, found := s.Store.GetDraft(sess.Login, id, lang, mode)
+		code, p, found, err := s.Store.GetDraft(r.Context(), sess.Login, id, lang, mode)
+		if err != nil {
+			writePrivateJSON(w, http.StatusInternalServerError, map[string]any{"error": "读取草稿失败"})
+			return
+		}
 		if !found {
 			writePrivateJSON(w, http.StatusOK, map[string]any{"code": nil})
 			return
@@ -311,6 +421,7 @@ func (s *Server) handlePractice(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			return
 		}
+		_ = s.Hydrator.EnsureHydrated(r.Context(), sess)
 		raw, err := io.ReadAll(io.LimitReader(r.Body, 512<<10))
 		if err != nil {
 			writePrivateJSON(w, http.StatusBadRequest, map[string]any{"error": "读取请求失败"})
@@ -325,7 +436,7 @@ func (s *Server) handlePractice(w http.ResponseWriter, r *http.Request) {
 			writePrivateJSON(w, st, map[string]any{"error": vErr.Error()})
 			return
 		}
-		res, sErr := s.Store.SavePractice(sess.Login, repo, sealedTok, *save, time.Now())
+		res, sErr := s.Store.SavePractice(r.Context(), sess.Login, repo, sealedTok, *save, time.Now())
 		if sErr != nil {
 			st := http.StatusBadRequest
 			if ve, ok := sErr.(*progress.ValidationError); ok && ve.Status > 0 {
@@ -349,6 +460,7 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	_ = s.Hydrator.EnsureHydrated(r.Context(), sess)
 	var body struct {
 		Langs []string `json:"langs"`
 	}
@@ -361,14 +473,18 @@ func (s *Server) handleSettings(w http.ResponseWriter, r *http.Request) {
 		writePrivateJSON(w, http.StatusBadRequest, map[string]any{"error": "至少选一种语言"})
 		return
 	}
-	saved := s.Store.SaveSettings(sess.Login, repo, sealedTok, cleaned, time.Now())
+	saved, err := s.Store.SaveSettings(r.Context(), sess.Login, repo, sealedTok, cleaned, time.Now())
+	if err != nil {
+		writePrivateJSON(w, http.StatusInternalServerError, map[string]any{"error": "保存设置失败"})
+		return
+	}
 	s.Worker.Notify()
 	writePrivateJSON(w, http.StatusOK, map[string]any{"settings": map[string]any{"langs": saved}})
 }
 
 func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 	now := time.Now()
-	sess := ReadSessionFromRequest(r, s.Cfg.SessionSecret, now)
+	sess := s.ResolveSession(r.Context(), w, r)
 
 	if r.Method == http.MethodGet {
 		var quotaPtr *CloudQuota
@@ -494,7 +610,7 @@ func (s *Server) handleRun(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleDAP(w http.ResponseWriter, r *http.Request) {
-	sess := ReadSessionFromRequest(r, s.Cfg.SessionSecret, time.Now())
+	sess := s.ResolveSession(r.Context(), w, r)
 	if sess == nil {
 		writePrivateJSON(w, http.StatusUnauthorized, map[string]any{"error": "云端调试要先登录"})
 		return
