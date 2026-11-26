@@ -139,11 +139,11 @@
 - [x] 练习数据挪到资源仓的 `tools/practice/data/`，网站经 `/api/practice/<题号>` 运行时读；CI 重新生成一遍并 `git diff` 检查
 - [x] TypeScript 只转译不做类型检查：编辑器下面加了说明（真做类型检查要带 `lib.*.d.ts`，以后再说）
 - [x] 去掉没用到的 `recharts` 依赖
-- [ ] `@playwright/test` 写的界面测试接进 CI：**卡在 HeroUI Pro**——它的 npm 包要授权才能装（公开的只是空壳），CI 里构建不了网站。要接进 CI，得在 GitHub 上配一个 HeroUI Pro 的授权密钥（作者决定）。目前在本地跑：`node tools/dev/preview.mjs` 起预览，再跑 `node tools/practice-ui/test.mjs`
+- [x] `@playwright/test` 写的界面测试接进 CI：**Phase 4 已彻底解耦 `@heroui-pro/react` 私有依赖**（内置预编译样式 + 零私有源同构兼容层），`.github/workflows/verify.yml` 的 `practice-ui` 任务直接在 CI 构建静态站点并在真实无头 Chrome 中运行 `tools/practice-ui/test.mjs`；本地也可随时用 `node tools/dev/preview.mjs` + `node tools/practice-ui/test.mjs` 复测
 - [x] 检查题目页的布局：手机（430 px）和桌面（1440 px）都没有横向溢出；「相关基础」在侧栏不显示的宽度下放到题面下面
 
 ### 阶段 1：运行环境包框架
-- [ ] 清单格式、R2 存放、版本和 sha256 校验
+- [x] 清单格式、R2 存放、版本和 sha256 校验（`site/public/practice-runtime/manifest.json` + `site/lib/practice/runtime-manifest.ts` + `tools/practice-runtime/prepare.mjs --verify`）
 - [ ] 下载前确认弹窗、进度、断点续传、Cache Storage、持久存储
 - [ ] 设置里「已下载的运行环境」管理页
 
@@ -214,6 +214,10 @@
 
 ## 变更记录
 
+- 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 4（前端与 CI 零私有源闭环）：
+  - 从 `site/package.json` 移除私有 `@heroui-pro/react` 依赖并完善 `site/lib/ui/heroui-pro-shim/`（支持受控/非受控 `Segment` 与 WAI-ARIA 键盘导航、`CodeBlock` SVG 复制按钮），配合 `site/styles/heroui-pro.prebuilt.css` 实现零 Token `npm install && npm run build` 静态导出；
+  - 将 WASM 运行时迁移至声明式 SHA-256 清单 `site/public/practice-runtime/manifest.json` + `site/lib/practice/runtime-manifest.ts`（`pyodide@314.0.8`、`typescript@5.6.3` 逐文件 SHA-256 校验 + R2 URL 解析 + `prepare.mjs --verify/--out/--force` 幂等拷贝），将 `prepare:practice` 从 `npm run build` 阻塞链中解耦；
+  - 净化 `.github/workflows/verify.yml`：移除 `/tmp/rt` 变通与 `HEROUI_PRO_SHIM=1` 强切，启用 R2 模式下无 `vendor/` 冗余产物校验，并新增跨平台 Playwright `practice-ui` 浏览器端到端回归任务。
 - 2026-11-26（分支 `feat/go-modernization`）：完成现代化改造 Phase 3（`cd-build` + declarative contracts + 3 级 R2/ASSETS 清单读取 + 停止 375 份派生 JSON Git 污染）：
   - 新增声明式题库契约 `contracts/practice-meta.json`（汇总 100 道题 ACM 题面叙述与边界用例）与 `contracts/schema/problem.schema.json` 字段对齐；
   - 将全部构建与六语言并发判题下沉至 Go CLI `cmd/cd-build`（`internal/builder/{build,practice_gen,starters,judge,examples,acm_codec,sig,verify,r2}.go`：`build` 分片并发建图解 + 统一 `topics/index.json` + 纯 Go 100 题练习生成 + `--bundle site/public/_r2`；`judge` 多核并发跑 `python/go/javascript/typescript(tsc --strict)/java/cpp`；`verify` / `export-contracts` / `dump-official-examples`）；

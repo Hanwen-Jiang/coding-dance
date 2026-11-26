@@ -128,17 +128,16 @@ coding-dance/
 
 ---
 
-### Phase 4：前端与 CI 纯粹化（零私有源闭环）
+### Phase 4：前端与 CI 纯粹化（零私有源闭环）（已完成）
 
-**核心目标**：移除构建期 `node_modules` 文件搬运，解耦 `@heroui-pro/react` 私有 npm 授权依赖，使公开 GitHub Actions 无需任何私有源 Token 即可完成全量前端构建与回归测试。
+**核心目标**：移除构建期 `node_modules` 文件搬运，解耦 `@heroui-pro/react` 私有 npm 授权依赖，使公开 GitHub Actions 无需任何私有源 Token 即可完成全量前端构建与浏览器 UI 端到端回归。
 
 1. **WASM 语言运行时版本化清单与 R2 分发**
-   - 新增 `site/public/practice-runtime/manifest.json`，统一声明 `pyodide`、`typescript` 以及后续 `clang-wasm`、`go-wasm`、`teavm-javac` 的版本号、相对路径、SHA-256 摘要与压缩体积。
-   - `site/next.config.mjs` 改为直接读取 `manifest.json` 注入构建期版本常量，彻底消除未安装 `pyodide` 时的 `require("pyodide/package.json")` 崩溃。
-   - `site/lib/practice/runner.ts` 支持 `NEXT_PUBLIC_RUNTIME_BASE_URL`（指向 R2 自定义 CDN 域名，未设置时平滑回退站内 `/practice-runtime/vendor/`）；`tools/practice-runtime/prepare.mjs` 降级为可选的离线本地缓存同步工具，不再阻塞 `npm run build`。
-2. **HeroUI Pro 预编译样式工件与开源兼容层**
-   - 站点仅使用了 `@heroui-pro/react` 的 5 份组件样式（合计约 21 KB：`segment`、`empty-state`、`kpi-group`、`kpi`、`code-block`）与 4 个轻量复合组件（`Segment`、`EmptyState`、`KPIGroup`、`CodeBlock`）。
-   - 将上述 5 份 CSS 预编译合并为仓库内受控工件 `site/styles/heroui-pro.prebuilt.css`（置于 `@layer components`），并在 `site/lib/ui/heroui-pro-shim/` 提供基于 `@heroui/react` / `react-aria-components` + `shiki` 的零私有依赖同构实现；当 CI 环境未配置私有源或装到公开空壳包时，`next.config.mjs` 自动启用兼容层别名，确保 `next build` 静态导出像素级一致通过。
+   - `site/public/practice-runtime/manifest.json` 统一声明 `pyodide`、`typescript`（含逐文件精确字节数与 SHA-256 摘要 `integrity`）及规划中的 `clang-wasm`、`go-wasm`、`teavm-javac` 元数据。
+   - `site/lib/practice/runtime-manifest.ts` + `site/next.config.mjs` + `site/lib/practice/runner.ts` 集中从清单与 `NEXT_PUBLIC_RUNTIME_BASE_URL` 解析版本化运行时地址；`tools/practice-runtime/prepare.mjs` 支持 `--verify` SHA-256 校验、`--out <dir>` R2 导出与幂等缓存，已从 `npm run build` 阻塞链剥离。
+2. **HeroUI Pro 预编译样式工件、开源兼容层与无头浏览器 CI**
+   - 移除 `site/package.json` 对私有 `@heroui-pro/react` 的直接依赖，保留 `site/styles/heroui-pro.prebuilt.css`（`@layer components`）与 `site/lib/ui/heroui-pro-shim/`（支持受控/非受控与 WAI-ARIA 键盘漫游导航的 `Segment`、`EmptyState`、`KPIGroup` 及基于 `shiki` + SVG 图标的 `CodeBlock`）。
+   - `.github/workflows/verify.yml` 全量移除 `/tmp/rt` 变通与 `HEROUI_PRO_SHIM=1` 强切，纯 `npm install --no-audit --no-fund && npm run build` 即可完成静态导出，并新增跨平台 Playwright `practice-ui` 真浏览器端到端回归任务。
 
 ---
 
@@ -148,5 +147,5 @@ coding-dance/
 | --- | --- | --- | --- | --- |
 | **Phase 1 (`cd-runner`)** | **✅ 已完成落地（`server.mjs` 与 `lib/*` 已彻底退役）** | 按节点灰度：先新起 `lou2` 跑 `cd-runner`（或更新 `lou1`），`RUNNER_NODES` 平滑承接 | HMAC 签名测试向量一致、`fc-manager` 协议与 SecretStore 热读全绿、Java/Go/C++ WebSocket DAP 断点单步跑通、`/api/admin/runner` 指标可见 | 从 `RUNNER_NODES` 摘除异常节点或切回上一版静态二进制 |
 | **Phase 2 (`cd-api`)** | **✅ 已完成落地（直连 GitHub 的 OLTP Pages Functions 与 `sso.ts` 已退役，统一收敛至 `cd-api` + Postgres/Valkey 热存储 + Edge BFF 代理）** | 前端 `NEXT_PUBLIC_API_BASE_URL` 或 Cloudflare `CD_API_UPSTREAM` 一键切流至 `cd-api` | AES-GCM Cookie 双向互通、Postgres 热写 `<5ms`、冷启动 GitHub Hydrator、Outbox Worker 批量合并提交及 Edge ⇄ Go OAuth 端到端全绿 | 清空 `CD_API_UPSTREAM` 退回只读降级态（Git 进度仓持续双写归档，数据零丢失） |
-| **Phase 3 (`cd-build`)** | **🚧 并发校验与 R2 打包已就绪** | CI 双跑对比期：`cd-build verify` 与旧 `build.js` 输出比对一致后再移除 Git 内派生 JSON | 100 题 + 22 专题 `//@tag` 零偏差、多语言判题全绿、R2 `manifest.json` 校验通过 | 站点数据读取层保留 GitHub Raw / R2 Manifest 双源回退 |
-| **Phase 4 (前端 & CI)** | **🚧 清单与零 Token 构建已就绪** | `NEXT_PUBLIC_RUNTIME_BASE_URL` 控制 R2 运行时源；`next.config.mjs` 自动探测 `@heroui-pro/react` 完整性 | 无私有 Token 全新容器内 `npm install && npm run build` 静态导出成功 + 运行时单测全绿 | 清空 `NEXT_PUBLIC_RUNTIME_BASE_URL` 即退回同源静态目录 |
+| **Phase 3 (`cd-build`)** | **✅ 已完成落地（375 份派生 JSON 已从 Git 退役，`build` / `judge` / `verify` / `bundle` 全部 Go 化）** | 边缘路由 `site/functions/_lib/r2.ts`：`R2_ASSETS_BASE_URL` → `env.ASSETS` (`/_r2/...`) → GitHub Raw 三级开关 | 100 题 + 22 专题 `//@tag` 零偏差、6 语言并发判题全绿、`r2.test.ts` 三级回退与 `out/_r2/v1/manifest.json` 通过 | 站点数据读取层按 3 级链自动平滑回退至静态资产或 GitHub Raw |
+| **Phase 4 (前端 & CI)** | **✅ 已完成落地（`@heroui-pro/react` 私有依赖解耦、`manifest.json` SHA-256 校验、Playwright CI 接入）** | `NEXT_PUBLIC_RUNTIME_BASE_URL` 控制 R2 运行时源（不设时自动回退本地 `/practice-runtime/vendor/`） | 零私有 Token `npm install && npm run build` 成功、WASM 清单 SHA-256 单测与 `practice-ui` 端到端回归全绿 | 清空 `NEXT_PUBLIC_RUNTIME_BASE_URL` 即退回同源静态目录 |

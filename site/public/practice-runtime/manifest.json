@@ -14,25 +14,69 @@
         "python_stdlib.zip",
         "pyodide-lock.json"
       ],
-      "uncompressedBytes": 14680064
+      "integrity": {
+        "pyodide.js": {
+          "bytes": 18726,
+          "sha256": "d4e1e0f06c29162eadf0c3f323c746884242b257d1faa94760442a4ac929e9a1"
+        },
+        "pyodide.mjs": {
+          "bytes": 17758,
+          "sha256": "1bb8cc14f9405aaa7cd4e00c12edd0a8539de9cc026618d6ee5a9663f367dc70"
+        },
+        "pyodide.asm.mjs": {
+          "bytes": 1250259,
+          "sha256": "22514b8be6980e28a02c8b1d6387ce8dfe666fc4edf8d547cff5dce29ff4d972"
+        },
+        "pyodide.asm.wasm": {
+          "bytes": 9597892,
+          "sha256": "e14d49ceca9b4a0e274ea918f3a898de2d3880b6e5573a6cfe1a2267ecc70329"
+        },
+        "python_stdlib.zip": {
+          "bytes": 2545550,
+          "sha256": "2bd3394a145bfbbe5bbc9d9d6ab9136abbb986c6fef6c142b3a2962227aa5c28"
+        },
+        "pyodide-lock.json": {
+          "bytes": 119077,
+          "sha256": "5dc2fc119108bc148c7457dc86e7675b5c87e1cafd420b9c34c1eaef7b36c010"
+        }
+      },
+      "uncompressedBytes": 13549262
     },
     "typescript": {
       "version": "5.6.3",
       "path": "typescript/5.6.3/typescript.js",
       "entry": "typescript.js",
-      "files": ["typescript.js"]
+      "files": [
+        "typescript.js"
+      ],
+      "integrity": {
+        "typescript.js": {
+          "bytes": 8927529,
+          "sha256": "f316520790d4db220a10d890c5f85310e26a1bd3c104b8d3b5eb62ba0491651b"
+        }
+      },
+      "uncompressedBytes": 8927529
     },
     "clang-wasm": {
       "version": "22.0.0",
       "path": "clang/22.0.0/",
       "compressedBytes": 21286092,
-      "distribution": "r2"
+      "distribution": "r2",
+      "status": "planned"
     },
     "go-wasm": {
       "version": "1.27.4",
       "path": "go/1.27.4/",
       "compressedBytes": 17301504,
-      "distribution": "r2"
+      "distribution": "r2",
+      "status": "planned"
+    },
+    "teavm-javac": {
+      "version": "0.11.0",
+      "path": "java/teavm-0.11.0/",
+      "compressedBytes": 7025459,
+      "distribution": "r2",
+      "status": "planned"
     }
   }
 }

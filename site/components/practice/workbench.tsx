@@ -908,7 +908,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
         </div>
         <span className="flex-1" />
         <div className="practice-run-controls">
-          {running ? <Button className="practice-tb-btn" onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止</Button> : <>
+          {running ? <Button aria-label="停止运行" className="practice-tb-btn" onPress={() => { setStatus("正在停止…"); abortRef.current?.abort(); }} size="sm" variant="danger-soft"><span aria-hidden className="size-2 rounded-[1px] bg-current" />停止</Button> : <>
             <Button aria-label={tab === "custom" ? "运行自定义" : "运行示例"} className="practice-tb-btn practice-tb-run" isDisabled={!ready} onPress={runCurrent} size="sm" variant="secondary"><PlayIcon /><span className="practice-tb-label">运行</span></Button>
             <Button aria-label={`调试（用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}，一步步看每一行和变量）`} className="practice-tb-icon" isDisabled={!ready} isIconOnly onPress={() => void runDebug()} size="sm" variant="ghost"><BugIcon /></Button>
             {/* 测试：主按钮跑当前这一档，右边的小箭头换档（精简边界 / 全量），选过的记在浏览器里 */}

@@ -54,13 +54,15 @@ jobs:
         run: |
           go vet ./...
           go test -race ./...
-      - name: 零私有源 Token 静态前端构建验证（HeroUI Pro Shim + R2 Runtime & Content-Addressed Manifest）
+      - name: 零私有源 Token 静态前端构建验证（内置开放兼容层 + R2 Runtime Manifest + Content-Addressed Manifest）
         working-directory: site
         run: |
-          npm install --no-audit --no-fund --ignore-scripts
-          HEROUI_PRO_SHIM=1 NEXT_PUBLIC_RUNTIME_BASE_URL=https://assets.codingdance.cn/practice-runtime/vendor npm run build
+          npm install --no-audit --no-fund
+          node ../tools/practice-runtime/prepare.mjs --verify
+          NEXT_PUBLIC_RUNTIME_BASE_URL=https://assets.codingdance.cn/practice-runtime/vendor npm run build
           test -f out/index.html
           test -f out/_r2/v1/manifest.json
+          test ! -d out/practice-runtime/vendor
 
   build:
     name: 生成器和网站测试
@@ -84,12 +86,13 @@ jobs:
           git diff --exit-code -- illustrations
       - name: 本地开发资源接口测试
         run: node tools/dev/resource-api.test.mjs
-      - name: 同步逻辑、练习区写进度仓、R2 三级清单、额度限流与 cd-runner 集群测试
+      - name: 同步逻辑、练习区写进度仓、WASM 清单、R2 三级清单、额度限流与 cd-runner 集群测试
         working-directory: site
         run: |
           node lib/sync/test/sync.test.ts
           node lib/practice/test/record.test.ts
           node lib/practice/test/save-queue.test.ts
+          node lib/practice/test/runtime-manifest.test.ts
           node functions/_lib/test/runner.test.ts
           node functions/_lib/test/bff.test.ts
           node functions/_lib/test/r2.test.ts
@@ -118,16 +121,60 @@ jobs:
       - name: 练习数据和输入输出的测试
         env:
           CD_BUILD_BIN: /tmp/cd-build
-        run: node tools/practice/test.cjs
-      # 网站的其他依赖（HeroUI Pro）要授权，CI 里装不了，所以网站本身不在 CI 里构建；这里只单独装运行器测试用到的两个包
-      - name: 装运行器测试要的包
         run: |
-          mkdir -p /tmp/rt && cd /tmp/rt && npm init -y > /dev/null && npm install --no-audit --no-fund pyodide@314.0.8 typescript@5.6.3
-          mkdir -p "$GITHUB_WORKSPACE/site/node_modules" && cp -r /tmp/rt/node_modules/. "$GITHUB_WORKSPACE/site/node_modules/"
+          node tools/practice/test.cjs
+          python3 tools/practice-runtime/audit-examples.py
+      - name: 零私有源安装前端依赖并校验 WASM 运行时 SHA-256 清单
+        working-directory: site
+        run: |
+          npm install --no-audit --no-fund
+          node ../tools/practice-runtime/prepare.mjs --verify
       - name: 运行器的测试（Python、JavaScript、TypeScript）
         run: node tools/practice-runtime/test.mjs
       - name: 调试（执行记录）的测试
         run: node tools/practice-runtime/debug.test.mjs
+
+  practice-ui:
+    name: 界面与浏览器端到端测试
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: 并发构建派生题库与站点内容寻址资产包
+        run: |
+          CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /tmp/cd-build ./cmd/cd-build
+          /tmp/cd-build build --root . --quick --bundle site/public/_r2
+      - name: 零私有源构建静态站点（含离线 WASM 运行时与预编译样式）
+        working-directory: site
+        run: |
+          npm install --no-audit --no-fund
+          npm run prepare:practice
+          npm run build
+          test -f out/index.html
+          test -f out/_r2/v1/manifest.json
+      - name: 运行真实浏览器练习区端到端回归
+        run: |
+          if [ ! -x /usr/bin/google-chrome ] && [ ! -x /usr/bin/chromium ]; then
+            npx --prefix site playwright install chromium
+          fi
+          node tools/dev/preview.mjs > /tmp/cd-preview.log 2>&1 &
+          PREVIEW_PID=$!
+          trap 'kill $PREVIEW_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8788/api/problems >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8788/api/problems >/dev/null || { cat /tmp/cd-preview.log; exit 1; }
+          PRACTICE_SCREENSHOT_DIR=/tmp/practice-ui-screenshots node tools/practice-ui/test.mjs
 
   judge:
     name: 判题 ${{ matrix.lang }}

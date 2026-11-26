@@ -38,7 +38,16 @@ function CodeBlockCopyButton({
       }}
       {...rest}
     >
-      <span className="font-mono text-[11px]">{copied ? "✓" : "复制"}</span>
+      {copied ? (
+        <svg aria-hidden="true" fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 16 16" width="12">
+          <path d="M3 8.5 6.5 12 13 4.5" />
+        </svg>
+      ) : (
+        <svg aria-hidden="true" fill="none" height="12" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" viewBox="0 0 16 16" width="12">
+          <rect height="9" rx="1.5" width="9" x="5" y="5" />
+          <path d="M11 5V3.5A1.5 1.5 0 0 0 9.5 2h-6A1.5 1.5 0 0 0 2 3.5v6A1.5 1.5 0 0 0 3.5 11H5" />
+        </svg>
+      )}
     </button>
   );
 }

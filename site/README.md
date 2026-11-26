@@ -129,7 +129,7 @@ wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 - **字体自托管**：Inter、JetBrains Mono、Silkscreen 的 latin 子集放在 `app/fonts/`（取自 fontsource，附 OFL 许可证），由 `app/fonts.ts` 用 `next/font/local` 输出到 `/_next/static/media/`。页面不请求 Google Fonts。正文和像素字体预加载，等宽字体用到才下载；都是 `font-display: swap`，等待期间用按字宽缩放过的后备字体，换上来时文字不跳。
 - **HeroUI 样式按组件引入**：`styles/heroui.css` 只引入用到的组件（OSS 和 Pro），整包有 680 KB。**用到新的 HeroUI 组件时，要在这个文件里加上它的样式**，否则组件没有样式；组件内部用到的组件也要有（比如 Select 要 list-box、popover）。
 - 首页的统计卡片没有用 Pro 的 `KPI` 组件（从 `@heroui-pro/react/kpi` 引入会连带 recharts，首页多 390 KB JS），而是在 `components/problem-list.tsx` 里按它的结构写了一样的标记，样式还是 Pro 的 `kpi.css`。
-- **缓存**（`public/_headers`）：`/_next/static/*`（文件名带内容哈希）和 `/practice-runtime/vendor/*` 缓存一年（`immutable`）；HTML 每次回源确认。Pyodide 和 TypeScript 由 `npm run prepare:practice` 复制到带版本号的目录 `public/practice-runtime/vendor/pyodide/<版本>/`、`vendor/typescript/<版本>/`，版本号由 `next.config.mjs` 从 `node_modules` 读出来写进 `lib/practice/runner.ts`，升级依赖后路径自动变，不会用到旧缓存。
+- **缓存**（`public/_headers`）：`/_next/static/*`（文件名带内容哈希）和 `/practice-runtime/vendor/*` 缓存一年（`immutable`）；HTML 每次回源确认。Pyodide 和 TypeScript 的版本、文件列表及 SHA-256 摘要统一声明在 `public/practice-runtime/manifest.json`（由 `lib/practice/runtime-manifest.ts` 解析，支持设置 `NEXT_PUBLIC_RUNTIME_BASE_URL` 指向 R2 CDN，未设置时默认回退本地 `vendor/`）。离线开发或打包本地镜像前按需运行 `npm run prepare:practice`（支持 `--verify` 校验 SHA-256），不再阻塞 `npm run build`。
 
 ### 静态资源放到别的域名（可选，目前没用）
 
@@ -145,12 +145,13 @@ wrangler pages secret put GITHUB_TOKEN --project-name lc-hot100
 
 ## 本地开发和部署
 
-@heroui-pro/react 需要授权；首次安装或缺包时按 [HeroUI Pro 官方安装文档](https://heroui.pro/docs/react/getting-started/installation) 完成授权。
+站点已内置 `@heroui-pro/react` 预编译样式（`styles/heroui-pro.prebuilt.css`）与零私有源兼容层（`lib/ui/heroui-pro-shim/`），无需任何私有源 Token 即可直接安装并构建（CI 已同步运行纯无头浏览器测试 `tools/practice-ui/test.mjs`）：
 
 ```bash
 npm install
-npm run build        # 静态导出到 out/
-npm run preview:local # 推荐：读取本地仓库资源，预览尚未 push 的改动
+npm run prepare:practice   # 可选：离线本地预览前同步并校验 Pyodide / TypeScript 运行时；若构建时设置了 NEXT_PUBLIC_RUNTIME_BASE_URL 可跳过
+npm run build              # 静态导出到 out/
+npm run preview:local      # 推荐：读取本地仓库资源，预览尚未 push 的改动
 # npx wrangler pages dev out   # 可选：通过 GitHub API 读取远端资源，带 Functions
 npx wrangler pages deploy out --project-name lc-hot100 --branch main
 ```

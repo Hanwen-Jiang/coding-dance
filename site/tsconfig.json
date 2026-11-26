@@ -17,8 +17,8 @@
     "plugins": [{ "name": "next" }],
     "paths": {
       "@/*": ["./*"],
-      "@heroui-pro/react": ["./node_modules/@heroui-pro/react/dist/index.d.ts", "./lib/ui/heroui-pro-shim/index.tsx"],
-      "@heroui-pro/react/code-block": ["./node_modules/@heroui-pro/react/dist/components/code-block/index.d.ts", "./lib/ui/heroui-pro-shim/code-block.tsx"]
+      "@heroui-pro/react": ["./lib/ui/heroui-pro-shim/index.tsx"],
+      "@heroui-pro/react/code-block": ["./lib/ui/heroui-pro-shim/code-block.tsx"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
