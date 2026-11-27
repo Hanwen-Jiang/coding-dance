@@ -37,7 +37,7 @@ public class JdiDap {
         FrameRef(ThreadReference t, int d) { this.thread = t; this.depth = d; }
     }
 
-    static final String[] EXCLUDE = {"java.*", "javax.*", "sun.*", "jdk.*", "com.sun.*", "H", "HR", "JudgeMain"};
+    static final String[] EXCLUDE = {"java.*", "javax.*", "sun.*", "jdk.*", "com.sun.*", "kotlin.*", "scala.*", "H", "HR", "JH", "JH$", "JudgeMain", "JudgeMain$"};
 
     public static void main(String[] a) throws Exception {
         inPath = a[0];

@@ -38,6 +38,64 @@ import { DapClient, DapConnectError, defaultEntryLine, type DapSnapshot } from "
     "};",
   ].join("\n");
   assert.equal(defaultEntryLine(cppLc, "cpp", "leetcode"), 6);
+
+  const pyLc = [
+    "class Solution:",
+    "    def twoSum(self, nums: List[int], target: int) -> List[int]:",
+    "        seen = {}",
+    "        return []",
+  ].join("\n");
+  assert.equal(defaultEntryLine(pyLc, "python", "leetcode"), 3);
+
+  const tsLc = [
+    "function twoSum(nums: number[], target: number): number[] {",
+    "    const m = new Map<number, number>();",
+    "    return [];",
+    "}",
+  ].join("\n");
+  assert.equal(defaultEntryLine(tsLc, "typescript", "leetcode"), 2);
+
+  const rustLc = [
+    "impl Solution {",
+    "    pub fn two_sum(nums: Vec<i32>, target: i32) -> Vec<i32> {",
+    "        let mut ans = vec![];",
+    "        ans",
+    "    }",
+    "}",
+  ].join("\n");
+  assert.equal(defaultEntryLine(rustLc, "rust", "leetcode"), 3);
+
+  const rubyAcm = [
+    "# read line",
+    "a, b = gets.split.map(&:to_i)",
+    "puts a + b",
+  ].join("\n");
+  assert.equal(defaultEntryLine(rubyAcm, "ruby", "acm"), 2);
+
+  const phpAcm = [
+    "<?php",
+    "fscanf(STDIN, '%d %d', $a, $b);",
+    "echo $a + $b;",
+  ].join("\n");
+  assert.equal(defaultEntryLine(phpAcm, "php", "acm"), 2);
+
+  const ktLc = [
+    "class Solution {",
+    "    fun twoSum(nums: IntArray, target: Int): IntArray {",
+    "        val m = HashMap<Int, Int>()",
+    "        return intArrayOf()",
+    "    }",
+    "}",
+  ].join("\n");
+  assert.equal(defaultEntryLine(ktLc, "kotlin", "leetcode"), 3);
+
+  const dartAcm = [
+    "import 'dart:io';",
+    "void main() {",
+    "  final line = stdin.readLineSync();",
+    "}",
+  ].join("\n");
+  assert.equal(defaultEntryLine(dartAcm, "dart", "acm"), 3);
 }
 
 // —— 2. DapClient mock WebSocket tests ——

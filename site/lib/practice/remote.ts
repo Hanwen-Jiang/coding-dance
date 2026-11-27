@@ -8,9 +8,13 @@ import type { CloudQuotaInfo, PracticeCaseResult, PracticeLanguage, PracticeRunP
 /** 只能在云端运行的语言 */
 export const REMOTE_LANGUAGES: PracticeLanguage[] = ["java", "cpp", "go", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
 export const isRemote = (language: PracticeLanguage) => REMOTE_LANGUAGES.includes(language);
-/** 云端能调试的（真调试器：JDI、gdb、Delve）；其余云端语言只能运行。Python、JavaScript、TypeScript 选了云端也在浏览器里调试 */
-export const REMOTE_DEBUG_LANGUAGES: PracticeLanguage[] = ["java", "cpp", "go"];
-/** 这一次交给云端：只能在云端跑的语言；或者选了云端、又不是调试 */
+/** 云端交互式实时 DAP 调试已接通全部 15 门语言；云端批式录制回放（/api/run debug）保留 Java、C++、Go */
+export const REMOTE_DEBUG_LANGUAGES: PracticeLanguage[] = [
+  "python", "java", "cpp", "go", "javascript", "typescript",
+  "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart",
+];
+export const REMOTE_TRACE_LANGUAGES: PracticeLanguage[] = ["java", "cpp", "go"];
+/** 批式运行/录制交给云端：只能在云端跑的语言，或选了云端、且非仅浏览器回放调试 */
 export const runsInCloud = (language: PracticeLanguage, target: PracticeTarget | undefined, debug = false) =>
   isRemote(language) || (target === "cloud" && !debug);
 
@@ -98,7 +102,7 @@ export async function runRemote(
   if (request.cases.length > 100) throw new Error("一次最多运行 100 个测试用例");
   const unavailable = request.mode === "leetcode" ? request.problem.leetcodeUnavailable?.[request.language] : undefined;
   if (unavailable) throw new Error(unavailable);
-  if (request.debug && !REMOTE_DEBUG_LANGUAGES.includes(request.language)) throw new Error("这门语言暂时不能调试（云端只有 Java、C++、Go 接了调试器），可以先运行，用打印看中间结果");
+  if (request.debug && !REMOTE_TRACE_LANGUAGES.includes(request.language)) throw new Error("这门语言请使用云端实时 DAP 调试（批式录制回放仅支持 Java、C++、Go）");
   if (lastStatus && remoteLacks(lastStatus, request.language)) throw new Error(`云端运行器还没装上这门语言（节点正在更新），暂时不能运行，${isRemote(request.language) ? "稍后再试" : "可以先换回浏览器运行"}`);
   if (!statusCache || Date.now() - statusCache.at >= 60000) void remoteStatus();
   const started = performance.now();

@@ -35,7 +35,7 @@ import { decodeAcmInput, encodeAcmInput, encodeAcmOutput, parseAcmOutput } from 
 import { DapClient, DapConnectError, type DapSnapshot } from "@/lib/practice/dap-client";
 import { DISCOVERED_KEY, usePracticeDock } from "@/lib/practice/dock";
 import { runPractice } from "@/lib/practice/runner";
-import { isRemote, readTarget, remoteLacks, RemoteLoginError, RemoteQuotaError, remoteStatus, REMOTE_DEBUG_LANGUAGES, writeTarget, type RemoteStatus } from "@/lib/practice/remote";
+import { isRemote, readTarget, remoteLacks, RemoteLoginError, RemoteQuotaError, remoteStatus, REMOTE_DEBUG_LANGUAGES, REMOTE_TRACE_LANGUAGES, writeTarget, type RemoteStatus } from "@/lib/practice/remote";
 import { PRACTICE_SAVED_EVENT, practiceSaves, type SaveJobState } from "@/lib/practice/save-queue";
 import type { PracticeCase, PracticeHints, PracticeLanguage, PracticeMode, PracticeProblem, PracticeRunProgress, PracticeRunResult, PracticeTarget } from "@/lib/practice/types";
 import type { RunScope, SolutionLabel } from "@/lib/practice/record";
@@ -89,13 +89,13 @@ function cloudNote(label: string, language: PracticeLanguage, mode: PracticeMode
     else if (q.blockedReason === "quota_exceeded") quotaMsg = `（今日额度已用完 ${q.used}/${q.limit}，北京时间 0 点重置）`;
     else quotaMsg = `（${q.founder ? "首批用户 · " : ""}今日剩余 ${q.remaining}/${q.limit} 次）`;
   }
-  if (chosen) return `${label} 在云端运行（要登录）${quotaMsg}；调试仍在浏览器里，云端只调试 Java、C++、Go。`;
-  return `${label} 在云端编译运行（要登录）${quotaMsg}${REMOTE_DEBUG_LANGUAGES.includes(language) ? "，调试用真调试器一步步记下来" : "；这门语言暂时不能调试"}。`;
+  if (chosen) return `${label} 在云端运行（要登录）${quotaMsg}；运行与实时 DAP 调试均在云端沙箱完成。`;
+  return `${label} 在云端编译运行（要登录）${quotaMsg}${REMOTE_DEBUG_LANGUAGES.includes(language) ? "，支持云端实时 DAP 单步调试" : "；这门语言暂时不能调试"}。`;
 }
 /** 「⋯」里的运行位置（Python、JavaScript、TypeScript 才能选） */
 const TARGETS: { id: PracticeTarget; label: string; desc: string }[] = [
-  { id: "browser", label: "在浏览器里运行", desc: "不用登录；调试也在这里" },
-  { id: "cloud", label: "在云端运行", desc: "要登录，交给云端的沙箱；调试仍在浏览器里" },
+  { id: "browser", label: "在浏览器里运行", desc: "不用登录；调试也在浏览器里" },
+  { id: "cloud", label: "在云端运行", desc: "要登录，在云端运行与实时 DAP 调试" },
 ];
 type TestTab = "examples" | "custom" | "results" | "debug" | "companion";
 /** 编辑器提示程度，存在浏览器里，换题、换语言都不变 */
@@ -998,9 +998,11 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
     });
   };
 
-  const canUseDap = REMOTE_DEBUG_LANGUAGES.includes(language) && !!(cloud?.features ?? []).includes("dap-ws");
+  const dapSupportedOnNode = cloud?.debugLangs ? cloud.debugLangs.includes(language) : REMOTE_DEBUG_LANGUAGES.includes(language);
+  const canUseDap = inCloud && dapSupportedOnNode && !!(cloud?.features ?? []).includes("dap-ws");
+  const canTrace = !inCloud || REMOTE_TRACE_LANGUAGES.includes(language);
 
-  /** 调试：Java/C++/Go 优先连 /api/dap 实时调试（支持表达式实时求值），其余语言或回退模式用录制回放 */
+  /** 调试：全部 15 门云端语言优先连 /api/dap 实时调试（支持表达式实时求值），支持录制的语言可切换录制回放 */
   const runDebug = async (overrideMode?: "dap" | "trace") => {
     if (!ready || running || abortRef.current) return;
     let test: PracticeCase;
@@ -1013,10 +1015,9 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
       setError(mode === "acm" ? "还没写程序：先写好读入、计算和输出，再调试。" : "还没写解法：在模板的方法里补上代码，再调试。");
       return;
     }
-    // 调试只有只能在云端跑的语言才去云端（Python、JavaScript、TypeScript 选了云端也在浏览器里调试）
     setNeedLogin(false);
     setQuotaError(null);
-    if (cloudOnly && signedOut) {
+    if (inCloud && signedOut && (canUseDap || cloudOnly)) {
       setError(null);
       setPanelOpen(true);
       setTab("debug");
@@ -1082,14 +1083,26 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
           abortRef.current = null;
           return;
         }
-        // WebSocket 连接失败（如旧节点或代理未放行 WS）：自动回退为录制回放调试
+        if (!canTrace) {
+          setError(e instanceof Error ? e.message : String(e));
+          setRunning(false);
+          setRunProgress(null);
+          abortRef.current = null;
+          return;
+        }
+        // 支持录制回放的语言在 WebSocket 连接失败时自动回退
         setDapSnap(null);
       }
     } else {
       setDapSnap(null);
+      if (!canTrace) {
+        setError(cloud && !cloud.available ? (cloud.reason || "云端调试节点暂时离线") : "当前云端节点尚未更新该语言的实时 DAP 调试器");
+        abortRef.current = null;
+        return;
+      }
     }
 
-    setStatus(target === "cloud" && !cloudOnly ? "正在浏览器里调试（云端只调试 Java、C++、Go）：记下每一步…" : "正在调试：记下每一步…");
+    setStatus(target === "cloud" && !cloudOnly ? "当前节点未开启该语言的云端 DAP，正在浏览器里调试：记下每一步…" : "正在调试：记下每一步…");
     setRunning(true);
     try {
       const result = await runPractice({ problem, language, mode, code: snapshot, cases: [test], debug: true, target, watch }, {
@@ -1453,7 +1466,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
             />
           ) : needLogin ? null : <p className="py-4 text-center text-xs leading-6 text-muted">运行代码后，在这里查看每个用例的结果。</p>)}
           {tab === "debug" && (() => {
-            const debugModeToggle = canUseDap ? (
+            const debugModeToggle = canUseDap && (canTrace || !cloudOnly) ? (
               <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
                 <span>调试方式：{cloudDebugMode === "dap" ? "实时 DAP（支持表达式实时求值）" : "录制回放（可前后回退步骤）"}</span>
                 <div className="flex items-center gap-1">
@@ -1466,7 +1479,7 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
                     className={clsx("rounded px-1.5 py-0.5", cloudDebugMode === "trace" ? "bg-accent/10 text-accent font-medium" : "hover:bg-surface-secondary")}
                     onClick={() => { setCloudDebugMode("trace"); void runDebug("trace"); }}
                     type="button"
-                  >录制回放</button>
+                  >{cloudOnly ? "录制回放" : "浏览器回放"}</button>
                 </div>
               </div>
             ) : null;
@@ -1510,8 +1523,8 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
                 {debugModeToggle}
                 <p className="max-w-sm text-xs leading-6 text-muted">
                   {canUseDap && cloudDebugMode === "dap"
-                    ? `用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}连接云端 DAP 真调试器：支持断点停住、单步调试，以及输入表达式实时求值。`
-                    : `用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}把程序跑一遍，记下每一行执行时的变量，然后一步步往前、往后看。点行号可以加断点。${target === "cloud" && !cloudOnly ? "选了云端运行，调试仍在浏览器里。" : ""}`}
+                    ? `用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}连接云端实时 DAP 调试器：支持断点停住、单步调试，以及输入表达式实时求值。`
+                    : `用${caseTab.current === "custom" ? "自定义输入" : `示例 ${sample + 1}`}把程序跑一遍，记下每一行执行时的变量，然后一步步往前、往后看。点行号可以加断点。${target === "cloud" && !cloudOnly && !canUseDap ? "当前云端节点未开启该语言的实时 DAP，调试将在浏览器里进行。" : ""}`}
                 </p>
                 <Button className="practice-tb-btn" isDisabled={!ready} onPress={() => void runDebug()} size="sm" variant="secondary"><BugIcon />开始调试</Button>
               </div>
@@ -1542,10 +1555,12 @@ function PracticeSession({ problem, mode, language, onLanguageChange, chrome }: 
           const q = cloud?.quota;
           const pct = q && q.limit > 0 ? q.remaining / q.limit : 0;
           const tone = pct <= 0.15 ? "is-empty" : pct <= 0.35 ? "is-low" : "";
-          const debugNote = REMOTE_DEBUG_LANGUAGES.includes(language)
-            ? "支持云端真调试器（断点、实时求值、单步轨迹）。"
+          const debugNote = canUseDap
+            ? "支持云端实时 DAP 调试器（断点、实时求值、单步控制）。"
             : !cloudOnly
-            ? "调试仍在浏览器里进行（云端只调试 Java、C++、Go）。"
+            ? "当前节点未开启该语言的云端 DAP，调试仍在浏览器里进行。"
+            : REMOTE_DEBUG_LANGUAGES.includes(language)
+            ? "当前云端节点尚未更新该语言的实时 DAP 调试器（节点升级后即可使用）。"
             : "这门语言暂不支持单步调试。";
           return (
             <Popover isOpen={cloudPopOpen} onOpenChange={setCloudPopOpen}>

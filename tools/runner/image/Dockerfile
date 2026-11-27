@@ -12,13 +12,14 @@ ARG SCALA_VERSION=2.13.16
 ARG SWIFT_VERSION=6.1
 ARG RUST_VERSION=1.86.0
 ARG DART_VERSION=3.7.2
+ARG NETCOREDBG_VERSION=3.1.3-1062
 
 ENV DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 LC_ALL=C.UTF-8
 
-# Python、Java、C / C++（gcc、g++、gdb，力扣的 C 能用 uthash）、Ruby、PHP、C#（.NET 8）
+# Python、Java、C / C++（gcc、g++、gdb，力扣的 C 能用 uthash）、Ruby、PHP（+phpdbg）、C#（.NET 8）
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl xz-utils unzip python3 openjdk-21-jdk-headless gcc g++ gdb uthash-dev \
-    ruby php8.3-cli php8.3-mbstring dotnet-sdk-8.0 \
+    ruby php8.3-cli php8.3-mbstring php8.3-phpdbg dotnet-sdk-8.0 \
     binutils libc6-dev libgcc-13-dev libstdc++-13-dev libsqlite3-0 libncurses6 libxml2 libcurl4 libedit2 tzdata zlib1g-dev \
  && rm -rf /var/lib/apt/lists/*
 
@@ -63,6 +64,10 @@ RUN curl -fsSL "https://static.rust-lang.org/dist/rust-${RUST_VERSION}-x86_64-un
 RUN curl -fsSL -o /tmp/dart.zip "https://storage.googleapis.com/dart-archive/channels/stable/release/${DART_VERSION}/sdk/dartsdk-linux-x64-release.zip" \
  && unzip -q /tmp/dart.zip -d /opt && rm /tmp/dart.zip \
  && ln -s /opt/dart-sdk/bin/dart /usr/local/bin/dart
+
+# C# 调试器（netcoredbg）
+RUN curl -fsSL "https://github.com/Samsung/netcoredbg/releases/download/${NETCOREDBG_VERSION}/netcoredbg-linux-amd64.tar.gz" | tar -xz -C /opt \
+ && ln -s /opt/netcoredbg/netcoredbg /usr/local/bin/netcoredbg
 
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DART_SUPPRESS_ANALYTICS=true
 

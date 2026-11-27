@@ -142,6 +142,18 @@ function goPrepared() {
   return exists(cfg) && exists(tools) ? { cfg, tooldir: fs.readFileSync(tools, "utf8").trim() } : null;
 }
 
+/** 调试器 ACM 模式用的 C/Rust/Swift stdin 注入目标文件 */
+async function ensureDapStdinObj(dir) {
+  const pre = path.join(PREP, "native", "cd_dap_stdin.o");
+  if (exists(pre)) return pre;
+  const src = path.join(dir, "__cd_dap_stdin.c");
+  const obj = path.join(dir, "__cd_dap_stdin.o");
+  fs.writeFileSync(src, '#include <stdio.h>\n__attribute__((constructor)) static void __cd_dap_stdin(void) { freopen("dap.stdin", "r", stdin); }\n');
+  const r = await run("gcc", ["-c", "-O2", src, "-o", obj], { cwd: dir, timeoutMs: 30000 });
+  if (r.code !== 0) return null;
+  return obj;
+}
+
 /**
  * 编译。返回 { ok, ms, error?, cmd: { file, args(from, tok), env } }。
  * debug：调试用的构建（不优化、带调试信息）；acm：ACM 模式的完整程序。
@@ -155,8 +167,9 @@ async function compile(lang, prog, dir, { debug = false, acm = false, timeoutMs 
 
   if (lang === "python") {
     // 只检查用户的代码（solution.py），行号就是编辑器里的
-    const r = await run(PY[0], [...PY.slice(1), "-X", "utf8", "-m", "py_compile", "solution.py"], { cwd: dir, timeoutMs });
-    if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr.replace(/^Sorry: /m, ""), { user: "solution.py", off: 0, n: prog.n });
+    const checkFile = exists(path.join(dir, "solution.py")) ? "solution.py" : prog.user;
+    const r = await run(PY[0], [...PY.slice(1), "-X", "utf8", "-m", "py_compile", checkFile], { cwd: dir, timeoutMs });
+    if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr.replace(/^Sorry: /m, ""), { user: checkFile, off: 0, n: prog.n });
     return done({ file: PY[0], args: (from, tok) => [...PY.slice(1), "-X", "utf8", ...prog.args(from, tok)] });
   }
   if (lang === "javascript" || lang === "typescript") {
@@ -166,7 +179,7 @@ async function compile(lang, prog, dir, { debug = false, acm = false, timeoutMs 
     // 只留报错和源码摘录，去掉 Node 自己的调用栈和版本号
     if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr.split(/\r?\n/).filter((l) => !/^\s+at |^Node\.js v/.test(l)).join("\n"));
     const flags = lang === "typescript" ? [...NODE_FLAGS, ...TS_FLAGS] : NODE_FLAGS;
-    return done({ file: process.execPath, args: (from, tok) => [...flags, ...prog.args(from, tok)] });
+    return done({ file: process.execPath, args: (from, tok) => [...flags, ...prog.args(from, tok)], tsFlags: lang === "typescript" ? TS_FLAGS : [] });
   }
   if (lang === "java") {
     const jsa = path.join(PREP, "java", "javac.jsa");
@@ -203,17 +216,25 @@ async function compile(lang, prog, dir, { debug = false, acm = false, timeoutMs 
   const exe = path.join(dir, "prog" + EXE);
   const native = () => done({ file: exe, args: (from, tok) => prog.args(from, tok), exe });
   if (lang === "c") {
-    const r = await run("gcc", [...C_FLAGS, "-fdiagnostics-color=never", "-o", exe, prog.user, "-lm"], { cwd: dir, timeoutMs });
+    const flags = debug ? C_DEBUG_FLAGS : C_FLAGS;
+    const stdinObj = debug && acm ? await ensureDapStdinObj(dir) : null;
+    const r = await run("gcc", [...flags, "-fdiagnostics-color=never", "-o", exe, prog.user, ...(stdinObj ? [stdinObj] : []), "-lm"], { cwd: dir, timeoutMs });
     if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr);
-    return done({ file: exe, args: (from, tok) => prog.args(from, tok), env: { ...process.env, ...SAN_ENV }, exe });
+    return done({ file: exe, args: (from, tok) => prog.args(from, tok), env: { ...process.env, ...(debug ? {} : SAN_ENV) }, exe });
   }
   if (lang === "csharp") {
     const cs = csharpTools();
     if (!cs) return fail("这台运行器上没有装 .NET SDK");
-    const r = await run("dotnet", [cs.csc, "-nologo", "-noconfig", "-target:exe", "-langversion:latest", "-nullable:disable", "-optimize+", "-debug:portable", "-unsafe+", "-warn:0", "-out:prog.dll", ...(prog.main ? [`-main:${prog.main}`] : []), `@${cs.rsp}`, ...ext(".cs")], { cwd: dir, timeoutMs, env: DOTNET_ENV });
+    const csFiles = ext(".cs");
+    if (debug && acm) {
+      fs.writeFileSync(path.join(dir, "__dap_stdin.cs"), 'using System;\nusing System.IO;\nusing System.Runtime.CompilerServices;\ninternal static class __CdDapStdin {\n    [ModuleInitializer]\n    internal static void Init() { if (File.Exists("dap.stdin")) Console.SetIn(new StreamReader("dap.stdin")); }\n}\n');
+      csFiles.push("__dap_stdin.cs");
+    }
+    const r = await run("dotnet", [cs.csc, "-nologo", "-noconfig", "-target:exe", "-langversion:latest", "-nullable:disable", debug ? "-optimize-" : "-optimize+", "-debug:portable", "-unsafe+", "-warn:0", "-out:prog.dll", ...(prog.main ? [`-main:${prog.main}`] : []), `@${cs.rsp}`, ...csFiles], { cwd: dir, timeoutMs, env: DOTNET_ENV });
     if (r.code !== 0) return fail(r.timedOut ? timeout : r.stdout + r.stderr);
     fs.writeFileSync(path.join(dir, "prog.runtimeconfig.json"), JSON.stringify({ runtimeOptions: { tfm: "net8.0", framework: { name: "Microsoft.NETCore.App", version: cs.runtime }, configProperties: { "System.Globalization.Invariant": true } } }));
-    return done({ file: "dotnet", args: (from, tok) => [path.join(dir, "prog.dll"), ...prog.args(from, tok)], env: DOTNET_ENV });
+    const dll = path.join(dir, "prog.dll");
+    return done({ file: "dotnet", args: (from, tok) => [dll, ...prog.args(from, tok)], env: DOTNET_ENV, dll });
   }
   if (lang === "kotlin" || lang === "scala") {
     const k = lang === "kotlin";
@@ -221,18 +242,24 @@ async function compile(lang, prog, dir, { debug = false, acm = false, timeoutMs 
     const cds = exists(jsa) ? [`-XX:SharedArchiveFile=${jsa}`] : [];
     const out = path.join(dir, "out");
     fs.mkdirSync(out, { recursive: true });
-    const r = await run("java", [...JVM_COMPILE, ...cds, ...(k ? kotlincArgs(home) : scalacArgs(home)), "-d", out, ...ext(k ? ".kt" : ".scala")], { cwd: dir, timeoutMs });
+    const dbgArgs = !k && debug ? ["-g:vars"] : [];
+    const r = await run("java", [...JVM_COMPILE, ...cds, ...(k ? kotlincArgs(home) : scalacArgs(home)), ...dbgArgs, "-d", out, ...ext(k ? ".kt" : ".scala")], { cwd: dir, timeoutMs });
     if (r.code !== 0) return fail(r.timedOut ? timeout : (r.stderr + r.stdout).replace(/^warning: .*\n?/gm, ""));
     const lib = k ? path.join(home, "lib", "kotlin-stdlib.jar") : path.join(home, "lib", "scala-library.jar");
-    return done({ file: "java", args: (from, tok) => [...JAVA_FLAGS, "-cp", out + path.delimiter + lib, prog.main, ...prog.args(from, tok)] });
+    const cp = out + path.delimiter + lib;
+    const mainClass = prog.main || (k ? "MainKt" : "Main");
+    return done({ file: "java", args: (from, tok) => [...JAVA_FLAGS, "-cp", cp, mainClass, ...prog.args(from, tok)], classpath: cp, main: mainClass });
   }
   if (lang === "swift") {
-    const r = await run("swiftc", [...SWIFT_FLAGS, "-module-cache-path", path.join(dir, "mc"), "-o", exe, ...ext(".swift")], { cwd: dir, timeoutMs });
+    const stdinObj = debug && acm ? await ensureDapStdinObj(dir) : null;
+    const r = await run("swiftc", [...SWIFT_FLAGS, "-module-cache-path", path.join(dir, "mc"), "-o", exe, ...ext(".swift"), ...(stdinObj ? [stdinObj] : [])], { cwd: dir, timeoutMs });
     if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr + r.stdout);
     return done({ file: exe, args: (from, tok) => prog.args(from, tok), env: SWIFT_ENV, exe });
   }
   if (lang === "rust") {
-    const r = await run("rustc", ["--edition", "2021", "-O", "-A", "warnings", "--color", "never", "-o", exe, prog.user], { cwd: dir, timeoutMs });
+    const optFlags = debug ? ["-C", "opt-level=0", "-g"] : ["-O"];
+    const stdinObj = debug && acm ? await ensureDapStdinObj(dir) : null;
+    const r = await run("rustc", ["--edition", "2021", ...optFlags, "-A", "warnings", "--color", "never", ...(stdinObj ? ["-C", `link-arg=${stdinObj}`] : []), "-o", exe, prog.user], { cwd: dir, timeoutMs });
     if (r.code !== 0) return fail(r.timedOut ? timeout : r.stderr);
     return native();
   }
@@ -241,7 +268,7 @@ async function compile(lang, prog, dir, { debug = false, acm = false, timeoutMs 
     const dill = path.join(dir, "prog.dill"), env = { ...process.env, DART_SUPPRESS_ANALYTICS: "true" };
     const r = await run("dart", ["compile", "kernel", "--verbosity", "error", "-o", dill, prog.user], { cwd: dir, timeoutMs, env });
     if (r.code !== 0) return fail(r.timedOut ? timeout : (r.stdout + r.stderr).replace(/^Compiling .* to kernel file .*$/m, ""));
-    return done({ file: "dart", args: (from, tok) => [dill, ...prog.args(from, tok)], env });
+    return done({ file: "dart", args: (from, tok) => [dill, ...prog.args(from, tok)], env, dill });
   }
   if (lang === "ruby") {
     const r = await run("ruby", ["-c", prog.user], { cwd: dir, timeoutMs });
@@ -257,8 +284,9 @@ async function compile(lang, prog, dir, { debug = false, acm = false, timeoutMs 
 }
 
 // —— 后加的九种语言（只在云端运行）用到的工具和参数 ——
-/** C：和 C++ 一样开地址检查和未定义行为检查 */
+/** C：运行用的开地址检查和未定义行为检查，调试用的不优化 */
 const C_FLAGS = ["-std=gnu17", "-O1", "-g", "-w", "-fsanitize=address,undefined", "-fno-sanitize-recover=all", "-fno-omit-frame-pointer"];
+const C_DEBUG_FLAGS = ["-std=gnu17", "-O0", "-g", "-w"];
 /**
  * Swift：-O 时越界、强制解包 nil 只会直接崩溃（ud2），不说原因也没有行号；加 -assert-config Debug 有了原因，
  * 但内联之后调用栈从断言那里就断了（实测）。练习的用例都很小，用 -Onone -g：「Fatal error: Index out of range」和行号都有（SWIFT_BACKTRACE）
@@ -308,4 +336,4 @@ function findCsharp(rsp) {
   return null;
 }
 
-module.exports = { compile, crashMessage, mapLines, compileMessage, PREP, exists, PY, CPP_FLAGS, JAVA_FLAGS, JAVAC_JVM, WIN, EXE, C_FLAGS, SWIFT_FLAGS, JVM_COMPILE, KOTLIN_HOME, SCALA_HOME, kotlincArgs, scalacArgs, findCsharp };
+module.exports = { compile, crashMessage, mapLines, compileMessage, PREP, exists, PY, CPP_FLAGS, JAVA_FLAGS, JAVAC_JVM, WIN, EXE, C_FLAGS, C_DEBUG_FLAGS, SWIFT_FLAGS, TS_FLAGS, NODE_FLAGS, RUBY_ENV, PHP_FLAGS, JVM_COMPILE, KOTLIN_HOME, SCALA_HOME, kotlincArgs, scalacArgs, findCsharp };

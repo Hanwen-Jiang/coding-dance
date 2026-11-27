@@ -93,11 +93,16 @@ function normalizeBreakpoints(lines: number[]): number[] {
 export function defaultEntryLine(code: string, lang: PracticeLanguage, mode: PracticeMode): number {
   const lines = code.replace(/\r\n?/g, "\n").split("\n");
   let inBlockComment = false;
+  let pyDocstring: string | null = null;
   let braceDepth = 0;
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i].trim();
     if (!raw) continue;
+    if (pyDocstring) {
+      if (raw.includes(pyDocstring)) pyDocstring = null;
+      continue;
+    }
     if (inBlockComment) {
       if (raw.includes("*/")) inBlockComment = false;
       continue;
@@ -107,18 +112,125 @@ export function defaultEntryLine(code: string, lang: PracticeLanguage, mode: Pra
       continue;
     }
     if (raw.startsWith("//")) continue;
+
+    if (lang === "python") {
+      if (raw.startsWith("#")) continue;
+      if ((raw.startsWith('"""') && !raw.slice(3).includes('"""')) || (raw.startsWith("'''") && !raw.slice(3).includes("'''"))) {
+        pyDocstring = raw.slice(0, 3);
+        continue;
+      }
+      if (/^(from\s+\S+\s+import|import\s+\S+)/.test(raw)) continue;
+      if (/^@/.test(raw)) continue;
+      if (/^class\s+\w+.*:$/.test(raw)) continue;
+      if (/^(?:async\s+)?def\s+\w+\s*\(.*\)\s*(?:->\s*[^:]+)?\s*:$/.test(raw)) continue;
+      if (/^if\s+__name__\s*==\s*['"]__main__['"]\s*:$/.test(raw)) continue;
+      return i + 1;
+    }
+
+    if (lang === "ruby") {
+      if (raw.startsWith("#")) continue;
+      if (/^(require|require_relative|include|extend)\b/.test(raw)) continue;
+      if (/^(?:class|module)\s+\w+/.test(raw)) continue;
+      if (/^def\s+\S+/.test(raw)) continue;
+      if (raw === "end") continue;
+      return i + 1;
+    }
+
+    if (lang === "php") {
+      if (raw.startsWith("#")) continue;
+      if (/^(<\?php|\?>)$/.test(raw)) continue;
+      if (/^(declare|namespace|use)\b/.test(raw)) continue;
+      if (/^(?:final\s+|abstract\s+)?class\s+\w+/.test(raw)) {
+        if (raw.includes("{")) braceDepth++;
+        continue;
+      }
+      if (/^(?:public|private|protected|static|\s)*function\s+\w+\s*\([^;]*\)\s*(?::\s*[\w\\|?]+)?\s*\{?$/.test(raw)) {
+        if (raw.includes("{")) braceDepth++;
+        continue;
+      }
+      if (raw === "{" || raw === "}") {
+        braceDepth += raw === "{" ? 1 : -1;
+        continue;
+      }
+      return i + 1;
+    }
+
     if (raw === "{" || raw === "}") {
       braceDepth += raw === "{" ? 1 : -1;
       continue;
     }
 
-    if (lang === "java") {
-      if (/^(package|import)\b/.test(raw)) continue;
-      if (mode === "leetcode" && braceDepth === 0 && /^(public\s+)?class\b/.test(raw)) {
+    if (lang === "java" || lang === "csharp") {
+      if (lang === "java" && /^(package|import)\b/.test(raw)) continue;
+      if (lang === "csharp" && /^(using|namespace)\b/.test(raw)) {
         if (raw.includes("{")) braceDepth++;
         continue;
       }
-      if (raw.endsWith("{") && /^(public|private|protected|static|\s)*[\w<>\[\],\s]+\s+\w+\s*\([^;]*\)\s*\{$/.test(raw)) {
+      if (mode === "leetcode" && braceDepth === 0 && /^(public\s+|internal\s+|private\s+|sealed\s+|partial\s+)*(class|struct)\b/.test(raw)) {
+        if (raw.includes("{")) braceDepth++;
+        continue;
+      }
+      if (raw.endsWith("{") && /^(public|private|protected|internal|static|virtual|override|async|\s)*[\w<>?\[\],\s]+\s+\w+\s*\([^;]*\)\s*\{$/.test(raw)) {
+        braceDepth++;
+        continue;
+      }
+    } else if (lang === "kotlin") {
+      if (/^(package|import)\b/.test(raw)) continue;
+      if (/^(?:class|object|interface)\s+\w+/.test(raw) && raw.endsWith("{")) {
+        braceDepth++;
+        continue;
+      }
+      if (/^(?:override\s+|private\s+|public\s+|internal\s+|suspend\s+)*fun\s+\w+.*\{$/.test(raw)) {
+        braceDepth++;
+        continue;
+      }
+    } else if (lang === "scala") {
+      if (/^(package|import)\b/.test(raw)) continue;
+      if (/^(?:case\s+)?(?:class|object|trait)\s+\w+/.test(raw) && raw.endsWith("{")) {
+        braceDepth++;
+        continue;
+      }
+      if (/^(?:override\s+|private\s+|protected\s+)*def\s+\w+.*=\s*\{$/.test(raw)) {
+        braceDepth++;
+        continue;
+      }
+    } else if (lang === "swift") {
+      if (/^import\b/.test(raw)) continue;
+      if (/^(?:final\s+|public\s+)?(?:class|struct|enum)\s+\w+/.test(raw) && raw.endsWith("{")) {
+        braceDepth++;
+        continue;
+      }
+      if (/^(?:mutating\s+|static\s+|class\s+|override\s+|public\s+|private\s+)*func\s+\w+.*\{$/.test(raw)) {
+        braceDepth++;
+        continue;
+      }
+    } else if (lang === "rust") {
+      if (/^(use|mod)\b/.test(raw)) continue;
+      if (/^(?:#\[.*\]|pub\s+)?(?:struct|enum|impl)\b/.test(raw) && raw.endsWith("{")) {
+        braceDepth++;
+        continue;
+      }
+      if (/^(?:pub\s+)?(?:async\s+)?fn\s+\w+.*\{$/.test(raw)) {
+        braceDepth++;
+        continue;
+      }
+    } else if (lang === "dart") {
+      if (/^(import|export|library|part)\b/.test(raw)) continue;
+      if (/^(?:abstract\s+)?class\s+\w+/.test(raw) && raw.endsWith("{")) {
+        braceDepth++;
+        continue;
+      }
+      if (raw.endsWith("{") && /^(?:static\s+|Future<.*?>\s+|void\s+|[\w<>?,\s]+\s+)?\w+\s*\([^;]*\)\s*(?:async\s*)?\{$/.test(raw)) {
+        braceDepth++;
+        continue;
+      }
+    } else if (lang === "javascript" || lang === "typescript") {
+      if (/^(import|export\s+(?:type\s+)?\{|use\s+strict)/.test(raw) || raw === "'use strict';" || raw === '"use strict";') continue;
+      if (/^(?:export\s+)?(?:default\s+)?(?:class|interface|type)\s+\w+/.test(raw) && raw.endsWith("{")) {
+        braceDepth++;
+        continue;
+      }
+      if (/^(?:export\s+)?(?:async\s+)?function\b.*\{$/.test(raw) || /^(?:var|let|const)\s+\w+.*=\s*(?:async\s+)?function\b.*\{$/.test(raw) || /^(?:var|let|const)\s+\w+.*=\s*(?:async\s+)?\([^)]*\).*=>\s*\{$/.test(raw)) {
         braceDepth++;
         continue;
       }
@@ -134,7 +246,7 @@ export function defaultEntryLine(code: string, lang: PracticeLanguage, mode: Pra
         braceDepth++;
         continue;
       }
-    } else if (lang === "cpp") {
+    } else if (lang === "cpp" || lang === "c") {
       if (/^#(include|define|pragma|if|ifdef|ifndef|endif)\b/.test(raw) || /^using\s+namespace\b/.test(raw)) continue;
       if (/^(public|private|protected)\s*:$/.test(raw)) continue;
       if (/^(class|struct)\s+\w+/.test(raw) && raw.endsWith("{")) {

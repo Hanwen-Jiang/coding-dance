@@ -1,11 +1,14 @@
-// 云端交互式真调试器（DAP WebSocket）：GET /api/dap?lang=go|cpp|java
+// 云端交互式真调试器（DAP WebSocket）：GET /api/dap?lang=<15种语言之一>
 // 验证 GitHub 登录态与当日云端额度，按加权 Rendezvous 哈希将 WebSocket Upgrade 转发至支持 dap-ws 的 cd-runner 节点。
 import { getSession, privateJson } from "../_lib/session.ts";
 import { consumeQuota, refundQuota, type QuotaEnv } from "../_lib/quota.ts";
 import { dapOnCluster, runnerConfigured, type RunnerEnv } from "../_lib/runner.ts";
 
 type Env = QuotaEnv & RunnerEnv;
-const DEBUG_LANGS = new Set(["java", "cpp", "go"]);
+const DEBUG_LANGS = new Set([
+  "python", "java", "cpp", "go", "javascript", "typescript",
+  "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart",
+]);
 
 export const onRequestGet = async ({ request, env, waitUntil }: { request: Request; env: Env; waitUntil?: (p: Promise<unknown>) => void }) => {
   if ((request.headers.get("Upgrade") || "").toLowerCase() !== "websocket") {
@@ -20,7 +23,7 @@ export const onRequestGet = async ({ request, env, waitUntil }: { request: Reque
   }
   const lang = new URL(request.url).searchParams.get("lang") || "";
   if (!DEBUG_LANGS.has(lang)) {
-    return privateJson({ error: "云端交互式 DAP 调试目前支持 java、cpp、go" }, 400, [cookie]);
+    return privateJson({ error: `不支持的云端 DAP 调试语言：${lang}` }, 400, [cookie]);
   }
 
   const q = await consumeQuota(env, session);

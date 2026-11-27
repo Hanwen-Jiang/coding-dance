@@ -45,7 +45,7 @@ WORKDIR /opt/lc
 # ── 分组 1：轻量脚本语言（Python / JavaScript / TypeScript / Ruby / PHP） ──
 FROM base AS runner-script
 RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 ruby php8.3-cli php8.3-mbstring \
+ && apt-get install -y --no-install-recommends python3 ruby php8.3-cli php8.3-mbstring php8.3-phpdbg \
  && rm -rf /var/lib/apt/lists/* \
  && RUNNER_PREPARE_GROUP=script node /opt/lc/tools/runner/sandbox/prepare.js \
  && rm -rf /tmp/* /root/.cache

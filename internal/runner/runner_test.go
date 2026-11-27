@@ -84,6 +84,20 @@ func TestValidateJobParity(t *testing.T) {
 			t.Errorf("validate(%s) = %q, want %q", tc.raw, msg, tc.want)
 		}
 	}
+	for _, lang := range Langs {
+		if !containsStr(DebugLangs, lang) {
+			t.Errorf("expected DebugLangs to include %q", lang)
+		}
+	}
+}
+
+func containsStr(xs []string, target string) bool {
+	for _, x := range xs {
+		if x == target {
+			return true
+		}
+	}
+	return false
 }
 
 type fakeFCServer struct {

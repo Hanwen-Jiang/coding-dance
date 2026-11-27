@@ -9,11 +9,13 @@
 //      - daemon <stateDir> / poll <stateDir> <waitMs>（Firecracker microVM，配合 fc-manager 的 /agent/v1/exec 无状态 RPC）。
 const fs = require("fs"), path = require("path"), net = require("net"), crypto = require("crypto"), cp = require("child_process");
 const { leetcodeProgram, acmProgram } = require("./programs");
-const { compile, PREP, exists } = require("./toolchain");
+const { compile, PREP, exists, PY, RUBY_ENV } = require("./toolchain");
 const { run, killTree } = require("./exec");
 
 const WORK = process.env.RUNNER_WORK || "/work";
-const DEBUG_LANGS = ["java", "cpp", "go"];
+const DEBUG_LANGS = ["python", "java", "cpp", "go", "javascript", "typescript", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"];
+const JDI_LANGS = new Set(["java", "kotlin", "scala"]);
+const GDB_LANGS = new Set(["cpp", "c", "rust", "swift"]);
 
 function frameBuf(jsonStr) {
   const b = Buffer.from(jsonStr, "utf8");
@@ -79,8 +81,8 @@ async function prepareAndSpawnAdapter(spec, workDir) {
   const progArgs = mode === "acm" ? [] : [...prog.args(0, tok), ...(spec.lang === "cpp" ? ["debug"] : [])];
   const userFullPath = path.join(workDir, prog.user);
 
-  let inStream, outStream, killFn, onCloseFn, needsLineShift = false, cppFlavor = "";
-  if (spec.lang === "java") {
+  let inStream, outStream, killFn, onCloseFn, needsLineShift = false, gdbFlavor = "";
+  if (JDI_LANGS.has(spec.lang)) {
     const jdiCp = await ensureJdiDir(workDir);
     const child = cp.spawn("java", ["-cp", jdiCp, "JdiDap", stdinFile, prog.user, String(prog.off), String(prog.n), tok, built.cmd.classpath, built.cmd.main, ...progArgs], {
       cwd: workDir, stdio: ["pipe", "pipe", "pipe"], detached: process.platform !== "win32",
@@ -119,13 +121,51 @@ async function prepareAndSpawnAdapter(spec, workDir) {
       sock.on("close", once);
       child.on("close", once);
     };
-  } else if (spec.lang === "cpp") {
+  } else if (GDB_LANGS.has(spec.lang)) {
     needsLineShift = true;
     const hasGdb = exists("/usr/bin/gdb") || cp.spawnSync("gdb", ["--version"], { stdio: "ignore" }).status === 0;
-    cppFlavor = hasGdb ? "gdb" : "lldb";
+    gdbFlavor = hasGdb ? "gdb" : "lldb";
     const child = hasGdb
       ? cp.spawn("gdb", ["-q", "-nx", "-i=dap"], { cwd: workDir, stdio: ["pipe", "pipe", "pipe"], detached: process.platform !== "win32" })
       : cp.spawn("lldb-dap", [], { cwd: workDir, stdio: ["pipe", "pipe", "pipe"], detached: process.platform !== "win32" });
+    inStream = child.stdin;
+    outStream = child.stdout;
+    killFn = () => killTree(child);
+    onCloseFn = (fn) => child.on("close", fn);
+  } else if (spec.lang === "csharp") {
+    needsLineShift = true;
+    const child = cp.spawn("netcoredbg", ["--interpreter=vscode"], {
+      cwd: workDir, env: built.cmd.env || process.env, stdio: ["pipe", "pipe", "pipe"], detached: process.platform !== "win32",
+    });
+    inStream = child.stdin;
+    outStream = child.stdout;
+    killFn = () => killTree(child);
+    onCloseFn = (fn) => child.on("close", fn);
+  } else {
+    needsLineShift = true;
+    const scriptArgs = prog.args(0, tok).slice(1);
+    let bin, spawnArgs, env = process.env;
+    if (spec.lang === "python") {
+      bin = PY[0];
+      spawnArgs = [...PY.slice(1), "-X", "utf8", path.join(__dirname, "trace", "py_dap.py"), userFullPath, String(prog.off), String(prog.n), stdinFile, userFullPath, ...scriptArgs];
+    } else if (spec.lang === "javascript" || spec.lang === "typescript") {
+      bin = process.execPath;
+      spawnArgs = [path.join(__dirname, "trace", "node_dap.js"), spec.lang, userFullPath, String(prog.off), String(prog.n), stdinFile, userFullPath, ...scriptArgs];
+    } else if (spec.lang === "ruby") {
+      bin = "ruby";
+      spawnArgs = ["-E", "UTF-8:UTF-8", "-W0", path.join(__dirname, "trace", "ruby_dap.rb"), userFullPath, String(prog.off), String(prog.n), stdinFile, userFullPath, ...scriptArgs];
+      env = { ...process.env, RUBY_THREAD_VM_STACK_SIZE: RUBY_ENV.RUBY_THREAD_VM_STACK_SIZE };
+    } else if (spec.lang === "dart") {
+      bin = process.execPath;
+      const dartArgs = mode === "acm" ? [] : prog.args(0, tok);
+      spawnArgs = [path.join(__dirname, "trace", "dart_dap.js"), userFullPath, String(prog.off), String(prog.n), stdinFile, built.cmd.dill || userFullPath, ...dartArgs];
+    } else if (spec.lang === "php") {
+      bin = process.execPath;
+      spawnArgs = [path.join(__dirname, "trace", "php_dap.js"), userFullPath, String(prog.off), String(prog.n), stdinFile, userFullPath, mode === "acm" ? "1" : "0", ...scriptArgs];
+    }
+    const child = cp.spawn(bin, spawnArgs, {
+      cwd: workDir, env, stdio: ["pipe", "pipe", "pipe"], detached: process.platform !== "win32",
+    });
     inStream = child.stdin;
     outStream = child.stdout;
     killFn = () => killTree(child);
@@ -140,7 +180,7 @@ async function prepareAndSpawnAdapter(spec, workDir) {
     onClose: onCloseFn,
     meta: {
       lang: spec.lang, mode, userFile: prog.user, userFullPath, off: prog.off, n: prog.n,
-      exe: built.cmd.exe, progArgs, stdinFile, workDir, tok, cppFlavor, needsLineShift,
+      exe: built.cmd.exe, dll: built.cmd.dll, progArgs, stdinFile, workDir, tok, cppFlavor: gdbFlavor, needsLineShift,
       gdbConfigDone: false, pendingGdbLaunch: null, suppressGdbLaunchSeq: null,
     },
   };
@@ -153,10 +193,12 @@ function processClientFrame(rawJson, meta, sendToAdapter, sendToClient) {
     const a = msg.arguments || {};
     if (meta.lang === "go") {
       msg.arguments = { request: "launch", mode: "exec", program: meta.exe, args: meta.progArgs, cwd: meta.workDir, ...(a.stopOnEntry ? { stopOnEntry: true } : {}) };
-    } else if (meta.lang === "cpp") {
+    } else if (GDB_LANGS.has(meta.lang)) {
       msg.arguments = meta.cppFlavor === "gdb"
         ? { program: meta.exe, args: meta.progArgs, cwd: meta.workDir, ...(a.stopAtBeginningOfMainSubprogram ? { stopAtBeginningOfMainSubprogram: true } : {}) }
         : { program: meta.exe, args: meta.progArgs, cwd: meta.workDir, ...(a.stopOnEntry ? { stopOnEntry: true } : {}) };
+    } else if (meta.lang === "csharp") {
+      msg.arguments = { request: "launch", type: "coreclr", program: "dotnet", args: [meta.dll, ...meta.progArgs], cwd: meta.workDir, stopAtEntry: !!a.stopOnEntry };
     }
     // GDB 15+ 的原生 DAP 在 launch 里就会立刻执行 run；先暂存 launch 并回 ACK，等 setBreakpoints 完成且收到 configurationDone 后再放行给 GDB。
     if (meta.cppFlavor === "gdb" && !meta.gdbConfigDone) {

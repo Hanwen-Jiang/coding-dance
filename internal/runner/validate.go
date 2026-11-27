@@ -8,9 +8,10 @@ import (
 )
 
 var (
-	Langs      = []string{"python", "java", "cpp", "go", "javascript", "typescript", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"}
-	DebugLangs = []string{"java", "cpp", "go"}
-	Features   = []string{"ts-transform", "dap-ws", "otel-metrics"}
+	Langs           = []string{"python", "java", "cpp", "go", "javascript", "typescript", "c", "csharp", "kotlin", "swift", "rust", "ruby", "php", "scala", "dart"}
+	DebugLangs      = append([]string(nil), Langs...)
+	TraceDebugLangs = []string{"java", "cpp", "go"}
+	Features        = []string{"ts-transform", "dap-ws", "otel-metrics"}
 )
 
 type Job struct {
@@ -86,7 +87,7 @@ func ParseAndValidateJob(raw []byte) (*Job, string, bool) {
 		return nil, "一次最多 100 组用例", true
 	}
 	debug, _ := obj["debug"].(bool)
-	if debug && !slices.Contains(DebugLangs, lang) {
+	if debug && !slices.Contains(TraceDebugLangs, lang) {
 		return nil, "这门语言不能在云端调试", true
 	}
 	if debug && len(rawCases) != 1 {

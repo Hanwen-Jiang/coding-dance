@@ -63,7 +63,7 @@ const LANG_TO_GROUP: Record<string, RunnerGroup> = {
 };
 
 const POC_LANGS = Object.keys(LANG_TO_GROUP);
-const POC_DEBUG_LANGS = ["java", "cpp", "go"];
+const POC_DEBUG_LANGS = [...POC_LANGS];
 const POC_FEATURES = ["ts-transform", "dap-ws", "otel-metrics", "cf-containers-poc"];
 const CLOCK_SKEW_SEC = 120;
 const CONTAINER_PORT = 8790;

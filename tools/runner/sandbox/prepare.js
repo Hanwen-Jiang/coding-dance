@@ -41,6 +41,14 @@ if (want("native")) step("C++ 预编译头", () => {
   fs.mkdirSync(dir, { recursive: true });
   fs.copyFileSync(h[1], path.join(dir, "stdc++.h"));
   sh("g++", [...CPP_FLAGS.run, "-x", "c++-header", path.join(dir, "stdc++.h"), "-o", path.join(dir, "stdc++.h.gch")]);
+
+  // ACM 实时 DAP 的通用 stdin 注入目标文件（C / Rust / Swift 调试时链接进去，零行号偏移）
+  const natDir = path.join(PREP, "native");
+  fs.mkdirSync(natDir, { recursive: true });
+  const stdinC = path.join(natDir, "cd_dap_stdin.c");
+  fs.writeFileSync(stdinC, '#include <stdio.h>\n__attribute__((constructor)) static void __cd_dap_stdin(void) { freopen("dap.stdin", "r", stdin); }\n');
+  sh("gcc", ["-c", "-O2", stdinC, "-o", path.join(natDir, "cd_dap_stdin.o")]);
+  fs.rmSync(stdinC, { force: true });
 });
 
 if (want("native")) step("Go 标准库", () => {
