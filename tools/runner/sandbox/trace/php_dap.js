@@ -80,7 +80,7 @@ class PhpdbgSession {
   ensureStarted() {
     if (this.readyPromise) return this.readyPromise;
     this.readyPromise = new Promise((resolve, reject) => {
-      const args = ["-qrr", SCRIPT_PATH, ...(SCRIPT_ARGS.length ? ["--", ...SCRIPT_ARGS] : [])];
+      const args = ["-q", "-e", SCRIPT_PATH, ...SCRIPT_ARGS];
       this.child = cp.spawn("phpdbg", args, {
         cwd: path.dirname(SCRIPT_PATH),
         stdio: ["pipe", "pipe", "pipe"],
@@ -99,7 +99,7 @@ class PhpdbgSession {
       });
 
       this.child.stdout.on("data", (d) => {
-        this.buf += d.toString("utf8");
+        this.buf += d.toString("utf8").replace(/\x1b\[[0-9;]*m/g, "");
         this.drain();
       });
 
@@ -139,8 +139,9 @@ class PhpdbgSession {
     for (const line of chunk.split(/\r?\n/)) {
       if (!line) continue;
       if (line.includes(MARK)) continue;
-      if (/^\[(?:Breakpoint|Script ended|Set |Deleted |Cleared|L\d+)/.test(line)) continue;
-      if (/^>\s*\d+:/.test(line)) continue;
+      if (/^\[(?:Welcome to phpdbg|Please report bugs|Successful compilation|Breakpoint|Script ended|Set |Deleted |Cleared|L\d+)/.test(line)) continue;
+      if (/^To get help using phpdbg/.test(line)) continue;
+      if (/^>?\s*\d{4,}:/.test(line)) continue;
       out.push(line);
     }
     if (out.length) {
@@ -149,7 +150,7 @@ class PhpdbgSession {
   }
 
   async evalTagged(tag, phpExpr) {
-    const out = await this.cmd(`ev echo "\\n${MARK}:${tag}:" . json_encode(${phpExpr}, JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_UNESCAPED_UNICODE) . "\\n";`);
+    const out = await this.cmd(`ev "${MARK}:${tag}:" . json_encode(${phpExpr}, JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_UNESCAPED_UNICODE)`);
     const re = new RegExp(`${MARK}:${tag}:(.*)`);
     const m = out.match(re);
     if (!m) return null;

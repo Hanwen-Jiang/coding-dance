@@ -534,14 +534,19 @@ export class DapClient {
       if (frameId != null) {
         const sc = await this.sendRequest("scopes", { frameId });
         const scopes = (sc.body?.scopes as { variablesReference?: number; expensive?: boolean }[] | undefined) || [];
-        const scope = scopes.find((s) => !s.expensive && (s.variablesReference || 0) > 0) || scopes.find((s) => (s.variablesReference || 0) > 0);
-        if (scope?.variablesReference) {
+        const activeScopes = scopes.filter((s) => !s.expensive && (s.variablesReference || 0) > 0);
+        const targetScopes = activeScopes.length ? activeScopes : scopes.filter((s) => (s.variablesReference || 0) > 0).slice(0, 1);
+        const seenVars = new Set<string>();
+        for (const scope of targetScopes) {
+          if (vars.length >= 50 || !scope.variablesReference) break;
           const vr = await this.sendRequest("variables", { variablesReference: scope.variablesReference });
           const rawVars = (vr.body?.variables as { name?: string; value?: string; type?: string }[] | undefined) || [];
-          vars = rawVars
-            .filter((v) => typeof v.name === "string" && v.name)
-            .slice(0, 40)
-            .map((v) => [v.name!, String(v.value ?? "")]);
+          for (const v of rawVars) {
+            if (typeof v.name !== "string" || !v.name || seenVars.has(v.name)) continue;
+            seenVars.add(v.name);
+            vars.push([v.name, String(v.value ?? "")]);
+            if (vars.length >= 50) break;
+          }
         }
       }
 

@@ -83,10 +83,16 @@ class DartVmDap {
     if (this.readyPromise) return this.readyPromise;
     this.readyPromise = (async () => {
       const env = { ...process.env, DART_SUPPRESS_ANALYTICS: "true" };
+      this.serviceInfoPath = path.join(path.dirname(TARGET_PATH), `.dart-vm-${process.pid}.json`);
+      try { fs.rmSync(this.serviceInfoPath, { force: true }); } catch {}
       const args = [
+        "run",
+        "--no-dds",
         "--enable-vm-service=0",
         "--pause-isolates-on-start",
+        "--pause-isolates-on-exit",
         "--disable-service-auth-codes",
+        `--write-service-info=${this.serviceInfoPath}`,
         TARGET_PATH,
         ...TARGET_ARGS,
       ];
@@ -98,31 +104,27 @@ class DartVmDap {
       }
 
       const wsUrl = await new Promise((resolve, reject) => {
-        let seen = "";
-        let resolved = false;
-        const timer = setTimeout(() => reject(new Error("Dart VM Service 启动超时")), 15000);
-        const onOut = (chunk, isErr) => {
-          const text = chunk.toString("utf8");
-          if (!resolved) {
-            seen += text;
-            const m = seen.match(/http:\/\/127\.0\.0\.1:\d+\/[^\s\r\n]*/);
-            if (m) {
-              resolved = true;
-              clearTimeout(timer);
-              const u = m[0].replace(/^http:/, "ws:");
-              resolve(u.endsWith("/") ? u + "ws" : u + "/ws");
-              return;
-            }
+        let earlyExit = false;
+        let errBuf = "";
+        this.child.stderr.on("data", (d) => { errBuf = (errBuf + d).slice(-2000); });
+        this.child.once("exit", () => { earlyExit = true; });
+        const deadline = Date.now() + 15000;
+        const poll = () => {
+          if (fs.existsSync(this.serviceInfoPath)) {
+            try {
+              const info = JSON.parse(fs.readFileSync(this.serviceInfoPath, "utf8"));
+              if (info && info.uri) {
+                const u = String(info.uri).replace(/^http:/, "ws:");
+                resolve(u.endsWith("/") ? u + "ws" : u + "/ws");
+                return;
+              }
+            } catch {}
           }
-          const clean = text.split(/\r?\n/).filter((l) => !/The Dart VM service is listening on/.test(l)).join("\n");
-          if (clean.trim()) sendEvent("output", { category: isErr ? "stderr" : "stdout", output: clean });
+          if (earlyExit) return reject(new Error("Dart 进程提前退出：" + errBuf));
+          if (Date.now() > deadline) return reject(new Error("Dart VM Service 启动超时：" + errBuf));
+          setTimeout(poll, 40);
         };
-        this.child.stdout.on("data", (d) => onOut(d, false));
-        this.child.stderr.on("data", (d) => onOut(d, true));
-        this.child.once("exit", () => {
-          clearTimeout(timer);
-          if (!resolved) reject(new Error("Dart 进程提前退出：" + seen));
-        });
+        poll();
       });
 
       this.child.on("close", (code) => {
@@ -148,6 +150,12 @@ class DartVmDap {
       const vm = await this.rpc("getVM");
       this.isolateId = (vm.isolates && vm.isolates[0] && vm.isolates[0].id) || null;
       if (this.isolateId) {
+        // Wait briefly for main isolate to finish loading scripts & reach PauseStart
+        for (let i = 0; i < 40; i++) {
+          const iso = await this.rpc("getIsolate", { isolateId: this.isolateId }).catch(() => null);
+          if (iso && iso.pauseEvent && iso.pauseEvent.kind === "PauseStart") break;
+          await new Promise((r) => setTimeout(r, 50));
+        }
         const scripts = await this.rpc("getScripts", { isolateId: this.isolateId });
         for (const sc of scripts.scripts || []) {
           if (sc.uri && (sc.uri.endsWith("/" + USER_BASE) || sc.uri === "file://" + USER_FULL)) {
@@ -218,6 +226,13 @@ class DartVmDap {
     if (!this.isolateId && ev.isolate) this.isolateId = ev.isolate.id;
     if (ev.kind === "PauseExit") {
       await this.rpc("resume", { isolateId: this.isolateId }).catch(() => {});
+      if (!this.exited) {
+        this.exited = true;
+        sendEvent("exited", { exitCode: 0 });
+        sendEvent("terminated", {});
+        this.kill();
+        setTimeout(() => process.exit(0), 30);
+      }
       return;
     }
     if (ev.kind === "PauseStart") {
