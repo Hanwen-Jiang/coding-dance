@@ -26,7 +26,7 @@ SITE_ORIGINS = "https://leetcode.cgent.link,https://codexdance.cn,https://coding
 # 云端运行（Java / C++ / Go）的运行器集群：「节点编号=地址」用逗号隔开，见 tools/runner/README.md 和 functions/_lib/runner.ts。
 # 各节点共用的签名密钥 RUNNER_SECRET 是加密环境变量；运行器前面开了 Cloudflare Access 的话，服务令牌 RUNNER_ACCESS_ID / RUNNER_ACCESS_SECRET 也是。
 # 加节点就往这里加一条（新节点用同一个 RUNNER_SECRET）；没设时练习区的 Java / C++ / Go 会提示「云端运行还没有部署」。
-RUNNER_NODES = "jd=https://run-jd.codingdance.cn,cf=https://run-cf.codingdance.cn"
+RUNNER_NODES = "jd=https://run-jd.nsnzd.cn,cf=https://run-cf.codingdance.cn"
 # coding-agent 伴学网关公开地址；鉴权密钥 CODING_DANCE_API_TOKEN 只放在 Cloudflare Pages 加密环境变量里
 CODING_AGENT_URL = "https://code.cgent.link"
 
