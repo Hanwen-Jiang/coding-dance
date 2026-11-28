@@ -166,11 +166,42 @@ try {
   assert.equal(telData.nodes[0].telemetry?.service, "cd-runner");
   console.log("✓ #/admin 集群 OTel 遥测聚合接口正常（鉴权 + 多节点指标汇总）");
 
-  // DAP 签名地址与 dap-ws 节点筛选
+  // DAP 签名地址（含可选 lang 查询参数）与 dap-ws 节点筛选
   const dapUrl = await signedDapUrl(env, { id: "lou1", url: A.url }, "octocat");
   assert.match(dapUrl, /\/v1\/dap\?.*node=lou1/);
+  const dapUrlWithLang = await signedDapUrl(env, { id: "lou1", url: A.url }, "octocat", Date.now(), "go");
+  assert.match(dapUrlWithLang, /\/v1\/dap\?.*lang=go/);
   assert.equal(nodeFits({ langs: ["go"], debugLangs: ["go"], features: ["ts-transform"] }, "go", true, "dap-ws"), false);
   assert.equal(nodeFits({ langs: ["go"], debugLangs: ["go"], features: ["ts-transform", "dap-ws"] }, "go", true, "dap-ws"), true);
+
+  // 冷缓存下异构节点返回 422 Unprocessable Entity 时无缝故障转移，且不把 422 节点标为下线
+  const jdOnlyServer = http.createServer((req, res) => {
+    if (req.url === "/v1/status") {
+      res.writeHead(200, { "content-type": "application/json" });
+      res.end(JSON.stringify({ node: "jd1", langs: ["python"], debugLangs: ["python"], slots: 2, queue: 4, busy: 0, queued: 0 }));
+      return;
+    }
+    res.writeHead(422, { "content-type": "application/json" });
+    res.end(JSON.stringify({ error: "这个节点不支持这门语言" }));
+  });
+  await new Promise<void>((r) => jdOnlyServer.listen(0, "127.0.0.1", () => r()));
+  const JD1 = `http://127.0.0.1:${(jdOnlyServer.address() as net.AddressInfo).port}`;
+  try {
+    forgetNodes();
+    const heteroEnv = { RUNNER_NODES: `jd1=${JD1},lou1=${A.url}`, RUNNER_SECRET: secret };
+    const heteroUsers = Array.from({ length: 40 }, (_, i) => "u" + i);
+    const firstJd = heteroUsers.find((u) => pickOrder(parseNodes(heteroEnv.RUNNER_NODES), u)[0].id === "jd1")!;
+    assert.ok(firstJd, "应能找到优先落在 jd1 的测试用户");
+    const r422 = await runOnCluster(heteroEnv, firstJd, JSON.stringify({ lang: "rust", mode: "acm", code: "fn main(){}", cases: [{ stdin: "" }] }), { lang: "rust" });
+    assert.equal(r422.res?.status, 200);
+    assert.deepEqual(r422.tried, ["jd1", "lou1"]);
+    // jd1 不应被 markDown，后续仍排在 python 默认顺序首位
+    assert.equal(pickOrder(parseNodes(heteroEnv.RUNNER_NODES), firstJd, { lang: "python" })[0].id, "jd1");
+    console.log("✓ 异构节点 422 Unprocessable Entity 无缝切换且不误判节点下线");
+  } finally {
+    jdOnlyServer.close();
+    jdOnlyServer.closeAllConnections?.();
+  }
 
   // 节点状态显示已满时直接去下一个
   forgetNodes();

@@ -90,7 +90,7 @@ export async function callNode(env: RunnerEnv, node: RunnerNode, method: "GET" |
 }
 
 /** 生成发往 cd-runner 节点 /v1/dap 的带签名 URL（供边缘侧 WebSocket Upgrade 转发） */
-export async function signedDapUrl(env: RunnerEnv, node: RunnerNode, user: string, now = Date.now()): Promise<string> {
+export async function signedDapUrl(env: RunnerEnv, node: RunnerNode, user: string, now = Date.now(), lang = ""): Promise<string> {
   const time = Math.floor(now / 1000);
   const nonce = hex(crypto.getRandomValues(new Uint8Array(12)).buffer);
   const sig = await sign(env.RUNNER_SECRET!, {
@@ -103,6 +103,7 @@ export async function signedDapUrl(env: RunnerEnv, node: RunnerNode, user: strin
     bodyHash: await sha256(""),
   });
   const q = new URLSearchParams({ time: String(time), nonce, user, node: node.id, sig });
+  if (lang) q.set("lang", lang);
   return `${node.url}/v1/dap?${q.toString()}`;
 }
 
@@ -181,6 +182,7 @@ export async function runOnCluster(env: RunnerEnv, user: string, body: string, o
     tried.push(node.id);
     try {
       const res = await callNode(env, node, "POST", "/v1/run", user, body);
+      if (res.status === 422) { continue; }
       if (res.status === 503) { markBusy(node); continue; }
       if (res.status === 401 || res.status >= 500) { markDown(node); continue; }
       return { res, node, tried };
@@ -199,7 +201,7 @@ export async function dapOnCluster(request: Request, env: RunnerEnv, user: strin
   for (const node of pickOrder(nodes, user, { lang, debug: true, feature: "dap-ws" })) {
     tried.push(node.id);
     try {
-      const targetUrl = await signedDapUrl(env, node, user);
+      const targetUrl = await signedDapUrl(env, node, user, Date.now(), lang);
       const headers = new Headers();
       headers.set("Upgrade", "websocket");
       headers.set("Connection", "Upgrade");
@@ -212,6 +214,7 @@ export async function dapOnCluster(request: Request, env: RunnerEnv, user: strin
         headers.set("cf-access-client-secret", env.RUNNER_ACCESS_SECRET);
       }
       const res = await fetch(targetUrl, { method: "GET", headers });
+      if (res.status === 422) { continue; }
       if (res.status === 503) { markBusy(node); continue; }
       if (res.status === 401 || res.status >= 500) { markDown(node); continue; }
       return { res, node, tried };

@@ -91,6 +91,73 @@ func TestValidateJobParity(t *testing.T) {
 	}
 }
 
+func TestServerRunnerLangsFilter(t *testing.T) {
+	secret := strings.Repeat("k", 32)
+	srv := NewServer(Config{
+		Node:   "jd",
+		Secret: secret,
+		Langs:  parseLangList("python,javascript,typescript,ruby,php"),
+	}, &LocalDriver{}, nil)
+	if len(srv.langs) != 5 || len(srv.debugLangs) != 5 {
+		t.Fatalf("unexpected scoped langs=%v debug=%v", srv.langs, srv.debugLangs)
+	}
+	ts := httptest.NewServer(srv)
+	defer ts.Close()
+
+	// /v1/status returns only the 5 configured languages
+	stHdrs := SignedHeaders(secret, "GET", "/v1/status", "jd", "u1", nil, time.Now())
+	stReq, _ := http.NewRequest(http.MethodGet, ts.URL+"/v1/status", nil)
+	for k, v := range stHdrs {
+		stReq.Header.Set(k, v)
+	}
+	stRes, err := http.DefaultClient.Do(stReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer stRes.Body.Close()
+	var st struct {
+		Langs      []string `json:"langs"`
+		DebugLangs []string `json:"debugLangs"`
+	}
+	_ = json.NewDecoder(stRes.Body).Decode(&st)
+	if len(st.Langs) != 5 || len(st.DebugLangs) != 5 {
+		t.Fatalf("status returned langs=%v debugLangs=%v", st.Langs, st.DebugLangs)
+	}
+
+	// Disallowed language (rust) returns 422 Unprocessable Entity on /v1/run and /v1/dap
+	body := []byte(`{"lang":"rust","mode":"acm","code":"fn main(){}","cases":[{"stdin":""}]}`)
+	runHdrs := SignedHeaders(secret, "POST", "/v1/run", "jd", "u1", body, time.Now())
+	runReq, _ := http.NewRequest(http.MethodPost, ts.URL+"/v1/run", bytes.NewReader(body))
+	for k, v := range runHdrs {
+		runReq.Header.Set(k, v)
+	}
+	runRes, err := http.DefaultClient.Do(runReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer runRes.Body.Close()
+	if runRes.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 for disallowed lang on /v1/run, got %d", runRes.StatusCode)
+	}
+
+	dapHdrs := SignedHeaders(secret, "GET", "/v1/dap", "jd", "u1", nil, time.Now())
+	q := url.Values{}
+	q.Set("time", dapHdrs["x-runner-time"])
+	q.Set("nonce", dapHdrs["x-runner-nonce"])
+	q.Set("user", dapHdrs["x-runner-user"])
+	q.Set("node", dapHdrs["x-runner-node"])
+	q.Set("sig", dapHdrs["x-runner-signature"])
+	q.Set("lang", "rust")
+	dapRes, err := http.Get(ts.URL + "/v1/dap?" + q.Encode())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer dapRes.Body.Close()
+	if dapRes.StatusCode != http.StatusUnprocessableEntity {
+		t.Fatalf("expected 422 for disallowed lang on /v1/dap, got %d", dapRes.StatusCode)
+	}
+}
+
 func containsStr(xs []string, target string) bool {
 	for _, x := range xs {
 		if x == target {

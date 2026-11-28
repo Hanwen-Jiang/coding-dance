@@ -7,7 +7,9 @@ import (
 	"maps"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Hanwen-Jiang/coding-dance/internal/otel"
@@ -29,6 +31,7 @@ type Config struct {
 	FCMemoryMB   int
 	Image        string
 	Runtime      string
+	Langs        []string
 	Pool         int
 	Slots        int
 	Queue        int
@@ -78,6 +81,7 @@ func LoadConfigFromEnv() Config {
 		FCMemoryMB:   num("RUNNER_FC_MEMORY_MB", 1024),
 		Image:        str("RUNNER_IMAGE", "lc-runner:latest"),
 		Runtime:      str("RUNNER_RUNTIME", ""),
+		Langs:        parseLangList(os.Getenv("RUNNER_LANGS")),
 		Pool:         num("RUNNER_POOL", 2),
 		Slots:        num("RUNNER_SLOTS", 2),
 		Queue:        num("RUNNER_QUEUE", 20),
@@ -96,15 +100,45 @@ func LoadConfigFromEnv() Config {
 	}
 }
 
+func parseLangList(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return nil
+	}
+	var out []string
+	for _, part := range strings.Split(raw, ",") {
+		lang := strings.ToLower(strings.TrimSpace(part))
+		if lang != "" && slices.Contains(Langs, lang) && !slices.Contains(out, lang) {
+			out = append(out, lang)
+		}
+	}
+	return out
+}
+
+func intersectLangs(allowed, subset []string) []string {
+	if len(allowed) == 0 {
+		return append([]string(nil), subset...)
+	}
+	var out []string
+	for _, l := range subset {
+		if slices.Contains(allowed, l) {
+			out = append(out, l)
+		}
+	}
+	return out
+}
+
 type Server struct {
-	cfg     Config
-	driver  Driver
-	nonces  *NonceCache
-	limits  *UserLimits
-	slots   *Slots
-	dap     *DAPManager
-	metrics *otel.Registry
-	logFn   func(map[string]any)
+	cfg             Config
+	driver          Driver
+	nonces          *NonceCache
+	limits          *UserLimits
+	slots           *Slots
+	dap             *DAPManager
+	metrics         *otel.Registry
+	logFn           func(map[string]any)
+	langs           []string
+	debugLangs      []string
+	traceDebugLangs []string
 }
 
 func NewServer(cfg Config, driver Driver, logFn func(map[string]any)) *Server {
@@ -137,6 +171,9 @@ func NewServer(cfg Config, driver Driver, logFn func(map[string]any)) *Server {
 		_, q := slots.Counts()
 		return float64(q)
 	})
+	langs := intersectLangs(cfg.Langs, Langs)
+	debugLangs := intersectLangs(langs, DebugLangs)
+	traceDebugLangs := intersectLangs(langs, TraceDebugLangs)
 	dapMgr := NewDAPManager(
 		driver,
 		time.Duration(cfg.DAPIdleMs)*time.Millisecond,
@@ -145,15 +182,19 @@ func NewServer(cfg Config, driver Driver, logFn func(map[string]any)) *Server {
 		metrics,
 		logFn,
 	)
+	dapMgr.AllowedLangs = debugLangs
 	return &Server{
-		cfg:     cfg,
-		driver:  driver,
-		nonces:  NewNonceCache(0),
-		limits:  NewUserLimits(cfg.PerMinute),
-		slots:   slots,
-		dap:     dapMgr,
-		metrics: metrics,
-		logFn:   logFn,
+		cfg:             cfg,
+		driver:          driver,
+		nonces:          NewNonceCache(0),
+		limits:          NewUserLimits(cfg.PerMinute),
+		slots:           slots,
+		dap:             dapMgr,
+		metrics:         metrics,
+		logFn:           logFn,
+		langs:           langs,
+		debugLangs:      debugLangs,
+		traceDebugLangs: traceDebugLangs,
 	}
 }
 
@@ -211,9 +252,9 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"ok":         true,
 			"node":       s.cfg.Node,
 			"version":    s.cfg.Version,
-			"langs":           Langs,
-			"debugLangs":      DebugLangs,
-			"traceDebugLangs": TraceDebugLangs,
+			"langs":           s.langs,
+			"debugLangs":      s.debugLangs,
+			"traceDebugLangs": s.traceDebugLangs,
 			"features":        Features,
 			"pool":       s.driver.Status(),
 			"slots":      s.cfg.Slots,
@@ -255,6 +296,15 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if badMsg != "" {
 		s.metrics.IncCounter("cd_runner_jobs_total", map[string]string{"status": "bad_request", "lang": "unknown"})
 		writeJSON(w, http.StatusBadRequest, map[string]any{"error": badMsg}, nil)
+		return
+	}
+	if !slices.Contains(s.langs, job.Lang) {
+		status := http.StatusBadRequest
+		if slices.Contains(Langs, job.Lang) {
+			status = http.StatusUnprocessableEntity
+		}
+		s.metrics.IncCounter("cd_runner_jobs_total", map[string]string{"status": "bad_request", "lang": job.Lang})
+		writeJSON(w, status, map[string]any{"error": "这个节点不支持这门语言"}, nil)
 		return
 	}
 

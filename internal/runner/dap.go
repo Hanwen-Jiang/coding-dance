@@ -101,12 +101,13 @@ type DAPAdapterSession interface {
 type DAPSpawner func(ctx context.Context, initReq DAPInitRequest) (DAPAdapterSession, error)
 
 type DAPManager struct {
-	IdleTimeout time.Duration
-	MaxDuration time.Duration
-	MaxSessions int
-	Spawner     DAPSpawner
-	Metrics     *otel.Registry
-	LogFn       func(map[string]any)
+	IdleTimeout  time.Duration
+	MaxDuration  time.Duration
+	MaxSessions  int
+	AllowedLangs []string
+	Spawner      DAPSpawner
+	Metrics      *otel.Registry
+	LogFn        func(map[string]any)
 
 	active atomic.Int64
 	mu     sync.Mutex
@@ -149,6 +150,18 @@ func (m *DAPManager) ActiveCount() int64 {
 }
 
 func (m *DAPManager) HandleWebSocket(w http.ResponseWriter, r *http.Request, user string) {
+	allowed := m.AllowedLangs
+	if len(allowed) == 0 {
+		allowed = DebugLangs
+	}
+	if qLang := strings.TrimSpace(r.URL.Query().Get("lang")); qLang != "" && !slices.Contains(allowed, qLang) {
+		status := http.StatusBadRequest
+		if slices.Contains(DebugLangs, qLang) {
+			status = http.StatusUnprocessableEntity
+		}
+		writeJSON(w, status, map[string]any{"error": "这个节点不支持调试这门语言"}, nil)
+		return
+	}
 	if int(m.active.Load()) >= m.MaxSessions {
 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "云端调试会话已满，请稍后再试"}, map[string]string{"Retry-After": "10"})
 		return
@@ -193,7 +206,7 @@ func (m *DAPManager) HandleWebSocket(w http.ResponseWriter, r *http.Request, use
 		_ = conn.WriteJSON(map[string]any{"type": "error", "error": "调试初始化消息不是合法的 JSON"})
 		return
 	}
-	if !slices.Contains(DebugLangs, initReq.Lang) {
+	if !slices.Contains(allowed, initReq.Lang) {
 		_ = conn.WriteJSON(map[string]any{"type": "error", "error": "这门语言暂不支持云端交互式 DAP 调试"})
 		return
 	}
