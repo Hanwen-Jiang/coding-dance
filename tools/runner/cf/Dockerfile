@@ -1,7 +1,8 @@
 # 多分组 Cloudflare Containers 沙箱镜像（在仓库根目录构建）：
-#   docker build --target runner-script -f tools/runner/cf/Dockerfile -t lc-runner-script:poc .
-#   docker build --target runner-jvm    -f tools/runner/cf/Dockerfile -t lc-runner-jvm:poc .
-#   docker build --target runner-native -f tools/runner/cf/Dockerfile -t lc-runner-native:poc .
+#   docker build --target runner-script -f tools/runner/cf/Dockerfile -t lc-runner-script:prod .
+#   docker build --target runner-jvm    -f tools/runner/cf/Dockerfile -t lc-runner-jvm:prod .
+#   docker build --target runner-native -f tools/runner/cf/Dockerfile -t lc-runner-native:prod .
+#   docker build --target runner-extra  -f tools/runner/cf/Dockerfile -t lc-runner-extra:prod .
 
 FROM golang:1.25-bookworm AS cd-runner-builder
 WORKDIR /src
@@ -90,6 +91,34 @@ RUN apt-get update \
  && rm -rf /tmp/rust-* /opt/rust/share/doc \
  && ln -s /opt/rust/bin/rustc /usr/local/bin/rustc \
  && RUNNER_PREPARE_GROUP=native node /opt/lc/tools/runner/sandbox/prepare.js \
+ && rm -rf /tmp/* /root/.cache
+USER 10001
+EXPOSE 8790
+ENTRYPOINT ["/usr/local/bin/cd-runner"]
+
+# ── 分组 4：其余三门编译/VM 语言（C# + netcoredbg / Swift + gdb / Dart + VM Service） ──
+FROM base AS runner-extra
+ARG SWIFT_VERSION=6.1
+ARG DART_VERSION=3.7.2
+ARG NETCOREDBG_VERSION=3.1.3-1062
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DART_SUPPRESS_ANALYTICS=true
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends unzip gcc gdb binutils libc6-dev libgcc-13-dev libstdc++-13-dev dotnet-sdk-8.0 libsqlite3-0 libncurses6 libxml2 libcurl4 libedit2 tzdata zlib1g-dev \
+ && rm -rf /var/lib/apt/lists/* \
+ && curl -fsSL "https://download.swift.org/swift-${SWIFT_VERSION}-release/ubuntu2404/swift-${SWIFT_VERSION}-RELEASE/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04.tar.gz" | tar -xz -C /opt \
+ && ln -s "/opt/swift-${SWIFT_VERSION}-RELEASE-ubuntu24.04" /opt/swift \
+ && cd /opt/swift/usr \
+ && rm -rf bin/sourcekit-lsp bin/swift-package* bin/swift-build bin/swift-test bin/swift-run bin/swift-sdk bin/swift-experimental-sdk \
+    bin/lldb* bin/clangd bin/docc bin/swift-format bin/swift-build-sdk-interfaces bin/swift-help bin/llvm-profdata bin/llvm-cov \
+    lib/libsourcekitdInProc.so lib/liblldb.so* lib/swift_static lib/swift/pm share/docc \
+ && find bin lib -xtype l -delete \
+ && ln -s /opt/swift/usr/bin/swiftc /usr/local/bin/swiftc \
+ && curl -fsSL -o /tmp/dart.zip "https://storage.googleapis.com/dart-archive/channels/stable/release/${DART_VERSION}/sdk/dartsdk-linux-x64-release.zip" \
+ && unzip -q /tmp/dart.zip -d /opt && rm /tmp/dart.zip \
+ && ln -s /opt/dart-sdk/bin/dart /usr/local/bin/dart \
+ && curl -fsSL "https://github.com/Samsung/netcoredbg/releases/download/${NETCOREDBG_VERSION}/netcoredbg-linux-amd64.tar.gz" | tar -xz -C /opt \
+ && ln -s /opt/netcoredbg/netcoredbg /usr/local/bin/netcoredbg \
+ && RUNNER_PREPARE_GROUP=extra node /opt/lc/tools/runner/sandbox/prepare.js \
  && rm -rf /tmp/* /root/.cache
 USER 10001
 EXPOSE 8790

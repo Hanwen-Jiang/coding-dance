@@ -1,0 +1,82 @@
+name: Deploy Cloudflare Containers Runner
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/runner/cf/**'
+      - 'tools/runner/sandbox/**'
+      - 'internal/runner/**'
+      - 'cmd/cd-runner/**'
+      - '.github/workflows/deploy-cf-runner.yml'
+
+concurrency:
+  group: deploy-cf-runner
+  cancel-in-progress: false
+
+jobs:
+  build-push:
+    name: Build & Push (${{ matrix.group }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [script, jvm, native, extra]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@4.168.0
+
+      - name: Build runner-${{ matrix.group }}
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: tools/runner/cf/Dockerfile
+          target: runner-${{ matrix.group }}
+          load: true
+          push: false
+          tags: lc-runner-${{ matrix.group }}:prod
+          cache-from: type=gha,scope=cf-${{ matrix.group }}
+          cache-to: type=gha,mode=max,scope=cf-${{ matrix.group }}
+
+      - name: Push lc-runner-${{ matrix.group }}:prod to Cloudflare Registry
+        env:
+          CI: "true"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 60a1944efd471ed11fad60eaba55e59c
+        run: wrangler containers push lc-runner-${{ matrix.group }}:prod
+
+  deploy-worker:
+    name: Deploy lc-runner-cf Worker
+    needs: build-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install Wrangler
+        run: npm install -g wrangler@4.168.0
+
+      - name: Deploy Worker & Container bindings
+        working-directory: tools/runner/cf
+        env:
+          CI: "true"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 60a1944efd471ed11fad60eaba55e59c
+        run: wrangler deploy

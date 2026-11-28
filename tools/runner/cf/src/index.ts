@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 
-type RunnerGroup = "script" | "jvm" | "native";
+type RunnerGroup = "script" | "jvm" | "native" | "extra";
 
 interface ContainerPort {
   fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
@@ -45,6 +45,7 @@ export interface Env {
   RUNNER_SCRIPT: DONamespaceLike;
   RUNNER_JVM: DONamespaceLike;
   RUNNER_NATIVE: DONamespaceLike;
+  RUNNER_EXTRA: DONamespaceLike;
 }
 
 const LANG_TO_GROUP: Record<string, RunnerGroup> = {
@@ -60,11 +61,14 @@ const LANG_TO_GROUP: Record<string, RunnerGroup> = {
   cpp: "native",
   go: "native",
   rust: "native",
+  csharp: "extra",
+  swift: "extra",
+  dart: "extra",
 };
 
 const POC_LANGS = Object.keys(LANG_TO_GROUP);
 const POC_DEBUG_LANGS = [...POC_LANGS];
-const POC_FEATURES = ["ts-transform", "dap-ws", "otel-metrics", "cf-containers-poc"];
+const POC_FEATURES = ["ts-transform", "dap-ws", "otel-metrics", "cf-containers"];
 const CLOCK_SKEW_SEC = 120;
 const CONTAINER_PORT = 8790;
 
@@ -146,16 +150,17 @@ async function verifySignature(
 function bindingForGroup(env: Env, group: RunnerGroup): DONamespaceLike {
   if (group === "script") return env.RUNNER_SCRIPT;
   if (group === "jvm") return env.RUNNER_JVM;
+  if (group === "extra") return env.RUNNER_EXTRA;
   return env.RUNNER_NATIVE;
 }
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    const nodeID = env.RUNNER_NODE_ID || "cf-poc";
+    const nodeID = env.RUNNER_NODE_ID || "cf";
 
     if (request.method === "GET" && url.pathname === "/healthz") {
-      return jsonRes({ ok: true, node: nodeID, groups: ["script", "jvm", "native"] });
+      return jsonRes({ ok: true, node: nodeID, groups: ["script", "jvm", "native", "extra"] });
     }
 
     const allowQuery = request.method === "GET" && url.pathname === "/v1/dap";
@@ -180,12 +185,12 @@ export default {
       return jsonRes({
         ok: true,
         node: nodeID,
-        version: "cf-poc",
+        version: "cf-prod",
         langs: POC_LANGS,
         debugLangs: POC_DEBUG_LANGS,
         features: POC_FEATURES,
-        pool: { driver: "cloudflare-containers", groups: ["script", "jvm", "native"] },
-        slots: 12,
+        pool: { driver: "cloudflare-containers", groups: ["script", "jvm", "native", "extra"] },
+        slots: 16,
         queue: 20,
         busy: 0,
         queued: 0,
@@ -428,4 +433,8 @@ export class RunnerJvmDO extends RunnerContainerDO {
 
 export class RunnerNativeDO extends RunnerContainerDO {
   protected readonly group: RunnerGroup = "native";
+}
+
+export class RunnerExtraDO extends RunnerContainerDO {
+  protected readonly group: RunnerGroup = "extra";
 }

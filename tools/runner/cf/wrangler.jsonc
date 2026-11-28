@@ -1,34 +1,40 @@
 {
-  "name": "lc-runner-cf-poc",
+  "name": "lc-runner-cf",
   "main": "src/index.ts",
   "compatibility_date": "2026-10-01",
   "workers_dev": true,
   "routes": [
     {
-      "pattern": "run-cf-poc.codingdance.cn",
+      "pattern": "run-cf.codingdance.cn",
       "custom_domain": true
     }
   ],
   "vars": {
-    "RUNNER_NODE_ID": "cf-poc",
+    "RUNNER_NODE_ID": "cf",
     "CONTAINER_SLEEP_MS": "120000"
   },
   "containers": [
     {
       "class_name": "RunnerScriptDO",
-      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-script:poc",
+      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-script:prod",
       "instance_type": "basic",
       "max_instances": 4
     },
     {
       "class_name": "RunnerJvmDO",
-      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-jvm:poc",
+      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-jvm:prod",
       "instance_type": "standard-1",
       "max_instances": 4
     },
     {
       "class_name": "RunnerNativeDO",
-      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-native:poc",
+      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-native:prod",
+      "instance_type": "standard-1",
+      "max_instances": 4
+    },
+    {
+      "class_name": "RunnerExtraDO",
+      "image": "registry.cloudflare.com/60a1944efd471ed11fad60eaba55e59c/lc-runner-extra:prod",
       "instance_type": "standard-1",
       "max_instances": 4
     }
@@ -37,13 +43,14 @@
     "bindings": [
       { "name": "RUNNER_SCRIPT", "class_name": "RunnerScriptDO" },
       { "name": "RUNNER_JVM", "class_name": "RunnerJvmDO" },
-      { "name": "RUNNER_NATIVE", "class_name": "RunnerNativeDO" }
+      { "name": "RUNNER_NATIVE", "class_name": "RunnerNativeDO" },
+      { "name": "RUNNER_EXTRA", "class_name": "RunnerExtraDO" }
     ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["RunnerScriptDO", "RunnerJvmDO", "RunnerNativeDO"]
+      "new_sqlite_classes": ["RunnerScriptDO", "RunnerJvmDO", "RunnerNativeDO", "RunnerExtraDO"]
     }
   ]
 }

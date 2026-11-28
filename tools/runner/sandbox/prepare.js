@@ -41,13 +41,16 @@ if (want("native")) step("C++ 预编译头", () => {
   fs.mkdirSync(dir, { recursive: true });
   fs.copyFileSync(h[1], path.join(dir, "stdc++.h"));
   sh("g++", [...CPP_FLAGS.run, "-x", "c++-header", path.join(dir, "stdc++.h"), "-o", path.join(dir, "stdc++.h.gch")]);
+});
 
-  // ACM 实时 DAP 的通用 stdin 注入目标文件（C / Rust / Swift 调试时链接进去，零行号偏移）
+if (want("native") || want("extra")) step("ACM DAP stdin 注入目标文件（cd_dap_stdin.o）", () => {
   const natDir = path.join(PREP, "native");
+  const obj = path.join(natDir, "cd_dap_stdin.o");
+  if (fs.existsSync(obj)) return;
   fs.mkdirSync(natDir, { recursive: true });
   const stdinC = path.join(natDir, "cd_dap_stdin.c");
   fs.writeFileSync(stdinC, '#include <stdio.h>\n__attribute__((constructor)) static void __cd_dap_stdin(void) { freopen("dap.stdin", "r", stdin); }\n');
-  sh("gcc", ["-c", "-O2", stdinC, "-o", path.join(natDir, "cd_dap_stdin.o")]);
+  sh("gcc", ["-c", "-O2", stdinC, "-o", obj]);
   fs.rmSync(stdinC, { force: true });
 });
 
